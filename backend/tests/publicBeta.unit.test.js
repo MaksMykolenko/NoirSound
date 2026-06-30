@@ -12,6 +12,7 @@ import jwt from 'jsonwebtoken';
 import {
   evaluateConfig,
   isWeakSecret,
+  isPlaceholderValue,
   getAllowedOrigins
 } from '../src/config.js';
 import { isCsrfSafe } from '../src/plugins/csrf.js';
@@ -43,6 +44,12 @@ describe('config / secret validation', () => {
     expect(isWeakSecret(STRONG)).toBe(false);
   });
 
+  it('detects production template placeholders', () => {
+    expect(isPlaceholderValue('CHANGE_ME_LONG_RANDOM')).toBe(true);
+    expect(isPlaceholderValue('https://example.com')).toBe(true);
+    expect(isPlaceholderValue(STRONG)).toBe(false);
+  });
+
   it('requires core secrets in any environment', () => {
     const { errors } = evaluateConfig({ NODE_ENV: 'development' });
     expect(errors.join(' ')).toMatch(/JWT_SECRET/);
@@ -62,6 +69,22 @@ describe('config / secret validation', () => {
     expect(errors.join(' ')).toMatch(/JWT_SECRET is too weak/);
     expect(errors.join(' ')).toMatch(/FRONTEND_ORIGIN is required/);
     expect(errors.join(' ')).toMatch(/S3_SECRET_ACCESS_KEY/);
+  });
+
+  it('rejects copied production templates before boot', () => {
+    const { errors } = evaluateConfig({
+      NODE_ENV: 'production',
+      JWT_SECRET: 'CHANGE_ME_LONG_RANDOM_CHANGE_ME_LONG_RANDOM',
+      COOKIE_SECRET: 'CHANGE_ME_LONG_RANDOM_DIFFERENT_SECRET',
+      DATABASE_URL: 'postgresql://noirsound:CHANGE_ME_LONG_RANDOM@postgres:5432/noirsound',
+      REDIS_URL: 'redis://redis:6379',
+      FRONTEND_ORIGIN: 'https://example.com',
+      S3_PUBLIC_ENDPOINT: 'https://example.com',
+      S3_ACCESS_KEY_ID: 'CHANGE_ME',
+      S3_SECRET_ACCESS_KEY: 'CHANGE_ME_LONG_RANDOM',
+      S3_BUCKET: 'noirsound-audio'
+    });
+    expect(errors.join(' ')).toMatch(/placeholder value/);
   });
 
   it('passes a well-formed production config', () => {

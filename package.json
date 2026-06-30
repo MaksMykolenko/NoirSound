@@ -8,6 +8,7 @@
     "build": "vite build",
     "lint": "oxlint",
     "test": "vitest run",
+    "check:forbidden": "bash scripts/check-forbidden-files.sh",
     "test:e2e": "playwright test",
     "preview": "vite preview",
     "local:up": "cd backend && docker compose up -d",

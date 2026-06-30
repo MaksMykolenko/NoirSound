@@ -31,7 +31,8 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     restart: unless-stopped
-    env_file: [.env.production]
+    env_file:
+      - ${APP_ENV_FILE:-.env.production}
     environment:
       NODE_ENV: production
       PORT: "3000"
@@ -40,8 +41,7 @@ services:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
       minio: { condition: service_healthy }
-    # Run migrations then start the API.
-    command: sh -c "npx prisma migrate deploy && npm start"
+    # Production migrations are run explicitly by scripts/deploy-hostinger.sh.
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://localhost:3000/api/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 15s
@@ -54,7 +54,8 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     restart: unless-stopped
-    env_file: [.env.production]
+    env_file:
+      - ${APP_ENV_FILE:-.env.production}
     environment:
       NODE_ENV: production
     command: ["npm", "run", "worker"]

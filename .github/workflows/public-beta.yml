@@ -2,28 +2,61 @@ name: NoirSound Public Beta CI
 
 on:
   push:
-    branches: [main, master]
+    branches: [main]
   pull_request:
   workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
 
 jobs:
-  frontend:
-    name: Frontend lint · test · build
+  forbidden-files-scan:
+    name: Forbidden files scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Scan Git-visible files for forbidden artifacts
+        run: bash scripts/check-forbidden-files.sh
+
+  frontend-lint:
+    name: Frontend lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: '22', cache: 'npm' }
+        with:
+          node-version: '22'
+          cache: npm
       - run: npm ci
-      - name: Lint
-        run: npm run lint
-      - name: Unit/component tests
-        run: npm test
-      - name: Production build
-        run: npm run build
+      - run: npm run lint
 
-  backend-tests:
-    name: Backend tests (Postgres)
+  frontend-test:
+    name: Frontend tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm test
+
+  frontend-build:
+    name: Frontend build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+
+  backend-test:
+    name: Backend tests
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -31,8 +64,9 @@ jobs:
         env:
           POSTGRES_USER: noirsound_user
           POSTGRES_PASSWORD: noirsound_password
-          POSTGRES_DB: noirsound_db
-        ports: ['5432:5432']
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
         options: >-
           --health-cmd "pg_isready -U noirsound_user"
           --health-interval 10s --health-timeout 5s --health-retries 5
@@ -42,58 +76,75 @@ jobs:
       DATABASE_URL_TEST: postgresql://noirsound_user:noirsound_password@localhost:5432/noirsound_test_db?schema=public
       JWT_SECRET: ci_test_secret_change_me_0123456789abcdef
       COOKIE_SECRET: ci_test_cookie_secret_abcdef0123456789xyz
+      REDIS_URL: redis://localhost:6379
       S3_ENDPOINT: http://localhost:9000
+      S3_PUBLIC_ENDPOINT: http://localhost:9000
       S3_BUCKET: noirsound-audio
       S3_ACCESS_KEY_ID: ci
       S3_SECRET_ACCESS_KEY: ci-secret
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: '22' }
-      - name: Install ffmpeg (worker media pipeline test)
+        with:
+          node-version: '22'
+      - name: Install ffmpeg
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
-      - working-directory: backend
-        run: npm ci
-      - name: Prisma generate
+      - name: Install backend dependencies
         working-directory: backend
-        run: npx prisma generate
-      - name: Run backend tests (migrate + seed + vitest)
+        run: npm ci
+      - name: Run backend migration, seed, and test suite
         working-directory: backend
         run: npm test
 
-  docker-build:
-    name: Docker images build
+  backend-unit-security:
+    name: Backend unit security
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: noirsound_user
+          POSTGRES_PASSWORD: noirsound_password
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U noirsound_user"
+          --health-interval 10s --health-timeout 5s --health-retries 5
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://noirsound_user:noirsound_password@localhost:5432/postgres?schema=public
+      JWT_SECRET: ci_unit_secret_0123456789abcdef0123456789abcdef
+      COOKIE_SECRET: ci_unit_cookie_abcdef0123456789abcdef01234567
+      FRONTEND_ORIGIN: http://localhost:5173
+      S3_ENDPOINT: http://localhost:9000
+      S3_PUBLIC_ENDPOINT: http://localhost:9000
+      S3_BUCKET: noirsound-audio
+      S3_ACCESS_KEY_ID: ci
+      S3_SECRET_ACCESS_KEY: ci-secret
     steps:
       - uses: actions/checkout@v4
-      - name: Build backend image
-        run: docker build -t noirsound-backend ./backend
-      - name: Verify shared taxonomy is in the backend image
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install system tools
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+      - name: Check Prisma migrations match schema
+        working-directory: backend
         run: |
-          docker run --rm noirsound-backend sh -c "test -f src/shared/musicGenres.json && test -f src/constants/musicGenres.js" \
-            || (echo 'Shared genre taxonomy missing from backend image' && exit 1)
-      - name: Build frontend image
-        run: docker build -t noirsound-web -f Dockerfile .
+          npx prisma migrate diff \
+            --from-migrations prisma/migrations \
+            --to-schema prisma/schema.prisma \
+            --exit-code
+      - name: Run isolated security/unit tests
+        working-directory: backend
+        run: npm run test:unit
 
-  secret-scan:
-    name: Forbidden secrets scan
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Fail if real .env files are committed
-        run: |
-          if git ls-files | grep -E '(^|/)\.env$|(^|/)\.env\.production$|(^|/)\.env\.local$'; then
-            echo 'Committed .env file detected — remove it.'; exit 1
-          fi
-      - name: Scan for obvious secret material
-        run: |
-          if git grep -nE 'BEGIN (RSA|OPENSSH|PRIVATE) KEY|AKIA[0-9A-Z]{16}' -- . ':!*.md' ':!.github/*'; then
-            echo 'Potential secret detected in source.'; exit 1
-          fi
-          echo 'No obvious secrets found.'
-
-  e2e:
-    name: Full-stack E2E (Playwright)
+  playwright-e2e:
+    name: Playwright E2E
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -102,22 +153,27 @@ jobs:
           POSTGRES_USER: noirsound_user
           POSTGRES_PASSWORD: noirsound_password
           POSTGRES_DB: noirsound_db
-        ports: ['5432:5432']
+        ports:
+          - 5432:5432
         options: >-
           --health-cmd "pg_isready -U noirsound_user"
           --health-interval 10s --health-timeout 5s --health-retries 5
       redis:
         image: redis:7-alpine
-        ports: ['6379:6379']
+        ports:
+          - 6379:6379
         options: >-
-          --health-cmd "redis-cli ping" --health-interval 10s --health-timeout 5s --health-retries 5
+          --health-cmd "redis-cli ping"
+          --health-interval 10s --health-timeout 5s --health-retries 5
     env:
       NODE_ENV: development
       DATABASE_URL: postgresql://noirsound_user:noirsound_password@localhost:5432/noirsound_db?schema=public
       REDIS_URL: redis://localhost:6379
       JWT_SECRET: ci_e2e_secret_change_me_0123456789abcd
       COOKIE_SECRET: ci_e2e_cookie_secret_abcdef0123456789
+      FRONTEND_ORIGIN: http://localhost:5173
       S3_ENDPOINT: http://localhost:9000
+      S3_PUBLIC_ENDPOINT: http://localhost:9000
       S3_BUCKET: noirsound-audio
       S3_ACCESS_KEY_ID: minioadmin
       S3_SECRET_ACCESS_KEY: minioadmin
@@ -127,27 +183,53 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: '22' }
-      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
+        with:
+          node-version: '22'
+      - name: Install ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
       - name: Start MinIO
         run: |
-          docker run -d --name minio -p 9000:9000 -e MINIO_ROOT_USER=minioadmin -e MINIO_ROOT_PASSWORD=minioadmin minio/minio server /data
+          docker run -d --name minio -p 9000:9000 \
+            -e MINIO_ROOT_USER=minioadmin \
+            -e MINIO_ROOT_PASSWORD=minioadmin \
+            minio/minio server /data
           sleep 5
           docker run --rm --network host minio/mc sh -c "until mc alias set ns http://localhost:9000 minioadmin minioadmin; do sleep 1; done; mc mb --ignore-existing ns/noirsound-audio; mc anonymous set none ns/noirsound-audio"
-      - name: Install deps
+      - name: Install dependencies
         run: npm ci && (cd backend && npm ci)
-      - name: Migrate + seed
+      - name: Migrate and seed
         working-directory: backend
         run: npx prisma generate && npx prisma migrate deploy && node prisma/seed.js minimal
-      - name: Start backend + worker
+      - name: Start backend and worker
         working-directory: backend
         run: |
           npm start &
           npm run worker &
           npx wait-on http-get://localhost:3000/api/ready -t 60000
-      - run: npx playwright install --with-deps chromium
-      - name: Run E2E
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+      - name: Run Playwright
         run: npm run test:e2e
       - uses: actions/upload-artifact@v4
         if: always()
-        with: { name: playwright-report, path: playwright-report/ }
+        with:
+          name: playwright-report
+          path: playwright-report/
+
+  docker-build:
+    name: Docker build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate production compose file
+        run: APP_ENV_FILE=.env.production.example docker compose -f docker-compose.production.yml --env-file .env.production.example config --quiet
+      - name: Build backend image
+        run: docker build -t noirsound-backend ./backend
+      - name: Verify shared taxonomy is in backend image
+        run: |
+          docker run --rm noirsound-backend sh -c "test -f src/shared/musicGenres.json && test -f src/constants/musicGenres.js" \
+            || (echo 'Shared genre taxonomy missing from backend image' && exit 1)
+      - name: Verify worker has FFmpeg and FFprobe
+        run: docker run --rm noirsound-backend sh -c "ffmpeg -version >/dev/null && ffprobe -version >/dev/null"
+      - name: Build frontend image
+        run: docker build -t noirsound-web -f Dockerfile .

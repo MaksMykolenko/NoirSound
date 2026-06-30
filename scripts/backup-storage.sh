@@ -14,8 +14,22 @@ STAGING="$(mktemp -d)"
 trap 'rm -rf "$STAGING"' EXIT
 
 log "Backing up object storage bucket '${S3_BUCKET}' from ${S3_ENDPOINT}"
+S3_HOST="$(url_host "$S3_ENDPOINT")"
 
-if command -v aws >/dev/null 2>&1; then
+if [[ "$S3_HOST" == "minio" ]] && compose_available; then
+  : "${S3_ACCESS_KEY_ID:?S3_ACCESS_KEY_ID is required}"
+  : "${S3_SECRET_ACCESS_KEY:?S3_SECRET_ACCESS_KEY is required}"
+  mapfile -t COMPOSE_ARGS < <(compose_args)
+  log "Using Docker Compose MinIO network for storage backup."
+  docker compose "${COMPOSE_ARGS[@]}" run --rm --no-deps \
+    -e S3_ENDPOINT -e S3_ACCESS_KEY_ID -e S3_SECRET_ACCESS_KEY -e S3_BUCKET \
+    -v "${STAGING}:/backup" \
+    --entrypoint /bin/sh minio-create-bucket -c '
+      set -e
+      mc alias set nsbackup "$S3_ENDPOINT" "$S3_ACCESS_KEY_ID" "$S3_SECRET_ACCESS_KEY" >/dev/null
+      mc mirror --overwrite "nsbackup/$S3_BUCKET" /backup
+    '
+elif command -v aws >/dev/null 2>&1; then
   AWS_ACCESS_KEY_ID="${S3_ACCESS_KEY_ID:-}" \
   AWS_SECRET_ACCESS_KEY="${S3_SECRET_ACCESS_KEY:-}" \
   aws --endpoint-url "$S3_ENDPOINT" s3 sync "s3://${S3_BUCKET}" "$STAGING" --no-progress

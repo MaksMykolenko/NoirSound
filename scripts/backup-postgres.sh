@@ -15,6 +15,25 @@ PARTIAL="${OUT}.partial"
 trap 'rm -f "$PARTIAL"' EXIT
 log "Backing up PostgreSQL ($(redact_url "$DATABASE_URL")) -> $(basename "$OUT")"
 PG_URL="$(postgres_cli_url "$DATABASE_URL")"
+PG_HOST="$(url_host "$PG_URL")"
+
+if [[ "$PG_HOST" == "postgres" ]] && compose_available; then
+  : "${POSTGRES_USER:?POSTGRES_USER is required for Docker Compose PostgreSQL backup}"
+  : "${POSTGRES_DB:?POSTGRES_DB is required for Docker Compose PostgreSQL backup}"
+  mapfile -t COMPOSE_ARGS < <(compose_args)
+  log "Using Docker Compose postgres service for backup."
+  docker compose "${COMPOSE_ARGS[@]}" exec -T postgres \
+    pg_dump --format=custom --no-owner --no-privileges -U "$POSTGRES_USER" "$POSTGRES_DB" \
+    | gzip -9 > "$PARTIAL"
+  mv "$PARTIAL" "$OUT"
+  trap - EXIT
+  SIZE="$(du -h "$OUT" | cut -f1)"
+  log "PostgreSQL backup complete: $(basename "$OUT") (${SIZE})"
+  prune_old "postgres_*.dump.gz"
+  log "Done. Retention: ${RETENTION_DAYS} days."
+  exit 0
+fi
+
 SERVER_MAJOR="$(postgres_server_major "$PG_URL" || true)"
 LOCAL_MAJOR="$(postgres_client_major pg_dump || true)"
 

@@ -1,5 +1,8 @@
 node_modules
 dist
+dist-ssr
+build
+coverage
 backend
 .git
 .github
@@ -13,5 +16,10 @@ test-results
 tests
 .env
 .env.*
+!.env.example
 !.env.production.example
+*.pem
+*.key
+*.p12
+*.log
 lint_output.txt

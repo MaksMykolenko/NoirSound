@@ -29,6 +29,14 @@ const WEAK_SECRET_VALUES = new Set([
   'minioadmin'
 ]);
 
+const PLACEHOLDER_PATTERNS = [
+  /change[_-]?me/i,
+  /replace[_-]?me/i,
+  /example\.com/i,
+  /your[_-]?(domain|value|secret|password|token|key)/i,
+  /^__[^_].*__$/i
+];
+
 function isWeakSecret(value) {
   if (typeof value !== 'string') return true;
   const trimmed = value.trim();
@@ -37,6 +45,13 @@ function isWeakSecret(value) {
   // Reject low-entropy single-character or obviously repeated strings.
   if (/^(.)\1+$/.test(trimmed)) return true;
   return false;
+}
+
+function isPlaceholderValue(value) {
+  if (typeof value !== 'string') return false;
+  const trimmed = value.trim();
+  if (!trimmed) return false;
+  return PLACEHOLDER_PATTERNS.some((pattern) => pattern.test(trimmed));
 }
 
 /**
@@ -69,6 +84,22 @@ function evaluateConfig(env = {}) {
 
   // --- Production-only hardening ---
   if (isProduction) {
+    const placeholderKeys = [
+      'JWT_SECRET',
+      'COOKIE_SECRET',
+      'DATABASE_URL',
+      'REDIS_URL',
+      'FRONTEND_ORIGIN',
+      'S3_ENDPOINT',
+      'S3_PUBLIC_ENDPOINT',
+      'S3_ACCESS_KEY_ID',
+      'S3_SECRET_ACCESS_KEY'
+    ];
+    for (const key of placeholderKeys) {
+      if (env[key] && isPlaceholderValue(env[key])) {
+        errors.push(`${key} still contains a placeholder value.`);
+      }
+    }
     if (env.JWT_SECRET && isWeakSecret(env.JWT_SECRET)) {
       errors.push(`JWT_SECRET is too weak — use a random string of at least ${MIN_SECRET_LENGTH} characters.`);
     }
@@ -153,6 +184,7 @@ function safeConfigSummary(env = process.env) {
 module.exports = {
   MIN_SECRET_LENGTH,
   isWeakSecret,
+  isPlaceholderValue,
   evaluateConfig,
   getAllowedOrigins,
   loadAndValidateConfig,

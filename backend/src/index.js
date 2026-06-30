@@ -130,6 +130,15 @@ function buildServer(options = {}) {
     return { status: 'ok', timestamp: new Date().toISOString() };
   });
 
+  // Runtime mode check for deployment smoke tests. This never exposes secrets.
+  fastify.get('/api/mode', async () => {
+    return {
+      apiMode: 'real',
+      mock: false,
+      environment: process.env.NODE_ENV === 'production' ? 'production' : 'non-production'
+    };
+  });
+
   // Readiness — dependencies reachable.
   fastify.get('/api/ready', async (request, reply) => {
     const checks = { database: 'unknown', redis: 'unknown', storage: 'unknown' };

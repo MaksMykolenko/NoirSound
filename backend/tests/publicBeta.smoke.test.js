@@ -32,6 +32,13 @@ describe('server wiring (no DB)', () => {
     expect(res.headers['content-security-policy']).toContain("default-src 'none'");
   });
 
+  it('serves a redaction-safe real API mode endpoint', async () => {
+    const res = await app.inject({ method: 'GET', url: '/api/mode' });
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toMatchObject({ apiMode: 'real', mock: false });
+    expect(JSON.stringify(res.json())).not.toMatch(/secret|password|token/i);
+  });
+
   it('reports not-ready when any required dependency is unavailable', async () => {
     const res = await app.inject({ method: 'GET', url: '/api/ready' });
     expect(res.statusCode).toBe(503);
