@@ -17,15 +17,31 @@ import {
 } from '../src/lib/pageMeta.js';
 
 const BASE = 'https://noirsound.co';
+// Mirrors the real built shell: charset/viewport/theme-color, then the
+// <!--noirsound:ssr-meta--> marker with the static defaults, THEN the theme
+// script, favicon, preconnect, module script, modulepreload, and CSS bundle
+// that Vite appends at build time. Shaped this way so tests actually exercise
+// the head-placement bug (metadata landing after scripts/fonts/CSS) instead
+// of a shell that never had that problem.
 const SHELL =
   '<!doctype html><html lang="en"><head>' +
   '<meta charset="UTF-8">' +
+  '<meta name="viewport" content="width=device-width, initial-scale=1.0">' +
+  '<meta name="theme-color" content="#09090b">' +
+  '<!--noirsound:ssr-meta-->' +
   '<title>Old Title</title>' +
   '<meta name="description" content="old">' +
   '<meta property="og:title" content="old og">' +
   '<link rel="canonical" href="https://old/">' +
   '<script type="application/ld+json">{"@type":"WebSite"}</script>' +
-  '</head><body><div id="root"></div><script src="/assets/index-abc.js"></script></body></html>';
+  '<script>/* theme init */</script>' +
+  '<link rel="icon" href="/favicon.svg">' +
+  '<link rel="preconnect" href="https://fonts.googleapis.com">' +
+  '<link href="https://fonts.googleapis.com/css2?family=Inter" rel="stylesheet">' +
+  '<script type="module" crossorigin src="/assets/index-abc.js"></script>' +
+  '<link rel="modulepreload" crossorigin href="/assets/vendor-xyz.js">' +
+  '<link rel="stylesheet" crossorigin href="/assets/index-def.css">' +
+  '</head><body><div id="root"></div></body></html>';
 
 describe('escapeHtml', () => {
   it('escapes HTML-significant characters', () => {
@@ -59,6 +75,54 @@ describe('injectMeta', () => {
     // The SPA bundle is preserved so the page still boots for real users.
     expect(out).toContain('/assets/index-abc.js');
     expect(out).toContain('<div id="root"></div>');
+  });
+
+  it('places metadata at the ssr-meta marker, before scripts/fonts/preload/CSS', () => {
+    const out = injectMeta(SHELL, homeMeta(BASE));
+    const markerIndex = out.indexOf('<!--noirsound:ssr-meta-->');
+    const titleIndex = out.indexOf('<title>');
+    const ogIndex = out.indexOf('<meta property="og:title"');
+    const themeScriptIndex = out.indexOf('/* theme init */');
+    const faviconIndex = out.indexOf('rel="icon"');
+    const preconnectIndex = out.indexOf('rel="preconnect"');
+    const moduleScriptIndex = out.indexOf('/assets/index-abc.js');
+    const modulePreloadIndex = out.indexOf('modulepreload');
+    const cssIndex = out.indexOf('/assets/index-def.css');
+
+    // Marker survives exactly once and immediately precedes the fresh block.
+    expect(out.match(/<!--noirsound:ssr-meta-->/g)).toHaveLength(1);
+    expect(titleIndex).toBeGreaterThan(markerIndex);
+
+    // Every scripted/linked asset comes AFTER the metadata block — this is
+    // the actual bug being fixed: crawlers must see OG/Twitter tags before
+    // any script, font preconnect, modulepreload, or stylesheet.
+    for (const assetIndex of [themeScriptIndex, faviconIndex, preconnectIndex, moduleScriptIndex, modulePreloadIndex, cssIndex]) {
+      expect(assetIndex).toBeGreaterThan(ogIndex);
+    }
+  });
+
+  it('falls back to right after <head> when the marker is missing (no append-before-</head>)', () => {
+    const noMarkerShell = SHELL.replace('<!--noirsound:ssr-meta-->', '');
+    const out = injectMeta(noMarkerShell, homeMeta(BASE));
+    const headOpenIndex = out.indexOf('<head>');
+    const titleIndex = out.indexOf('<title>');
+    const moduleScriptIndex = out.indexOf('/assets/index-abc.js');
+    expect(titleIndex).toBeGreaterThan(headOpenIndex);
+    expect(titleIndex).toBeLessThan(moduleScriptIndex);
+  });
+
+  it('is idempotent across repeated injections (no marker drift, no duplicate blocks)', () => {
+    const once = injectMeta(SHELL, homeMeta(BASE));
+    const twice = injectMeta(once, homeMeta(BASE));
+    expect(twice.match(/<!--noirsound:ssr-meta-->/g)).toHaveLength(1);
+    expect(twice.match(/<title>/g)).toHaveLength(1);
+    expect(twice.match(/<link rel="canonical"/g)).toHaveLength(1);
+    expect(twice).toContain('/assets/index-abc.js');
+  });
+
+  it('collapses blank lines left behind by stripped tags', () => {
+    const out = injectMeta(SHELL, homeMeta(BASE));
+    expect(out).not.toMatch(/\n[ \t]*\n[ \t]*\n/);
   });
 
   it('escapes user-generated values — no markup injection from a malicious title', () => {

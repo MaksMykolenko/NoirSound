@@ -19,7 +19,9 @@ const SHELL_TTL_MS = Number(process.env.APP_SHELL_TTL_MS || 60_000);
 
 const FALLBACK_SHELL =
   '<!doctype html><html lang="en"><head><meta charset="UTF-8">' +
-  '<meta name="viewport" content="width=device-width, initial-scale=1.0"></head>' +
+  '<meta name="viewport" content="width=device-width, initial-scale=1.0">' +
+  '<meta name="theme-color" content="#09090b">' +
+  '<!--noirsound:ssr-meta--></head>' +
   '<body><div id="root"></div></body></html>';
 
 let shellCache = { html: null, ts: 0 };

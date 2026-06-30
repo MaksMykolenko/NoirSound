@@ -2,6 +2,53 @@
 <html lang="en" data-theme="noir-pink" data-theme-preference="noir-pink">
   <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#09090b" />
+
+    <!-- SSR-injected per-route metadata; see backend/src/lib/metaRenderer.js -->
+    <!--noirsound:ssr-meta-->
+    <title>NoirSound — Creator-first music platform</title>
+    <meta
+      name="description"
+      content="Discover independent music, upload your own tracks, and build your audience on NoirSound."
+    />
+    <link rel="canonical" href="https://noirsound.co/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="NoirSound" />
+    <meta property="og:title" content="NoirSound — Creator-first music platform" />
+    <meta
+      property="og:description"
+      content="Discover independent music, upload your own tracks, and build your audience on NoirSound."
+    />
+    <meta property="og:url" content="https://noirsound.co/" />
+    <meta property="og:image" content="https://noirsound.co/og/noirsound-cover.png" />
+    <meta property="og:image:secure_url" content="https://noirsound.co/og/noirsound-cover.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="NoirSound — creator-first music platform" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="NoirSound — Creator-first music platform" />
+    <meta
+      name="twitter:description"
+      content="Discover independent music, upload your own tracks, and build your audience on NoirSound."
+    />
+    <meta name="twitter:image" content="https://noirsound.co/og/noirsound-cover.png" />
+    <meta name="twitter:image:alt" content="NoirSound — creator-first music platform" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "NoirSound",
+        "url": "https://noirsound.co",
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": "https://noirsound.co/discover?q={search_term_string}",
+          "query-input": "required name=search_term_string"
+        }
+      }
+    </script>
+
     <script>
       (function () {
         var allowedThemes = [
@@ -35,65 +82,13 @@
       })();
     </script>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#09090b" />
-    <meta
-      name="description"
-      content="Discover independent music, upload your own tracks, and build your audience on NoirSound."
-    />
-    <link rel="canonical" href="https://noirsound.co/" />
-
-    <!--
-      Default app-shell metadata. Crawler-visible routes (/, /track/:id,
-      /artist/:id, legal pages) are re-rendered server-side with route-specific
-      values; these defaults cover direct static serves and other SPA routes.
-    -->
-    <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="NoirSound" />
-    <meta property="og:title" content="NoirSound — Creator-first music platform" />
-    <meta
-      property="og:description"
-      content="Discover independent music, upload your own tracks, and build your audience on NoirSound."
-    />
-    <meta property="og:url" content="https://noirsound.co/" />
-    <meta property="og:image" content="https://noirsound.co/og/noirsound-cover.png" />
-    <meta property="og:image:secure_url" content="https://noirsound.co/og/noirsound-cover.png" />
-    <meta property="og:image:type" content="image/png" />
-    <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="NoirSound — creator-first music platform" />
-
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="NoirSound — Creator-first music platform" />
-    <meta
-      name="twitter:description"
-      content="Discover independent music, upload your own tracks, and build your audience on NoirSound."
-    />
-    <meta name="twitter:image" content="https://noirsound.co/og/noirsound-cover.png" />
-    <meta name="twitter:image:alt" content="NoirSound — creator-first music platform" />
-
-    <script type="application/ld+json">
-      {
-        "@context": "https://schema.org",
-        "@type": "WebSite",
-        "name": "NoirSound",
-        "url": "https://noirsound.co",
-        "potentialAction": {
-          "@type": "SearchAction",
-          "target": "https://noirsound.co/discover?q={search_term_string}",
-          "query-input": "required name=search_term_string"
-        }
-      }
-    </script>
-
-    <title>NoirSound — Creator-first music platform</title>
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script type="module" src="/src/main.jsx"></script>
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
