@@ -1,6 +1,19 @@
 # NoirSound production reverse proxy.
 # Set DOMAIN (e.g. noirsound.app) to enable automatic HTTPS via Let's Encrypt.
 # Defaults to :80 for local/staging if DOMAIN is unset.
+#
+# Canonical origin / CSRF note:
+# The SPA calls the API same-origin at /api, and the backend's CSRF guard accepts
+# requests whose Origin host matches the host actually served here. Keep ONE
+# canonical origin so the browser, FRONTEND_ORIGIN, and cookies all agree. If www
+# is also pointed at this server, redirect it to the apex by UNCOMMENTING the
+# block below (only enable it once DOMAIN is set — an empty DOMAIN makes "www."
+# an invalid site address):
+#
+#   www.{$DOMAIN} {
+#       redir https://{$DOMAIN}{uri} permanent
+#   }
+#
 {$DOMAIN::80} {
 	encode zstd gzip
 

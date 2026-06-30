@@ -1,4 +1,10 @@
 {
+  "errors": {
+    "CSRF_VALIDATION_FAILED": "Your secure session expired. Please refresh the page and try again.",
+    "RATE_LIMITED": "Too many attempts. Please wait a moment and try again.",
+    "network": "Network error. Please check your connection and try again.",
+    "generic": "Something went wrong. Please try again."
+  },
   "nav": {
     "home": "Home",
     "discover": "Discover",

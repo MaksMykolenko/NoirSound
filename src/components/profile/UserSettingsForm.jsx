@@ -5,6 +5,7 @@ import { useToastStore } from '../../store/toastStore';
 import { Save, Shield, Bell } from 'lucide-react';
 import LanguageSwitcher from '../ui/LanguageSwitcher';
 import ThemeSelector from '../settings/ThemeSelector';
+import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 
 export default function UserSettingsForm() {
   const { t } = useTranslation();
@@ -47,7 +48,9 @@ export default function UserSettingsForm() {
       addActivity('settings', 'Updated profile configuration settings');
       addToast(t('profile.savedSuccess'), 'success');
     } catch (err) {
-      setErrorMsg(err.message || 'Failed to update profile settings.');
+      // Show a friendly, localized message (e.g. for CSRF_VALIDATION_FAILED)
+      // instead of the raw backend error code.
+      setErrorMsg(getApiErrorMessage(err, t));
     } finally {
       setIsSubmitting(false);
     }

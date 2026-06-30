@@ -154,6 +154,62 @@ describe('CSRF origin guard', () => {
   });
 });
 
+describe('CSRF same-origin (Origin/Referer == Host) guard', () => {
+  // Allowlist deliberately does NOT contain www — the same-origin Host check
+  // must still accept a genuine same-origin save from the host being served.
+  const allowed = ['https://noirsound.app'];
+
+  it('accepts a same-origin POST whose Origin host matches Host even if not allowlisted', () => {
+    expect(isCsrfSafe({
+      method: 'POST', hasSessionCookie: true,
+      origin: 'https://www.noirsound.app', host: 'www.noirsound.app',
+      allowedOrigins: allowed
+    })).toBe(true);
+  });
+
+  it('accepts a same-origin POST validated by Referer host', () => {
+    expect(isCsrfSafe({
+      method: 'POST', hasSessionCookie: true,
+      referer: 'https://www.noirsound.app/profile', host: 'www.noirsound.app',
+      allowedOrigins: allowed
+    })).toBe(true);
+  });
+
+  it('still blocks a cross-origin POST even when a Host header is present', () => {
+    expect(isCsrfSafe({
+      method: 'POST', hasSessionCookie: true,
+      origin: 'https://evil.com', host: 'noirsound.app',
+      allowedOrigins: allowed
+    })).toBe(false);
+  });
+
+  it('still blocks a cross-origin POST validated by Referer when Host differs', () => {
+    expect(isCsrfSafe({
+      method: 'POST', hasSessionCookie: true,
+      referer: 'https://evil.com/attack', host: 'noirsound.app',
+      allowedOrigins: allowed
+    })).toBe(false);
+  });
+
+  it('falls back to the allowlist when Origin host does not match Host', () => {
+    // e.g. an intentionally configured cross-origin client; Host is the internal
+    // upstream and does not match, but the Origin is explicitly allowlisted.
+    expect(isCsrfSafe({
+      method: 'POST', hasSessionCookie: true,
+      origin: 'https://noirsound.app', host: 'backend:3000',
+      allowedOrigins: allowed
+    })).toBe(true);
+  });
+
+  it('treats an unparseable "null" Origin as not same-origin and rejects it', () => {
+    expect(isCsrfSafe({
+      method: 'POST', hasSessionCookie: true,
+      origin: 'null', host: 'noirsound.app',
+      allowedOrigins: allowed
+    })).toBe(false);
+  });
+});
+
 describe('file signature detection', () => {
   it('detects WAV/MP3/PNG/JPEG', () => {
     const wav = Buffer.concat([Buffer.from('RIFF'), Buffer.alloc(4), Buffer.from('WAVE')]);

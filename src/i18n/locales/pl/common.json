@@ -1,4 +1,10 @@
 {
+  "errors": {
+    "CSRF_VALIDATION_FAILED": "Twoja bezpieczna sesja wygasła. Odśwież stronę i spróbuj ponownie.",
+    "RATE_LIMITED": "Zbyt wiele prób. Odczekaj chwilę i spróbuj ponownie.",
+    "network": "Błąd sieci. Sprawdź połączenie i spróbuj ponownie.",
+    "generic": "Coś poszło nie tak. Spróbuj ponownie."
+  },
   "nav": {
     "home": "Główna",
     "discover": "Odkrywaj",

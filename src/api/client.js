@@ -8,6 +8,10 @@ export class ApiError extends Error {
     super(message);
     this.status = status;
     this.data = data;
+    // Stable machine-readable error code from the backend body (e.g.
+    // 'CSRF_VALIDATION_FAILED', 'RATE_LIMITED'). Used to look up a friendly,
+    // localized message at display time while `message` stays log-friendly.
+    this.code = data && typeof data === 'object' ? (data.error || null) : null;
     this.name = 'ApiError';
   }
 }
@@ -85,7 +89,10 @@ export function notifyApiError(error) {
     window.dispatchEvent(new CustomEvent('noirsound:api-error', {
       detail: {
         message: error.message,
-        status: error.status
+        status: error.status,
+        // Pass the stable code through so the UI can render a friendly,
+        // localized message instead of the raw backend code.
+        code: error.code ?? null
       }
     }));
   }

@@ -8,6 +8,7 @@ import { useUserStore } from './store/userStore';
 import { useToastStore } from './store/toastStore';
 import { useThemeStore } from './store/themeStore';
 import { isMockMode } from './api/mode';
+import { getApiErrorMessage } from './utils/apiErrorMessage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -87,7 +88,12 @@ export default function App() {
 
   useEffect(() => {
     const handleApiError = (event) => {
-      addToast(event.detail?.message || 'API request failed.', 'error');
+      // Keep the raw code/status in the developer console for triage, but show
+      // users a friendly, localized message (never the raw backend code).
+      if (event.detail?.code || event.detail?.status) {
+        console.debug('[api-error]', event.detail);
+      }
+      addToast(getApiErrorMessage(event.detail), 'error');
     };
     window.addEventListener('noirsound:api-error', handleApiError);
     return () => window.removeEventListener('noirsound:api-error', handleApiError);
