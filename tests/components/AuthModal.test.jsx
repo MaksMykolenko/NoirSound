@@ -41,6 +41,7 @@ describe('AuthModal Component', () => {
   it('renders the login form by default when open', () => {
     renderWithProvider(<AuthModal isOpen={true} onClose={vi.fn()} />);
     expect(screen.getAllByText('Sign In').length).toBeGreaterThan(0);
+    expect(screen.getByRole('button', { name: 'Continue with Google' })).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Email Address')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Password')).toBeInTheDocument();
   });

@@ -18,6 +18,8 @@ HOSTINGER DEPLOYMENT READY, pending manual VPS secret setup and successful GitHu
 - Reworked CI into explicit GitHub gate jobs.
 - Added manual/tagged Hostinger SSH deploy workflow.
 - Added DNS, backup, release, rollback, secrets, checklist, command, and audit documentation.
+- Added Google OAuth Authorization Code flow with state, nonce, PKCE, verified ID tokens, provider-account linking, and the existing revocable NoirSound session cookie.
+- Added a Prisma migration for Google identities and passwordless OAuth users.
 
 ## GitHub Workflow
 
@@ -69,6 +71,14 @@ HOSTINGER_PORT
 /opt/noirsound/scripts/deploy-hostinger.sh
 ```
 
+Required Google OAuth values in `/opt/noirsound/.env.production`:
+
+```txt
+GOOGLE_CLIENT_ID
+GOOGLE_CLIENT_SECRET
+GOOGLE_REDIRECT_URI=https://<domain>/api/auth/google/callback
+```
+
 ## Deployment Commands
 
 ```bash
@@ -107,7 +117,7 @@ Passed locally:
 - `npm run lint`
 - `npm run test`: 18 files, 73 tests passed.
 - `npm run build`
-- `cd backend && npm run test:unit`: 2 files, 31 tests passed.
+- `cd backend && npm run test:unit`: 2 files, 36 tests passed.
 - `bash -n scripts/*.sh`
 - `npm run check:forbidden`
 - production Compose config validation using `.env.production.example`
@@ -128,6 +138,8 @@ The GitHub CI workflow provisions PostgreSQL, Redis, MinIO, FFmpeg, and Playwrig
 - Configure GitHub deploy secrets.
 - Bootstrap or prepare the Hostinger VPS.
 - Create and fill `/opt/noirsound/.env.production` with real values.
+- Rotate the exposed Google client secret, register the exact production callback URI, and add the rotated credentials to `.env.production`.
+- Add beta accounts as Google OAuth test users or publish the consent screen.
 - Point DNS records to the VPS.
 - Run first GitHub or manual VPS deployment.
 - Configure off-host backup copy.

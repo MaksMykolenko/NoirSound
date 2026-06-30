@@ -22,6 +22,11 @@ import {
   signatureMatchesDeclared
 } from '../src/lib/fileSignature.js';
 import { hashToken, newSessionId, sessionExpiry } from '../src/lib/session.js';
+import {
+  safeReturnTo,
+  secureEqual,
+  usernameBase
+} from '../src/lib/googleOAuth.js';
 import { userOrIpKey } from '../src/lib/rateLimitKeys.js';
 import { scaledRateLimitMax } from '../src/lib/rateLimit.js';
 import { serializePublicTrack } from '../src/lib/publicTrack.js';
@@ -96,7 +101,10 @@ describe('config / secret validation', () => {
       REDIS_URL: 'redis://x',
       FRONTEND_ORIGIN: 'https://noirsound.app',
       S3_PUBLIC_ENDPOINT: 'https://noirsound.app',
-      S3_ACCESS_KEY_ID: 'AKIAEXAMPLE', S3_SECRET_ACCESS_KEY: STRONG, S3_BUCKET: 'b'
+      S3_ACCESS_KEY_ID: 'AKIAEXAMPLE', S3_SECRET_ACCESS_KEY: STRONG, S3_BUCKET: 'b',
+      GOOGLE_CLIENT_ID: '123.apps.googleusercontent.com',
+      GOOGLE_CLIENT_SECRET: STRONG,
+      GOOGLE_REDIRECT_URI: 'https://noirsound.app/api/auth/google/callback'
     });
     expect(errors).toEqual([]);
   });
@@ -104,6 +112,22 @@ describe('config / secret validation', () => {
   it('parses multi-origin allowlists', () => {
     expect(getAllowedOrigins({ FRONTEND_ORIGIN: 'https://a.com, https://b.com' }))
       .toEqual(['https://a.com', 'https://b.com']);
+  });
+});
+
+describe('Google OAuth helpers', () => {
+  it('accepts local return paths and rejects external redirects', () => {
+    expect(safeReturnTo('/library?tab=likes')).toBe('/library?tab=likes');
+    expect(safeReturnTo('https://evil.example')).toBe('/');
+    expect(safeReturnTo('//evil.example')).toBe('/');
+    expect(safeReturnTo('/\\evil.example')).toBe('/');
+  });
+
+  it('compares OAuth state values and creates safe username bases', () => {
+    expect(secureEqual('state-value', 'state-value')).toBe(true);
+    expect(secureEqual('state-value', 'different')).toBe(false);
+    expect(usernameBase({ email: 'Jane.Doe+music@example.com' })).toBe('jane_doe_music');
+    expect(usernameBase({ email: '🎵@example.com' })).toBe('listener');
   });
 });
 

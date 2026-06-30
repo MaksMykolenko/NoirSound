@@ -19,6 +19,10 @@ enum UserStatus {
   DELETED
 }
 
+enum OAuthProvider {
+  GOOGLE
+}
+
 enum TrackStatus {
   DRAFT
   PROCESSING
@@ -45,22 +49,23 @@ enum ReportStatus {
 }
 
 model User {
-  id           String     @id @default(uuid())
-  email        String     @unique
-  passwordHash String
-  username     String     @unique
-  displayName  String
-  avatarUrl    String?
-  bannerUrl    String?
-  bio          String?
-  location     String?
-  preferredLanguage String?   @default("en")
-  role         UserRole   @default(LISTENER)
-  status       UserStatus @default(ACTIVE)
-  joinedAt     DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  id                String     @id @default(uuid())
+  email             String     @unique
+  passwordHash      String?
+  username          String     @unique
+  displayName       String
+  avatarUrl         String?
+  bannerUrl         String?
+  bio               String?
+  location          String?
+  preferredLanguage String?    @default("en")
+  role              UserRole   @default(LISTENER)
+  status            UserStatus @default(ACTIVE)
+  joinedAt          DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
 
   artistProfile  ArtistProfile?
+  oauthAccounts  OAuthAccount[]
   sessions       Session[]
   playlists      Playlist[]
   trackLikes     TrackLike[]
@@ -73,7 +78,22 @@ model User {
   uploads        Upload[]
   reportsMade    Report[]
   notifications  Notification[]
-  auditLogs      AuditLog[]     @relation("AuditActor")
+  auditLogs      AuditLog[]          @relation("AuditActor")
+}
+
+model OAuthAccount {
+  id                String        @id @default(uuid())
+  provider          OAuthProvider
+  providerAccountId String
+  providerEmail     String
+  userId            String
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
 }
 
 model Session {

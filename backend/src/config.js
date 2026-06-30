@@ -68,6 +68,12 @@ function evaluateConfig(env = {}) {
   if (!env.COOKIE_SECRET) errors.push('COOKIE_SECRET is required.');
   if (!env.DATABASE_URL) errors.push('DATABASE_URL is required.');
 
+  const googleKeys = ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'GOOGLE_REDIRECT_URI'];
+  const configuredGoogleKeys = googleKeys.filter((key) => Boolean(env[key]));
+  if (configuredGoogleKeys.length > 0 && configuredGoogleKeys.length < googleKeys.length) {
+    errors.push('Google OAuth is partially configured; set GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET and GOOGLE_REDIRECT_URI together.');
+  }
+
   // --- Required for queues + rate limiting ---
   const hasRedis = Boolean(env.REDIS_URL || env.REDIS_HOST);
   if (!hasRedis) {
@@ -93,7 +99,10 @@ function evaluateConfig(env = {}) {
       'S3_ENDPOINT',
       'S3_PUBLIC_ENDPOINT',
       'S3_ACCESS_KEY_ID',
-      'S3_SECRET_ACCESS_KEY'
+      'S3_SECRET_ACCESS_KEY',
+      'GOOGLE_CLIENT_ID',
+      'GOOGLE_CLIENT_SECRET',
+      'GOOGLE_REDIRECT_URI'
     ];
     for (const key of placeholderKeys) {
       if (env[key] && isPlaceholderValue(env[key])) {
@@ -114,6 +123,19 @@ function evaluateConfig(env = {}) {
     }
     if (!env.S3_PUBLIC_ENDPOINT) {
       errors.push('S3_PUBLIC_ENDPOINT is required in production for browser-reachable signed upload/stream URLs.');
+    }
+    for (const key of googleKeys) {
+      if (!env[key]) errors.push(`${key} is required in production.`);
+    }
+    if (env.GOOGLE_REDIRECT_URI) {
+      try {
+        const redirect = new URL(env.GOOGLE_REDIRECT_URI);
+        if (redirect.protocol !== 'https:' || redirect.pathname !== '/api/auth/google/callback') {
+          errors.push('GOOGLE_REDIRECT_URI must be an HTTPS URL ending in /api/auth/google/callback.');
+        }
+      } catch {
+        errors.push('GOOGLE_REDIRECT_URI must be a valid URL.');
+      }
     }
     if (env.S3_SECRET_ACCESS_KEY && WEAK_SECRET_VALUES.has(String(env.S3_SECRET_ACCESS_KEY).toLowerCase())) {
       errors.push('S3_SECRET_ACCESS_KEY uses a default/weak value — set real object-storage credentials.');
@@ -176,6 +198,9 @@ function safeConfigSummary(env = process.env) {
     s3Endpoint: env.S3_ENDPOINT || 'default(localhost:9000)',
     s3PublicEndpoint: env.S3_PUBLIC_ENDPOINT || env.S3_ENDPOINT || 'default(localhost:9000)',
     s3Bucket: env.S3_BUCKET || 'default(noirsound-audio)',
+    googleOAuth: env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET && env.GOOGLE_REDIRECT_URI
+      ? 'enabled'
+      : 'disabled',
     jwtSecret: present('JWT_SECRET'),
     cookieSecret: present('COOKIE_SECRET')
   };

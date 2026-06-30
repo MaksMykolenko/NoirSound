@@ -18,6 +18,10 @@
 - [ ] Install `git`, `curl`, and `ufw`.
 - [ ] Open only SSH, 80, and 443.
 - [ ] Confirm MinIO, PostgreSQL, and Redis ports are not published publicly.
+- [ ] Create a Google OAuth Web application client.
+- [ ] Add `https://<domain>/api/auth/google/callback` as an authorized redirect URI.
+- [ ] Set the rotated `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and exact `GOOGLE_REDIRECT_URI` in `.env.production`.
+- [ ] Add launch accounts as OAuth test users, or publish the Google consent screen.
 
 ## Deploy
 
@@ -25,6 +29,7 @@
 - [ ] Confirm `/api/ready` returns 200.
 - [ ] Run `DOMAIN=https://noirsound.co scripts/smoke-production.sh`.
 - [ ] Confirm Caddy issued HTTPS certificate.
+- [ ] Confirm Google sign-in creates a session and returns to NoirSound.
 - [ ] Confirm backup artifacts exist after deploying over an existing stack.
 
 ## Manual Launch Reminders

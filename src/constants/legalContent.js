@@ -70,7 +70,8 @@ export const LEGAL_DOCS = {
       {
         heading: 'What we collect',
         body: [
-          'Account data: email, username, display name, and an irreversibly hashed password.',
+          'Account data: email, username, display name, and an irreversibly hashed password when you use password sign-in.',
+          'When you sign in with Google, Google provides your verified email, display name, profile image, and a provider account identifier. NoirSound does not receive your Google password.',
           'Content data: tracks, cover images, descriptions, tags, comments, and playlists you create.',
           'Usage data: play events and listening statistics used to power your dashboard and basic analytics.'
         ]
@@ -86,7 +87,7 @@ export const LEGAL_DOCS = {
       {
         heading: 'Cookies and sessions',
         body: [
-          'We use a single HttpOnly session cookie to keep you signed in. It is not used for cross-site tracking.'
+          'We use an HttpOnly session cookie to keep you signed in. Google sign-in also uses short-lived, signed security cookies for state, nonce, and PKCE validation. These cookies are not used for cross-site tracking.'
         ]
       },
       {

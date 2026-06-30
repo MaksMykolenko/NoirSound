@@ -53,10 +53,37 @@ export default function App() {
   }, [hydrateTheme, listenToSystemTheme]);
 
   useEffect(() => {
-    fetchCurrentUser().catch(() => {
-      // The store exposes the real session error; the API error event renders the toast.
-    });
-  }, [fetchCurrentUser]);
+    const url = new URL(window.location.href);
+    const authResult = url.searchParams.get('auth');
+    const authReason = url.searchParams.get('reason');
+    if (authResult) {
+      url.searchParams.delete('auth');
+      url.searchParams.delete('reason');
+      window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+    }
+
+    fetchCurrentUser()
+      .then((user) => {
+        if (authResult === 'google_success' && user) {
+          addToast('Signed in with Google.', 'success');
+        }
+      })
+      .catch(() => {
+        if (authResult === 'google_success') {
+          addToast('Google sign-in could not be completed.', 'error');
+        }
+      });
+
+    if (authResult === 'google_error') {
+      const messages = {
+        access_denied: 'Google sign-in was cancelled.',
+        account_inactive: 'This NoirSound account is not active.',
+        not_configured: 'Google sign-in is not configured.',
+        invalid_state: 'Google sign-in expired. Please try again.',
+      };
+      addToast(messages[authReason] || 'Google sign-in failed. Please try again.', 'error');
+    }
+  }, [addToast, fetchCurrentUser]);
 
   useEffect(() => {
     const handleApiError = (event) => {

@@ -32,6 +32,14 @@ openssl rand -hex 32
 
 Edit `.env.production` and replace every placeholder.
 
+Set the rotated Google OAuth credentials and exact callback:
+
+```txt
+GOOGLE_CLIENT_ID=<web-client-id>
+GOOGLE_CLIENT_SECRET=<rotated-client-secret>
+GOOGLE_REDIRECT_URI=https://<domain>/api/auth/google/callback
+```
+
 ## Manual VPS Deploy
 
 ```bash

@@ -62,6 +62,14 @@ esac
 
 expect_not_5xx "$BASE/api/health"
 
+google_headers="$(curl -sS -D - -o /dev/null "$BASE/api/auth/google")"
+google_status="$(awk 'NR == 1 { print $2 }' <<<"$google_headers")"
+google_location="$(awk 'BEGIN { IGNORECASE=1 } /^location:/ { sub(/\r$/, ""); print $2 }' <<<"$google_headers")"
+if [[ "$google_status" != "302" ]] || [[ "$google_location" != https://accounts.google.com/* ]]; then
+  fail "Google OAuth start route did not redirect to Google."
+fi
+printf 'OK %s/api/auth/google -> Google authorization redirect\n' "$BASE"
+
 if [[ "${SMOKE_REGISTER:-false}" == "true" ]]; then
   : "${SMOKE_EMAIL:?SMOKE_EMAIL is required when SMOKE_REGISTER=true}"
   : "${SMOKE_PASSWORD:?SMOKE_PASSWORD is required when SMOKE_REGISTER=true}"

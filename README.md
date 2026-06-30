@@ -81,6 +81,20 @@ COPYRIGHT_EMAIL
 ABUSE_EMAIL
 ```
 
+Google sign-in uses a server-side OAuth flow. Configure these only in the
+backend environment:
+
+```txt
+GOOGLE_CLIENT_ID
+GOOGLE_CLIENT_SECRET
+GOOGLE_REDIRECT_URI
+```
+
+For local development, register
+`http://localhost:3000/api/auth/google/callback`. For production, register
+`https://<your-domain>/api/auth/google/callback`. The production URI must match
+`GOOGLE_REDIRECT_URI` exactly.
+
 ## GitHub To Hostinger Deployment
 
 Deployment workflow:

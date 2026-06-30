@@ -69,7 +69,7 @@ function buildServer(options = {}) {
     }
   });
 
-  fastify.register(require('./plugins/prisma'));
+  fastify.register(require('./plugins/prisma'), { client: options.prisma });
   fastify.register(require('./plugins/auth'));
   fastify.register(require('./plugins/csrf'));
   fastify.decorate('storage', storage);
@@ -116,6 +116,10 @@ function buildServer(options = {}) {
 
   // Register routes
   fastify.register(require('./routes/auth'), { prefix: '/api/auth' });
+  fastify.register(require('./routes/googleAuth'), {
+    prefix: '/api/auth',
+    googleOAuthClientFactory: options.googleOAuthClientFactory
+  });
   fastify.register(require('./routes/tracks'), { prefix: '/api/tracks' });
   fastify.register(require('./routes/artists'), { prefix: '/api/artists' });
   fastify.register(require('./routes/playlists'), { prefix: '/api/playlists' });

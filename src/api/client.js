@@ -12,6 +12,15 @@ export class ApiError extends Error {
   }
 }
 
+export function getGoogleAuthorizationUrl() {
+  const returnTo = typeof window === 'undefined'
+    ? '/'
+    : `${window.location.pathname}${window.location.search}`;
+  const url = new URL(`${API_BASE_URL}/auth/google`, window.location.origin);
+  url.searchParams.set('returnTo', returnTo);
+  return url.toString();
+}
+
 export async function apiFetch(endpoint, options = {}) {
   const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
   const {

@@ -1,39 +1,9 @@
 const argon2 = require('argon2');
-const jwt = require('jsonwebtoken');
-const {
-  hashToken,
-  newSessionId,
-  sessionExpiry,
-  SESSION_TTL_DAYS
-} = require('../lib/session');
+const { issueSession } = require('../lib/authSession');
 const { userOrIpKey } = require('../lib/rateLimitKeys');
 const { scaledRateLimitMax } = require('../lib/rateLimit');
 
 async function authRoutes(fastify, _options) {
-
-  // Issue a JWT bound to a revocable server-side session and set the cookie.
-  async function issueSession(reply, user) {
-    const sid = newSessionId();
-    const token = jwt.sign({ userId: user.id, sid }, process.env.JWT_SECRET, {
-      expiresIn: `${SESSION_TTL_DAYS}d`
-    });
-    await fastify.prisma.session.create({
-      data: {
-        id: sid,
-        userId: user.id,
-        token: hashToken(token),
-        expiresAt: sessionExpiry()
-      }
-    });
-    reply.setCookie('token', token, {
-      path: '/',
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * SESSION_TTL_DAYS
-    });
-  }
-
   // POST /api/auth/register
   fastify.post('/register', {
     config: {
@@ -72,7 +42,7 @@ async function authRoutes(fastify, _options) {
       });
 
       // Issue a revocable session + JWT cookie
-      await issueSession(reply, user);
+      await issueSession(fastify, reply, user);
 
       // don't send password hash back
       const { passwordHash: _, ...safeUser } = user;
@@ -104,7 +74,7 @@ async function authRoutes(fastify, _options) {
         where: { email }
       });
 
-      if (!user) {
+      if (!user || !user.passwordHash) {
         return reply.status(401).send({ error: 'Invalid credentials' });
       }
 
@@ -113,7 +83,7 @@ async function authRoutes(fastify, _options) {
         return reply.status(401).send({ error: 'Invalid credentials' });
       }
 
-      await issueSession(reply, user);
+      await issueSession(fastify, reply, user);
 
       const { passwordHash: _, ...safeUser } = user;
       return { user: safeUser };
