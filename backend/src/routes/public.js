@@ -19,7 +19,7 @@ module.exports = async function publicRoutes(fastify) {
         where: {
           id: request.params.trackId,
           status: 'PUBLISHED',
-          artist: { user: { status: 'ACTIVE' } }
+          artist: { isHidden: false, user: { status: 'ACTIVE' } }
         },
         select: { coverImageKey: true, coverUrl: true }
       });

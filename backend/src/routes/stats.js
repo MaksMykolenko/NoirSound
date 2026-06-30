@@ -35,7 +35,7 @@ async function statsRoutes(fastify, _options) {
         where: {
           id: request.params.id,
           status: 'PUBLISHED',
-          artist: { user: { status: 'ACTIVE' } }
+          artist: { isHidden: false, user: { status: 'ACTIVE' } }
         }
       });
       if (!track) {
@@ -156,7 +156,7 @@ async function statsRoutes(fastify, _options) {
           userId: request.user.id,
           track: {
             status: 'PUBLISHED',
-            artist: { user: { status: 'ACTIVE' } }
+            artist: { isHidden: false, user: { status: 'ACTIVE' } }
           }
         },
         orderBy: { createdAt: 'desc' },
@@ -211,7 +211,7 @@ async function statsRoutes(fastify, _options) {
           userId: request.user.id,
           track: {
             status: 'PUBLISHED',
-            artist: { user: { status: 'ACTIVE' } }
+            artist: { isHidden: false, user: { status: 'ACTIVE' } }
           }
         },
         orderBy: { createdAt: 'desc' },

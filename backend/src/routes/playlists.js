@@ -26,7 +26,7 @@ async function playlistsRoutes(fastify, _options) {
             where: {
               track: {
                 status: 'PUBLISHED',
-                artist: { user: { status: 'ACTIVE' } }
+                artist: { isHidden: false, user: { status: 'ACTIVE' } }
               }
             },
             include: {

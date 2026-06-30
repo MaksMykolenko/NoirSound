@@ -15,7 +15,7 @@ async function reportsRoutes(fastify, _options) {
       return reply.status(400).send({ error: 'Missing required fields: targetType, targetId, reason' });
     }
 
-    const validTargetTypes = ['TRACK', 'COMMENT', 'USER', 'PLAYLIST'];
+    const validTargetTypes = ['TRACK', 'COMMENT', 'USER', 'ARTIST', 'PLAYLIST'];
     if (!validTargetTypes.includes(targetType)) {
       return reply.status(400).send({ error: 'Invalid target type' });
     }
@@ -37,6 +37,9 @@ async function reportsRoutes(fastify, _options) {
           break;
         case 'USER':
           targetExists = await fastify.prisma.user.count({ where: { id: targetId } }) > 0;
+          break;
+        case 'ARTIST':
+          targetExists = await fastify.prisma.artistProfile.count({ where: { id: targetId } }) > 0;
           break;
         case 'PLAYLIST':
           targetExists = await fastify.prisma.playlist.count({ where: { id: targetId } }) > 0;

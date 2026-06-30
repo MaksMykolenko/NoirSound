@@ -18,6 +18,7 @@ describe('NoirSound backend integration', () => {
   let app;
   let listenerCookie;
   let artistCookie;
+  let adminCookie;
   const objectMetadata = new Map();
   const queueAdd = vi.fn(async (_name, _data, options) => ({ id: options.jobId }));
 
@@ -34,8 +35,10 @@ describe('NoirSound backend integration', () => {
   const audioQueue = {
     add: queueAdd
   };
+  const previousRateMultiplier = process.env.RATE_LIMIT_MULTIPLIER;
 
   beforeAll(async () => {
+    process.env.RATE_LIMIT_MULTIPLIER = '10';
     app = buildServer({ storage, audioQueue });
     await app.ready();
 
@@ -50,10 +53,17 @@ describe('NoirSound backend integration', () => {
       .post('/api/auth/login')
       .send({ email: 'artist@noirsound.com', password: 'password123' });
     artistCookie = artistLogin.headers['set-cookie'];
+
+    const adminLogin = await supertest(app.server)
+      .post('/api/auth/login')
+      .send({ email: 'admin@noirsound.com', password: 'password123' });
+    adminCookie = adminLogin.headers['set-cookie'];
   });
 
   afterAll(async () => {
     await app.close();
+    if (previousRateMultiplier === undefined) delete process.env.RATE_LIMIT_MULTIPLIER;
+    else process.env.RATE_LIMIT_MULTIPLIER = previousRateMultiplier;
   });
 
   function validUploadBody(overrides = {}) {
@@ -421,6 +431,138 @@ describe('NoirSound backend integration', () => {
       expect(failed.track.status).toBe('FAILED');
       expect(failed.processingError).not.toContain('/tmp/private-job');
       expect(failed.errorMessage).not.toContain('/tmp/private-job');
+    });
+  });
+
+  describe('admin console API', () => {
+    it('rejects non-admins and allows admins to read the overview', async () => {
+      const forbidden = await supertest(app.server)
+        .get('/api/admin/overview')
+        .set('Cookie', listenerCookie);
+      const allowed = await supertest(app.server)
+        .get('/api/admin/overview')
+        .set('Cookie', adminCookie);
+
+      expect(forbidden.statusCode).toBe(403);
+      expect(allowed.statusCode).toBe(200);
+      expect(allowed.body.users.total).toBeGreaterThan(0);
+      expect(allowed.body.tracks).toHaveProperty('published');
+      expect(allowed.body.system).toHaveProperty('checks');
+    });
+
+    it('paginates, searches, and filters users without returning password hashes', async () => {
+      const response = await supertest(app.server)
+        .get('/api/admin/users?search=listener&role=LISTENER&status=ACTIVE&page=1&pageSize=5')
+        .set('Cookie', adminCookie);
+
+      expect(response.statusCode).toBe(200);
+      expect(response.body.pagination.pageSize).toBe(5);
+      expect(response.body.data.some((user) => user.email === 'listener@noirsound.com')).toBe(true);
+      expect(JSON.stringify(response.body)).not.toContain('passwordHash');
+    });
+
+    it('suspends a user, revokes sessions, and writes an audit entry', async () => {
+      const suffix = Date.now();
+      const registered = await supertest(app.server)
+        .post('/api/auth/register')
+        .send({
+          email: `admin_suspend_${suffix}@test.local`,
+          password: 'Password123!',
+          username: `admin_suspend_${suffix}`,
+          displayName: 'Admin Suspend Target'
+        });
+      const targetId = registered.body.user.id;
+      expect(await app.prisma.session.count({ where: { userId: targetId } })).toBe(1);
+
+      const response = await supertest(app.server)
+        .post(`/api/admin/users/${targetId}/suspend`)
+        .set('Cookie', adminCookie)
+        .send({ reason: 'Integration safety test' });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.body.user.status).toBe('SUSPENDED');
+      expect(await app.prisma.session.count({ where: { userId: targetId } })).toBe(0);
+      expect(await app.prisma.auditLog.count({
+        where: { action: 'USER_SUSPEND', targetId }
+      })).toBe(1);
+    });
+
+    it('does not allow the last active admin to be demoted', async () => {
+      const admin = await app.prisma.user.findUnique({
+        where: { email: 'admin@noirsound.com' }
+      });
+      const response = await supertest(app.server)
+        .post(`/api/admin/users/${admin.id}/set-role`)
+        .set('Cookie', adminCookie)
+        .send({
+          role: 'LISTENER',
+          reason: 'Integration safety test',
+          confirmation: 'SET_ROLE'
+        });
+
+      expect(response.statusCode).toBe(409);
+      expect(response.body.error).toBe('ADMIN_LAST_ADMIN');
+    });
+
+    it('hides and unhides a published track and removes it from public access', async () => {
+      const track = await app.prisma.track.findFirst({ where: { status: 'PUBLISHED' } });
+      const hide = await supertest(app.server)
+        .post(`/api/admin/tracks/${track.id}/hide`)
+        .set('Cookie', adminCookie)
+        .send({ reason: 'Integration moderation test' });
+      expect(hide.statusCode).toBe(200);
+      expect((await supertest(app.server).get(`/api/tracks/${track.id}`)).statusCode).toBe(404);
+      expect((await supertest(app.server).get(`/api/tracks/${track.id}/stream`)).statusCode).toBe(404);
+
+      const unhide = await supertest(app.server)
+        .post(`/api/admin/tracks/${track.id}/unhide`)
+        .set('Cookie', adminCookie)
+        .send({ reason: 'Integration restore test' });
+      expect(unhide.statusCode).toBe(200);
+      expect(await app.prisma.auditLog.count({
+        where: { targetType: 'TRACK', targetId: track.id, action: { in: ['TRACK_HIDE', 'TRACK_UNHIDE'] } }
+      })).toBe(2);
+    });
+
+    it('resolves a report with notes and records the decision and audit log', async () => {
+      const track = await app.prisma.track.findFirst({ where: { status: 'PUBLISHED' } });
+      const created = await supertest(app.server)
+        .post('/api/reports')
+        .set('Cookie', listenerCookie)
+        .send({
+          targetType: 'TRACK',
+          targetId: track.id,
+          reason: 'OTHER',
+          details: 'Admin integration report'
+        });
+      expect(created.statusCode).toBe(200);
+
+      const response = await supertest(app.server)
+        .post(`/api/admin/reports/${created.body.report.id}/resolve`)
+        .set('Cookie', adminCookie)
+        .send({ notes: 'Reviewed in integration test', targetAction: 'NONE' });
+      expect(response.statusCode).toBe(200);
+      expect(response.body.report.status).toBe('REVIEWED');
+      expect(await app.prisma.auditLog.count({
+        where: { action: 'REPORT_RESOLVE', targetId: created.body.report.id }
+      })).toBe(1);
+    });
+
+    it('caps pagination and returns a redaction-safe system summary', async () => {
+      const users = await supertest(app.server)
+        .get('/api/admin/users?pageSize=10000')
+        .set('Cookie', adminCookie);
+      const system = await supertest(app.server)
+        .get('/api/admin/system')
+        .set('Cookie', adminCookie);
+
+      expect(users.body.pagination.pageSize).toBe(100);
+      expect(system.statusCode).toBe(200);
+      const serialized = JSON.stringify(system.body);
+      expect(serialized).not.toContain(process.env.DATABASE_URL);
+      expect(serialized).not.toContain(process.env.JWT_SECRET);
+      expect(serialized).not.toContain(process.env.COOKIE_SECRET);
+      expect(serialized).not.toMatch(/storageKey|signedUrl/i);
     });
   });
 });

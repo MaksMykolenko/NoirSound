@@ -8,6 +8,7 @@ async function artistsRoutes(fastify, _options) {
       const filterPublished = request.query.hasPublishedTracks === 'true';
 
       const where = {
+        isHidden: false,
         user: { status: 'ACTIVE' },
         ...(filterPublished ? { tracks: { some: { status: 'PUBLISHED' } } } : {})
       };
@@ -30,7 +31,7 @@ async function artistsRoutes(fastify, _options) {
   fastify.get('/:id', async (request, reply) => {
     try {
       const artist = await fastify.prisma.artistProfile.findFirst({
-        where: { id: request.params.id, user: { status: 'ACTIVE' } },
+        where: { id: request.params.id, isHidden: false, user: { status: 'ACTIVE' } },
         include: {
           user: { select: { displayName: true, username: true, avatarUrl: true, bannerUrl: true, bio: true } },
           tracks: { where: { status: 'PUBLISHED' }, select: { genre: true }, take: 20 },
@@ -64,7 +65,7 @@ async function artistsRoutes(fastify, _options) {
   fastify.get('/:id/tracks', async (request, reply) => {
     try {
       const artist = await fastify.prisma.artistProfile.findFirst({
-        where: { id: request.params.id, user: { status: 'ACTIVE' } },
+        where: { id: request.params.id, isHidden: false, user: { status: 'ACTIVE' } },
         select: { id: true }
       });
       if (!artist) {
@@ -102,7 +103,7 @@ async function artistsRoutes(fastify, _options) {
   fastify.post('/:id/follow', { preValidation: [fastify.authenticate] }, async (request, reply) => {
     try {
       const artistProfile = await fastify.prisma.artistProfile.findFirst({
-        where: { id: request.params.id, user: { status: 'ACTIVE' } },
+        where: { id: request.params.id, isHidden: false, user: { status: 'ACTIVE' } },
         select: { userId: true }
       });
       if (!artistProfile) {

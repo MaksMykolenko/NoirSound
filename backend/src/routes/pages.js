@@ -75,7 +75,7 @@ module.exports = async function pages(fastify) {
         where: {
           id: request.params.id,
           status: 'PUBLISHED',
-          artist: { user: { status: 'ACTIVE' } }
+          artist: { isHidden: false, user: { status: 'ACTIVE' } }
         },
         select: {
           id: true,
@@ -99,7 +99,7 @@ module.exports = async function pages(fastify) {
     let meta;
     try {
       const artist = await fastify.prisma.artistProfile.findFirst({
-        where: { id: request.params.id, user: { status: 'ACTIVE' } },
+        where: { id: request.params.id, isHidden: false, user: { status: 'ACTIVE' } },
         select: { id: true, user: { select: { displayName: true, bio: true, avatarUrl: true } } }
       });
       meta = artist ? artistMeta(artist, base) : artistUnavailableMeta(base, request.params.id);
@@ -134,7 +134,7 @@ module.exports = async function pages(fastify) {
     let artists = [];
     try {
       tracks = await fastify.prisma.track.findMany({
-        where: { status: 'PUBLISHED', artist: { user: { status: 'ACTIVE' } } },
+        where: { status: 'PUBLISHED', artist: { isHidden: false, user: { status: 'ACTIVE' } } },
         select: { id: true, updatedAt: true },
         orderBy: { publishedAt: 'desc' },
         take: 5000
@@ -144,7 +144,7 @@ module.exports = async function pages(fastify) {
     }
     try {
       artists = await fastify.prisma.artistProfile.findMany({
-        where: { user: { status: 'ACTIVE' }, tracks: { some: { status: 'PUBLISHED' } } },
+        where: { isHidden: false, user: { status: 'ACTIVE' }, tracks: { some: { status: 'PUBLISHED' } } },
         select: { id: true, updatedAt: true },
         take: 5000
       });

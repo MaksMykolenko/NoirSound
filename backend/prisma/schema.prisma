@@ -39,6 +39,7 @@ enum UploadStatus {
   PROCESSING
   READY
   FAILED
+  CANCELLED
 }
 
 enum ReportStatus {
@@ -46,6 +47,7 @@ enum ReportStatus {
   REVIEWED
   DISMISSED
   ACTION_TAKEN
+  ESCALATED
 }
 
 model User {
@@ -107,6 +109,7 @@ model Session {
 model ArtistProfile {
   id               String   @id @default(uuid())
   userId           String   @unique
+  isHidden         Boolean  @default(false)
   monthlyListeners Int      @default(0)
   genres           String[] // Stored as array of strings
   socialLinks      Json? // Stored as JSON { instagram, twitter, etc }
@@ -376,7 +379,7 @@ model Notification {
 
 model AuditLog {
   id         String   @id @default(uuid())
-  actorId    String // admin user who performed the action
+  actorId    String? // retained as null if the actor account is ever removed
   action     String // e.g. TRACK_HIDE, TRACK_UNHIDE, COMMENT_HIDE, USER_SUSPEND, USER_UNSUSPEND, REPORT_RESOLVE
   targetType String // 'TRACK', 'COMMENT', 'USER', 'REPORT'
   targetId   String
@@ -384,7 +387,7 @@ model AuditLog {
   metadata   Json?
   createdAt  DateTime @default(now())
 
-  actor User @relation("AuditActor", fields: [actorId], references: [id], onDelete: Cascade)
+  actor User? @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
 
   @@index([createdAt])
   @@index([targetType, targetId])

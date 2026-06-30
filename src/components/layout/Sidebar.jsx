@@ -23,7 +23,7 @@ export default function Sidebar() {
       { to: '/dashboard', label: t('header.creatorDashboard'), icon: LayoutDashboard },
     ] : []),
     ...(user?.role === 'ADMIN' ? [
-      { to: '/admin', label: 'Moderation', icon: ShieldAlert },
+      { to: '/admin', label: t('admin.admin'), icon: ShieldAlert },
     ] : []),
   ];
 

@@ -1,5 +1,5 @@
 import React, { Suspense, lazy, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Navigate, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AppLayout from './components/layout/AppLayout';
 import ToastContainer from './components/ui/ToastContainer';
@@ -31,7 +31,21 @@ const Profile = lazy(() => import('./pages/Profile'));
 const PlaylistPage = lazy(() => import('./pages/PlaylistPage'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 const LegalPage = lazy(() => import('./pages/LegalPage'));
-const Admin = lazy(() => import('./pages/Admin'));
+const AdminLayout = lazy(() => import('./pages/admin/AdminLayout'));
+const AdminOverview = lazy(() => import('./pages/admin/AdminOverview'));
+const AdminUsers = lazy(() => import('./pages/admin/AdminUsers'));
+const AdminUserDetail = lazy(() => import('./pages/admin/AdminUserDetail'));
+const AdminTracks = lazy(() => import('./pages/admin/AdminTracks'));
+const AdminTrackDetail = lazy(() => import('./pages/admin/AdminTrackDetail'));
+const AdminArtists = lazy(() => import('./pages/admin/AdminArtists'));
+const AdminArtistDetail = lazy(() => import('./pages/admin/AdminArtistDetail'));
+const AdminReports = lazy(() => import('./pages/admin/AdminReports'));
+const AdminReportDetail = lazy(() => import('./pages/admin/AdminReportDetail'));
+const AdminComments = lazy(() => import('./pages/admin/AdminComments'));
+const AdminUploads = lazy(() => import('./pages/admin/AdminUploads'));
+const AdminAuditLogs = lazy(() => import('./pages/admin/AdminAuditLogs'));
+const AdminSystem = lazy(() => import('./pages/admin/AdminSystem'));
+const AdminSettings = lazy(() => import('./pages/admin/AdminSettings'));
 
 // Fallback skeleton while loading routes
 const RouteSkeleton = () => (
@@ -119,7 +133,24 @@ export default function App() {
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/playlist/:id" element={<PlaylistPage />} />
-              <Route path="/admin" element={<Admin />} />
+              <Route path="/admin" element={<AdminLayout />}>
+                <Route index element={<Navigate to="/admin/overview" replace />} />
+                <Route path="overview" element={<AdminOverview />} />
+                <Route path="reports" element={<AdminReports />} />
+                <Route path="reports/:id" element={<AdminReportDetail />} />
+                <Route path="users" element={<AdminUsers />} />
+                <Route path="users/:id" element={<AdminUserDetail />} />
+                <Route path="tracks" element={<AdminTracks />} />
+                <Route path="tracks/:id" element={<AdminTrackDetail />} />
+                <Route path="artists" element={<AdminArtists />} />
+                <Route path="artists/:id" element={<AdminArtistDetail />} />
+                <Route path="comments" element={<AdminComments />} />
+                <Route path="uploads" element={<AdminUploads />} />
+                <Route path="moderation" element={<Navigate to="/admin/reports" replace />} />
+                <Route path="audit-logs" element={<AdminAuditLogs />} />
+                <Route path="system" element={<AdminSystem />} />
+                <Route path="settings" element={<AdminSettings />} />
+              </Route>
               <Route path="/terms" element={<LegalPage slug="terms" />} />
               <Route path="/privacy" element={<LegalPage slug="privacy" />} />
               <Route path="/guidelines" element={<LegalPage slug="guidelines" />} />

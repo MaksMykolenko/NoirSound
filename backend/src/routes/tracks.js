@@ -9,7 +9,7 @@ async function tracksRoutes(fastify, _options) {
       const tracks = await fastify.prisma.track.findMany({
         where: {
           status: 'PUBLISHED',
-          artist: { user: { status: 'ACTIVE' } }
+          artist: { isHidden: false, user: { status: 'ACTIVE' } }
         },
         include: {
           artist: {
@@ -41,7 +41,7 @@ async function tracksRoutes(fastify, _options) {
         where: {
           id: request.params.id,
           status: 'PUBLISHED',
-          artist: { user: { status: 'ACTIVE' } }
+          artist: { isHidden: false, user: { status: 'ACTIVE' } }
         },
         include: {
           artist: {
@@ -78,7 +78,7 @@ async function tracksRoutes(fastify, _options) {
         return reply.status(404).send({ error: 'Track not found or not published' });
       }
       // Block streaming for tracks owned by a suspended/banned/deleted artist.
-      if (track.artist?.user?.status !== 'ACTIVE') {
+      if (track.artist?.isHidden || track.artist?.user?.status !== 'ACTIVE') {
         return reply.status(404).send({ error: 'Track not available' });
       }
       if (!track.processedAudioKey) {
@@ -104,7 +104,7 @@ async function tracksRoutes(fastify, _options) {
         where: {
           id: request.params.id,
           status: 'PUBLISHED',
-          artist: { user: { status: 'ACTIVE' } }
+          artist: { isHidden: false, user: { status: 'ACTIVE' } }
         },
         select: { coverImageKey: true }
       });
@@ -190,7 +190,7 @@ async function tracksRoutes(fastify, _options) {
         where: {
           id: request.params.id,
           status: 'PUBLISHED',
-          artist: { user: { status: 'ACTIVE' } }
+          artist: { isHidden: false, user: { status: 'ACTIVE' } }
         }
       });
       if (!track) {
@@ -233,7 +233,7 @@ async function tracksRoutes(fastify, _options) {
         where: {
           id: request.params.id,
           status: 'PUBLISHED',
-          artist: { user: { status: 'ACTIVE' } }
+          artist: { isHidden: false, user: { status: 'ACTIVE' } }
         }
       });
       if (!track) {

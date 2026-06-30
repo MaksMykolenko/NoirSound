@@ -7,6 +7,19 @@ test.describe('public beta · moderation', () => {
     test.skip(!(await backendUp(request)), 'Backend not reachable — full-stack test skipped.');
   });
 
+  test('admin can open the routed console overview', async ({ page }) => {
+    const login = await page.request.post(`${API_BASE}/auth/login`, {
+      data: { email: 'admin@noirsound.com', password: 'password123' },
+    });
+    expect(login.ok()).toBeTruthy();
+
+    await page.goto('/admin');
+    await expect(page).toHaveURL(/\/admin\/overview$/);
+    await expect(page.getByRole('heading', { name: 'Overview' })).toBeVisible();
+    await expect(page.getByText('Pending reports', { exact: true })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Audit Logs', exact: true })).toBeVisible();
+  });
+
   test('report then admin hide removes a track from public surfaces', async ({ playwright }) => {
     test.setTimeout(120_000);
     const artist = await playwright.request.newContext();
