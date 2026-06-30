@@ -1,0 +1,371 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  LISTENER
+  ARTIST
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  BANNED
+  DELETED
+}
+
+enum TrackStatus {
+  DRAFT
+  PROCESSING
+  PENDING_REVIEW
+  PUBLISHED
+  FAILED
+  REJECTED
+  HIDDEN
+}
+
+enum UploadStatus {
+  INITIATED
+  UPLOADING
+  PROCESSING
+  READY
+  FAILED
+}
+
+enum ReportStatus {
+  OPEN
+  REVIEWED
+  DISMISSED
+  ACTION_TAKEN
+}
+
+model User {
+  id           String     @id @default(uuid())
+  email        String     @unique
+  passwordHash String
+  username     String     @unique
+  displayName  String
+  avatarUrl    String?
+  bannerUrl    String?
+  bio          String?
+  location     String?
+  preferredLanguage String?   @default("en")
+  role         UserRole   @default(LISTENER)
+  status       UserStatus @default(ACTIVE)
+  joinedAt     DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  artistProfile  ArtistProfile?
+  sessions       Session[]
+  playlists      Playlist[]
+  trackLikes     TrackLike[]
+  playlistLikes  PlaylistLike[]
+  artistFollows  ArtistFollow[]
+  comments       Comment[]
+  commentLikes   CommentLike[]
+  playEvents     PlayEvent[]
+  listeningStats ListeningAggregate?
+  uploads        Upload[]
+  reportsMade    Report[]
+  notifications  Notification[]
+  auditLogs      AuditLog[]     @relation("AuditActor")
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ArtistProfile {
+  id               String   @id @default(uuid())
+  userId           String   @unique
+  monthlyListeners Int      @default(0)
+  genres           String[] // Stored as array of strings
+  socialLinks      Json? // Stored as JSON { instagram, twitter, etc }
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tracks    Track[]
+  albums    Album[]
+  followers ArtistFollow[]
+}
+
+enum UploadType {
+  AUDIO
+  COVER
+}
+
+model Track {
+  id              String      @id @default(uuid())
+  title           String
+  slug            String?     @unique
+  artistId        String
+  coverUrl        String?
+  genre           String?
+  tags            String[]
+  duration        Int         @default(0) // Legacy
+  durationSeconds Int         @default(0)
+  waveformJson    String?
+  description     String?
+  status          TrackStatus @default(DRAFT)
+  plays           Int         @default(0)
+  likes           Int         @default(0)
+  releaseDate     DateTime    @default(now())
+
+  originalAudioKey   String?
+  processedAudioKey  String?
+  coverImageKey      String?
+  mimeType           String?
+  fileSize           Int?
+  copyrightConfirmed Boolean @default(false)
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  publishedAt DateTime?
+
+  artist     ArtistProfile    @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  audioAsset TrackAudioAsset?
+  album      Album?           @relation(fields: [albumId], references: [id])
+  albumId    String?
+  playlists  PlaylistTrack[]
+  trackLikes TrackLike[]
+  comments   Comment[]
+  playEvents PlayEvent[]
+  uploads    Upload[]
+
+  @@index([status])
+  @@index([artistId])
+}
+
+model TrackAudioAsset {
+  id          String  @id @default(uuid())
+  trackId     String  @unique
+  originalUrl String? // Private S3 URL
+  streamUrl   String? // Public/Streamable URL (HLS or MP3)
+  waveformUrl String? // URL to waveform JSON
+  mimeType    String?
+  size        Int? // Size in bytes
+
+  track Track @relation(fields: [trackId], references: [id], onDelete: Cascade)
+}
+
+model Album {
+  id          String   @id @default(uuid())
+  title       String
+  artistId    String
+  coverUrl    String?
+  releaseDate DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  artist ArtistProfile @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  tracks Track[]
+}
+
+model Playlist {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  coverUrl    String?
+  creatorId   String
+  isPublic    Boolean  @default(true)
+  likes       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  creator User            @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  tracks  PlaylistTrack[]
+  likedBy PlaylistLike[]
+}
+
+model PlaylistTrack {
+  playlistId String
+  trackId    String
+  addedAt    DateTime @default(now())
+  order      Int
+
+  playlist Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  track    Track    @relation(fields: [trackId], references: [id], onDelete: Cascade)
+
+  @@id([playlistId, trackId])
+}
+
+model TrackLike {
+  userId    String
+  trackId   String
+  createdAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  track Track @relation(fields: [trackId], references: [id], onDelete: Cascade)
+
+  @@id([userId, trackId])
+}
+
+model PlaylistLike {
+  userId     String
+  playlistId String
+  createdAt  DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  playlist Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+
+  @@id([userId, playlistId])
+}
+
+model ArtistFollow {
+  userId    String
+  artistId  String
+  createdAt DateTime @default(now())
+
+  user   User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  artist ArtistProfile @relation(fields: [artistId], references: [id], onDelete: Cascade)
+
+  @@id([userId, artistId])
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  trackId   String
+  userId    String
+  text      String
+  likes     Int      @default(0)
+  parentId  String? // For nested replies
+  isDeleted Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  track   Track         @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  user    User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent  Comment?      @relation("CommentReplies", fields: [parentId], references: [id])
+  replies Comment[]     @relation("CommentReplies")
+  likedBy CommentLike[]
+}
+
+model CommentLike {
+  userId    String
+  commentId String
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  @@id([userId, commentId])
+}
+
+model PlayEvent {
+  id                      String   @id @default(uuid())
+  trackId                 String
+  userId                  String? // Nullable for anonymous plays
+  artistId                String?
+  sessionId               String?
+  durationListenedSeconds Int // How long they listened in seconds
+  completed               Boolean  @default(false)
+  source                  String?
+  createdAt               DateTime @default(now())
+
+  track Track @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  user  User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
+
+model ListeningAggregate {
+  userId                String   @id
+  date                  DateTime @default(now()) // Can be used if cron aggregates per day
+  totalListeningSeconds Int      @default(0)
+  tracksPlayed          Int      @default(0)
+  uniqueArtists         Int      @default(0)
+  topGenre              String?
+  topTrackId            String?
+  listeningStreakDays   Int      @default(0)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Upload {
+  id               String       @id @default(uuid())
+  userId           String
+  trackId          String?
+  type             UploadType   @default(AUDIO)
+  status           UploadStatus @default(INITIATED)
+  originalFileName String
+  uploadUrl        String?
+  storageKey       String?
+  mimeType         String?
+  sizeBytes        Int?
+  coverStorageKey  String?
+  coverMimeType    String?
+  coverSizeBytes   Int?
+  processingError  String?
+  errorMessage     String?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  track Track? @relation(fields: [trackId], references: [id])
+
+  @@index([status])
+  @@index([trackId])
+}
+
+model Report {
+  id           String       @id @default(uuid())
+  reporterId   String
+  targetType   String // 'TRACK', 'COMMENT', 'USER', 'PLAYLIST'
+  targetId     String
+  reason       String // 'COPYRIGHT', 'SPAM', 'HARASSMENT', 'HATE', 'NSFW', 'OTHER'
+  details      String?
+  status       ReportStatus @default(OPEN)
+  createdAt    DateTime     @default(now())
+  reviewedAt   DateTime?
+  reviewedById String?
+
+  reporter User                @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+  decision ModerationDecision?
+}
+
+model ModerationDecision {
+  id          String   @id @default(uuid())
+  reportId    String   @unique
+  adminId     String
+  actionTaken String
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  report Report @relation(fields: [reportId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  type      String // 'LIKE', 'COMMENT', 'FOLLOW', 'SYSTEM'
+  text      String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  actorId    String // admin user who performed the action
+  action     String // e.g. TRACK_HIDE, TRACK_UNHIDE, COMMENT_HIDE, USER_SUSPEND, USER_UNSUSPEND, REPORT_RESOLVE
+  targetType String // 'TRACK', 'COMMENT', 'USER', 'REPORT'
+  targetId   String
+  reason     String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  actor User @relation("AuditActor", fields: [actorId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([targetType, targetId])
+}

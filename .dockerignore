@@ -1,0 +1,17 @@
+node_modules
+dist
+backend
+.git
+.github
+*.md
+backups
+design-audit-screenshots
+design-screenshots
+presentation-screenshots
+playwright-report
+test-results
+tests
+.env
+.env.*
+!.env.production.example
+lint_output.txt

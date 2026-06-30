@@ -1,0 +1,42 @@
+# NoirSound production reverse proxy.
+# Set DOMAIN (e.g. noirsound.app) to enable automatic HTTPS via Let's Encrypt.
+# Defaults to :80 for local/staging if DOMAIN is unset.
+{$DOMAIN::80} {
+	encode zstd gzip
+
+	# Allow audio uploads up to ~60MB (audio cap is 50MB + headroom).
+	request_body {
+		max_size 60MB
+	}
+
+	# API → backend service. reverse_proxy passes Range requests through, so
+	# audio streaming/seeking works.
+	handle /api/* {
+		reverse_proxy backend:3000
+	}
+
+	# Browser-reachable target for signed MinIO PUT/GET URLs. The SDK signs
+	# same-origin, path-style URLs such as /noirsound-audio/<object>. MinIO
+	# still validates every signature and anonymous bucket access is disabled.
+	@storage path /{$S3_BUCKET:noirsound-audio}/*
+	handle @storage {
+		reverse_proxy minio:9000
+	}
+
+	# SPA static assets with client-side routing fallback.
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+
+	# Security headers (HSTS only applies when served over HTTPS).
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "no-referrer"
+		Permissions-Policy "geolocation=(), microphone=(), camera=()"
+		-Server
+	}
+}

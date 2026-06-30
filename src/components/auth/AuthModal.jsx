@@ -1,0 +1,239 @@
+import React, { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { X, Mail, Lock, User, AtSign, Loader2 } from 'lucide-react';
+import { useLogin, useRegister } from '../../hooks/mutations/useAuth';
+
+export default function AuthModal({ isOpen, onClose, initialMode = 'login' }) {
+  const { t } = useTranslation();
+  const [mode, setMode] = useState(initialMode);
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+    username: '',
+    displayName: ''
+  });
+  const [errorMsg, setErrorMsg] = useState('');
+  const modalRef = useRef(null);
+  const emailRef = useRef(null);
+
+  const loginMutation = useLogin();
+  const registerMutation = useRegister();
+  const isLoading = loginMutation.isPending || registerMutation.isPending;
+
+  useEffect(() => {
+    if (!isOpen) return undefined;
+
+    const previouslyFocused = document.activeElement;
+    setMode(initialMode);
+    setErrorMsg('');
+
+    const focusTimer = window.setTimeout(() => {
+      const firstField = modalRef.current?.querySelector('input');
+      firstField?.focus();
+    }, 0);
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onClose();
+        return;
+      }
+      if (event.key !== 'Tab' || !modalRef.current) return;
+
+      const focusable = Array.from(
+        modalRef.current.querySelectorAll(
+          'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href]'
+        )
+      );
+      if (focusable.length === 0) return;
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.clearTimeout(focusTimer);
+      document.removeEventListener('keydown', handleKeyDown);
+      previouslyFocused?.focus?.();
+    };
+  }, [initialMode, isOpen, onClose]);
+
+  if (!isOpen) return null;
+
+  const handleChange = (e) => {
+    setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    setErrorMsg('');
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setErrorMsg('');
+
+    try {
+      if (mode === 'login') {
+        await loginMutation.mutateAsync({ email: formData.email, password: formData.password });
+      } else {
+        await registerMutation.mutateAsync(formData);
+      }
+      onClose();
+    } catch (err) {
+      setErrorMsg(err.message);
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <div 
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="auth-modal-title"
+        className="w-full max-w-md max-h-[92dvh] overflow-y-auto bg-zinc-950 border border-zinc-800 shadow-2xl shadow-brand-red/10 rounded-t-[1.75rem] sm:rounded-[1.75rem] relative animate-in fade-in zoom-in-95 duration-200 mobile-safe-bottom"
+        onClick={e => e.stopPropagation()}
+      >
+        <button 
+          onClick={onClose}
+          className="absolute top-4 right-4 ns-icon-button rounded-full cursor-pointer"
+          aria-label="Close authentication dialog"
+        >
+          <X size={16} />
+        </button>
+
+        <div className="p-6 sm:p-8">
+          <div className="text-center mb-8">
+            <h2 id="auth-modal-title" className="text-2xl font-bold text-zinc-100 mb-2">
+              {mode === 'login' ? t('header.signIn') : 'Join NoirSound'}
+            </h2>
+            <p className="text-sm text-zinc-400">
+              {mode === 'login' 
+                ? t('empty.signInDesc') 
+                : 'Create an account to start sharing and discovering.'}
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {mode === 'register' && (
+              <>
+                <div className="relative">
+                  <label htmlFor="auth-username" className="sr-only">Username</label>
+                  <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={16} />
+                  <input
+                    id="auth-username"
+                    type="text"
+                    name="username"
+                    required
+                    placeholder="Username"
+                    value={formData.username}
+                    onChange={handleChange}
+                    className="ns-field w-full pl-10 pr-4"
+                    disabled={isLoading}
+                    aria-describedby={errorMsg ? 'auth-error' : undefined}
+                  />
+                </div>
+                <div className="relative">
+                  <label htmlFor="auth-display-name" className="sr-only">Display name</label>
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={16} />
+                  <input
+                    id="auth-display-name"
+                    type="text"
+                    name="displayName"
+                    required
+                    placeholder="Display Name"
+                    value={formData.displayName}
+                    onChange={handleChange}
+                    className="ns-field w-full pl-10 pr-4"
+                    disabled={isLoading}
+                    aria-describedby={errorMsg ? 'auth-error' : undefined}
+                  />
+                </div>
+              </>
+            )}
+
+            <div className="relative">
+              <label htmlFor="auth-email" className="sr-only">Email address</label>
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={16} />
+              <input
+                id="auth-email"
+                ref={emailRef}
+                type="email"
+                name="email"
+                required
+                placeholder="Email Address"
+                value={formData.email}
+                onChange={handleChange}
+                className="ns-field w-full pl-10 pr-4"
+                disabled={isLoading}
+                aria-invalid={Boolean(errorMsg)}
+                aria-describedby={errorMsg ? 'auth-error' : undefined}
+              />
+            </div>
+
+            <div className="relative">
+              <label htmlFor="auth-password" className="sr-only">Password</label>
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={16} />
+              <input
+                id="auth-password"
+                type="password"
+                name="password"
+                required
+                placeholder="Password"
+                value={formData.password}
+                onChange={handleChange}
+                className="ns-field w-full pl-10 pr-4"
+                disabled={isLoading}
+                aria-invalid={Boolean(errorMsg)}
+                aria-describedby={errorMsg ? 'auth-error' : undefined}
+              />
+            </div>
+
+            {errorMsg && (
+              <div id="auth-error" className="p-3 bg-red-950/50 border border-red-900/50 rounded-xl text-sm text-red-300 text-center" role="alert">
+                {errorMsg}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full ns-button-primary px-5 disabled:opacity-50 flex items-center justify-center space-x-2 cursor-pointer"
+            >
+              {isLoading && <Loader2 size={16} className="animate-spin" />}
+              <span>{mode === 'login' ? t('header.signIn') : t('actions.create')}</span>
+            </button>
+          </form>
+
+          <div className="mt-6 text-center text-sm text-zinc-500">
+            {mode === 'login' ? (
+              <p>
+                Don't have an account?{' '}
+                <button onClick={() => setMode('register')} className="text-brand-red hover:text-white transition-colors font-medium cursor-pointer">
+                  Sign up
+                </button>
+              </p>
+            ) : (
+              <p>
+                Already have an account?{' '}
+                <button onClick={() => setMode('login')} className="text-brand-red hover:text-white transition-colors font-medium cursor-pointer">
+                  {t('header.signIn')}
+                </button>
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

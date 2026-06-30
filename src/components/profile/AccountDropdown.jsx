@@ -1,0 +1,119 @@
+import React, { useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { User, Settings, LayoutDashboard, LogOut } from 'lucide-react';
+import { useToastStore } from '../../store/toastStore';
+import { useLogout } from '../../hooks/mutations/useAuth';
+import LanguageSwitcher from '../ui/LanguageSwitcher';
+import ThemeSelector from '../settings/ThemeSelector';
+
+export default function AccountDropdown({ isOpen, onClose, anchorRef }) {
+  const navigate = useNavigate();
+  const dropdownRef = useRef(null);
+  const { t } = useTranslation();
+  const { addToast } = useToastStore();
+  const logoutMutation = useLogout();
+
+  useEffect(() => {
+    function handleOutsideClick(e) {
+      if (
+        isOpen &&
+        dropdownRef.current &&
+        !dropdownRef.current.contains(e.target) &&
+        anchorRef.current &&
+        !anchorRef.current.contains(e.target)
+      ) {
+        onClose();
+      }
+    }
+
+    function handleKeyDown(e) {
+      if (e.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    }
+
+    document.addEventListener('mousedown', handleOutsideClick);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose, anchorRef]);
+
+  if (!isOpen) return null;
+
+  const handleNavigate = (path) => {
+    navigate(path);
+    onClose();
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logoutMutation.mutateAsync();
+      addToast("Signed out successfully.", "success");
+    } catch {
+      addToast("Failed to sign out.", "error");
+    } finally {
+      onClose();
+    }
+  };
+
+  return (
+    <div
+      ref={dropdownRef}
+      className="absolute right-0 mt-2.5 w-64 bg-zinc-950/95 border border-zinc-900 rounded-2xl glass-panel shadow-2xl z-50 py-1.5 animate-fade-in"
+      role="menu"
+    >
+      <button
+        onClick={() => handleNavigate('/profile')}
+        className="w-full flex items-center space-x-3 px-4 py-2.5 text-xs font-bold text-zinc-300 hover:text-zinc-100 hover:bg-zinc-900/60 transition-colors cursor-pointer text-left"
+        role="menuitem"
+      >
+        <User size={14} className="text-zinc-500" />
+        <span>{t('nav.profile')}</span>
+      </button>
+
+      <button
+        onClick={() => handleNavigate('/profile?tab=settings')}
+        className="w-full flex items-center space-x-3 px-4 py-2.5 text-xs font-bold text-zinc-300 hover:text-zinc-100 hover:bg-zinc-900/60 transition-colors cursor-pointer text-left"
+        role="menuitem"
+      >
+        <Settings size={14} className="text-zinc-500" />
+        <span>{t('header.profileSettings')}</span>
+      </button>
+
+      <button
+        onClick={() => handleNavigate('/dashboard')}
+        className="w-full flex items-center space-x-3 px-4 py-2.5 text-xs font-bold text-zinc-300 hover:text-zinc-100 hover:bg-zinc-900/60 transition-colors cursor-pointer text-left"
+        role="menuitem"
+      >
+        <LayoutDashboard size={14} className="text-zinc-500" />
+        <span>{t('header.creatorDashboard')}</span>
+      </button>
+
+      <div className="h-px bg-zinc-900/60 my-1"></div>
+
+      <div className="px-3 py-2">
+        <ThemeSelector compact />
+      </div>
+
+      <div className="h-px bg-zinc-900/60 my-1"></div>
+
+      <div className="px-3 py-2">
+        <LanguageSwitcher compact />
+      </div>
+
+      <div className="h-px bg-zinc-900/60 my-1"></div>
+
+      <button
+        onClick={handleLogout}
+        className="w-full flex items-center space-x-3 px-4 py-2.5 text-xs font-bold text-rose-500 hover:text-rose-400 hover:bg-rose-950/20 transition-colors cursor-pointer text-left"
+        role="menuitem"
+      >
+        <LogOut size={14} />
+        <span>{t('header.logout')}</span>
+      </button>
+    </div>
+  );
+}

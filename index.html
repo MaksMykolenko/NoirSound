@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en" data-theme="noir-pink" data-theme-preference="noir-pink">
+  <head>
+    <meta charset="UTF-8" />
+    <script>
+      (function () {
+        var allowedThemes = [
+          'noir-pink',
+          'midnight-blue',
+          'crimson-red',
+          'royal-purple',
+          'emerald-dark',
+          'light-minimal',
+          'green-stream',
+          'orange-wave',
+          'system'
+        ];
+        try {
+          var selectedTheme = localStorage.getItem('noirsound.theme') || 'noir-pink';
+          if (allowedThemes.indexOf(selectedTheme) === -1) selectedTheme = 'noir-pink';
+          var resolvedTheme = selectedTheme;
+          if (selectedTheme === 'system') {
+            resolvedTheme = window.matchMedia('(prefers-color-scheme: light)').matches
+              ? 'light-minimal'
+              : 'noir-pink';
+          }
+          document.documentElement.dataset.theme = resolvedTheme;
+          document.documentElement.dataset.themePreference = selectedTheme;
+          document.documentElement.style.colorScheme =
+            resolvedTheme === 'light-minimal' ? 'light' : 'dark';
+        } catch (error) {
+          document.documentElement.dataset.theme = 'noir-pink';
+          document.documentElement.dataset.themePreference = 'noir-pink';
+        }
+      })();
+    </script>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NoirSound — Discover music after dark.</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

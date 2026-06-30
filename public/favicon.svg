@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Background Squircle -->
+  <rect x="24" y="24" width="464" height="464" rx="140" fill="#09090b" stroke="#18181b" stroke-width="20" />
+  
+  <!-- Subtle Ambient Glow Rings -->
+  <circle cx="256" cy="256" r="220" fill="none" stroke="#e11d48" stroke-width="8" stroke-opacity="0.1" />
+  <circle cx="256" cy="256" r="180" fill="none" stroke="#e11d48" stroke-width="12" stroke-opacity="0.2" />
+  
+  <!-- Left Outer Sound Waves -->
+  <path d="M 120 120 A 190 190 0 0 0 120 392" fill="none" stroke="#e11d48" stroke-width="20" stroke-linecap="round" opacity="0.5" />
+  <path d="M 170 170 A 120 120 0 0 0 170 342" fill="none" stroke="#e11d48" stroke-width="28" stroke-linecap="round" />
+  
+  <!-- Right Outer Sound Waves -->
+  <path d="M 392 120 A 190 190 0 0 1 392 392" fill="none" stroke="#e11d48" stroke-width="20" stroke-linecap="round" opacity="0.5" />
+  <path d="M 342 170 A 120 120 0 0 1 342 342" fill="none" stroke="#e11d48" stroke-width="28" stroke-linecap="round" />
+  
+  <!-- Center Core Transmitter -->
+  <circle cx="256" cy="256" r="48" fill="#e11d48" />
+  <circle cx="256" cy="256" r="24" fill="#ffffff" />
+</svg>
