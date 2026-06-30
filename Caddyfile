@@ -28,6 +28,18 @@
 		reverse_proxy backend:3000
 	}
 
+	# Server-rendered metadata for crawler-visible routes (Telegram, WhatsApp,
+	# Discord, X, Facebook read the initial HTML and do not run React). The
+	# backend injects per-route <head> into the built SPA shell and serves the
+	# dynamic sitemap. All OTHER paths (assets, /og/*, /images/*, /robots.txt,
+	# /favicon*, and client-only routes like /discover) fall through to the
+	# static file_server below. `/index.html` is NOT matched here, so the
+	# backend can fetch the shell from this server without looping.
+	@ssr path / /track/* /artist/* /terms /privacy /guidelines /copyright /abuse /creator-rules /sitemap.xml
+	handle @ssr {
+		reverse_proxy backend:3000
+	}
+
 	# Browser-reachable target for signed MinIO PUT/GET URLs. The SDK signs
 	# same-origin, path-style URLs such as /noirsound-audio/<object>. MinIO
 	# still validates every signature and anonymous bucket access is disabled.
@@ -52,4 +64,15 @@
 		Permissions-Policy "geolocation=(), microphone=(), camera=()"
 		-Server
 	}
+}
+
+# Internal-only origin the backend uses to fetch the built SPA shell for
+# server-side metadata injection. It listens on ANY Host on :8080, so the
+# backend can reach it as http://web:8080/index.html regardless of the public
+# DOMAIN (the main site matches by Host and would 404 a request with Host
+# "web"). Not published to the host in docker-compose, so it is reachable only
+# on the internal Docker network. Serves static files only.
+:8080 {
+	root * /srv
+	file_server
 }

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import PageMeta from '../components/meta/PageMeta';
 import { useTranslation } from 'react-i18next';
 import { Play, Pause, Heart, Plus, Check, Clock, Headphones, Share2 } from 'lucide-react';
 import { usePlayerStore } from '../store/playerStore';
@@ -154,6 +155,11 @@ export default function TrackPage() {
 
   return (
     <div className="ns-page-stack animate-fade-in">
+      <PageMeta
+        title={`${track.title} — ${track.artistName} · NoirSound`}
+        description={`${showGenre ? `${genreLabel} · ` : ''}${hasDuration ? `${durationStr} · ` : ''}Listen to ${track.title} by ${track.artistName} on NoirSound.`}
+        canonical={`https://noirsound.co/track/${track.id}`}
+      />
 
       {/* Hero + waveform form one connected unit */}
       <div className="space-y-4">

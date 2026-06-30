@@ -7,6 +7,7 @@ import HomeHero from '../components/home/HomeHero';
 import BrowseByGenre from '../components/home/BrowseByGenre';
 import CreatorCallout from '../components/home/CreatorCallout';
 import ProductFeatures from '../components/home/ProductFeatures';
+import PageMeta from '../components/meta/PageMeta';
 import TrackCard from '../components/tracks/TrackCard';
 import ArtistCard from '../components/artists/ArtistCard';
 import EmptyState from '../components/ui/EmptyState';
@@ -65,6 +66,11 @@ export default function Home() {
 
   return (
     <div className="flex flex-col gap-8 sm:gap-10 animate-fade-in">
+      <PageMeta
+        title="NoirSound — Creator-first music platform"
+        description="Discover independent music, upload your own tracks, and build your audience on NoirSound."
+        canonical="https://noirsound.co/"
+      />
       <HomeHero
         onDiscover={() => navigate('/discover')}
         onUpload={() => navigate('/upload')}

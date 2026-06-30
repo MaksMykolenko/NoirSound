@@ -37,6 +37,12 @@ services:
       NODE_ENV: production
       PORT: "3000"
       TRUST_PROXY: "true"
+      # Internal origin the backend fetches the built SPA shell from when
+      # injecting server-side metadata for crawler-visible routes. Caddy's
+      # internal :8080 site serves /srv statically for any Host, so this works
+      # regardless of the public DOMAIN and never loops back through the SSR
+      # routes.
+      APP_SHELL_ORIGIN: http://web:8080
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }

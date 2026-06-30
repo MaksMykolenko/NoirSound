@@ -1,6 +1,7 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { LEGAL_DOCS, LEGAL_DISCLAIMER, LEGAL_NAV } from '../constants/legalContent';
+import PageMeta from '../components/meta/PageMeta';
 import NotFound from './NotFound';
 
 /**
@@ -12,14 +13,15 @@ export default function LegalPage({ slug: slugProp }) {
   const slug = slugProp || params.slug;
   const doc = LEGAL_DOCS[slug];
 
-  useEffect(() => {
-    if (doc) document.title = `${doc.title} · NoirSound`;
-  }, [doc]);
-
   if (!doc) return <NotFound />;
 
   return (
     <div className="max-w-3xl mx-auto pb-12">
+      <PageMeta
+        title={`${doc.title} · NoirSound`}
+        description={doc.intro || `${doc.title} for NoirSound.`}
+        canonical={`https://noirsound.co/${slug}`}
+      />
       <nav className="flex flex-wrap gap-2 mb-6 text-xs">
         {LEGAL_NAV.map((item) => (
           <Link

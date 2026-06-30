@@ -1,0 +1,9 @@
+# NoirSound robots policy. Public pages are open to crawlers; admin and
+# privileged API surfaces are disallowed. OG images (/og/, /api/public/covers)
+# stay crawlable so social previews work.
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /api/admin
+
+Sitemap: https://noirsound.co/sitemap.xml

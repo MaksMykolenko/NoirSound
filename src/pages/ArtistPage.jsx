@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import PageMeta from '../components/meta/PageMeta';
 import { useTranslation } from 'react-i18next';
 import { Check, Play, Users, Globe, Music, Edit } from 'lucide-react';
 import { followArtist, getArtistById, getTracksByArtist } from '../api';
@@ -109,7 +110,12 @@ export default function ArtistPage() {
 
   return (
     <div className="ns-page-stack animate-fade-in pb-10">
-      
+      <PageMeta
+        title={`${artist.name} — NoirSound`}
+        description={artist.bio || `${artist.name} is an independent artist on NoirSound. Listen to releases and follow new music.`}
+        canonical={`https://noirsound.co/artist/${artist.id}`}
+      />
+
       {/* Hero / Header Box */}
       <section className="relative rounded-[1.75rem] overflow-hidden border border-zinc-800/70 bg-zinc-950 shadow-2xl">
         <div 

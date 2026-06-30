@@ -83,8 +83,14 @@ function buildServer(options = {}) {
     reply.header('Referrer-Policy', 'no-referrer');
     reply.header('X-DNS-Prefetch-Control', 'off');
     reply.header('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
-    // This is a JSON API; lock the CSP right down.
-    reply.header('Content-Security-Policy', "default-src 'none'; frame-ancestors 'none'");
+    // The JSON API locks the CSP right down. The server-rendered SPA shell
+    // (text/html from the metadata routes) must load its own scripts/styles/
+    // fonts, so the API CSP is not applied there — matching how Caddy already
+    // serves the static SPA (no CSP). Crawlers only read <head> metadata.
+    const responseContentType = String(reply.getHeader('content-type') || '');
+    if (!responseContentType.includes('text/html')) {
+      reply.header('Content-Security-Policy', "default-src 'none'; frame-ancestors 'none'");
+    }
     if (process.env.NODE_ENV === 'production') {
       reply.header('Strict-Transport-Security', 'max-age=15552000; includeSubDomains');
     }
@@ -128,6 +134,12 @@ function buildServer(options = {}) {
   fastify.register(require('./routes/reports'), { prefix: '/api/reports' });
   fastify.register(require('./routes/admin'), { prefix: '/api/admin' });
   fastify.register(require('./routes/stats'), { prefix: '/api' });
+  // Public, no-auth media (OG cover previews — never exposes private keys).
+  fastify.register(require('./routes/public'), { prefix: '/api/public' });
+  // Server-rendered metadata for crawler-visible routes (/, /track/:id,
+  // /artist/:id, legal pages) and the dynamic sitemap. Registered at root;
+  // Caddy proxies only these document paths to the backend.
+  fastify.register(require('./routes/pages'));
 
   // Liveness — process is up.
   fastify.get('/api/health', async () => {

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Static fallback sitemap for core pages. In production the backend serves a
+  dynamic /sitemap.xml (this file's route is proxied to the backend) that also
+  includes published tracks and active artists. This static copy is only used
+  if the dynamic route is unavailable.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://noirsound.co/</loc><priority>1.0</priority></url>
+  <url><loc>https://noirsound.co/discover</loc><priority>0.8</priority></url>
+  <url><loc>https://noirsound.co/terms</loc><priority>0.3</priority></url>
+  <url><loc>https://noirsound.co/privacy</loc><priority>0.3</priority></url>
+  <url><loc>https://noirsound.co/guidelines</loc><priority>0.3</priority></url>
+  <url><loc>https://noirsound.co/copyright</loc><priority>0.3</priority></url>
+  <url><loc>https://noirsound.co/abuse</loc><priority>0.3</priority></url>
+  <url><loc>https://noirsound.co/creator-rules</loc><priority>0.3</priority></url>
+</urlset>
