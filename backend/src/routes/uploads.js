@@ -2,6 +2,8 @@ const { v4: uuidv4 } = require('uuid');
 const { normalizeGenre } = require('../constants/musicGenres');
 const { userOrIpKey } = require('../lib/rateLimitKeys');
 const { scaledRateLimitMax } = require('../lib/rateLimit');
+const { auditData, createAudit } = require('../lib/auditLog');
+const { evaluateUploadAccess, ensureArtistProfile } = require('../lib/artistAccess');
 
 const MAX_AUDIO_BYTES = 50 * 1024 * 1024;
 const MAX_COVER_BYTES = 5 * 1024 * 1024;
@@ -121,19 +123,41 @@ async function uploadsRoutes(fastify) {
       return reply.status(400).send({ error: validationError });
     }
 
+    // Single source of truth for "does this user have working artist upload
+    // access" — see backend/src/lib/artistAccess.js. Admins keep the narrow,
+    // pre-existing behavior of getting a bare profile created for them
+    // automatically (their role already implies trust); every other role
+    // must be granted access explicitly through the admin console
+    // (POST /api/admin/users/:id/grant-artist) rather than via this route.
     let artistProfile = await fastify.prisma.artistProfile.findUnique({
       where: { userId: request.user.id },
-      select: { id: true }
+      select: { id: true, isHidden: true }
     });
     if (!artistProfile && request.user.role === 'ADMIN') {
-      artistProfile = await fastify.prisma.artistProfile.create({
-        data: { userId: request.user.id, monthlyListeners: 0, genres: [] },
-        select: { id: true }
-      });
+      const ensured = await ensureArtistProfile(fastify.prisma, request.user.id);
+      artistProfile = ensured.profile;
+      if (ensured.created) {
+        await createAudit(fastify.prisma, auditData(
+          request.user.id,
+          'ARTIST_PROFILE_CREATED',
+          'ARTIST',
+          ensured.profile.id,
+          'Automatic artist profile creation for admin upload.',
+          { userId: request.user.id, triggeredBy: 'UPLOAD_INIT' }
+        ));
+      }
     }
-    if (!artistProfile) {
+
+    const access = evaluateUploadAccess({
+      role: request.user.role,
+      status: request.user.status,
+      artistProfile
+    });
+    if (!access.canUploadTracks) {
       return reply.status(422).send({
-        error: 'An ArtistProfile is required before uploading tracks.'
+        error: 'ARTIST_PROFILE_REQUIRED',
+        message: 'An ArtistProfile is required before uploading tracks.',
+        uploadAccessReason: access.uploadAccessReason
       });
     }
 

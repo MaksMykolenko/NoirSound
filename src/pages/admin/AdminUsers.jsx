@@ -18,17 +18,38 @@ import {
 } from '../../components/admin/AdminUI';
 import { formatAdminDate, useAdminData } from '../../components/admin/adminUtils';
 
+function ArtistProfileCell({ t, user }) {
+  if (!user.hasArtistProfile) {
+    const label = user.role === 'LISTENER'
+      ? t('admin.artistAccess.noArtistAccess')
+      : t('admin.artistAccess.profileMissingShort');
+    return <span className="text-xs font-semibold text-[var(--ns-text-muted)]">{label}</span>;
+  }
+  if (user.artistProfileHidden) {
+    return <span className="text-xs font-semibold text-amber-400">{t('admin.artistAccess.profileHiddenShort')}</span>;
+  }
+  return <span className="text-xs font-semibold text-emerald-400">{t('admin.artistAccess.profileReadyShort')}</span>;
+}
+
+function UploadAccessCell({ t, user }) {
+  return user.canUploadTracks
+    ? <span className="text-xs font-semibold text-emerald-400">{t('admin.artistAccess.canUploadShort')}</span>
+    : <span className="text-xs font-semibold text-amber-400">{t('admin.artistAccess.uploadBlockedShort')}</span>;
+}
+
 export default function AdminUsers() {
   const { t, i18n } = useTranslation();
   const [searchParams] = useSearchParams();
   const [search, setSearch] = useState('');
   const [role, setRole] = useState(searchParams.get('role') || '');
   const [status, setStatus] = useState(searchParams.get('status') || '');
+  const [hasArtistProfile, setHasArtistProfile] = useState(searchParams.get('hasArtistProfile') || '');
+  const [uploadBlocked, setUploadBlocked] = useState(searchParams.get('uploadBlocked') || '');
   const [page, setPage] = useState(1);
-  const query = { search, role, status, page };
+  const query = { search, role, status, hasArtistProfile, uploadBlocked, page };
   const { data, loading, error, reload } = useAdminData(
     () => getAdminUsers(query),
-    [search, role, status, page]
+    [search, role, status, hasArtistProfile, uploadBlocked, page]
   );
 
   return (
@@ -59,13 +80,44 @@ export default function AdminUsers() {
               ['DELETED', t('admin.statusValues.DELETED')],
             ]}
           />
+          <AdminSelect
+            label={t('admin.artistAccess.filterProfile')}
+            value={hasArtistProfile}
+            onChange={(value) => { setHasArtistProfile(value); setPage(1); }}
+            options={[
+              ['', t('admin.artistAccess.filterProfileAll')],
+              ['true', t('admin.artistAccess.filterProfileHas')],
+              ['false', t('admin.artistAccess.filterProfileMissing')],
+            ]}
+          />
+          <AdminSelect
+            label={t('admin.artistAccess.filterUpload')}
+            value={uploadBlocked}
+            onChange={(value) => { setUploadBlocked(value); setPage(1); }}
+            options={[
+              ['', t('admin.artistAccess.filterUploadAll')],
+              ['false', t('admin.artistAccess.filterUploadCan')],
+              ['true', t('admin.artistAccess.filterUploadBlocked')],
+            ]}
+          />
         </AdminSearch>
         {loading ? <AdminLoading /> : error ? <AdminError error={error} onRetry={reload} /> : !data?.data?.length ? (
           <AdminEmpty text={t('admin.noUsersFound')} />
         ) : (
           <AdminTable>
             <thead><tr>
-              {[t('admin.user'), t('admin.email'), t('admin.role'), t('admin.status'), t('admin.joinedUpdated'), t('admin.tracks'), t('admin.reports'), t('admin.actions')].map((label) => (
+              {[
+                t('admin.user'),
+                t('admin.email'),
+                t('admin.role'),
+                t('admin.status'),
+                t('admin.artistAccess.columnProfile'),
+                t('admin.artistAccess.columnUpload'),
+                t('admin.joinedUpdated'),
+                t('admin.tracks'),
+                t('admin.reports'),
+                t('admin.actions'),
+              ].map((label) => (
                 <AdminTableHead key={label}>{label}</AdminTableHead>
               ))}
             </tr></thead>
@@ -79,6 +131,8 @@ export default function AdminUsers() {
                   <td className="px-4 py-3 text-xs text-[var(--ns-text-secondary)]">{user.email}</td>
                   <td className="px-4 py-3"><StatusBadge status={user.role} /></td>
                   <td className="px-4 py-3"><StatusBadge status={user.status} /></td>
+                  <td className="px-4 py-3"><ArtistProfileCell t={t} user={user} /></td>
+                  <td className="px-4 py-3"><UploadAccessCell t={t} user={user} /></td>
                   <td className="px-4 py-3 text-xs text-[var(--ns-text-muted)]">{formatAdminDate(user.updatedAt || user.joinedAt, i18n.language)}</td>
                   <td className="px-4 py-3">{user.counts?.tracks ?? 0}</td>
                   <td className="px-4 py-3">{user.counts?.reports ?? 0}</td>

@@ -16,6 +16,13 @@ const {
   enumFilter
 } = require('../lib/pagination');
 const { auditData, createAudit, redactAuditMetadata } = require('../lib/auditLog');
+const {
+  ARTIST_ACCESS_USER_SELECT,
+  summarizeArtistAccess,
+  ensureArtistProfile,
+  grantArtistAccess,
+  revokeArtistAccess
+} = require('../lib/artistAccess');
 
 const execFileAsync = promisify(execFile);
 const USER_ROLES = ['LISTENER', 'ARTIST', 'ADMIN'];
@@ -364,19 +371,48 @@ async function adminRoutes(fastify) {
     if (request.query.role && role === undefined) return invalidFilter(reply, 'role');
     if (request.query.status && status === undefined) return invalidFilter(reply, 'status');
 
+    // Tri-state (unset / 'true' / 'false') artist-access filters. Anything
+    // else in the query string is treated as unset rather than rejected, so
+    // the UI can always round-trip an empty "all" option.
+    const hasArtistProfile = request.query.hasArtistProfile === 'true'
+      ? true
+      : request.query.hasArtistProfile === 'false' ? false : undefined;
+    const uploadBlocked = request.query.uploadBlocked === 'true'
+      ? true
+      : request.query.uploadBlocked === 'false' ? false : undefined;
+
     const allowedSort = ['updatedAt', 'id', 'email', 'joinedAt'];
     const sortBy = allowedSort.includes(request.query.sortBy) ? request.query.sortBy : 'updatedAt';
     const sortOrder = request.query.sortOrder === 'asc' ? 'asc' : 'desc';
+
+    const andConditions = [];
+    if (hasArtistProfile !== undefined) {
+      andConditions.push({ artistProfile: hasArtistProfile ? { isNot: null } : { is: null } });
+    }
+    if (uploadBlocked !== undefined) {
+      // canUploadTracks is computed, not stored — express the same rule
+      // (see artistAccess.evaluateUploadAccess) as a Prisma filter so
+      // pagination stays correct at the database level.
+      const canUploadWhere = {
+        status: 'ACTIVE',
+        role: { in: ['ARTIST', 'ADMIN'] },
+        artistProfile: { is: { isHidden: false } }
+      };
+      andConditions.push(uploadBlocked ? { NOT: canUploadWhere } : canUploadWhere);
+    }
+
     const where = {
       ...(role ? { role } : {}),
       ...(status ? { status } : {}),
       ...(search ? {
         OR: [
+          { id: { contains: search, mode: 'insensitive' } },
           { email: { contains: search, mode: 'insensitive' } },
           { username: { contains: search, mode: 'insensitive' } },
           { displayName: { contains: search, mode: 'insensitive' } }
         ]
-      } : {})
+      } : {}),
+      ...(andConditions.length ? { AND: andConditions } : {})
     };
     const [total, users] = await fastify.prisma.$transaction([
       fastify.prisma.user.count({ where }),
@@ -415,6 +451,7 @@ async function adminRoutes(fastify) {
         artistProfile: user.artistProfile
           ? { id: user.artistProfile.id, isHidden: user.artistProfile.isHidden }
           : null,
+        ...summarizeArtistAccess(user),
         _count: undefined
       })),
       pagination: paginationMeta(total, page, pageSize)
@@ -509,6 +546,7 @@ async function adminRoutes(fastify) {
         ...user,
         sessions: { active: user._count.sessions },
         counts: user._count,
+        ...summarizeArtistAccess(user),
         _count: undefined
       },
       reportsAgainst,
@@ -608,9 +646,12 @@ async function adminRoutes(fastify) {
     if (request.body?.confirmation !== 'SET_ROLE') {
       return sendAdminError(reply, 400, 'ADMIN_CONFIRMATION_REQUIRED', 'Role changes require explicit confirmation.');
     }
-    const target = await fastify.prisma.user.findUnique({ where: { id: request.params.id } });
+    const target = await fastify.prisma.user.findUnique({
+      where: { id: request.params.id },
+      include: { artistProfile: { select: { id: true, isHidden: true } } }
+    });
     if (!target) return sendAdminError(reply, 404, 'ADMIN_USER_NOT_FOUND', 'User not found.');
-    if (target.role === role) return { user: { id: target.id, role } };
+    if (target.role === role) return { user: { id: target.id, role, ...summarizeArtistAccess(target) } };
     if (target.role === 'ADMIN' && role !== 'ADMIN') {
       const adminCount = await fastify.prisma.user.count({
         where: { role: 'ADMIN', status: 'ACTIVE' }
@@ -619,15 +660,263 @@ async function adminRoutes(fastify) {
         return sendAdminError(reply, 409, 'ADMIN_LAST_ADMIN', 'The last active admin cannot be demoted.');
       }
     }
-    await fastify.prisma.$transaction(async (tx) => {
+
+    // Artist-profile side effects. Defaults mirror Phase 9 of the artist
+    // access brief: moving a user *to* ARTIST auto-creates a profile unless
+    // explicitly disabled; moving a user *to* ADMIN never auto-creates one
+    // unless explicitly requested (an admin does not need upload access by
+    // default); moving a user *away from* ARTIST never hides the profile
+    // unless explicitly requested ("ask whether to hide"). Omitting these
+    // fields entirely (older/scripted callers) reproduces the exact
+    // pre-existing behavior below.
+    const createArtistProfile = role === 'ARTIST'
+      ? request.body?.createArtistProfile !== false
+      : role === 'ADMIN' && request.body?.createArtistProfile === true;
+    const hideArtistProfile = target.role === 'ARTIST' && role !== 'ARTIST' &&
+      request.body?.hideArtistProfile === true;
+    const revokeSessions = typeof request.body?.revokeSessions === 'boolean'
+      ? request.body.revokeSessions
+      : role !== 'ADMIN';
+
+    const result = await fastify.prisma.$transaction(async (tx) => {
       await tx.user.update({ where: { id: target.id }, data: { role } });
-      if (role !== 'ADMIN') await tx.session.deleteMany({ where: { userId: target.id } });
       await createAudit(tx, auditData(request.user.id, 'USER_SET_ROLE', 'USER', target.id, reason, {
         previousRole: target.role,
-        nextRole: role
+        nextRole: role,
+        requestId: request.id
       }));
+
+      let profile = target.artistProfile;
+      if (createArtistProfile && !profile) {
+        const ensured = await ensureArtistProfile(tx, target.id);
+        profile = ensured.profile;
+        if (ensured.created) {
+          await createAudit(tx, auditData(request.user.id, 'ARTIST_PROFILE_CREATED', 'ARTIST', ensured.profile.id, reason, {
+            userId: target.id,
+            triggeredBy: 'USER_SET_ROLE'
+          }));
+        }
+      } else if (hideArtistProfile && profile && !profile.isHidden) {
+        profile = await tx.artistProfile.update({ where: { id: profile.id }, data: { isHidden: true } });
+        await createAudit(tx, auditData(request.user.id, 'ARTIST_HIDE', 'ARTIST', profile.id, reason, {
+          userId: target.id,
+          triggeredBy: 'USER_SET_ROLE'
+        }));
+      }
+
+      if (revokeSessions) {
+        const revoked = await tx.session.deleteMany({ where: { userId: target.id } });
+        await createAudit(tx, auditData(request.user.id, 'USER_REVOKE_SESSIONS', 'USER', target.id, reason, {
+          revokedCount: revoked.count,
+          triggeredBy: 'USER_SET_ROLE'
+        }));
+      }
+
+      return { role, status: target.status, artistProfile: profile };
     });
-    return { user: { id: target.id, role } };
+
+    return { user: { id: target.id, ...result, ...summarizeArtistAccess(result) } };
+  });
+
+  // --- Artist access ---------------------------------------------------------
+  //
+  // Composite operations layered on top of the primitives above: granting or
+  // revoking artist upload access bundles a role change, an ArtistProfile
+  // create/hide, and an optional session revocation into one auditable admin
+  // action. See backend/src/lib/artistAccess.js for the shared rules.
+
+  fastify.post('/users/:id/grant-artist', mutate, async (request, reply) => {
+    const reason = requiredReason(request.body);
+    if (!reason) return sendAdminError(reply, 400, 'ADMIN_REASON_REQUIRED', 'A reason is required.');
+    if (request.user.status !== 'ACTIVE') {
+      return sendAdminError(reply, 403, 'ADMIN_NOT_ACTIVE', 'Your admin account is not active.');
+    }
+    const target = await fastify.prisma.user.findUnique({
+      where: { id: request.params.id },
+      select: ARTIST_ACCESS_USER_SELECT
+    });
+    if (!target) return sendAdminError(reply, 404, 'ADMIN_USER_NOT_FOUND', 'User not found.');
+    if (target.status === 'BANNED') {
+      return sendAdminError(reply, 409, 'ADMIN_USER_BANNED', 'Unban this user before granting artist access.');
+    }
+    if (target.status === 'DELETED') {
+      return sendAdminError(reply, 409, 'ADMIN_USER_DELETED', 'This account is deleted and cannot be granted artist access.');
+    }
+
+    const options = {
+      createProfile: request.body?.createProfile !== false,
+      revokeSessions: request.body?.revokeSessions !== false
+    };
+
+    const outcome = await fastify.prisma.$transaction(async (tx) => {
+      const diff = await grantArtistAccess(tx, target, options);
+
+      if (diff.roleChanged) {
+        await createAudit(tx, auditData(request.user.id, 'USER_SET_ROLE', 'USER', target.id, reason, {
+          previousRole: diff.previousRole,
+          nextRole: diff.nextRole,
+          triggeredBy: 'USER_GRANT_ARTIST'
+        }));
+      }
+      if (diff.profileCreated) {
+        await createAudit(tx, auditData(request.user.id, 'ARTIST_PROFILE_CREATED', 'ARTIST', diff.profile.id, reason, {
+          userId: target.id,
+          triggeredBy: 'USER_GRANT_ARTIST'
+        }));
+      }
+      if (diff.profileUnhiddenNow) {
+        await createAudit(tx, auditData(request.user.id, 'ARTIST_UNHIDE', 'ARTIST', diff.profile.id, reason, {
+          userId: target.id,
+          triggeredBy: 'USER_GRANT_ARTIST'
+        }));
+      }
+      if (diff.sessionsRevoked) {
+        await createAudit(tx, auditData(request.user.id, 'USER_REVOKE_SESSIONS', 'USER', target.id, reason, {
+          revokedCount: diff.revokedSessionCount,
+          triggeredBy: 'USER_GRANT_ARTIST'
+        }));
+      }
+      await createAudit(tx, auditData(request.user.id, 'USER_GRANT_ARTIST', 'USER', target.id, reason, {
+        previousRole: diff.previousRole,
+        nextRole: diff.nextRole,
+        previousStatus: diff.previousStatus,
+        nextStatus: diff.nextStatus,
+        artistProfileId: diff.profile?.id || null,
+        artistProfileCreated: diff.profileCreated,
+        artistProfileUnhidden: diff.profileUnhiddenNow,
+        sessionsRevoked: diff.sessionsRevoked,
+        requestId: request.id
+      }));
+
+      return diff;
+    });
+
+    return {
+      user: {
+        id: target.id,
+        email: target.email,
+        username: target.username,
+        displayName: target.displayName,
+        role: outcome.nextRole,
+        status: outcome.nextStatus,
+        ...summarizeArtistAccess({ role: outcome.nextRole, status: outcome.nextStatus, artistProfile: outcome.profile })
+      }
+    };
+  });
+
+  fastify.post('/users/:id/revoke-artist', mutate, async (request, reply) => {
+    const reason = requiredReason(request.body);
+    if (!reason) return sendAdminError(reply, 400, 'ADMIN_REASON_REQUIRED', 'A reason is required.');
+    if (request.user.status !== 'ACTIVE') {
+      return sendAdminError(reply, 403, 'ADMIN_NOT_ACTIVE', 'Your admin account is not active.');
+    }
+    const target = await fastify.prisma.user.findUnique({
+      where: { id: request.params.id },
+      select: ARTIST_ACCESS_USER_SELECT
+    });
+    if (!target) return sendAdminError(reply, 404, 'ADMIN_USER_NOT_FOUND', 'User not found.');
+    // Revoking artist access never demotes an admin — only role ARTIST is
+    // ever changed by this endpoint (see artistAccess.revokeArtistAccess),
+    // so the last-active-admin guard used by set-role does not apply here.
+
+    const options = {
+      hideArtistProfile: request.body?.hideArtistProfile !== false,
+      revokeSessions: request.body?.revokeSessions !== false
+    };
+
+    const outcome = await fastify.prisma.$transaction(async (tx) => {
+      const diff = await revokeArtistAccess(tx, target, options);
+
+      if (diff.roleChanged) {
+        await createAudit(tx, auditData(request.user.id, 'USER_SET_ROLE', 'USER', target.id, reason, {
+          previousRole: diff.previousRole,
+          nextRole: diff.nextRole,
+          triggeredBy: 'USER_REVOKE_ARTIST'
+        }));
+      }
+      if (diff.profileHiddenNow) {
+        await createAudit(tx, auditData(request.user.id, 'ARTIST_HIDE', 'ARTIST', diff.profile.id, reason, {
+          userId: target.id,
+          triggeredBy: 'USER_REVOKE_ARTIST'
+        }));
+      }
+      if (diff.sessionsRevoked) {
+        await createAudit(tx, auditData(request.user.id, 'USER_REVOKE_SESSIONS', 'USER', target.id, reason, {
+          revokedCount: diff.revokedSessionCount,
+          triggeredBy: 'USER_REVOKE_ARTIST'
+        }));
+      }
+      await createAudit(tx, auditData(request.user.id, 'USER_REVOKE_ARTIST', 'USER', target.id, reason, {
+        previousRole: diff.previousRole,
+        nextRole: diff.nextRole,
+        artistProfileId: diff.profile?.id || null,
+        artistProfileHiddenNow: diff.profileHiddenNow,
+        sessionsRevoked: diff.sessionsRevoked,
+        requestId: request.id
+      }));
+
+      return diff;
+    });
+
+    return {
+      user: {
+        id: target.id,
+        email: target.email,
+        username: target.username,
+        displayName: target.displayName,
+        role: outcome.nextRole,
+        status: target.status,
+        ...summarizeArtistAccess({ role: outcome.nextRole, status: target.status, artistProfile: outcome.profile })
+      }
+    };
+  });
+
+  fastify.post('/users/:id/ensure-artist-profile', mutate, async (request, reply) => {
+    const reason = requiredReason(request.body);
+    if (!reason) return sendAdminError(reply, 400, 'ADMIN_REASON_REQUIRED', 'A reason is required.');
+    if (request.user.status !== 'ACTIVE') {
+      return sendAdminError(reply, 403, 'ADMIN_NOT_ACTIVE', 'Your admin account is not active.');
+    }
+    const target = await fastify.prisma.user.findUnique({
+      where: { id: request.params.id },
+      select: ARTIST_ACCESS_USER_SELECT
+    });
+    if (!target) return sendAdminError(reply, 404, 'ADMIN_USER_NOT_FOUND', 'User not found.');
+    const revokeSessions = request.body?.revokeSessions === true;
+
+    const result = await fastify.prisma.$transaction(async (tx) => {
+      const ensured = await ensureArtistProfile(tx, target.id);
+      await createAudit(tx, auditData(request.user.id, 'ARTIST_PROFILE_CREATED', 'ARTIST', ensured.profile.id, reason, {
+        userId: target.id,
+        alreadyExisted: !ensured.created,
+        triggeredBy: 'USER_ENSURE_ARTIST_PROFILE',
+        requestId: request.id
+      }));
+      let revokedSessionCount = null;
+      if (revokeSessions) {
+        const revoked = await tx.session.deleteMany({ where: { userId: target.id } });
+        revokedSessionCount = revoked.count;
+        await createAudit(tx, auditData(request.user.id, 'USER_REVOKE_SESSIONS', 'USER', target.id, reason, {
+          revokedCount: revoked.count,
+          triggeredBy: 'USER_ENSURE_ARTIST_PROFILE'
+        }));
+      }
+      return { profile: ensured.profile, created: ensured.created, revokedSessionCount };
+    });
+
+    return {
+      user: {
+        id: target.id,
+        email: target.email,
+        username: target.username,
+        displayName: target.displayName,
+        role: target.role,
+        status: target.status,
+        ...summarizeArtistAccess({ role: target.role, status: target.status, artistProfile: result.profile })
+      },
+      artistProfile: result.profile,
+      created: result.created
+    };
   });
 
   // --- Tracks --------------------------------------------------------------

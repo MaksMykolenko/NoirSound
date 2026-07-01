@@ -37,3 +37,11 @@ export async function updateProfile(profileData) {
   });
   return response.user ?? response;
 }
+
+// Narrow self-service: only ever succeeds for the signed-in user, and only
+// when that user already has the ADMIN role (see backend/src/routes/auth.js).
+// Not a general "become an artist" endpoint.
+export async function ensureMyArtistProfile() {
+  const response = await apiFetch('/auth/me/ensure-artist-profile', { method: 'POST' });
+  return response.user ?? response;
+}

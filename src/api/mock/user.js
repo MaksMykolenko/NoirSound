@@ -35,3 +35,13 @@ export async function updateProfile(profileData) {
   currentDemoUser = { ...(currentDemoUser || demoUser), ...profileData };
   return currentDemoUser;
 }
+
+export async function ensureMyArtistProfile() {
+  currentDemoUser = {
+    ...(currentDemoUser || demoUser),
+    hasArtistProfile: true,
+    canUploadTracks: true,
+    uploadAccessReason: null,
+  };
+  return currentDemoUser;
+}

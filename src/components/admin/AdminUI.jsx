@@ -14,9 +14,9 @@ export function AdminPageHeader({ title, description, actions }) {
   );
 }
 
-export function AdminPanel({ children, className = '' }) {
+export function AdminPanel({ children, className = '', ...rest }) {
   return (
-    <section className={`rounded-2xl border border-[var(--ns-border-subtle)] bg-[var(--ns-card)] shadow-[var(--ns-shadow-card)] ${className}`}>
+    <section {...rest} className={`rounded-2xl border border-[var(--ns-border-subtle)] bg-[var(--ns-card)] shadow-[var(--ns-shadow-card)] ${className}`}>
       {children}
     </section>
   );
@@ -157,18 +157,29 @@ export function AdminPagination({ pagination, onPage }) {
 export function ConfirmActionModal({
   open,
   title,
+  description,
   actionLabel,
   onClose,
   onConfirm,
   requireReason = true,
   danger = true,
+  options = [],
 }) {
   const { t } = useTranslation();
   const [reason, setReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [optionValues, setOptionValues] = useState({});
 
   useEffect(() => {
-    if (open) setReason('');
+    if (open) {
+      setReason('');
+      setOptionValues(Object.fromEntries(
+        options.map((option) => [option.key, option.defaultChecked !== false])
+      ));
+    }
+    // `options` is expected to be a stable array literal from the caller;
+    // re-running only when the modal opens avoids resetting mid-edit.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   if (!open) return null;
@@ -178,7 +189,13 @@ export function ConfirmActionModal({
     if (requireReason && !reason.trim()) return;
     setSubmitting(true);
     try {
-      await onConfirm(reason.trim());
+      // Preserve the original single-argument signature when no options are
+      // configured, so existing callers/tests are unaffected.
+      if (options.length > 0) {
+        await onConfirm(reason.trim(), optionValues);
+      } else {
+        await onConfirm(reason.trim());
+      }
       onClose();
     } finally {
       setSubmitting(false);
@@ -191,6 +208,7 @@ export function ConfirmActionModal({
         <div className="flex items-start justify-between gap-4">
           <div>
             <h2 id="admin-confirm-title" className="font-bold text-[var(--ns-text)]">{title || t('admin.confirmAction')}</h2>
+            {description && <p className="mt-1 text-xs text-[var(--ns-text-secondary)]">{description}</p>}
             <p className="mt-1 text-xs text-[var(--ns-text-muted)]">{t('admin.auditNotice')}</p>
           </div>
           <button type="button" onClick={onClose} aria-label={t('admin.close')} className="ns-icon-button">
@@ -210,6 +228,21 @@ export function ConfirmActionModal({
               placeholder={t('admin.reasonPlaceholder')}
             />
           </label>
+        )}
+        {options.length > 0 && (
+          <div className="mt-4 space-y-2.5">
+            {options.map((option) => (
+              <label key={option.key} className="flex items-start gap-2.5 text-xs text-[var(--ns-text-secondary)]">
+                <input
+                  type="checkbox"
+                  checked={Boolean(optionValues[option.key])}
+                  onChange={(event) => setOptionValues((prev) => ({ ...prev, [option.key]: event.target.checked }))}
+                  className="mt-0.5 h-4 w-4 accent-[var(--ns-accent)]"
+                />
+                <span>{option.label}</span>
+              </label>
+            ))}
+          </div>
         )}
         <div className="mt-5 flex justify-end gap-2">
           <button type="button" onClick={onClose} className="ns-button-secondary rounded-lg px-4 py-2 text-sm">

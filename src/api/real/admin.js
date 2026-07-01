@@ -35,11 +35,19 @@ export const unsuspendUser = (id, reason) => mutate(`/admin/users/${encodeURICom
 export const banUser = (id, reason) => mutate(`/admin/users/${encodeURIComponent(id)}/ban`, { reason });
 export const unbanUser = (id, reason) => mutate(`/admin/users/${encodeURIComponent(id)}/unban`, { reason });
 export const revokeUserSessions = (id, reason) => mutate(`/admin/users/${encodeURIComponent(id)}/revoke-sessions`, { reason });
-export const setUserRole = (id, role, reason) => mutate(`/admin/users/${encodeURIComponent(id)}/set-role`, {
+export const setUserRole = (id, role, reason, options = {}) => mutate(`/admin/users/${encodeURIComponent(id)}/set-role`, {
   role,
   reason,
   confirmation: 'SET_ROLE',
+  ...options,
 });
+
+// Artist access — grant/revoke bundle a role change, an ArtistProfile
+// create/hide, and an optional session revocation into one auditable action.
+// See backend/src/lib/artistAccess.js.
+export const grantArtistAccess = (id, payload) => mutate(`/admin/users/${encodeURIComponent(id)}/grant-artist`, payload);
+export const revokeArtistAccess = (id, payload) => mutate(`/admin/users/${encodeURIComponent(id)}/revoke-artist`, payload);
+export const ensureArtistProfile = (id, payload) => mutate(`/admin/users/${encodeURIComponent(id)}/ensure-artist-profile`, payload);
 
 export const getAdminTracks = (params) => get('/admin/tracks', params);
 export const getAdminTrack = (id) => get(`/admin/tracks/${encodeURIComponent(id)}`);

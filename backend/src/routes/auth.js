@@ -2,6 +2,18 @@ const argon2 = require('argon2');
 const { issueSession } = require('../lib/authSession');
 const { userOrIpKey } = require('../lib/rateLimitKeys');
 const { scaledRateLimitMax } = require('../lib/rateLimit');
+const { evaluateUploadAccess, ensureArtistProfile } = require('../lib/artistAccess');
+const { auditData, createAudit } = require('../lib/auditLog');
+
+function withArtistAccess(user, artistProfile) {
+  return {
+    ...user,
+    artistProfileId: artistProfile?.id || null,
+    hasArtistProfile: Boolean(artistProfile),
+    artistProfileHidden: artistProfile?.isHidden || false,
+    ...evaluateUploadAccess({ role: user.role, status: user.status, artistProfile })
+  };
+}
 
 async function authRoutes(fastify, _options) {
   // POST /api/auth/register
@@ -115,14 +127,9 @@ async function authRoutes(fastify, _options) {
   fastify.get('/me', { preValidation: [fastify.authenticate] }, async (request) => {
     const artistProfile = await fastify.prisma.artistProfile.findUnique({
       where: { userId: request.user.id },
-      select: { id: true }
+      select: { id: true, isHidden: true }
     });
-    return {
-      user: {
-        ...request.user,
-        artistProfileId: artistProfile?.id || null
-      }
-    };
+    return { user: withArtistAccess(request.user, artistProfile) };
   });
 
   // PUT /api/auth/me
@@ -166,20 +173,48 @@ async function authRoutes(fastify, _options) {
 
       const artistProfile = await fastify.prisma.artistProfile.findUnique({
         where: { userId: updatedUser.id },
-        select: { id: true }
+        select: { id: true, isHidden: true }
       });
 
       const { passwordHash: _, ...safeUser } = updatedUser;
-      return {
-        user: {
-          ...safeUser,
-          artistProfileId: artistProfile?.id || null
-        }
-      };
+      return { user: withArtistAccess(safeUser, artistProfile) };
     } catch (error) {
       fastify.log.error(error);
       return reply.status(500).send({ error: 'Internal Server Error' });
     }
+  });
+
+  // POST /api/auth/me/ensure-artist-profile — narrow self-service: an ADMIN
+  // may create their own artist profile without going through the admin
+  // console. This grants no new privilege — admins already get a profile
+  // auto-created the first time they use /uploads/track/init; this exposes
+  // that same, already-trusted behavior as an explicit, friendly action from
+  // the Upload page instead of a silent side effect. Never available to
+  // non-admins, and it can only ever act on the caller's own account.
+  fastify.post('/me/ensure-artist-profile', {
+    preValidation: [fastify.authenticate],
+    config: {
+      rateLimit: { max: scaledRateLimitMax(10), timeWindow: '1 hour', keyGenerator: userOrIpKey }
+    }
+  }, async (request, reply) => {
+    if (request.user.role !== 'ADMIN') {
+      return reply.status(403).send({
+        error: 'ADMIN_ONLY',
+        message: 'Only administrators can self-create an artist profile. Ask an admin to grant artist access.'
+      });
+    }
+    const ensured = await ensureArtistProfile(fastify.prisma, request.user.id);
+    if (ensured.created) {
+      await createAudit(fastify.prisma, auditData(
+        request.user.id,
+        'ARTIST_PROFILE_CREATED',
+        'ARTIST',
+        ensured.profile.id,
+        'Self-service artist profile creation by admin.',
+        { userId: request.user.id, triggeredBy: 'SELF_SERVICE' }
+      ));
+    }
+    return { user: withArtistAccess(request.user, ensured.profile), created: ensured.created };
   });
 }
 

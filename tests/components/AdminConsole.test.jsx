@@ -1,6 +1,6 @@
 import React from 'react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import i18n from '../../src/i18n';
@@ -15,6 +15,8 @@ import {
   getAdminUser,
   getAdminUsers,
   suspendUser,
+  grantArtistAccess,
+  ensureArtistProfile,
 } from '../../src/api/admin';
 
 vi.mock('../../src/api/admin', () => ({
@@ -27,6 +29,11 @@ vi.mock('../../src/api/admin', () => ({
   unbanUser: vi.fn(),
   revokeUserSessions: vi.fn(),
   setUserRole: vi.fn(),
+  grantArtistAccess: vi.fn(),
+  revokeArtistAccess: vi.fn(),
+  ensureArtistProfile: vi.fn(),
+  hideArtist: vi.fn(),
+  unhideArtist: vi.fn(),
 }));
 
 const adminUser = {
@@ -171,5 +178,151 @@ describe('Admin console', () => {
     await waitFor(() => {
       expect(suspendUser).toHaveBeenCalledWith('user-1', 'Repeated abuse');
     });
+  });
+});
+
+describe('Artist Access panel', () => {
+  const blockedUser = {
+    id: 'user-2',
+    displayName: 'Listener Two',
+    username: 'listener_two',
+    email: 'listener2@test.local',
+    role: 'LISTENER',
+    status: 'ACTIVE',
+    joinedAt: '2026-06-30T00:00:00.000Z',
+    updatedAt: '2026-06-30T00:00:00.000Z',
+    sessions: { active: 1 },
+    counts: { sessions: 1, uploads: 0, comments: 0, reportsMade: 0 },
+    hasArtistProfile: false,
+    artistProfileId: null,
+    artistProfileHidden: null,
+    canUploadTracks: false,
+    uploadAccessReason: 'NOT_ARTIST_ROLE',
+  };
+
+  const readyArtist = {
+    ...blockedUser,
+    role: 'ARTIST',
+    hasArtistProfile: true,
+    artistProfileId: 'artist-profile-9',
+    artistProfileHidden: false,
+    canUploadTracks: true,
+    uploadAccessReason: null,
+  };
+
+  const adminMissingProfile = {
+    ...blockedUser,
+    id: 'user-3',
+    role: 'ADMIN',
+    hasArtistProfile: false,
+    canUploadTracks: false,
+    uploadAccessReason: 'MISSING_ARTIST_PROFILE',
+  };
+
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    await i18n.changeLanguage('en');
+    useUserStore.setState({ user: adminUser, authHydrated: true });
+  });
+
+  it('shows the Artist Access panel with the missing-profile state visible', async () => {
+    getAdminUser.mockResolvedValue({ user: blockedUser, audit: [] });
+    renderAdmin('/admin/users/user-2', <AdminUserDetail />);
+
+    const panel = await screen.findByTestId('artist-access-panel');
+    expect(panel).toBeInTheDocument();
+    expect(within(panel).getByText('Has ArtistProfile')).toBeInTheDocument();
+    expect(within(panel).getAllByText('No').length).toBeGreaterThan(0);
+    expect(within(panel).getByText('This account is not an Artist or Admin, so it cannot upload.')).toBeInTheDocument();
+  });
+
+  it('opens a confirm modal requiring a reason when Grant Artist Access is clicked', async () => {
+    getAdminUser.mockResolvedValue({ user: blockedUser, audit: [] });
+    const user = userEvent.setup();
+    renderAdmin('/admin/users/user-2', <AdminUserDetail />);
+
+    const panel = await screen.findByTestId('artist-access-panel');
+    await user.click(within(panel).getByRole('button', { name: 'Grant Artist Access' }));
+
+    const dialog = await screen.findByRole('dialog');
+    const submit = within(dialog).getByRole('button', { name: 'Grant Artist Access' });
+    expect(submit).toBeDisabled();
+    expect(grantArtistAccess).not.toHaveBeenCalled();
+
+    await user.type(within(dialog).getByRole('textbox'), 'Approved via support ticket');
+    expect(submit).toBeEnabled();
+  });
+
+  it('grants artist access and updates the UI to reflect upload access', async () => {
+    getAdminUser.mockResolvedValueOnce({ user: blockedUser, audit: [] });
+    getAdminUser.mockResolvedValueOnce({ user: readyArtist, audit: [] });
+    grantArtistAccess.mockResolvedValue({ user: readyArtist });
+    const user = userEvent.setup();
+    renderAdmin('/admin/users/user-2', <AdminUserDetail />);
+
+    const panel = await screen.findByTestId('artist-access-panel');
+    await user.click(within(panel).getByRole('button', { name: 'Grant Artist Access' }));
+    const dialog = await screen.findByRole('dialog');
+    await user.type(within(dialog).getByRole('textbox'), 'Approved via support ticket');
+    await user.click(within(dialog).getByRole('button', { name: 'Grant Artist Access' }));
+
+    await waitFor(() => {
+      expect(grantArtistAccess).toHaveBeenCalledWith(
+        'user-2',
+        expect.objectContaining({ reason: 'Approved via support ticket' })
+      );
+    });
+    await waitFor(() => {
+      expect(getAdminUser).toHaveBeenCalledTimes(2);
+    });
+    const updatedPanel = await screen.findByTestId('artist-access-panel');
+    const canUploadRow = within(updatedPanel).getByText('Can upload tracks').closest('div');
+    expect(within(canUploadRow).getByText('Yes')).toBeInTheDocument();
+  });
+
+  it('shows a Create Artist Profile button for an eligible user and it works', async () => {
+    getAdminUser.mockResolvedValueOnce({ user: adminMissingProfile, audit: [] });
+    getAdminUser.mockResolvedValueOnce({
+      user: { ...adminMissingProfile, hasArtistProfile: true, artistProfileId: 'artist-profile-5', canUploadTracks: true, uploadAccessReason: null },
+      audit: [],
+    });
+    ensureArtistProfile.mockResolvedValue({ user: { ...adminMissingProfile, hasArtistProfile: true } });
+    const user = userEvent.setup();
+    renderAdmin('/admin/users/user-3', <AdminUserDetail />);
+
+    const panel = await screen.findByTestId('artist-access-panel');
+    const createButton = within(panel).getByRole('button', { name: 'Create Artist Profile' });
+    await user.click(createButton);
+    const dialog = await screen.findByRole('dialog');
+    await user.type(within(dialog).getByRole('textbox'), 'Self-service admin profile');
+    await user.click(within(dialog).getByRole('button', { name: 'Create Artist Profile' }));
+
+    await waitFor(() => {
+      expect(ensureArtistProfile).toHaveBeenCalledWith(
+        'user-3',
+        expect.objectContaining({ reason: 'Self-service admin profile' })
+      );
+    });
+  });
+
+  it('does not render admin user-management screens (or Artist Access controls) for a non-admin', async () => {
+    useUserStore.setState({ user: { ...adminUser, role: 'LISTENER' }, authHydrated: true });
+    getAdminUser.mockResolvedValue({ user: blockedUser, audit: [] });
+    renderAdmin('/admin/users/user-2', <AdminUserDetail />);
+
+    expect(screen.getByTestId('admin-access-denied')).toBeInTheDocument();
+    expect(screen.queryByTestId('artist-access-panel')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Grant Artist Access' })).not.toBeInTheDocument();
+  });
+
+  it('never displays raw SQL, table, or column names in the Artist Access panel', async () => {
+    getAdminUser.mockResolvedValue({ user: readyArtist, audit: [] });
+    renderAdmin('/admin/users/user-2', <AdminUserDetail />);
+
+    const panel = await screen.findByTestId('artist-access-panel');
+    const panelText = panel.textContent;
+    for (const forbidden of ['SELECT ', 'UPDATE ', 'INSERT INTO', 'DELETE FROM', 'psql', '"User"', '"ArtistProfile"', 'UPDATE "User"']) {
+      expect(panelText).not.toContain(forbidden);
+    }
   });
 });

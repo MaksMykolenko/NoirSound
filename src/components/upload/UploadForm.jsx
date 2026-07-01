@@ -3,13 +3,30 @@ import { useTranslation } from 'react-i18next';
 import { UploadCloud, CheckCircle, FileAudio, Image as ImageIcon, Music, AlertCircle } from 'lucide-react';
 import { useUploadTrack, pollUploadStatus } from '../../hooks/mutations/useUploadTrack';
 import { useUserStore } from '../../store/userStore';
+import { useToastStore } from '../../store/toastStore';
+import { ensureMyArtistProfile } from '../../api/user';
 import LoadingState from '../ui/LoadingState';
 import GenrePicker from '../ui/GenrePicker';
 import { getLocalizedGenre } from '../../i18n/genreLabels';
 
 export default function UploadForm() {
   const { t } = useTranslation();
-  const { user, authHydrated, setAuthModalOpen } = useUserStore();
+  const { user, authHydrated, setAuthModalOpen, fetchCurrentUser } = useUserStore();
+  const addToast = useToastStore((state) => state.addToast);
+  const [profileSetupStatus, setProfileSetupStatus] = useState('idle'); // idle | loading
+
+  async function handleCreateMyArtistProfile() {
+    setProfileSetupStatus('loading');
+    try {
+      await ensureMyArtistProfile();
+      await fetchCurrentUser();
+      addToast(t('uploadForm.artistProfileReadyToast', { defaultValue: 'Artist profile created — you can upload now.' }), 'success');
+    } catch (err) {
+      addToast(err.message || t('uploadForm.artistProfileCreateFailed', { defaultValue: 'Could not create your artist profile.' }), 'error');
+    } finally {
+      setProfileSetupStatus('idle');
+    }
+  }
   const [title, setTitle] = useState('');
   const [genre, setGenre] = useState('');
   const [description, setDescription] = useState('');
@@ -50,7 +67,17 @@ export default function UploadForm() {
       setUploadId(res.uploadId);
       setUploadStatus('processing');
     } catch (err) {
-      setErrorMsg(err.message || 'Upload failed.');
+      // The backend reports this specific failure as a stable code
+      // (`ARTIST_PROFILE_REQUIRED`), not a display string — never show that
+      // code verbatim. This is a defensive fallback: the role/profile gate
+      // above should already prevent reaching submit in this state, but the
+      // profile can change between page load and submit (e.g. an admin
+      // hides it mid-session).
+      setErrorMsg(err.code === 'ARTIST_PROFILE_REQUIRED'
+        ? t('uploadForm.profileNotReadyMessage', {
+          defaultValue: 'Your artist profile is not ready yet. Please contact an admin or complete your artist profile before uploading tracks.',
+        })
+        : (err.message || 'Upload failed.'));
       setUploadStatus('error');
     }
   };
@@ -150,6 +177,40 @@ export default function UploadForm() {
             Listener accounts cannot initialize uploads. Ask an administrator to enable an artist profile.
           </p>
         </div>
+      </div>
+    );
+  }
+
+  // Role alone (ARTIST/ADMIN) does not guarantee a working ArtistProfile —
+  // strict `=== false` so a user object that doesn't carry this field yet
+  // (e.g. demo/mock mode) is never incorrectly blocked here.
+  if (user.canUploadTracks === false) {
+    const canSelfService = user.role === 'ADMIN' && user.uploadAccessReason === 'MISSING_ARTIST_PROFILE';
+    return (
+      <div className="max-w-lg mx-auto ns-state-panel text-center space-y-4" data-testid="artist-profile-not-ready">
+        <AlertCircle size={30} className="mx-auto text-amber-300" />
+        <div>
+          <h2 className="text-xl font-bold text-zinc-100">
+            {t('uploadForm.profileNotReadyTitle', { defaultValue: 'Artist profile not ready' })}
+          </h2>
+          <p className="text-sm leading-relaxed text-zinc-400 mt-2">
+            {t('uploadForm.profileNotReadyMessage', {
+              defaultValue: 'Your artist profile is not ready yet. Please contact an admin or complete your artist profile before uploading tracks.',
+            })}
+          </p>
+        </div>
+        {canSelfService && (
+          <button
+            type="button"
+            onClick={handleCreateMyArtistProfile}
+            disabled={profileSetupStatus === 'loading'}
+            className="w-full ns-button-primary px-5 cursor-pointer disabled:opacity-50"
+          >
+            {profileSetupStatus === 'loading'
+              ? t('uploadForm.creatingProfile', { defaultValue: 'Creating…' })
+              : t('uploadForm.createMyArtistProfile', { defaultValue: 'Create my artist profile' })}
+          </button>
+        )}
       </div>
     );
   }
