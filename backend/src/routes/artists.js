@@ -1,4 +1,36 @@
 const { serializePublicTrack } = require('../lib/publicTrack');
+const { userOrIpKey } = require('../lib/rateLimitKeys');
+const { scaledRateLimitMax } = require('../lib/rateLimit');
+
+// Best-effort current-user id from the session cookie, without requiring
+// authentication. Public artist routes stay public either way; when a
+// viewer happens to be signed in we additionally tell them whether they
+// already follow this artist, so the UI never has to guess/hardcode it.
+function optionalUserId(request) {
+  try {
+    const raw = request.headers.cookie || '';
+    const match = /(?:^|;\s*)token=([^;]+)/.exec(raw);
+    if (!match || !process.env.JWT_SECRET) return null;
+    const jwt = require('jsonwebtoken');
+    const decoded = jwt.verify(decodeURIComponent(match[1]), process.env.JWT_SECRET);
+    return decoded?.userId || null;
+  } catch {
+    return null;
+  }
+}
+
+async function attachIsFollowing(prisma, artists, viewerId) {
+  const list = Array.isArray(artists) ? artists : [artists];
+  if (!viewerId) {
+    return list.map((artist) => ({ ...artist, isFollowing: false }));
+  }
+  const follows = await prisma.artistFollow.findMany({
+    where: { userId: viewerId, artistId: { in: list.map((artist) => artist.id) } },
+    select: { artistId: true }
+  });
+  const followedIds = new Set(follows.map((follow) => follow.artistId));
+  return list.map((artist) => ({ ...artist, isFollowing: followedIds.has(artist.id) }));
+}
 
 async function artistsRoutes(fastify, _options) {
   // GET /api/artists
@@ -20,7 +52,8 @@ async function artistsRoutes(fastify, _options) {
           _count: { select: { followers: true } }
         }
       });
-      return { data: artists };
+      const withFollowState = await attachIsFollowing(fastify.prisma, artists, optionalUserId(request));
+      return { data: withFollowState };
     } catch (error) {
       fastify.log.error(error);
       return reply.status(500).send({ error: 'Internal Server Error' });
@@ -54,7 +87,8 @@ async function artistsRoutes(fastify, _options) {
         .filter((g) => Boolean(g) && !FORBIDDEN_GENRES.has(g.toUpperCase()));
 
       const { tracks: _, ...cleanArtist } = artist;
-      return { artist: { ...cleanArtist, genres: combinedGenres } };
+      const [withFollowState] = await attachIsFollowing(fastify.prisma, cleanArtist, optionalUserId(request));
+      return { artist: { ...withFollowState, genres: combinedGenres } };
     } catch (error) {
       fastify.log.error(error);
       return reply.status(500).send({ error: 'Internal Server Error' });
@@ -100,7 +134,15 @@ async function artistsRoutes(fastify, _options) {
   });
 
   // POST /api/artists/:id/follow
-  fastify.post('/:id/follow', { preValidation: [fastify.authenticate] }, async (request, reply) => {
+  fastify.post('/:id/follow', {
+    preValidation: [fastify.authenticate],
+    config: {
+      // Idempotent upsert already prevents duplicate rows/inflated counts;
+      // this rate limit exists to stop follow/unfollow-cycling spam (e.g. a
+      // script hammering the endpoint to pad notification/activity volume).
+      rateLimit: { max: scaledRateLimitMax(30), timeWindow: '1 minute', keyGenerator: userOrIpKey }
+    }
+  }, async (request, reply) => {
     try {
       const artistProfile = await fastify.prisma.artistProfile.findFirst({
         where: { id: request.params.id, isHidden: false, user: { status: 'ACTIVE' } },
@@ -113,6 +155,10 @@ async function artistsRoutes(fastify, _options) {
         return reply.status(400).send({ error: 'You cannot follow your own artist profile' });
       }
 
+      // Upsert on the composite key is inherently idempotent: a second
+      // follow from the same user is a no-op, never a second row, so the
+      // follower count (a live COUNT of ArtistFollow rows) can never be
+      // inflated by a duplicate follow.
       await fastify.prisma.artistFollow.upsert({
         where: {
           userId_artistId: {
@@ -130,6 +176,43 @@ async function artistsRoutes(fastify, _options) {
         where: { artistId: request.params.id }
       });
       return { success: true, following: true, followerCount };
+    } catch (error) {
+      fastify.log.error(error);
+      return reply.status(500).send({ error: 'Internal Server Error' });
+    }
+  });
+
+  // POST /api/artists/:id/unfollow
+  // (POST rather than DELETE so both mutations share one simple, uniformly
+  // CSRF/rate-limited shape; DELETE would work equally well but the frontend
+  // client and every other mutation in this codebase already standardizes on
+  // POST-with-action-suffix, e.g. /grant-artist, /revoke-artist.)
+  fastify.post('/:id/unfollow', {
+    preValidation: [fastify.authenticate],
+    config: {
+      rateLimit: { max: scaledRateLimitMax(30), timeWindow: '1 minute', keyGenerator: userOrIpKey }
+    }
+  }, async (request, reply) => {
+    try {
+      const artistProfile = await fastify.prisma.artistProfile.findFirst({
+        where: { id: request.params.id },
+        select: { id: true }
+      });
+      if (!artistProfile) {
+        return reply.status(404).send({ error: 'Artist not found' });
+      }
+
+      // deleteMany (not delete) so unfollowing when not currently following
+      // is a stable no-op (count: 0) rather than a P2025 "record not found"
+      // error -- unfollow must be safe to call from a UI that is not 100%
+      // sure of the current follow state.
+      const result = await fastify.prisma.artistFollow.deleteMany({
+        where: { userId: request.user.id, artistId: request.params.id }
+      });
+      const followerCount = await fastify.prisma.artistFollow.count({
+        where: { artistId: request.params.id }
+      });
+      return { success: true, following: false, unfollowed: result.count > 0, followerCount };
     } catch (error) {
       fastify.log.error(error);
       return reply.status(500).send({ error: 'Internal Server Error' });

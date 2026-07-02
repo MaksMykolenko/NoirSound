@@ -138,6 +138,15 @@ describe('artist access admin API', () => {
     expect(response.body.user.role).toBe('ADMIN');
     expect(response.body.user.hasArtistProfile).toBe(true);
     expect(response.body.user.canUploadTracks).toBe(true);
+
+    // This is a disposable fixture user promoted directly via Prisma only to
+    // exercise the "grant on an ADMIN" path above -- demote it back so it
+    // does not linger as a real ADMIN+ACTIVE row in the shared test
+    // database for the rest of the run. Other files' tests (e.g. the "last
+    // active admin cannot be demoted" check in endpoints.test.js) count
+    // ADMIN users globally, and a leaked extra admin here previously made
+    // that check spuriously pass by making a real admin demotable.
+    await app.prisma.user.update({ where: { id: target.id }, data: { role: 'LISTENER' } });
   });
 
   it('ensure-artist-profile creates a profile for an ADMIN without a role change, and is a no-op the second time', async () => {
@@ -160,6 +169,10 @@ describe('artist access admin API', () => {
     expect(second.body.created).toBe(false);
     expect(second.body.artistProfile.id).toBe(first.body.artistProfile.id);
     expect(await app.prisma.artistProfile.count({ where: { userId: target.id } })).toBe(1);
+
+    // See the comment in the previous test -- keep this disposable fixture
+    // from lingering as a real ADMIN in the shared test database.
+    await app.prisma.user.update({ where: { id: target.id }, data: { role: 'LISTENER' } });
   });
 
   it('rejects ensure-artist-profile and grant-artist from a non-admin', async () => {
@@ -215,6 +228,10 @@ describe('artist access admin API', () => {
       });
     expect(explicit.statusCode).toBe(200);
     expect(explicit.body.user.hasArtistProfile).toBe(true);
+
+    // See the comment further up this file -- keep these disposable
+    // fixtures from lingering as real ADMINs in the shared test database.
+    await app.prisma.user.updateMany({ where: { id: { in: [target.id, other.id] } }, data: { role: 'LISTENER' } });
   });
 
   it('revoking artist access demotes ARTIST to LISTENER and hides the profile without deleting it', async () => {
@@ -262,8 +279,14 @@ describe('artist access admin API', () => {
     expect(revoke.body.user.role).toBe('ADMIN');
     expect(revoke.body.user.artistProfileHidden).toBe(true);
     expect(revoke.body.user.canUploadTracks).toBe(false);
+
     const stillAdmin = await app.prisma.user.findUnique({ where: { id: target.id } });
     expect(stillAdmin.role).toBe('ADMIN');
+
+    // See the comment further up this file -- keep this disposable fixture
+    // from lingering as a real ADMIN in the shared test database, now that
+    // the above assertion (role must NOT have changed) has already run.
+    await app.prisma.user.update({ where: { id: target.id }, data: { role: 'LISTENER' } });
   });
 
   it('revokes sessions on grant when requested, and leaves them when not', async () => {
@@ -480,5 +503,9 @@ describe('artist access admin API', () => {
     expect(allowed.body.user.hasArtistProfile).toBe(true);
     expect(allowed.body.user.canUploadTracks).toBe(true);
     expect(await app.prisma.artistProfile.count({ where: { userId: target.id } })).toBe(1);
+
+    // See the comment further up this file -- keep this disposable fixture
+    // from lingering as a real ADMIN in the shared test database.
+    await app.prisma.user.update({ where: { id: target.id }, data: { role: 'LISTENER' } });
   });
 });

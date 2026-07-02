@@ -1,6 +1,11 @@
 require('dotenv').config();
 const argon2 = require('argon2');
 const { createPrismaClient } = require('../src/lib/prisma');
+const {
+  isQualifiedPlay,
+  recalculateAllTrackPlayCounts,
+  recalculateAllArtistMonthlyListeners
+} = require('../src/lib/statsAccess');
 
 const prisma = createPrismaClient();
 
@@ -449,15 +454,23 @@ async function seedDemo(client = prisma) {
     },
   });
 
-  // Seed demo play event.
+  // Seed demo play event. `qualified` is computed from the same rule the
+  // real /play-event endpoint uses (never hardcoded), so this fixture
+  // behaves exactly like a genuine qualifying listen -- it shows up in
+  // "recently played", counts toward Track.plays and the artist's
+  // monthlyListeners, and will not be flagged as stale by
+  // `npm run stats:check` / GET /admin/stats/integrity.
+  const demoPlayDurationListenedSeconds = 120;
+  const demoPlayQualified = isQualifiedPlay(demoPlayDurationListenedSeconds, glassHighway.durationSeconds);
   await client.playEvent.upsert({
     where: { id: DEMO_PLAY_EVENT_ID },
     update: {
       trackId: glassHighway.id,
       userId: listener.id,
       artistId: glassHighway.artistId,
-      durationListenedSeconds: 120,
+      durationListenedSeconds: demoPlayDurationListenedSeconds,
       completed: true,
+      qualified: demoPlayQualified,
       source: 'seed_history',
     },
     create: {
@@ -465,11 +478,20 @@ async function seedDemo(client = prisma) {
       trackId: glassHighway.id,
       userId: listener.id,
       artistId: glassHighway.artistId,
-      durationListenedSeconds: 120,
+      durationListenedSeconds: demoPlayDurationListenedSeconds,
       completed: true,
+      qualified: demoPlayQualified,
       source: 'seed_history',
     },
   });
+
+  // Recompute the derived aggregates from the real PlayEvent rows (pure
+  // recomputation, never an increment) rather than hand-maintaining
+  // Track.plays / ArtistProfile.monthlyListeners values here -- this is the
+  // same shared logic the admin recalculate action and `stats:check` use,
+  // so the demo seed can never silently drift from what those report.
+  await recalculateAllTrackPlayCounts(client);
+  await recalculateAllArtistMonthlyListeners(client);
 
   console.log(`Demo seed completed: ${DEMO_ARTISTS.length + 1} artists, ${DEMO_TRACKS.length} tracks.`);
   return {

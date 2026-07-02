@@ -28,6 +28,8 @@ const STATUS_TONES = {
   PUBLISHED: 'text-emerald-400 bg-emerald-500/12 border-emerald-500/25',
   REVIEWED: 'text-emerald-400 bg-emerald-500/12 border-emerald-500/25',
   ACTION_TAKEN: 'text-emerald-400 bg-emerald-500/12 border-emerald-500/25',
+  PASS: 'text-emerald-400 bg-emerald-500/12 border-emerald-500/25',
+  FAIL: 'text-red-400 bg-red-500/12 border-red-500/25',
   OPEN: 'text-amber-400 bg-amber-500/12 border-amber-500/25',
   ESCALATED: 'text-orange-400 bg-orange-500/12 border-orange-500/25',
   PROCESSING: 'text-sky-400 bg-sky-500/12 border-sky-500/25',

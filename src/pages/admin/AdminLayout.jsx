@@ -3,6 +3,7 @@ import { Navigate, NavLink, Outlet } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   Activity,
+  BarChart3,
   Flag,
   Gauge,
   HardDriveUpload,
@@ -56,6 +57,7 @@ export default function AdminLayout() {
     ['uploads', 'uploads', HardDriveUpload],
     ['audit-logs', 'auditLogs', ScrollText],
     ['system', 'system', Activity],
+    ['system/stats', 'statsIntegrity.navLabel', BarChart3],
     ['settings', 'settings', Settings],
   ];
 

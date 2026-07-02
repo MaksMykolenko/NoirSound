@@ -45,6 +45,7 @@ const AdminComments = lazy(() => import('./pages/admin/AdminComments'));
 const AdminUploads = lazy(() => import('./pages/admin/AdminUploads'));
 const AdminAuditLogs = lazy(() => import('./pages/admin/AdminAuditLogs'));
 const AdminSystem = lazy(() => import('./pages/admin/AdminSystem'));
+const AdminStats = lazy(() => import('./pages/admin/AdminStats'));
 const AdminSettings = lazy(() => import('./pages/admin/AdminSettings'));
 
 // Fallback skeleton while loading routes
@@ -149,6 +150,7 @@ export default function App() {
                 <Route path="moderation" element={<Navigate to="/admin/reports" replace />} />
                 <Route path="audit-logs" element={<AdminAuditLogs />} />
                 <Route path="system" element={<AdminSystem />} />
+                <Route path="system/stats" element={<AdminStats />} />
                 <Route path="settings" element={<AdminSettings />} />
               </Route>
               <Route path="/terms" element={<LegalPage slug="terms" />} />

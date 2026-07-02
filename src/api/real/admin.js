@@ -81,3 +81,11 @@ export const unhideComment = (id, reason) => mutate(`/admin/comments/${encodeURI
 export const getAuditLogs = (params) => get('/admin/audit-logs', params);
 export const getAuditLog = (id) => get(`/admin/audit-logs/${encodeURIComponent(id)}`);
 export const getAdminSystem = () => get('/admin/system');
+
+// Stats integrity — see backend/src/lib/statsIntegrity.js and
+// backend/src/lib/statsAccess.js. The integrity read shares its checks
+// verbatim with `npm run stats:check`; the recalculate actions are pure
+// recomputations (never increments), so they are always safe to re-run.
+export const getStatsIntegrity = () => get('/admin/stats/integrity');
+export const recalculateStats = (reason, target = 'all') => mutate('/admin/stats/recalculate', { reason, target });
+export const recalculateArtistStats = (id, reason) => mutate(`/admin/stats/artists/${encodeURIComponent(id)}/recalculate`, { reason });

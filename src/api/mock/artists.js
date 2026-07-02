@@ -16,7 +16,11 @@ export async function getArtistById(id) {
 }
 
 export async function followArtist() {
-  return { success: true };
+  return { success: true, following: true };
+}
+
+export async function unfollowArtist() {
+  return { success: true, following: false, unfollowed: true };
 }
 
 export async function getFollowedArtists() {

@@ -101,7 +101,10 @@
     "topGenre": "Top Genre",
     "genreBreakdown": "Genre Breakdown",
     "calculatedFromEvents": "Calculated from your persisted playback events.",
-    "noListeningTime": "No measured listening time yet"
+    "noListeningTime": "No measured listening time yet",
+    "topTracksHeading": "Your Top Tracks",
+    "topArtistsHeading": "Your Top Artists",
+    "noTopArtistsYet": "No qualified plays yet"
   },
   "settings": {
     "appearance": "Appearance",
@@ -202,8 +205,19 @@
     "uploadNew": "Upload New Track",
     "totalStreams": "Total Streams",
     "hearts": "Hearts",
+    "followers": "Followers",
+    "monthlyListeners": "Monthly Listeners",
     "analytics": "Creator Analytics",
-    "emptyState": "Creator analytics will appear after your first published upload"
+    "emptyState": "Creator analytics will appear after your first published upload",
+    "topTracks": "Top Tracks",
+    "noTopTracksYet": "No qualified plays yet",
+    "recentUploads": "Recent Uploads",
+    "failedUploads": "Failed Uploads",
+    "noFailedUploads": "No failed uploads",
+    "geographyTitle": "Listener Geography",
+    "geographyUnavailable": "Not available yet.",
+    "trendsTitle": "Trends Over Time",
+    "trendsUnavailable": "Not available yet."
   },
   "uploadForm": {
     "title": "Upload your track",
@@ -247,6 +261,7 @@
   "actions": {
     "follow": "Follow",
     "following": "Following",
+    "saving": "Saving…",
     "uploadTrack": "Upload a Track",
     "discoverMusic": "Discover Music",
     "discoverGenres": "Browse Genres",
@@ -664,7 +679,9 @@
       "DISABLED": "Disabled",
       "REDACTED": "Redacted",
       "NON-PRODUCTION": "Non-production",
-      "PRODUCTION": "Production"
+      "PRODUCTION": "Production",
+      "PASS": "Pass",
+      "FAIL": "Fail"
     },
     "artistAccess": {
       "title": "Artist Access",
@@ -710,6 +727,27 @@
         "USER_SUSPENDED": "This account is suspended.",
         "USER_BANNED": "This account is banned.",
         "USER_DELETED": "This account is deleted."
+      }
+    },
+    "statsIntegrity": {
+      "navLabel": "Stats Integrity",
+      "title": "Stats Integrity",
+      "description": "Cross-checks stored play, listener, and follower aggregates against the raw data, and lets you safely recompute them.",
+      "verdict": "Verdict",
+      "checkedAt": "Checked",
+      "recalculateAll": "Recalculate All Stats",
+      "recalculateMonthlyListeners": "Recalculate Monthly Listeners",
+      "recalculateTrackPlays": "Recalculate Track Plays",
+      "recalculateArtist": "Recalculate",
+      "noIssues": "No integrity issues found. Every checked aggregate matches the raw data.",
+      "checks": {
+        "duplicateFollows": "Duplicate follows",
+        "missingArtistProfiles": "Missing artist profiles",
+        "orphanArtistProfiles": "Orphan artist profiles",
+        "staleTrackPlayCounts": "Stale track play counts",
+        "staleMonthlyListeners": "Stale monthly listeners",
+        "orphanPlayEvents": "Orphan play events",
+        "orphanFollows": "Orphan follows"
       }
     }
   }

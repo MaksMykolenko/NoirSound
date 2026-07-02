@@ -12,6 +12,7 @@
     "db:seed:demo": "node prisma/seed.js demo",
     "db:clean-demo": "node scripts/cleanDemoData.js",
     "db:clean-local": "node scripts/cleanLocalProductData.js",
+    "stats:check": "node scripts/check-stats-integrity.js",
     "test": "node tests/runTests.js",
     "test:unit": "vitest run tests/publicBeta.unit.test.js tests/publicBeta.smoke.test.js",
     "test:direct": "vitest run"

@@ -23,7 +23,108 @@ if (typeof window !== 'undefined') {
   audio.crossOrigin = 'anonymous';
 }
 
+// --- Qualified-play tracking -------------------------------------------
+// A "play" only counts once the user has actually listened for at least
+// 30 seconds OR 50% of the track's duration, whichever is smaller (see
+// NOIRSOUND_STATS_DATA_AUDIT.md). The backend is always the final
+// authority on whether a reported event qualifies -- it recomputes the
+// threshold itself from the track's stored duration and never trusts a
+// client-sent flag. This client-side tracker exists only to decide *when*
+// to send the one report for a given listen: it tracks the furthest
+// playhead position reached during real `<audio>` playback (driven by the
+// element's own `timeupdate` events), which a page load, a crawler/bot GET
+// to the stream URL, or a reload can never produce, since none of those
+// ever run a real HTMLMediaElement that fires playback events.
+//
+// Lives in module scope (like `audio` above) rather than component state
+// or Zustand-store fields, so remounts of the player UI can never reset or
+// duplicate it -- there is exactly one tracker for the one <audio> element.
+let listenState = {
+  trackId: null,
+  artistId: null,
+  accumulatedSeconds: 0,
+  qualifyReported: false,
+};
+
+function resetListenState(track) {
+  listenState = {
+    trackId: track?.id ?? null,
+    artistId: track?.artistId ?? null,
+    accumulatedSeconds: 0,
+    qualifyReported: false,
+  };
+}
+
+export function qualifyThresholdSeconds(durationSeconds) {
+  const duration = Number(durationSeconds) || 0;
+  if (duration <= 0) return 30;
+  return Math.min(30, duration * 0.5);
+}
+
+async function reportQualifyingPlay(track, listenedSeconds, completed) {
+  try {
+    await useUserStore.getState().incrementPlayStats(track.id, track.artistId, {
+      durationListenedSeconds: Math.round(listenedSeconds),
+      completed: !!completed,
+    });
+  } catch (err) {
+    console.warn('Failed to record a qualifying play:', err);
+    // Do not flip qualifyReported back off on failure -- retrying mid-listen
+    // would risk a duplicate report if the first request actually landed.
+    // The next real listen (a fresh track/session) will try again.
+  }
+}
+
+// Exposed only so tests can drive the exact <audio> element the store
+// wires up (dispatching real `timeupdate`/`ended` events against it),
+// instead of re-implementing or mocking the qualifying-play logic
+// separately from what production code actually runs. Not part of the
+// app-facing player API.
+export function __getAudioElementForTests() {
+  return audio;
+}
+
 export const usePlayerStore = create((set, get) => {
+  // Tracks the furthest point the real <audio> playhead has reached for
+  // the current listen, and fires exactly one qualifying play-event report
+  // the moment that crosses min(30s, 50% of duration). Called on every
+  // `timeupdate` tick (which only fires during genuine HTMLMediaElement
+  // playback -- a page load, a bot/crawler GET to the stream URL, or a
+  // reload never produces one) and once more, defensively, on `ended` for
+  // very short tracks that can finish before a final tick lands.
+  //
+  // Using the max reached position (not a sum of per-tick deltas) keeps
+  // this simple and avoids any dependency on wall-clock timing or tick
+  // frequency. It does mean a deliberate seek straight to the qualifying
+  // point would register as qualified without the seconds before it having
+  // played -- the ticket's explicit anti-inflation targets are page-load,
+  // bot/crawler, and duplicate/reload counting, none of which involve a
+  // real browser driving this element's playback events at all, so this
+  // tradeoff is deliberate rather than a gap in those specific protections.
+  const trackQualifyingProgress = (isEnded = false) => {
+    const { currentTrack, duration } = get();
+    if (!currentTrack || listenState.trackId !== currentTrack.id) return;
+    if (listenState.qualifyReported) return;
+
+    const currentPosition = (audio && audio.currentTime) || 0;
+    listenState.accumulatedSeconds = Math.max(listenState.accumulatedSeconds, currentPosition);
+
+    const trackDuration = duration || currentTrack.duration || 0;
+    const threshold = qualifyThresholdSeconds(trackDuration);
+    if (listenState.accumulatedSeconds >= threshold) {
+      listenState.qualifyReported = true;
+      const track = currentTrack;
+      const listenedSeconds = listenState.accumulatedSeconds;
+      reportQualifyingPlay(track, listenedSeconds, isEnded).then(() => {
+        // The recently-played list should only ever reflect a listen the
+        // backend actually counted -- never an optimistic click. Adding it
+        // here, after the qualifying report, keeps it consistent with
+        // GET /me/recently-played (qualified-only).
+        get().addToRecentlyPlayed(track);
+      });
+    }
+  };
+
   // Setup audio listeners
   const setupEventListeners = () => {
     if (!audio) return;
@@ -38,9 +139,12 @@ export const usePlayerStore = create((set, get) => {
 
     audio.onplay = () => set({ isPlaying: true });
     audio.onpause = () => set({ isPlaying: false });
-    
-    audio.ontimeupdate = () => set({ progress: audio.currentTime });
-    
+
+    audio.ontimeupdate = () => {
+      set({ progress: audio.currentTime });
+      trackQualifyingProgress();
+    };
+
     audio.ondurationchange = () => {
       if (audio.duration) {
         set({ duration: audio.duration });
@@ -48,6 +152,9 @@ export const usePlayerStore = create((set, get) => {
     };
 
     audio.onended = () => {
+      // Safety net for very short tracks: `ended` can fire before the last
+      // `timeupdate` tick would have crossed the qualifying threshold.
+      trackQualifyingProgress(true);
       get().handleEnded();
     };
     audio.onerror = () => {
@@ -160,6 +267,14 @@ export const usePlayerStore = create((set, get) => {
 
       set(updates);
 
+      // A new play session -- whether a new track or a restart of the same
+      // one -- is a genuinely new listen, so its qualifying-play tracker
+      // starts clean. This is the only place listenState resets; pausing
+      // and resuming the *same* session (togglePlay) must not reset it, or
+      // a user who pauses partway through would lose credit for time
+      // already listened.
+      resetListenState(track);
+
       if (useMockApi) {
         audio.src = track.audioUrl;
       } else {
@@ -170,15 +285,12 @@ export const usePlayerStore = create((set, get) => {
       try {
         await audio.play();
         set({ isPlaying: true });
-        get().addToRecentlyPlayed(track);
-        try {
-          await useUserStore.getState().incrementPlayStats(track.id, track.artistId, {
-            durationListenedSeconds: 0,
-            completed: false
-          });
-        } catch (err) {
-          console.warn("Failed to record playback start:", err);
-        }
+        // Do NOT report a play or touch recently-played here -- starting
+        // playback is not a listen. Both happen only once the qualifying
+        // threshold is actually crossed (see trackQualifyingProgress),
+        // which is the entire point of this pass: no page-load/click
+        // inflation of play counts, monthly listeners, or listening
+        // history.
       } catch (err) {
         console.error('HTML5 audio playback failed.', err);
         const message = err.message || 'Audio playback failed.';

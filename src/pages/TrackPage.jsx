@@ -7,6 +7,7 @@ import { usePlayerStore } from '../store/playerStore';
 import { useToastStore } from '../store/toastStore';
 import { getTrackById, getTracks } from '../api';
 import { formatDuration, formatTime } from '../utils/formatTime';
+import { formatNumber } from '../utils/formatLocale';
 import Waveform from '../components/player/Waveform';
 import CommentSection from '../components/ui/CommentSection';
 import ReportButton from '../components/ui/ReportButton';
@@ -264,10 +265,10 @@ export default function TrackPage() {
               <div className="flex flex-wrap items-center justify-center md:justify-start gap-x-2.5 gap-y-1.5 text-[13px] text-zinc-500">
                 <span
                   className="inline-flex items-center gap-1.5"
-                  aria-label={`${playCount.toLocaleString()} ${t('trackPage.plays')}`}
+                  aria-label={`${formatNumber(playCount)} ${t('trackPage.plays')}`}
                 >
                   <Headphones size={14} className="opacity-70" aria-hidden="true" />
-                  {playCount.toLocaleString()}
+                  {formatNumber(playCount)}
                 </span>
                 {hasDuration && (
                   <>

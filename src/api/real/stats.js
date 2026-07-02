@@ -20,3 +20,7 @@ export async function getRecentlyPlayed() {
     .map((item) => mapTrackResponse(item.track))
     .filter(Boolean);
 }
+
+export async function getArtistDashboard() {
+  return apiFetch('/me/artist-dashboard');
+}

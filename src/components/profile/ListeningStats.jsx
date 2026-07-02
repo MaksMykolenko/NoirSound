@@ -1,15 +1,19 @@
 import React, { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { Clock, Disc3, Music2, Play } from 'lucide-react';
 import { useUserStore } from '../../store/userStore';
 import EmptyState from '../ui/EmptyState';
 import ErrorState from '../ui/ErrorState';
 import LoadingState from '../ui/LoadingState';
+import FallbackCover from '../ui/FallbackCover';
+import FallbackAvatar from '../ui/FallbackAvatar';
 import { getLocalizedGenre } from '../../i18n/genreLabels';
 import { formatNumber } from '../../utils/formatLocale';
 
 export default function ListeningStats() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const {
     userListeningStats,
     listeningStatsHydrated,
@@ -77,6 +81,72 @@ export default function ListeningStats() {
             </div>
           </div>
         ))}
+      </section>
+
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="p-5 sm:p-6 ns-card space-y-3">
+          <h3 className="ns-eyebrow">{t('stats.topTracksHeading')}</h3>
+          {stats.topTracks.length === 0 ? (
+            <p className="text-sm text-zinc-500">{t('stats.notEnoughData')}</p>
+          ) : (
+            <div className="space-y-1">
+              {stats.topTracks.slice(0, 5).map(({ track, playCount }) => (
+                <button
+                  key={track.id}
+                  onClick={() => navigate(`/track/${track.id}`)}
+                  className="w-full flex items-center justify-between p-2 hover:bg-zinc-900/40 rounded-xl text-left cursor-pointer"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <FallbackCover
+                      src={track.coverUrl}
+                      title={track.title}
+                      genre={track.genre}
+                      className="w-9 h-9 rounded-lg shrink-0"
+                      imageClassName="object-cover"
+                    />
+                    <div className="min-w-0">
+                      <h4 className="text-sm font-bold text-zinc-200 truncate">{track.title}</h4>
+                      <p className="text-xs text-zinc-500 truncate">{getLocalizedGenre(track.genre) || 'Uncategorized'}</p>
+                    </div>
+                  </div>
+                  <span className="text-xs text-zinc-500 font-semibold shrink-0">
+                    {formatNumber(playCount)} {t('trackPage.plays')}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="p-5 sm:p-6 ns-card space-y-3">
+          <h3 className="ns-eyebrow">{t('stats.topArtistsHeading')}</h3>
+          {stats.topArtists.length === 0 ? (
+            <p className="text-sm text-zinc-500">{t('stats.notEnoughData')}</p>
+          ) : (
+            <div className="space-y-1">
+              {stats.topArtists.slice(0, 5).map((artist) => (
+                <button
+                  key={artist.id}
+                  onClick={() => navigate(`/artist/${artist.id}`)}
+                  className="w-full flex items-center justify-between p-2 hover:bg-zinc-900/40 rounded-xl text-left cursor-pointer"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <FallbackAvatar
+                      src={artist.avatarUrl}
+                      name={artist.name}
+                      className="w-9 h-9 rounded-full shrink-0"
+                      imageClassName="object-cover"
+                    />
+                    <h4 className="text-sm font-bold text-zinc-200 truncate">{artist.name}</h4>
+                  </div>
+                  <span className="text-xs text-zinc-500 font-semibold shrink-0">
+                    {formatNumber(artist.playCount)} {t('trackPage.plays')}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </section>
 
       <section className="p-5 sm:p-6 ns-card space-y-5">

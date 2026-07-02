@@ -14,6 +14,7 @@ import { Search, SlidersHorizontal, X, ChevronDown } from 'lucide-react';
 import FallbackAvatar from '../components/ui/FallbackAvatar';
 import { normalizeGenre, getGroupOf, isGenreGroup } from '../constants/musicGenres';
 import { getGenreLabel } from '../utils/genreLabels';
+import { formatNumber } from '../utils/formatLocale';
 import {
   rankRecommendedArtists,
   selectFeaturedTracks,
@@ -351,7 +352,7 @@ export default function Discover() {
                   <div className="min-w-0 flex-1">
                     <h4 className="text-xs font-bold text-zinc-200 truncate">{artist.name}</h4>
                     <p className="text-[10px] text-zinc-500 mt-0.5 truncate">
-                      {(artist.followers || 0).toLocaleString()} followers
+                      {formatNumber(artist.followers || 0)} followers
                     </p>
                   </div>
                 </div>

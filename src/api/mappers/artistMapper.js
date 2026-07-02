@@ -9,6 +9,7 @@ export function mapArtistResponse(backendArtist) {
       avatarUrl: backendArtist.avatarUrl || null,
       followers: Number(backendArtist.followers || 0),
       monthlyListeners: Number(backendArtist.monthlyListeners || 0),
+      isFollowing: Boolean(backendArtist.isFollowing),
     };
   }
 
@@ -44,5 +45,6 @@ export function mapArtistResponse(backendArtist) {
     isVerified: Boolean(backendArtist.isVerified),
     socialLinks: backendArtist.socialLinks || {},
     createdAt: backendArtist.createdAt || null,
+    isFollowing: Boolean(backendArtist.isFollowing),
   };
 }

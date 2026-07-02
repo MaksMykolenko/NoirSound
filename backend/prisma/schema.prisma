@@ -291,11 +291,22 @@ model PlayEvent {
   sessionId               String?
   durationListenedSeconds Int // How long they listened in seconds
   completed               Boolean  @default(false)
+  // A "qualified" play satisfies the anti-inflation rule: listened for at
+  // least min(30s, 50% of track duration). Computed and stored server-side
+  // at write time from the reported duration vs. the track's real duration —
+  // never trusted from the client directly. Only qualified events count
+  // toward Track.plays, ArtistProfile.monthlyListeners, recently-played,
+  // and user listening stats.
+  qualified               Boolean  @default(false)
   source                  String?
   createdAt               DateTime @default(now())
 
   track Track @relation(fields: [trackId], references: [id], onDelete: Cascade)
   user  User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([trackId, qualified])
+  @@index([artistId, qualified, createdAt])
+  @@index([userId, qualified, createdAt])
 }
 
 model ListeningAggregate {

@@ -2,6 +2,7 @@ import React from 'react';
 import { Play } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { usePlayerStore } from '../../store/playerStore';
+import { formatNumber } from '../../utils/formatLocale';
 import FallbackCover from '../ui/FallbackCover';
 
 export default function PlaylistCard({ playlist }) {
@@ -68,7 +69,7 @@ export default function PlaylistCard({ playlist }) {
         <p className="text-[13px] text-zinc-400 truncate">{playlist.description}</p>
         <div className="flex justify-between items-center text-[12px] text-zinc-550 font-medium pt-1 border-t border-zinc-900/40">
           <span>By {playlist.creator}</span>
-          <span className="font-mono">{(playlist.likes || 0).toLocaleString()} likes</span>
+          <span className="font-mono">{formatNumber(playlist.likes || 0)} likes</span>
         </div>
       </div>
     </div>

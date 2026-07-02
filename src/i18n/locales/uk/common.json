@@ -101,7 +101,10 @@
     "topGenre": "Топовий жанр",
     "genreBreakdown": "Розподіл за жанрами",
     "calculatedFromEvents": "Розраховано на основі ваших реальних відтворень.",
-    "noListeningTime": "Ще немає виміряного часу"
+    "noListeningTime": "Ще немає виміряного часу",
+    "topTracksHeading": "Ваші топ-треки",
+    "topArtistsHeading": "Ваші топ-артисти",
+    "noTopArtistsYet": "Ще немає зарахованих прослуховувань"
   },
   "settings": {
     "appearance": "Вигляд",
@@ -202,8 +205,19 @@
     "uploadNew": "Завантажити новий трек",
     "totalStreams": "Всього прослуховувань",
     "hearts": "Вподобань",
+    "followers": "Підписники",
+    "monthlyListeners": "Слухачів на місяць",
     "analytics": "Аналітика творця",
-    "emptyState": "Аналітика творця з'явиться після вашого першого опублікованого завантаження"
+    "emptyState": "Аналітика творця з'явиться після вашого першого опублікованого завантаження",
+    "topTracks": "Топ треків",
+    "noTopTracksYet": "Ще немає зарахованих прослуховувань",
+    "recentUploads": "Останні завантаження",
+    "failedUploads": "Невдалі завантаження",
+    "noFailedUploads": "Немає невдалих завантажень",
+    "geographyTitle": "Географія слухачів",
+    "geographyUnavailable": "Поки що недоступно.",
+    "trendsTitle": "Тренди за часом",
+    "trendsUnavailable": "Поки що недоступно."
   },
   "uploadForm": {
     "title": "Завантажити ваш трек",
@@ -247,6 +261,7 @@
   "actions": {
     "follow": "Підписатися",
     "following": "Ви підписані",
+    "saving": "Збереження…",
     "uploadTrack": "Завантажити трек",
     "discoverMusic": "Шукати музику",
     "discoverGenres": "Огляд жанрів",
@@ -581,7 +596,8 @@
       "HATE": "Мова ненависті", "NSFW": "Вміст для дорослих", "OTHER": "Інше",
       "DEGRADED": "Обмежено", "OK": "OK", "UNAVAILABLE": "Недоступно", "ERROR": "Помилка",
       "NOT-READY": "Не готово", "CONFIGURED": "Налаштовано", "MISSING": "Відсутнє", "DISABLED": "Вимкнено",
-      "REDACTED": "Приховано", "NON-PRODUCTION": "Не продакшн", "PRODUCTION": "Продакшн"
+      "REDACTED": "Приховано", "NON-PRODUCTION": "Не продакшн", "PRODUCTION": "Продакшн",
+      "PASS": "Успішно", "FAIL": "Помилка"
     },
     "systemChecks": {
       "api": "API", "database": "База даних", "redis": "Redis", "storage": "Сховище", "worker": "Обробник", "ffmpeg": "FFmpeg"
@@ -630,6 +646,27 @@
         "USER_SUSPENDED": "Цей акаунт призупинено.",
         "USER_BANNED": "Цей акаунт заблоковано.",
         "USER_DELETED": "Цей акаунт видалено."
+      }
+    },
+    "statsIntegrity": {
+      "navLabel": "Цілісність статистики",
+      "title": "Цілісність статистики",
+      "description": "Звіряє збережені агрегати прослуховувань, слухачів і підписників із вихідними даними та дозволяє безпечно їх перерахувати.",
+      "verdict": "Вердикт",
+      "checkedAt": "Перевірено",
+      "recalculateAll": "Перерахувати всю статистику",
+      "recalculateMonthlyListeners": "Перерахувати слухачів на місяць",
+      "recalculateTrackPlays": "Перерахувати прослуховування треків",
+      "recalculateArtist": "Перерахувати",
+      "noIssues": "Проблем із цілісністю не знайдено. Усі перевірені агрегати відповідають вихідним даним.",
+      "checks": {
+        "duplicateFollows": "Дублікати підписок",
+        "missingArtistProfiles": "Відсутні профілі артистів",
+        "orphanArtistProfiles": "Профілі артистів-сироти",
+        "staleTrackPlayCounts": "Застарілі лічильники прослуховувань треків",
+        "staleMonthlyListeners": "Застарілі слухачі на місяць",
+        "orphanPlayEvents": "Події відтворення-сироти",
+        "orphanFollows": "Підписки-сироти"
       }
     }
   }

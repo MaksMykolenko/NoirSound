@@ -77,7 +77,10 @@
     "topGenre": "Główny gatunek",
     "genreBreakdown": "Podział na gatunki",
     "calculatedFromEvents": "Obliczono na podstawie zarejestrowanych odtworzeń.",
-    "noListeningTime": "Brak zmierzonego czasu"
+    "noListeningTime": "Brak zmierzonego czasu",
+    "topTracksHeading": "Twoje najlepsze utwory",
+    "topArtistsHeading": "Twoi najlepsi artyści",
+    "noTopArtistsYet": "Brak zakwalifikowanych odtworzeń"
   },
   "settings": {
     "appearance": "Wygląd",
@@ -178,8 +181,19 @@
     "uploadNew": "Prześlij nowy utwór",
     "totalStreams": "Łącznie odtworzeń",
     "hearts": "Polubienia",
+    "followers": "Obserwujący",
+    "monthlyListeners": "Słuchacze miesięcznie",
     "analytics": "Analityka twórcy",
-    "emptyState": "Analityka twórcy pojawi się po pierwszym opublikowanym utworze"
+    "emptyState": "Analityka twórcy pojawi się po pierwszym opublikowanym utworze",
+    "topTracks": "Najlepsze utwory",
+    "noTopTracksYet": "Brak zakwalifikowanych odtworzeń",
+    "recentUploads": "Ostatnie przesłane utwory",
+    "failedUploads": "Nieudane przesłania",
+    "noFailedUploads": "Brak nieudanych przesłań",
+    "geographyTitle": "Geografia słuchaczy",
+    "geographyUnavailable": "Jeszcze niedostępne.",
+    "trendsTitle": "Trendy w czasie",
+    "trendsUnavailable": "Jeszcze niedostępne."
   },
   "uploadForm": {
     "title": "Prześlij swój utwór",
@@ -223,6 +237,7 @@
   "actions": {
     "follow": "Obserwuj",
     "following": "Obserwujesz",
+    "saving": "Zapisywanie…",
     "uploadTrack": "Prześlij utwór",
     "discoverMusic": "Odkrywaj muzykę",
     "discoverGenres": "Przeglądaj gatunki",
@@ -560,7 +575,8 @@
       "HATE": "Mowa nienawiści", "NSFW": "Treści dla dorosłych", "OTHER": "Inne",
       "DEGRADED": "Ograniczony", "OK": "OK", "UNAVAILABLE": "Niedostępne", "ERROR": "Błąd",
       "NOT-READY": "Niegotowy", "CONFIGURED": "Skonfigurowano", "MISSING": "Brak", "DISABLED": "Wyłączono",
-      "REDACTED": "Ukryto", "NON-PRODUCTION": "Nieprodukcyjne", "PRODUCTION": "Produkcyjne"
+      "REDACTED": "Ukryto", "NON-PRODUCTION": "Nieprodukcyjne", "PRODUCTION": "Produkcyjne",
+      "PASS": "Powodzenie", "FAIL": "Błąd"
     },
     "systemChecks": {
       "api": "API", "database": "Baza danych", "redis": "Redis", "storage": "Magazyn", "worker": "Proces roboczy", "ffmpeg": "FFmpeg"
@@ -609,6 +625,27 @@
         "USER_SUSPENDED": "To konto jest zawieszone.",
         "USER_BANNED": "To konto jest zbanowane.",
         "USER_DELETED": "To konto jest usunięte."
+      }
+    },
+    "statsIntegrity": {
+      "navLabel": "Integralność statystyk",
+      "title": "Integralność statystyk",
+      "description": "Porównuje zapisane zagregowane dane odtworzeń, słuchaczy i obserwujących z danymi źródłowymi i pozwala je bezpiecznie przeliczyć.",
+      "verdict": "Werdykt",
+      "checkedAt": "Sprawdzono",
+      "recalculateAll": "Przelicz wszystkie statystyki",
+      "recalculateMonthlyListeners": "Przelicz słuchaczy miesięcznie",
+      "recalculateTrackPlays": "Przelicz odtworzenia utworów",
+      "recalculateArtist": "Przelicz",
+      "noIssues": "Nie znaleziono problemów z integralnością. Wszystkie sprawdzone dane zgadzają się z danymi źródłowymi.",
+      "checks": {
+        "duplicateFollows": "Zduplikowane obserwacje",
+        "missingArtistProfiles": "Brakujące profile artystów",
+        "orphanArtistProfiles": "Osierocone profile artystów",
+        "staleTrackPlayCounts": "Nieaktualne liczniki odtworzeń utworów",
+        "staleMonthlyListeners": "Nieaktualni słuchacze miesięczni",
+        "orphanPlayEvents": "Osierocone zdarzenia odtworzenia",
+        "orphanFollows": "Osierocone obserwacje"
       }
     }
   }

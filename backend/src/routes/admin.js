@@ -23,6 +23,12 @@ const {
   grantArtistAccess,
   revokeArtistAccess
 } = require('../lib/artistAccess');
+const {
+  recalculateAllArtistMonthlyListeners,
+  recalculateArtistMonthlyListeners,
+  recalculateAllTrackPlayCounts
+} = require('../lib/statsAccess');
+const { runStatsIntegrityCheck } = require('../lib/statsIntegrity');
 
 const execFileAsync = promisify(execFile);
 const USER_ROLES = ['LISTENER', 'ARTIST', 'ADMIN'];
@@ -1730,6 +1736,79 @@ async function adminRoutes(fastify) {
       },
       backup: { status: 'unavailable' }
     };
+  });
+
+  // --- Stats integrity -------------------------------------------------
+
+  // GET /admin/stats/integrity — read-only, safe to call as often as
+  // desired. Runs the exact same checks as `npm run stats:check` (see
+  // backend/src/lib/statsIntegrity.js), so the admin UI and the CLI can
+  // never disagree.
+  fastify.get('/stats/integrity', read, async () => {
+    const report = await runStatsIntegrityCheck(fastify.prisma);
+    return report;
+  });
+
+  // POST /admin/stats/recalculate — admin-only, audited, CSRF-protected
+  // (global CSRF hook) and rate-limited (adminMutationOptions). Body:
+  // { reason, target?: 'monthlyListeners' | 'trackPlays' | 'all' }.
+  // Recomputes (never increments) the requested stored aggregate(s) from
+  // the real PlayEvent rows, so it is always safe to run repeatedly.
+  fastify.post('/stats/recalculate', mutate, async (request, reply) => {
+    const reason = requiredReason(request.body);
+    if (!reason) return sendAdminError(reply, 400, 'ADMIN_REASON_REQUIRED', 'A reason is required.');
+    const target = ['monthlyListeners', 'trackPlays', 'all'].includes(request.body?.target)
+      ? request.body.target
+      : 'all';
+
+    const summary = { target, monthlyListeners: null, trackPlays: null };
+    if (target === 'monthlyListeners' || target === 'all') {
+      const results = await recalculateAllArtistMonthlyListeners(fastify.prisma);
+      summary.monthlyListeners = {
+        artistsChecked: results.length,
+        artistsChanged: results.filter((result) => result.changed).length
+      };
+    }
+    if (target === 'trackPlays' || target === 'all') {
+      const results = await recalculateAllTrackPlayCounts(fastify.prisma);
+      summary.trackPlays = {
+        tracksChecked: results.length,
+        tracksChanged: results.filter((result) => result.changed).length
+      };
+    }
+
+    await createAudit(fastify.prisma, auditData(
+      request.user.id,
+      'STATS_RECALCULATE',
+      'SYSTEM',
+      'stats',
+      reason,
+      { requestId: request.id, ...summary }
+    ));
+
+    return { success: true, ...summary };
+  });
+
+  // POST /admin/stats/artists/:id/recalculate — same recomputation, scoped
+  // to a single artist (used by the per-artist "recalculate" affordance
+  // rather than forcing a full-catalog recalculation for a one-off fix).
+  fastify.post('/stats/artists/:id/recalculate', mutate, async (request, reply) => {
+    const reason = requiredReason(request.body);
+    if (!reason) return sendAdminError(reply, 400, 'ADMIN_REASON_REQUIRED', 'A reason is required.');
+
+    const result = await recalculateArtistMonthlyListeners(fastify.prisma, request.params.id);
+    if (!result) return sendAdminError(reply, 404, 'ADMIN_ARTIST_NOT_FOUND', 'Artist profile not found.');
+
+    await createAudit(fastify.prisma, auditData(
+      request.user.id,
+      'STATS_RECALCULATE',
+      'ARTIST',
+      request.params.id,
+      reason,
+      { requestId: request.id, ...result }
+    ));
+
+    return { success: true, ...result };
   });
 }
 

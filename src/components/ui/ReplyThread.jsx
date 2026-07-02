@@ -2,6 +2,7 @@ import React from 'react';
 import { Heart, Trash2 } from 'lucide-react';
 import { useUserStore } from '../../store/userStore';
 import FallbackAvatar from './FallbackAvatar';
+import { formatNumber } from '../../utils/formatLocale';
 
 export default function ReplyThread({ replies, onLikeReply, onDeleteReply }) {
   const { user } = useUserStore();
@@ -46,7 +47,7 @@ export default function ReplyThread({ replies, onLikeReply, onDeleteReply }) {
                   aria-pressed={isLiked}
                 >
                   <Heart size={10} fill={isLiked ? 'currentColor' : 'none'} />
-                  <span>{reply.likes}</span>
+                  <span>{formatNumber(reply.likes || 0)}</span>
                 </button>
 
                 {/* Delete */}

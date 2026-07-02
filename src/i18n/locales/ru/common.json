@@ -77,7 +77,10 @@
     "topGenre": "Топовый жанр",
     "genreBreakdown": "Распределение по жанрам",
     "calculatedFromEvents": "Рассчитано на основе ваших реальных воспроизведений.",
-    "noListeningTime": "Еще нет измеренного времени"
+    "noListeningTime": "Еще нет измеренного времени",
+    "topTracksHeading": "Ваши топ-треки",
+    "topArtistsHeading": "Ваши топ-артисты",
+    "noTopArtistsYet": "Пока нет засчитанных прослушиваний"
   },
   "settings": {
     "appearance": "Оформление",
@@ -178,8 +181,19 @@
     "uploadNew": "Загрузить новый трек",
     "totalStreams": "Всего прослушиваний",
     "hearts": "Лайков",
+    "followers": "Подписчики",
+    "monthlyListeners": "Слушателей в месяц",
     "analytics": "Аналитика создателя",
-    "emptyState": "Аналитика создателя появится после вашей первой опубликованной загрузки"
+    "emptyState": "Аналитика создателя появится после вашей первой опубликованной загрузки",
+    "topTracks": "Топ треков",
+    "noTopTracksYet": "Пока нет засчитанных прослушиваний",
+    "recentUploads": "Недавние загрузки",
+    "failedUploads": "Неудачные загрузки",
+    "noFailedUploads": "Нет неудачных загрузок",
+    "geographyTitle": "География слушателей",
+    "geographyUnavailable": "Пока недоступно.",
+    "trendsTitle": "Тренды по времени",
+    "trendsUnavailable": "Пока недоступно."
   },
   "uploadForm": {
     "title": "Загрузить ваш трек",
@@ -223,6 +237,7 @@
   "actions": {
     "follow": "Подписаться",
     "following": "Вы подписаны",
+    "saving": "Сохранение…",
     "uploadTrack": "Загрузить трек",
     "discoverMusic": "Искать музыку",
     "discoverGenres": "Обзор жанров",
@@ -560,7 +575,8 @@
       "HATE": "Язык ненависти", "NSFW": "Контент для взрослых", "OTHER": "Другое",
       "DEGRADED": "Ограничено", "OK": "OK", "UNAVAILABLE": "Недоступно", "ERROR": "Ошибка",
       "NOT-READY": "Не готово", "CONFIGURED": "Настроено", "MISSING": "Отсутствует", "DISABLED": "Отключено",
-      "REDACTED": "Скрыто", "NON-PRODUCTION": "Не продакшн", "PRODUCTION": "Продакшн"
+      "REDACTED": "Скрыто", "NON-PRODUCTION": "Не продакшн", "PRODUCTION": "Продакшн",
+      "PASS": "Успешно", "FAIL": "Ошибка"
     },
     "systemChecks": {
       "api": "API", "database": "База данных", "redis": "Redis", "storage": "Хранилище", "worker": "Обработчик", "ffmpeg": "FFmpeg"
@@ -609,6 +625,27 @@
         "USER_SUSPENDED": "Этот аккаунт заморожен.",
         "USER_BANNED": "Этот аккаунт заблокирован.",
         "USER_DELETED": "Этот аккаунт удалён."
+      }
+    },
+    "statsIntegrity": {
+      "navLabel": "Целостность статистики",
+      "title": "Целостность статистики",
+      "description": "Сверяет сохранённые агрегаты прослушиваний, слушателей и подписчиков с исходными данными и позволяет безопасно их пересчитать.",
+      "verdict": "Вердикт",
+      "checkedAt": "Проверено",
+      "recalculateAll": "Пересчитать всю статистику",
+      "recalculateMonthlyListeners": "Пересчитать слушателей в месяц",
+      "recalculateTrackPlays": "Пересчитать прослушивания треков",
+      "recalculateArtist": "Пересчитать",
+      "noIssues": "Проблем с целостностью не найдено. Все проверенные агрегаты соответствуют исходным данным.",
+      "checks": {
+        "duplicateFollows": "Дубликаты подписок",
+        "missingArtistProfiles": "Отсутствующие профили артистов",
+        "orphanArtistProfiles": "Профили артистов-сироты",
+        "staleTrackPlayCounts": "Устаревшие счётчики прослушиваний треков",
+        "staleMonthlyListeners": "Устаревшие слушатели в месяц",
+        "orphanPlayEvents": "События воспроизведения-сироты",
+        "orphanFollows": "Подписки-сироты"
       }
     }
   }

@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import PageMeta from '../components/meta/PageMeta';
 import { useTranslation } from 'react-i18next';
 import { Check, Play, Users, Globe, Music, Edit } from 'lucide-react';
-import { followArtist, getArtistById, getTracksByArtist } from '../api';
+import { followArtist, unfollowArtist, getArtistById, getTracksByArtist } from '../api';
 import { useUserStore } from '../store/userStore';
 import { useToastStore } from '../store/toastStore';
 import TrackListItem from '../components/tracks/TrackListItem';
@@ -29,6 +29,13 @@ export default function ArtistPage() {
   const [error, setError] = useState(null);
   const [isFollowing, setIsFollowing] = useState(false);
   const [followerCount, setFollowerCount] = useState(null);
+  // Must be declared before any early return below -- React requires the
+  // exact same hooks in the exact same order on every render. Declaring
+  // this after the loading/error/not-found guards meant the very first
+  // render (while loading) never called it, but the next render (once data
+  // loads) did, which crashes with "Rendered more hooks than during the
+  // previous render" every time an artist page finishes loading.
+  const [followActionPending, setFollowActionPending] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -38,6 +45,11 @@ export default function ArtistPage() {
           getTracksByArtist(id)
         ]);
         setArtist(a);
+        // Hydrate from the server's per-viewer flag instead of assuming
+        // "not following" -- a signed-in user revisiting/refreshing an
+        // artist they already follow must see "Following", not "Follow".
+        setIsFollowing(Boolean(a.isFollowing));
+        setFollowerCount(null);
         setArtistTracks(sortTracksNewest(t));
       } catch (err) {
         console.error('Failed to load artist data:', err);
@@ -95,14 +107,26 @@ export default function ArtistPage() {
       setAuthModalOpen(true);
       return;
     }
-    if (isFollowing) return;
+    if (followActionPending) return;
+    setFollowActionPending(true);
     try {
-      await followArtist(id);
-      setIsFollowing(true);
-      setFollowerCount((current) => (current ?? Number(artist.followers || 0)) + 1);
-      addToast(`Following ${artist.name}.`, 'success');
+      if (isFollowing) {
+        const result = await unfollowArtist(id);
+        setIsFollowing(false);
+        // Trust the backend's post-mutation count over a hand-computed
+        // local delta -- it reflects the real row count, not an assumption.
+        if (typeof result?.followerCount === 'number') setFollowerCount(result.followerCount);
+        addToast(`Unfollowed ${artist.name}.`, 'success');
+      } else {
+        const result = await followArtist(id);
+        setIsFollowing(true);
+        if (typeof result?.followerCount === 'number') setFollowerCount(result.followerCount);
+        addToast(`Following ${artist.name}.`, 'success');
+      }
     } catch (err) {
-      addToast(err.message || 'Failed to follow artist.', 'error');
+      addToast(err.message || (isFollowing ? 'Failed to unfollow artist.' : 'Failed to follow artist.'), 'error');
+    } finally {
+      setFollowActionPending(false);
     }
   };
 
@@ -175,13 +199,17 @@ export default function ArtistPage() {
           ) : (
             <button
               onClick={handleFollowClick}
-              className={`px-6 min-h-11 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer shrink-0 ${
+              disabled={followActionPending}
+              aria-pressed={isFollowing}
+              className={`px-6 min-h-11 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer shrink-0 disabled:opacity-60 disabled:cursor-wait ${
                 isFollowing
                   ? 'bg-zinc-800 text-zinc-400 hover:text-zinc-100 border border-zinc-700/60'
                   : 'ns-button-primary'
               }`}
             >
-              {isFollowing ? t('actions.following') : t('actions.follow')}
+              {followActionPending
+                ? t('actions.saving', { defaultValue: 'Saving…' })
+                : isFollowing ? t('actions.following') : t('actions.follow')}
             </button>
           )}
         </div>

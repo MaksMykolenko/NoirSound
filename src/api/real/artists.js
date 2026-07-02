@@ -25,6 +25,10 @@ export async function followArtist(id) {
   return apiFetch(`/artists/${id}/follow`, { method: 'POST' });
 }
 
+export async function unfollowArtist(id) {
+  return apiFetch(`/artists/${id}/unfollow`, { method: 'POST' });
+}
+
 export async function getFollowedArtists() {
   const response = await apiFetch('/me/followed-artists');
   const data = response?.data ?? response;

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Play, Pause, Heart, Plus, Check } from 'lucide-react';
 import { usePlayerStore } from '../../store/playerStore';
 import { formatDuration } from '../../utils/formatTime';
+import { formatNumber } from '../../utils/formatLocale';
 import FallbackCover from '../ui/FallbackCover';
 import { getLocalizedGenre } from '../../i18n/genreLabels';
 
@@ -136,7 +137,7 @@ export default function TrackListItem({ track, index, tracksContext = [] }) {
           {getLocalizedGenre(track.genre)}
         </span>
         <span className="hidden sm:inline text-[13px] text-zinc-400 font-mono select-none">
-          {Number(track.plays || 0).toLocaleString()} plays
+          {formatNumber(track.plays || 0)} plays
         </span>
         <span className="text-[13px] text-zinc-450 font-mono w-10 text-right select-none">
           {formatDuration(track.duration)}

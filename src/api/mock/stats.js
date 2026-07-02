@@ -19,3 +19,20 @@ export async function recordPlayEvent() {
 export async function getRecentlyPlayed() {
   return [];
 }
+
+export async function getArtistDashboard() {
+  return {
+    followers: 0,
+    monthlyListeners: 0,
+    isHidden: false,
+    totalPlays: 0,
+    totalLikes: 0,
+    publishedTrackCount: 0,
+    tracks: [],
+    topTracks: [],
+    recentUploads: [],
+    failedUploads: [],
+    geography: null,
+    trends: null,
+  };
+}

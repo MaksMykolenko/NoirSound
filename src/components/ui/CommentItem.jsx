@@ -6,6 +6,7 @@ import { useUserStore } from '../../store/userStore';
 import ReplyThread from './ReplyThread';
 import ReplyInput from './ReplyInput';
 import FallbackAvatar from './FallbackAvatar';
+import { formatNumber } from '../../utils/formatLocale';
 
 export default function CommentItem({ comment, trackId }) {
   const { user } = useUserStore();
@@ -79,7 +80,7 @@ export default function CommentItem({ comment, trackId }) {
               aria-pressed={isLiked}
             >
               <Heart size={12} fill={isLiked ? 'currentColor' : 'none'} />
-              <span>{comment.likes}</span>
+              <span>{formatNumber(comment.likes || 0)}</span>
             </button>
 
             {/* Reply */}

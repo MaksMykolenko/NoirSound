@@ -1,21 +1,45 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Check } from 'lucide-react';
-import { followArtist } from '../../api/artists';
+import { followArtist, unfollowArtist } from '../../api/artists';
+import { useUserStore } from '../../store/userStore';
+import { formatNumber } from '../../utils/formatLocale';
 import FallbackAvatar from '../ui/FallbackAvatar';
 
 export default function ArtistCard({ artist }) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
-  const [isFollowing, setIsFollowing] = useState(false);
+  const user = useUserStore((state) => state.user);
+  const setAuthModalOpen = useUserStore((state) => state.setAuthModalOpen);
+  // Hydrated from the artist payload itself (isFollowing is computed
+  // server-side per viewer) rather than assumed false, so a card for an
+  // artist the viewer already follows renders correctly on first paint --
+  // notably on the Profile > Followed Artists tab, where every card here
+  // is, by definition, already followed.
+  const [isFollowing, setIsFollowing] = useState(Boolean(artist.isFollowing));
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    setIsFollowing(Boolean(artist.isFollowing));
+  }, [artist.id, artist.isFollowing]);
 
   const handleFollowClick = async (e) => {
     e.stopPropagation();
-    if (isFollowing || isSubmitting) return;
+    if (!user) {
+      setAuthModalOpen(true);
+      return;
+    }
+    if (isSubmitting) return;
     try {
       setIsSubmitting(true);
-      await followArtist(artist.id);
-      setIsFollowing(true);
+      if (isFollowing) {
+        await unfollowArtist(artist.id);
+        setIsFollowing(false);
+      } else {
+        await followArtist(artist.id);
+        setIsFollowing(true);
+      }
     } catch {
       // The real API client emits the visible error toast.
     } finally {
@@ -62,7 +86,7 @@ export default function ArtistCard({ artist }) {
           )}
         </div>
         <p className="text-[13px] text-zinc-400 font-medium">
-          {(artist.monthlyListeners || 0).toLocaleString()} monthly listeners
+          {formatNumber(artist.monthlyListeners || 0)} {t('profile.monthlyListeners')}
         </p>
       </div>
 
@@ -76,7 +100,7 @@ export default function ArtistCard({ artist }) {
         }`}
         aria-pressed={isFollowing}
       >
-        {isSubmitting ? 'Saving…' : isFollowing ? 'Following' : 'Follow'}
+        {isSubmitting ? t('actions.saving') : isFollowing ? t('actions.following') : t('actions.follow')}
       </button>
     </div>
   );
