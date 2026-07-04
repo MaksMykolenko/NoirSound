@@ -42,7 +42,7 @@ async function artistsRoutes(fastify, _options) {
       const where = {
         isHidden: false,
         user: { status: 'ACTIVE' },
-        ...(filterPublished ? { tracks: { some: { status: 'PUBLISHED' } } } : {})
+        ...(filterPublished ? { tracks: { some: { status: 'PUBLISHED', isPublic: true } } } : {})
       };
 
       const artists = await fastify.prisma.artistProfile.findMany({
@@ -67,7 +67,7 @@ async function artistsRoutes(fastify, _options) {
         where: { id: request.params.id, isHidden: false, user: { status: 'ACTIVE' } },
         include: {
           user: { select: { displayName: true, username: true, avatarUrl: true, bannerUrl: true, bio: true } },
-          tracks: { where: { status: 'PUBLISHED' }, select: { genre: true }, take: 20 },
+          tracks: { where: { status: 'PUBLISHED', isPublic: true }, select: { genre: true }, take: 20 },
           _count: { select: { followers: true } }
         }
       });
@@ -109,7 +109,8 @@ async function artistsRoutes(fastify, _options) {
       const tracks = await fastify.prisma.track.findMany({
         where: {
           artistId: artist.id,
-          status: 'PUBLISHED'
+          status: 'PUBLISHED',
+          isPublic: true
         },
         include: {
           artist: {

@@ -1,4 +1,5 @@
 import { mapTrackResponse } from './trackMapper';
+import { API_BASE_URL } from '../client';
 
 export function mapPlaylistResponse(backendPlaylist) {
   if (!backendPlaylist) return null;
@@ -15,7 +16,9 @@ export function mapPlaylistResponse(backendPlaylist) {
     creatorName: backendPlaylist.creator?.displayName?.trim()
       || backendPlaylist.creator?.username?.trim()
       || 'Unknown creator',
-    coverUrl: backendPlaylist.coverUrl || null,
+    coverUrl: backendPlaylist.hasCoverImage
+      ? `${API_BASE_URL}/public/playlist-covers/${backendPlaylist.id}`
+      : backendPlaylist.coverUrl || null,
     likes: Number(backendPlaylist.likes || 0),
     trackCount: backendPlaylist.tracks ? backendPlaylist.tracks.length : 0,
     tracks: backendPlaylist.tracks ? backendPlaylist.tracks.map(pt => mapTrackResponse(pt.track)) : [],

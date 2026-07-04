@@ -5,21 +5,44 @@
 // derived lookups + pure helper functions used across the app.
 //
 // IMPORTANT: stable snake_case `key` values are what the backend/database store.
-// Localized display labels live in i18n (see src/utils/genreLabels.js). Never
-// store a translated/display string as a genre value.
+// Display labels are English-only and live right on the taxonomy (`label` per
+// genre, `groupLabels` per group) — see src/utils/genreLabels.js for the
+// lookup/fallback helpers. Genre names are never translated: the UI language
+// (en/uk/pl/ru) must never change how a genre or genre group is displayed.
+// See NOIRSOUND_GENRE_LABELS_AUDIT.md / NOIRSOUND_GENRE_ENGLISH_ONLY_REPORT.md.
 
 import taxonomy from '../../shared/musicGenres.json';
 
 /** Ordered list of group keys (used for display grouping). */
 export const GENRE_GROUPS = Object.freeze([...taxonomy.groups]);
 
-/** Full taxonomy: [{ key, group, aliases }]. */
+/** Full taxonomy: [{ key, label, group, aliases }]. `label` is English-only. */
 export const MUSIC_GENRES = Object.freeze(
   taxonomy.genres.map((g) => Object.freeze({ ...g, aliases: Object.freeze([...g.aliases]) }))
 );
 
 /** All canonical genre keys in taxonomy order. */
 export const GENRE_KEYS = Object.freeze(MUSIC_GENRES.map((g) => g.key));
+
+/** English-only group label, full form (e.g. "Hip-Hop & Urban"). Used in the genre picker's group headers. Never localized. */
+export const GROUP_LABELS = Object.freeze({ ...taxonomy.groupLabels });
+
+/**
+ * English-only, compact group labels for space-constrained "quick filter" UI
+ * (Discover quick tabs, Home "Browse by Genre" chips) — deliberately shorter
+ * than GROUP_LABELS (e.g. "Hip-Hop" vs "Hip-Hop & Urban"). This is a display
+ * concern, not taxonomy data, so it lives here rather than in the shared JSON.
+ * Never localized — see NOIRSOUND_GENRE_ENGLISH_ONLY_REPORT.md.
+ */
+export const QUICK_GROUP_LABELS = Object.freeze({
+  popular: 'Popular',
+  urban: 'Hip-Hop',
+  electronic: 'Electronic',
+  rock: 'Rock',
+  chill: 'Chill',
+  jazz_blues: 'Jazz',
+  world: 'World',
+});
 
 const KEY_SET = new Set(GENRE_KEYS);
 const GROUP_SET = new Set(GENRE_GROUPS);
@@ -33,6 +56,12 @@ const GENRES_BY_GROUP = MUSIC_GENRES.reduce((acc, g) => {
 // key -> group
 const GROUP_OF = MUSIC_GENRES.reduce((acc, g) => {
   acc[g.key] = g.group;
+  return acc;
+}, {});
+
+// key -> English label (single source of truth for genre display text).
+const LABEL_OF = MUSIC_GENRES.reduce((acc, g) => {
+  acc[g.key] = g.label;
   return acc;
 }, {});
 
@@ -102,4 +131,20 @@ export function getAllGenreKeys() {
 /** All group keys, in display order. */
 export function getGroupKeys() {
   return [...GENRE_GROUPS];
+}
+
+/**
+ * English display label for an already-canonical genre key (e.g. "hip_hop").
+ * Does NOT normalize or accept a locale — callers that may have a legacy/
+ * freeform value should normalize first (see getGenreLabel in
+ * src/utils/genreLabels.js, which wraps this with normalization + fallback).
+ * Returns undefined for an unknown key.
+ */
+export function getLabelOfKey(key) {
+  return LABEL_OF[key];
+}
+
+/** English display label for a group key. Returns undefined for an unknown group. */
+export function getLabelOfGroup(groupKey) {
+  return GROUP_LABELS[groupKey];
 }

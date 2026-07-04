@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { backendUp, loginApi, uploadTrackViaApi } from './_helpers.js';
 
 // Design QA for the new genre UI. These tests avoid depending on backend data:
 // the genre taxonomy (quick tabs + picker options) is static, so the picker,
@@ -94,18 +95,101 @@ test.describe('Discover genre filters — mobile', () => {
   });
 });
 
-test.describe('Genre i18n does not break layout', () => {
+// Genre names are always English, regardless of the active UI language
+// (en/uk/pl/ru) — see NOIRSOUND_GENRE_ENGLISH_ONLY_REPORT.md. These specs
+// assert English text appears (and the old localized text does not) under
+// every non-English UI language NoirSound ships.
+test.describe('Genre i18n does not break layout — genre names stay English', () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
-  test('Ukrainian quick tabs render and fit', async ({ page }) => {
+  const LOCALIZED_URBAN_TAB = { uk: 'Хіп-хоп', pl: 'Hip-hop', ru: 'Хип-хоп' };
+
+  for (const lng of ['uk', 'pl', 'ru']) {
+    test(`${lng}: quick tabs render in English and fit`, async ({ page }) => {
+      await page.addInitScript((l) => localStorage.setItem('noirsound_language', l), lng);
+      await page.goto('/discover');
+      await page.waitForSelector('[data-testid="genre-quick-tabs"]');
+
+      // Genre-group tab text is the English label, not a translation.
+      await expect(page.getByRole('button', { name: 'Hip-Hop', exact: true })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Electronic', exact: true })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'World', exact: true })).toBeVisible();
+      // The old per-language "Hip-Hop" translation must be gone.
+      const localized = LOCALIZED_URBAN_TAB[lng];
+      if (localized && localized !== 'Hip-Hop') {
+        await expect(page.getByText(localized, { exact: true })).toHaveCount(0);
+      }
+
+      const { docOverflow, tabsOverflow } = await horizontalOverflow(page);
+      expect(docOverflow).toBeLessThanOrEqual(1);
+      expect(tabsOverflow).toBeLessThanOrEqual(1);
+      await page.screenshot({ path: `${SHOTS}/mobile-discover-genres-${lng}-390x844.png` });
+    });
+
+    test(`${lng}: full picker options and the active chip render in English`, async ({ page }) => {
+      await page.addInitScript((l) => localStorage.setItem('noirsound_language', l), lng);
+      await page.goto('/discover');
+      await openMorePicker(page);
+
+      await page.getByTestId('genre-search').fill('jazz');
+      const jazzOption = page.locator('[data-genre-option="jazz"]');
+      await expect(jazzOption).toBeVisible();
+      await expect(jazzOption).toContainText('Jazz');
+
+      await jazzOption.click();
+      const chip = page.getByRole('button', { name: /Clear genre/ });
+      await expect(chip).toBeVisible();
+      await expect(chip).toContainText('Jazz');
+    });
+  }
+});
+
+test.describe('Genre i18n — Upload picker and Track page pill stay English', () => {
+  test.describe.configure({ mode: 'serial' });
+  let backendReady = false;
+  let trackId = null;
+  let artistCookies = [];
+
+  test.beforeAll(async ({ request }) => {
+    backendReady = await backendUp(request);
+    if (!backendReady) return;
+    const ok = await loginApi(request, 'artist@noirsound.com', 'password123');
+    if (!ok) { backendReady = false; return; }
+    artistCookies = (await request.storageState()).cookies;
+    try {
+      const result = await uploadTrackViaApi(request, { title: `Genre i18n E2E ${Date.now()}` });
+      trackId = result.trackId;
+    } catch {
+      trackId = null;
+    }
+  });
+
+  test.beforeEach(async ({ context }) => {
+    if (artistCookies.length) await context.addCookies(artistCookies);
+  });
+
+  test('Ukrainian UI: Upload genre picker options are English', async ({ page }) => {
+    test.skip(!backendReady, 'Backend not reachable in this environment.');
     await page.addInitScript(() => localStorage.setItem('noirsound_language', 'uk'));
-    await page.goto('/discover');
-    await page.waitForSelector('[data-testid="genre-quick-tabs"]');
-    await expect(page.getByRole('button', { name: 'Хіп-хоп' })).toBeVisible();
-    const { docOverflow, tabsOverflow } = await horizontalOverflow(page);
-    expect(docOverflow).toBeLessThanOrEqual(1);
-    expect(tabsOverflow).toBeLessThanOrEqual(1);
-    await page.screenshot({ path: `${SHOTS}/mobile-discover-genres-uk-390x844.png` });
+    await page.goto('/upload');
+    await page.waitForSelector('main');
+    const trigger = page.getByTestId('genre-picker-trigger');
+    test.skip(!(await trigger.count()), 'Upload form not reachable (auth fallback).');
+    await trigger.click();
+    const panel = page.getByTestId('genre-picker-panel');
+    await expect(panel).toBeVisible();
+    await expect(panel.locator('[data-genre-option="hip_hop"]')).toContainText('Hip-Hop');
+    await expect(panel.locator('[data-genre-group="urban"]')).toContainText('Hip-Hop & Urban');
+  });
+
+  test('Ukrainian UI: Track page genre pill is English', async ({ page }) => {
+    test.skip(!backendReady || !trackId, 'Backend/track not available in this environment.');
+    await page.addInitScript(() => localStorage.setItem('noirsound_language', 'uk'));
+    await page.goto(`/track/${trackId}`);
+    await page.waitForSelector('main');
+    // The uploaded track's genre is "electronic" (see uploadTrackViaApi default).
+    await expect(page.getByText('Electronic', { exact: true }).first()).toBeVisible();
+    await expect(page.getByText('Електроніка')).toHaveCount(0);
   });
 });
 

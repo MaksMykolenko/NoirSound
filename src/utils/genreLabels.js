@@ -1,13 +1,23 @@
-// i18n-aware genre label helpers.
+// English-only genre label helpers.
 //
 // Backend/database always store a stable key (e.g. "hip_hop"); these helpers map
-// a key (or a legacy/custom value) to a localized display label. User-supplied
-// tags are NOT translated here — only platform-known genre keys.
+// a key (or a legacy/custom value) to its display label. Genre and genre-group
+// NAMES are product/music-taxonomy terms, not UI copy — they are always shown
+// in English, regardless of the active UI language (en/uk/pl/ru). Only the
+// surrounding UI labels (e.g. the word "Genre:") are translated via i18n.
+// See NOIRSOUND_GENRE_LABELS_AUDIT.md / NOIRSOUND_GENRE_ENGLISH_ONLY_REPORT.md.
+//
+// User-supplied tags are NOT touched here — only platform-known genre keys.
 
-import i18n from '../i18n';
-import { MUSIC_GENRES, normalizeGenre, isSupportedGenre } from '../constants/musicGenres';
+import {
+  MUSIC_GENRES,
+  normalizeGenre,
+  isSupportedGenre,
+  getLabelOfKey,
+  getLabelOfGroup,
+} from '../constants/musicGenres';
 
-/** Humanize a snake_case key as a last-resort display fallback. */
+/** Humanize a snake_case key as a last-resort display fallback (English-like, never localized). */
 function prettifyKey(key) {
   return String(key || '')
     .replace(/_/g, ' ')
@@ -17,50 +27,51 @@ function prettifyKey(key) {
 }
 
 /**
- * Localized label for a genre key (or legacy value).
- * @param {string} key   genre key or legacy/custom value
- * @param {string} [language] BCP-47 code; defaults to the active language
- * @returns {string} localized label, or the raw value for unknown/custom genres
+ * English display label for a genre key (or legacy/freeform value). Always
+ * English, regardless of UI language — genre names are never translated.
+ *
+ * @param {string} key         genre key or legacy/custom value
+ * @param {string} [_language] ignored. Kept for call-site backward
+ *   compatibility with the old i18n-aware signature `getGenreLabel(key, lng)`;
+ *   genre names no longer vary by locale.
+ * @returns {string} English label, or the raw value verbatim for unknown/custom genres
  */
-export function getGenreLabel(key, language) {
+export function getGenreLabel(key, _language) {
   if (!key) return '';
   const norm = normalizeGenre(key);
   if (!norm) {
-    // Unknown/custom genre — display the original text safely (never crash).
+    // Unknown/custom genre — display the original text safely (never crash,
+    // never localized).
     return String(key);
   }
-  const options = { defaultValue: '' };
-  if (language) options.lng = language;
-  const label = i18n.t(`genres.${norm}`, options);
-  return label || prettifyKey(norm);
+  return getLabelOfKey(norm) ?? prettifyKey(norm);
 }
 
 /**
- * Localized label for a genre group key.
+ * English display label for a genre group key. Always English, regardless of
+ * UI language.
+ *
  * @param {string} groupKey
- * @param {string} [language]
+ * @param {string} [_language] ignored — see getGenreLabel.
  */
-export function getGenreGroupLabel(groupKey, language) {
+export function getGenreGroupLabel(groupKey, _language) {
   if (!groupKey) return '';
-  const options = { defaultValue: '' };
-  if (language) options.lng = language;
-  const label = i18n.t(`genreGroups.${groupKey}`, options);
-  return label || prettifyKey(groupKey);
+  return getLabelOfGroup(groupKey) ?? prettifyKey(groupKey);
 }
 
 /**
- * Search the taxonomy by localized label, key, or alias.
+ * Search the taxonomy by (English) label, key, or alias. Search terms are
+ * always matched/displayed in English — there is no per-language index.
  * @param {string} query
- * @param {string} [language]
+ * @param {string} [_language] ignored — see getGenreLabel.
  * @returns {Array<{key,group,label,aliases}>}
  */
-export function searchGenres(query, language) {
-  const lng = language || i18n.language;
+export function searchGenres(query, _language) {
   const entries = MUSIC_GENRES.map((g) => ({
     key: g.key,
     group: g.group,
     aliases: g.aliases,
-    label: getGenreLabel(g.key, lng),
+    label: g.label,
   }));
 
   const q = String(query || '').trim().toLowerCase();

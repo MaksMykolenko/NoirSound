@@ -16,9 +16,27 @@
     "world",
     "experimental"
   ],
+  "groupLabels": {
+    "popular": "Popular",
+    "urban": "Hip-Hop & Urban",
+    "rnb_soul": "R&B & Soul",
+    "rock": "Rock & Alternative",
+    "metal": "Metal",
+    "electronic": "Electronic",
+    "chill": "Chill & Beats",
+    "jazz_blues": "Jazz & Blues",
+    "folk": "Folk & Acoustic",
+    "country": "Country",
+    "latin": "Latin & Afro",
+    "classical": "Classical",
+    "soundtrack": "Soundtracks & Media",
+    "world": "World & Regional",
+    "experimental": "Experimental"
+  },
   "genres": [
     {
       "key": "pop",
+      "label": "Pop",
       "group": "popular",
       "aliases": [
         "mainstream pop"
@@ -26,6 +44,7 @@
     },
     {
       "key": "dance_pop",
+      "label": "Dance Pop",
       "group": "popular",
       "aliases": [
         "dance pop"
@@ -33,6 +52,7 @@
     },
     {
       "key": "synth_pop",
+      "label": "Synth-Pop",
       "group": "popular",
       "aliases": [
         "synthpop",
@@ -41,6 +61,7 @@
     },
     {
       "key": "k_pop",
+      "label": "K-Pop",
       "group": "popular",
       "aliases": [
         "kpop",
@@ -49,6 +70,7 @@
     },
     {
       "key": "j_pop",
+      "label": "J-Pop",
       "group": "popular",
       "aliases": [
         "jpop",
@@ -57,6 +79,7 @@
     },
     {
       "key": "hyperpop",
+      "label": "Hyperpop",
       "group": "popular",
       "aliases": [
         "hyper pop"
@@ -64,6 +87,7 @@
     },
     {
       "key": "hip_hop",
+      "label": "Hip-Hop",
       "group": "urban",
       "aliases": [
         "hip hop",
@@ -73,6 +97,7 @@
     },
     {
       "key": "rap",
+      "label": "Rap",
       "group": "urban",
       "aliases": [
         "rap music"
@@ -80,6 +105,7 @@
     },
     {
       "key": "trap",
+      "label": "Trap",
       "group": "urban",
       "aliases": [
         "trap rap"
@@ -87,6 +113,7 @@
     },
     {
       "key": "drill",
+      "label": "Drill",
       "group": "urban",
       "aliases": [
         "uk drill",
@@ -95,6 +122,7 @@
     },
     {
       "key": "boom_bap",
+      "label": "Boom Bap",
       "group": "urban",
       "aliases": [
         "boombap",
@@ -104,6 +132,7 @@
     },
     {
       "key": "cloud_rap",
+      "label": "Cloud Rap",
       "group": "urban",
       "aliases": [
         "cloud rap"
@@ -111,6 +140,7 @@
     },
     {
       "key": "emo_rap",
+      "label": "Emo Rap",
       "group": "urban",
       "aliases": [
         "emo rap"
@@ -118,6 +148,7 @@
     },
     {
       "key": "phonk",
+      "label": "Phonk",
       "group": "urban",
       "aliases": [
         "drift phonk"
@@ -125,11 +156,13 @@
     },
     {
       "key": "grime",
+      "label": "Grime",
       "group": "urban",
       "aliases": []
     },
     {
       "key": "rnb",
+      "label": "R&B",
       "group": "rnb_soul",
       "aliases": [
         "r&b",
@@ -141,11 +174,13 @@
     },
     {
       "key": "soul",
+      "label": "Soul",
       "group": "rnb_soul",
       "aliases": []
     },
     {
       "key": "neo_soul",
+      "label": "Neo Soul",
       "group": "rnb_soul",
       "aliases": [
         "neo-soul",
@@ -154,16 +189,19 @@
     },
     {
       "key": "funk",
+      "label": "Funk",
       "group": "rnb_soul",
       "aliases": []
     },
     {
       "key": "gospel",
+      "label": "Gospel",
       "group": "rnb_soul",
       "aliases": []
     },
     {
       "key": "rock",
+      "label": "Rock",
       "group": "rock",
       "aliases": [
         "rock music"
@@ -171,6 +209,7 @@
     },
     {
       "key": "alternative",
+      "label": "Alternative",
       "group": "rock",
       "aliases": [
         "alt"
@@ -178,6 +217,7 @@
     },
     {
       "key": "alternative_rock",
+      "label": "Alternative Rock",
       "group": "rock",
       "aliases": [
         "alt rock",
@@ -186,6 +226,7 @@
     },
     {
       "key": "indie",
+      "label": "Indie",
       "group": "rock",
       "aliases": [
         "indie music"
@@ -193,6 +234,7 @@
     },
     {
       "key": "indie_rock",
+      "label": "Indie Rock",
       "group": "rock",
       "aliases": [
         "indie rock"
@@ -200,6 +242,7 @@
     },
     {
       "key": "punk",
+      "label": "Punk",
       "group": "rock",
       "aliases": [
         "punk music"
@@ -207,6 +250,7 @@
     },
     {
       "key": "punk_rock",
+      "label": "Punk Rock",
       "group": "rock",
       "aliases": [
         "punk rock"
@@ -214,6 +258,7 @@
     },
     {
       "key": "post_punk",
+      "label": "Post-Punk",
       "group": "rock",
       "aliases": [
         "post punk",
@@ -222,6 +267,7 @@
     },
     {
       "key": "garage_rock",
+      "label": "Garage Rock",
       "group": "rock",
       "aliases": [
         "garage rock"
@@ -229,6 +275,7 @@
     },
     {
       "key": "psychedelic_rock",
+      "label": "Psychedelic Rock",
       "group": "rock",
       "aliases": [
         "psych rock",
@@ -238,6 +285,7 @@
     },
     {
       "key": "hard_rock",
+      "label": "Hard Rock",
       "group": "rock",
       "aliases": [
         "hard rock"
@@ -245,11 +293,13 @@
     },
     {
       "key": "metal",
+      "label": "Metal",
       "group": "metal",
       "aliases": []
     },
     {
       "key": "heavy_metal",
+      "label": "Heavy Metal",
       "group": "metal",
       "aliases": [
         "heavy metal"
@@ -257,6 +307,7 @@
     },
     {
       "key": "death_metal",
+      "label": "Death Metal",
       "group": "metal",
       "aliases": [
         "death metal"
@@ -264,6 +315,7 @@
     },
     {
       "key": "black_metal",
+      "label": "Black Metal",
       "group": "metal",
       "aliases": [
         "black metal"
@@ -271,6 +323,7 @@
     },
     {
       "key": "doom_metal",
+      "label": "Doom Metal",
       "group": "metal",
       "aliases": [
         "doom metal"
@@ -278,6 +331,7 @@
     },
     {
       "key": "metalcore",
+      "label": "Metalcore",
       "group": "metal",
       "aliases": [
         "metal core"
@@ -285,6 +339,7 @@
     },
     {
       "key": "nu_metal",
+      "label": "Nu Metal",
       "group": "metal",
       "aliases": [
         "nu-metal",
@@ -293,6 +348,7 @@
     },
     {
       "key": "electronic",
+      "label": "Electronic",
       "group": "electronic",
       "aliases": [
         "edm",
@@ -301,11 +357,13 @@
     },
     {
       "key": "house",
+      "label": "House",
       "group": "electronic",
       "aliases": []
     },
     {
       "key": "deep_house",
+      "label": "Deep House",
       "group": "electronic",
       "aliases": [
         "deep house"
@@ -313,6 +371,7 @@
     },
     {
       "key": "tech_house",
+      "label": "Tech House",
       "group": "electronic",
       "aliases": [
         "tech house"
@@ -320,16 +379,19 @@
     },
     {
       "key": "techno",
+      "label": "Techno",
       "group": "electronic",
       "aliases": []
     },
     {
       "key": "trance",
+      "label": "Trance",
       "group": "electronic",
       "aliases": []
     },
     {
       "key": "drum_and_bass",
+      "label": "Drum and Bass",
       "group": "electronic",
       "aliases": [
         "dnb",
@@ -342,6 +404,7 @@
     },
     {
       "key": "dubstep",
+      "label": "Dubstep",
       "group": "electronic",
       "aliases": [
         "dub step"
@@ -349,6 +412,7 @@
     },
     {
       "key": "future_bass",
+      "label": "Future Bass",
       "group": "electronic",
       "aliases": [
         "future bass"
@@ -356,6 +420,7 @@
     },
     {
       "key": "uk_garage",
+      "label": "UK Garage",
       "group": "electronic",
       "aliases": [
         "ukg",
@@ -366,6 +431,7 @@
     },
     {
       "key": "breakbeat",
+      "label": "Breakbeat",
       "group": "electronic",
       "aliases": [
         "breaks",
@@ -374,6 +440,7 @@
     },
     {
       "key": "idm",
+      "label": "IDM",
       "group": "electronic",
       "aliases": [
         "intelligent dance music"
@@ -381,11 +448,13 @@
     },
     {
       "key": "electro",
+      "label": "Electro",
       "group": "electronic",
       "aliases": []
     },
     {
       "key": "synthwave",
+      "label": "Synthwave",
       "group": "electronic",
       "aliases": [
         "synth wave",
@@ -397,6 +466,7 @@
     },
     {
       "key": "vaporwave",
+      "label": "Vaporwave",
       "group": "electronic",
       "aliases": [
         "vapor wave"
@@ -404,11 +474,13 @@
     },
     {
       "key": "ambient",
+      "label": "Ambient",
       "group": "electronic",
       "aliases": []
     },
     {
       "key": "dark_ambient",
+      "label": "Dark Ambient",
       "group": "electronic",
       "aliases": [
         "dark ambient"
@@ -416,6 +488,7 @@
     },
     {
       "key": "lofi",
+      "label": "Lo-fi",
       "group": "chill",
       "aliases": [
         "lo-fi",
@@ -427,6 +500,7 @@
     },
     {
       "key": "chillhop",
+      "label": "Chillhop",
       "group": "chill",
       "aliases": [
         "chill hop"
@@ -434,6 +508,7 @@
     },
     {
       "key": "downtempo",
+      "label": "Downtempo",
       "group": "chill",
       "aliases": [
         "down tempo"
@@ -441,6 +516,7 @@
     },
     {
       "key": "trip_hop",
+      "label": "Trip-Hop",
       "group": "chill",
       "aliases": [
         "trip hop",
@@ -449,11 +525,13 @@
     },
     {
       "key": "lounge",
+      "label": "Lounge",
       "group": "chill",
       "aliases": []
     },
     {
       "key": "study_beats",
+      "label": "Study Beats",
       "group": "chill",
       "aliases": [
         "study beats",
@@ -462,11 +540,13 @@
     },
     {
       "key": "jazz",
+      "label": "Jazz",
       "group": "jazz_blues",
       "aliases": []
     },
     {
       "key": "smooth_jazz",
+      "label": "Smooth Jazz",
       "group": "jazz_blues",
       "aliases": [
         "smooth jazz"
@@ -474,6 +554,7 @@
     },
     {
       "key": "bebop",
+      "label": "Bebop",
       "group": "jazz_blues",
       "aliases": [
         "be bop"
@@ -481,6 +562,7 @@
     },
     {
       "key": "fusion",
+      "label": "Fusion",
       "group": "jazz_blues",
       "aliases": [
         "jazz fusion"
@@ -488,21 +570,25 @@
     },
     {
       "key": "blues",
+      "label": "Blues",
       "group": "jazz_blues",
       "aliases": []
     },
     {
       "key": "folk",
+      "label": "Folk",
       "group": "folk",
       "aliases": []
     },
     {
       "key": "acoustic",
+      "label": "Acoustic",
       "group": "folk",
       "aliases": []
     },
     {
       "key": "singer_songwriter",
+      "label": "Singer-Songwriter",
       "group": "folk",
       "aliases": [
         "singer-songwriter",
@@ -511,6 +597,7 @@
     },
     {
       "key": "indie_folk",
+      "label": "Indie Folk",
       "group": "folk",
       "aliases": [
         "indie folk"
@@ -518,21 +605,25 @@
     },
     {
       "key": "country",
+      "label": "Country",
       "group": "country",
       "aliases": []
     },
     {
       "key": "americana",
+      "label": "Americana",
       "group": "country",
       "aliases": []
     },
     {
       "key": "bluegrass",
+      "label": "Bluegrass",
       "group": "country",
       "aliases": []
     },
     {
       "key": "latin",
+      "label": "Latin",
       "group": "latin",
       "aliases": [
         "latino"
@@ -540,6 +631,7 @@
     },
     {
       "key": "reggaeton",
+      "label": "Reggaeton",
       "group": "latin",
       "aliases": [
         "reggaeton music"
@@ -547,16 +639,19 @@
     },
     {
       "key": "salsa",
+      "label": "Salsa",
       "group": "latin",
       "aliases": []
     },
     {
       "key": "bachata",
+      "label": "Bachata",
       "group": "latin",
       "aliases": []
     },
     {
       "key": "afrobeat",
+      "label": "Afrobeat",
       "group": "latin",
       "aliases": [
         "afrobeats",
@@ -565,11 +660,13 @@
     },
     {
       "key": "amapiano",
+      "label": "Amapiano",
       "group": "latin",
       "aliases": []
     },
     {
       "key": "dancehall",
+      "label": "Dancehall",
       "group": "latin",
       "aliases": [
         "dance hall"
@@ -577,11 +674,13 @@
     },
     {
       "key": "reggae",
+      "label": "Reggae",
       "group": "latin",
       "aliases": []
     },
     {
       "key": "classical",
+      "label": "Classical",
       "group": "classical",
       "aliases": [
         "classical music"
@@ -589,6 +688,7 @@
     },
     {
       "key": "piano",
+      "label": "Piano",
       "group": "classical",
       "aliases": [
         "solo piano"
@@ -596,6 +696,7 @@
     },
     {
       "key": "orchestral",
+      "label": "Orchestral",
       "group": "classical",
       "aliases": [
         "orchestra"
@@ -603,16 +704,19 @@
     },
     {
       "key": "opera",
+      "label": "Opera",
       "group": "classical",
       "aliases": []
     },
     {
       "key": "instrumental",
+      "label": "Instrumental",
       "group": "classical",
       "aliases": []
     },
     {
       "key": "soundtrack",
+      "label": "Soundtrack",
       "group": "soundtrack",
       "aliases": [
         "ost",
@@ -622,6 +726,7 @@
     },
     {
       "key": "cinematic",
+      "label": "Cinematic",
       "group": "soundtrack",
       "aliases": [
         "cinema"
@@ -629,6 +734,7 @@
     },
     {
       "key": "game_music",
+      "label": "Game Music",
       "group": "soundtrack",
       "aliases": [
         "video game music",
@@ -639,6 +745,7 @@
     },
     {
       "key": "anime",
+      "label": "Anime",
       "group": "soundtrack",
       "aliases": [
         "anime music",
@@ -647,6 +754,7 @@
     },
     {
       "key": "trailer_music",
+      "label": "Trailer Music",
       "group": "soundtrack",
       "aliases": [
         "trailer",
@@ -655,6 +763,7 @@
     },
     {
       "key": "world",
+      "label": "World",
       "group": "world",
       "aliases": [
         "world music"
@@ -662,6 +771,7 @@
     },
     {
       "key": "ukrainian",
+      "label": "Ukrainian",
       "group": "world",
       "aliases": [
         "ukraine",
@@ -670,6 +780,7 @@
     },
     {
       "key": "polish",
+      "label": "Polish",
       "group": "world",
       "aliases": [
         "poland",
@@ -678,6 +789,7 @@
     },
     {
       "key": "balkan",
+      "label": "Balkan",
       "group": "world",
       "aliases": [
         "balkan music"
@@ -685,6 +797,7 @@
     },
     {
       "key": "arabic",
+      "label": "Arabic",
       "group": "world",
       "aliases": [
         "arab",
@@ -693,6 +806,7 @@
     },
     {
       "key": "indian",
+      "label": "Indian",
       "group": "world",
       "aliases": [
         "india",
@@ -702,6 +816,7 @@
     },
     {
       "key": "turkish",
+      "label": "Turkish",
       "group": "world",
       "aliases": [
         "turkey"
@@ -709,6 +824,7 @@
     },
     {
       "key": "african",
+      "label": "African",
       "group": "world",
       "aliases": [
         "africa"
@@ -716,6 +832,7 @@
     },
     {
       "key": "celtic",
+      "label": "Celtic",
       "group": "world",
       "aliases": [
         "irish",
@@ -724,11 +841,13 @@
     },
     {
       "key": "experimental",
+      "label": "Experimental",
       "group": "experimental",
       "aliases": []
     },
     {
       "key": "noise",
+      "label": "Noise",
       "group": "experimental",
       "aliases": [
         "noise music"
@@ -736,11 +855,13 @@
     },
     {
       "key": "industrial",
+      "label": "Industrial",
       "group": "experimental",
       "aliases": []
     },
     {
       "key": "avant_garde",
+      "label": "Avant-Garde",
       "group": "experimental",
       "aliases": [
         "avant garde",
@@ -749,6 +870,7 @@
     },
     {
       "key": "spoken_word",
+      "label": "Spoken Word",
       "group": "experimental",
       "aliases": [
         "spoken word",
@@ -757,6 +879,7 @@
     },
     {
       "key": "podcast",
+      "label": "Podcast",
       "group": "experimental",
       "aliases": [
         "podcasts"
@@ -764,6 +887,7 @@
     },
     {
       "key": "other",
+      "label": "Other",
       "group": "experimental",
       "aliases": [
         "custom",

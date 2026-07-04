@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import i18n from '../../src/i18n';
 import { getArtistById, getTracksByArtist, followArtist } from '../../src/api';
 import { useUserStore } from '../../src/store/userStore';
 
@@ -100,5 +101,19 @@ describe('ArtistPage', () => {
     expect(await screen.findByRole('button', { name: 'Following' })).toBeInTheDocument();
     expect(screen.getByText('129')).toBeInTheDocument();
     expect(followArtist).toHaveBeenCalledWith('a1');
+  });
+
+  it('renders focus genres in English regardless of UI language', async () => {
+    getArtistById.mockResolvedValue({ ...baseArtist, genres: ['hip_hop', 'electronic'] });
+    await i18n.changeLanguage('uk');
+    renderArtist();
+
+    await screen.findByText('Static Bloom');
+    expect(screen.getByText('Hip-Hop')).toBeInTheDocument();
+    expect(screen.getByText('Electronic')).toBeInTheDocument();
+    expect(screen.queryByText('Хіп-хоп')).not.toBeInTheDocument();
+    expect(screen.queryByText('Електроніка')).not.toBeInTheDocument();
+
+    await i18n.changeLanguage('en');
   });
 });

@@ -429,5 +429,11 @@ async function uploadsRoutes(fastify) {
 }
 
 module.exports = uploadsRoutes;
+module.exports.MAX_AUDIO_BYTES = MAX_AUDIO_BYTES;
+module.exports.MAX_COVER_BYTES = MAX_COVER_BYTES;
+module.exports.AUDIO_MIME_TYPES = AUDIO_MIME_TYPES;
+module.exports.COVER_MIME_TYPES = COVER_MIME_TYPES;
+module.exports.cleanFileName = cleanFileName;
+module.exports.validateFileMetadata = validateFileMetadata;
 module.exports.validateInitBody = validateInitBody;
 module.exports.metadataMismatch = metadataMismatch;

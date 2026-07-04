@@ -105,12 +105,20 @@ describe('TrackPage refreshed design', () => {
     expect(container.innerHTML).toContain('--ns-border');
   });
 
-  it('localizes the genre label', async () => {
+  it('keeps the genre pill in English regardless of UI language', async () => {
     getTrackById.mockResolvedValue(baseTrack);
-    await i18n.changeLanguage('uk');
-    renderTrack();
-    await screen.findByText('Midnight Protocol');
-    expect(screen.getByText('Реп')).toBeInTheDocument();
+    for (const lng of ['uk', 'pl', 'ru']) {
+      // eslint-disable-next-line no-await-in-loop
+      await i18n.changeLanguage(lng);
+      const { unmount } = renderTrack();
+      // eslint-disable-next-line no-await-in-loop
+      await screen.findByText('Midnight Protocol');
+      // Genre names are music taxonomy, not UI copy — "Rap" must never
+      // become "Реп" no matter which UI language is active.
+      expect(screen.getByText('Rap')).toBeInTheDocument();
+      expect(screen.queryByText('Реп')).not.toBeInTheDocument();
+      unmount();
+    }
     await i18n.changeLanguage('en');
   });
 });

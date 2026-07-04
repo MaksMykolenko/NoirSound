@@ -77,6 +77,7 @@ module.exports = async function pages(fastify) {
         where: {
           id: request.params.id,
           status: 'PUBLISHED',
+          isPublic: true,
           artist: { isHidden: false, user: { status: 'ACTIVE' } }
         },
         select: {
@@ -136,7 +137,7 @@ module.exports = async function pages(fastify) {
     let artists = [];
     try {
       tracks = await fastify.prisma.track.findMany({
-        where: { status: 'PUBLISHED', artist: { isHidden: false, user: { status: 'ACTIVE' } } },
+        where: { status: 'PUBLISHED', isPublic: true, artist: { isHidden: false, user: { status: 'ACTIVE' } } },
         select: { id: true, updatedAt: true },
         orderBy: { publishedAt: 'desc' },
         take: 5000
@@ -146,7 +147,7 @@ module.exports = async function pages(fastify) {
     }
     try {
       artists = await fastify.prisma.artistProfile.findMany({
-        where: { isHidden: false, user: { status: 'ACTIVE' }, tracks: { some: { status: 'PUBLISHED' } } },
+        where: { isHidden: false, user: { status: 'ACTIVE' }, tracks: { some: { status: 'PUBLISHED', isPublic: true } } },
         select: { id: true, updatedAt: true },
         take: 5000
       });

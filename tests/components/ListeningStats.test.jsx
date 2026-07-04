@@ -1,7 +1,8 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, afterEach } from 'vitest';
+import i18n from '../../src/i18n';
 import ListeningStats from '../../src/components/profile/ListeningStats';
 import {
   EMPTY_LISTENING_STATS,
@@ -87,5 +88,38 @@ describe('ListeningStats', () => {
     expect(screen.getByText('Your Top Tracks')).toBeInTheDocument();
     expect(screen.getByText('Your Top Artists')).toBeInTheDocument();
     expect(screen.getAllByText('Not enough listening data yet').length).toBeGreaterThanOrEqual(2);
+  });
+
+  describe('genre labels stay English regardless of UI language', () => {
+    afterEach(async () => {
+      await i18n.changeLanguage('en');
+    });
+
+    it.each(['uk', 'pl', 'ru'])('top genre + breakdown render in English under %s UI', async (lng) => {
+      await i18n.changeLanguage(lng);
+      useUserStore.setState({
+        userListeningStats: {
+          ...EMPTY_LISTENING_STATS,
+          tracksPlayed: 10,
+          uniqueArtists: 3,
+          topGenre: 'hip_hop',
+          topGenres: [
+            { genre: 'hip_hop', percent: 60 },
+            { genre: 'electronic', percent: 40 },
+          ],
+        },
+        listeningStatsHydrated: true,
+        listeningStatsError: null,
+      });
+
+      render(<ListeningStats />, { wrapper: MemoryRouter });
+
+      // "Hip-Hop" appears twice (top-genre stat card + breakdown bar) —
+      // assert presence, not uniqueness.
+      expect(screen.getAllByText('Hip-Hop').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Electronic').length).toBeGreaterThan(0);
+      expect(screen.queryByText('Хіп-хоп')).not.toBeInTheDocument();
+      expect(screen.queryByText('Електроніка')).not.toBeInTheDocument();
+    });
   });
 });

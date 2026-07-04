@@ -434,6 +434,344 @@ describe('NoirSound backend integration', () => {
     });
   });
 
+  describe('batch upload studio API', () => {
+    function batchFiles(count = 2) {
+      return Array.from({ length: count }, (_, index) => ({
+        clientId: `batch-${Date.now()}-${index}`,
+        fileName: `batch_track_${index + 1}.wav`,
+        fileSize: 4096 + index,
+        mimeType: 'audio/wav'
+      }));
+    }
+
+    async function initializeBatch(files = batchFiles(), mode = 'MIXED', extra = {}) {
+      return supertest(app.server)
+        .post('/api/uploads/batch/init')
+        .set('Cookie', artistCookie)
+        .send({ files, mode, ...extra });
+    }
+
+    async function completeItemMetadata(batchId, item, target, playlistOrder = null) {
+      return supertest(app.server)
+        .patch(`/api/uploads/batch/${batchId}/items/${item.id}`)
+        .set('Cookie', artistCookie)
+        .send({
+          title: item.title,
+          primaryArtistName: item.primaryArtistName,
+          genre: 'electronic',
+          tags: ['batch'],
+          description: 'Batch integration fixture',
+          explicit: false,
+          visibility: 'PUBLIC',
+          copyrightConfirmed: true,
+          target,
+          playlistOrder
+        });
+    }
+
+    it('enforces authentication, artist access, limits, ownership, and draft-only Track creation', async () => {
+      const files = batchFiles();
+      const unauthenticated = await supertest(app.server)
+        .post('/api/uploads/batch/init')
+        .send({ files, mode: 'MIXED' });
+      expect(unauthenticated.statusCode).toBe(401);
+
+      const listener = await supertest(app.server)
+        .post('/api/uploads/batch/init')
+        .set('Cookie', listenerCookie)
+        .send({ files, mode: 'MIXED' });
+      expect(listener.statusCode).toBe(403);
+
+      const tooMany = await initializeBatch(batchFiles(21));
+      expect(tooMany.statusCode).toBe(400);
+
+      const beforeTracks = await app.prisma.track.count();
+      const created = await initializeBatch(files);
+      expect(created.statusCode).toBe(201);
+      expect(created.body.uploads).toHaveLength(2);
+      expect(await app.prisma.track.count()).toBe(beforeTracks);
+
+      const own = await supertest(app.server)
+        .get(`/api/uploads/batch/${created.body.batchId}`)
+        .set('Cookie', artistCookie);
+      expect(own.statusCode).toBe(200);
+      expect(own.body.batch.items).toHaveLength(2);
+      expect(JSON.stringify(own.body)).not.toMatch(/storageKey|audioUploadUrl/);
+
+      const forbidden = await supertest(app.server)
+        .get(`/api/uploads/batch/${created.body.batchId}`)
+        .set('Cookie', listenerCookie);
+      expect(forbidden.statusCode).toBe(403);
+
+      const first = own.body.batch.items[0];
+      const invalidGenre = await supertest(app.server)
+        .patch(`/api/uploads/batch/${created.body.batchId}/items/${first.id}`)
+        .set('Cookie', artistCookie)
+        .send({ genre: 'not-a-real-genre' });
+      expect(invalidGenre.statusCode).toBe(400);
+
+      await completeItemMetadata(created.body.batchId, first, 'PLAYLIST', 1);
+      const missingTitle = await supertest(app.server)
+        .patch(`/api/uploads/batch/${created.body.batchId}/playlist`)
+        .set('Cookie', artistCookie)
+        .send({ title: '' });
+      expect(missingTitle.statusCode).toBe(400);
+    });
+
+    it('replays the same client batch id without duplicate batches or items', async () => {
+      const files = batchFiles();
+      const clientBatchId = `integration-idempotency-${Date.now()}`;
+      const before = await app.prisma.uploadBatch.count();
+
+      const first = await initializeBatch(files, 'MIXED', { clientBatchId });
+      const replay = await initializeBatch(files, 'MIXED', { clientBatchId });
+
+      expect(first.statusCode).toBe(201);
+      expect(replay.statusCode).toBe(200);
+      expect(replay.body.idempotentReplay).toBe(true);
+      expect(replay.body.batchId).toBe(first.body.batchId);
+      expect(await app.prisma.uploadBatch.count()).toBe(before + 1);
+      expect(await app.prisma.uploadBatchItem.count({
+        where: { batchId: first.body.batchId }
+      })).toBe(files.length);
+    });
+
+    it('completes idempotently, publishes singles and an ordered playlist once, and creates no plays', async () => {
+      queueAdd.mockClear();
+      const beforePlayEvents = await app.prisma.playEvent.count();
+      const created = await initializeBatch();
+      expect(created.statusCode).toBe(201);
+      let state = (await supertest(app.server)
+        .get(`/api/uploads/batch/${created.body.batchId}`)
+        .set('Cookie', artistCookie)).body.batch;
+
+      await completeItemMetadata(created.body.batchId, state.items[0], 'SINGLE');
+      await completeItemMetadata(created.body.batchId, state.items[1], 'PLAYLIST', 1);
+      const playlistDraft = await supertest(app.server)
+        .patch(`/api/uploads/batch/${created.body.batchId}/playlist`)
+        .set('Cookie', artistCookie)
+        .send({
+          title: 'Integration Batch Playlist',
+          description: 'Ordered release fixture',
+          visibility: 'PUBLIC',
+          tags: ['integration'],
+          orderedItemIds: [state.items[1].id]
+        });
+      expect(playlistDraft.statusCode).toBe(200);
+
+      const persistedBeforeComplete = await app.prisma.uploadBatch.findUnique({
+        where: { id: created.body.batchId },
+        include: { items: { include: { upload: true } } }
+      });
+      for (const item of persistedBeforeComplete.items) {
+        objectMetadata.set(item.upload.storageKey, {
+          exists: true,
+          mimeType: item.upload.mimeType,
+          size: item.upload.sizeBytes
+        });
+      }
+
+      const complete = await supertest(app.server)
+        .post(`/api/uploads/batch/${created.body.batchId}/complete`)
+        .set('Cookie', artistCookie);
+      expect(complete.statusCode).toBe(200);
+      expect(complete.body.items.every((entry) => entry.status === 'PROCESSING')).toBe(true);
+      expect(queueAdd).toHaveBeenCalledTimes(2);
+
+      const duplicateComplete = await supertest(app.server)
+        .post(`/api/uploads/batch/${created.body.batchId}/complete`)
+        .set('Cookie', artistCookie);
+      expect(duplicateComplete.statusCode).toBe(200);
+      expect(queueAdd).toHaveBeenCalledTimes(2);
+
+      const processing = await app.prisma.uploadBatch.findUnique({
+        where: { id: created.body.batchId },
+        include: { items: { include: { upload: true, track: true } } }
+      });
+      for (const [index, item] of processing.items.entries()) {
+        await app.prisma.$transaction([
+          app.prisma.track.update({
+            where: { id: item.trackId },
+            data: {
+              status: 'DRAFT',
+              processedAudioKey: `processed/test/${item.trackId}.mp3`,
+              durationSeconds: 120 + index
+            }
+          }),
+          app.prisma.upload.update({ where: { id: item.uploadId }, data: { status: 'READY' } }),
+          app.prisma.uploadBatchItem.update({ where: { id: item.id }, data: { status: 'READY' } })
+        ]);
+      }
+      await app.prisma.uploadBatch.update({ where: { id: created.body.batchId }, data: { status: 'READY' } });
+
+      const publish = await supertest(app.server)
+        .post(`/api/uploads/batch/${created.body.batchId}/publish`)
+        .set('Cookie', artistCookie)
+        .send({ allowPartial: false });
+      expect(publish.statusCode).toBe(200);
+      expect(publish.body.batch.status).toBe('PUBLISHED');
+      expect(publish.body.playlistId).toBeTruthy();
+      expect(publish.body.tracks).toHaveLength(2);
+
+      const playlist = await app.prisma.playlist.findUnique({
+        where: { id: publish.body.playlistId },
+        include: { tracks: { orderBy: { order: 'asc' } } }
+      });
+      expect(playlist.name).toBe('Integration Batch Playlist');
+      expect(playlist.tracks).toHaveLength(1);
+      expect(playlist.tracks[0].order).toBe(1);
+
+      const duplicatePublish = await supertest(app.server)
+        .post(`/api/uploads/batch/${created.body.batchId}/publish`)
+        .set('Cookie', artistCookie)
+        .send({ allowPartial: false });
+      expect(duplicatePublish.statusCode).toBe(200);
+      expect(duplicatePublish.body.playlistId).toBe(publish.body.playlistId);
+      expect(await app.prisma.playlistTrack.count({
+        where: { playlistId: publish.body.playlistId }
+      })).toBe(1);
+      expect(await app.prisma.playEvent.count()).toBe(beforePlayEvents);
+    });
+
+    it('retries one failed item without creating another Track', async () => {
+      queueAdd.mockClear();
+      const created = await initializeBatch(batchFiles(1));
+      let state = (await supertest(app.server)
+        .get(`/api/uploads/batch/${created.body.batchId}`)
+        .set('Cookie', artistCookie)).body.batch;
+      await completeItemMetadata(created.body.batchId, state.items[0], 'SINGLE');
+      const persisted = await app.prisma.uploadBatch.findUnique({
+        where: { id: created.body.batchId },
+        include: { items: { include: { upload: true } } }
+      });
+      objectMetadata.set(persisted.items[0].upload.storageKey, {
+        exists: true,
+        mimeType: persisted.items[0].upload.mimeType,
+        size: persisted.items[0].upload.sizeBytes
+      });
+      await supertest(app.server)
+        .post(`/api/uploads/batch/${created.body.batchId}/complete`)
+        .set('Cookie', artistCookie);
+
+      const initialized = await app.prisma.uploadBatchItem.findFirst({
+        where: { batchId: created.body.batchId },
+        include: { track: true, upload: true }
+      });
+      await app.prisma.$transaction([
+        app.prisma.track.update({ where: { id: initialized.trackId }, data: { status: 'FAILED' } }),
+        app.prisma.upload.update({ where: { id: initialized.uploadId }, data: { status: 'FAILED' } }),
+        app.prisma.uploadBatchItem.update({ where: { id: initialized.id }, data: { status: 'FAILED' } })
+      ]);
+      const beforeTracks = await app.prisma.track.count();
+      const retry = await supertest(app.server)
+        .post(`/api/uploads/batch/${created.body.batchId}/items/${initialized.id}/retry`)
+        .set('Cookie', artistCookie);
+      expect(retry.statusCode).toBe(200);
+      expect(retry.body.status).toBe('PROCESSING');
+      expect(await app.prisma.track.count()).toBe(beforeTracks);
+      const sameItem = await app.prisma.uploadBatchItem.findUnique({ where: { id: initialized.id } });
+      expect(sameItem.trackId).toBe(initialized.trackId);
+    });
+
+    it('publishes only ready items when partial publish is explicit and keeps private tracks owner-only', async () => {
+      const beforePlayEvents = await app.prisma.playEvent.count();
+      const created = await initializeBatch();
+      const state = (await supertest(app.server)
+        .get(`/api/uploads/batch/${created.body.batchId}`)
+        .set('Cookie', artistCookie)).body.batch;
+
+      await supertest(app.server)
+        .patch(`/api/uploads/batch/${created.body.batchId}/items/${state.items[0].id}`)
+        .set('Cookie', artistCookie)
+        .send({
+          title: state.items[0].title,
+          primaryArtistName: state.items[0].primaryArtistName,
+          genre: 'electronic',
+          tags: ['private'],
+          copyrightConfirmed: true,
+          visibility: 'PRIVATE',
+          target: 'SINGLE'
+        });
+      await completeItemMetadata(created.body.batchId, state.items[1], 'SINGLE');
+
+      const beforeComplete = await app.prisma.uploadBatch.findUnique({
+        where: { id: created.body.batchId },
+        include: { items: { include: { upload: true } } }
+      });
+      for (const item of beforeComplete.items) {
+        objectMetadata.set(item.upload.storageKey, {
+          exists: true,
+          mimeType: item.upload.mimeType,
+          size: item.upload.sizeBytes
+        });
+      }
+      await supertest(app.server)
+        .post(`/api/uploads/batch/${created.body.batchId}/complete`)
+        .set('Cookie', artistCookie);
+
+      const processing = await app.prisma.uploadBatch.findUnique({
+        where: { id: created.body.batchId },
+        include: { items: { orderBy: { createdAt: 'asc' } } }
+      });
+      const [readyItem, failedItem] = processing.items;
+      await app.prisma.$transaction([
+        app.prisma.track.update({
+          where: { id: readyItem.trackId },
+          data: {
+            status: 'DRAFT',
+            processedAudioKey: `processed/test/${readyItem.trackId}.mp3`,
+            durationSeconds: 90
+          }
+        }),
+        app.prisma.upload.update({ where: { id: readyItem.uploadId }, data: { status: 'READY' } }),
+        app.prisma.uploadBatchItem.update({ where: { id: readyItem.id }, data: { status: 'READY' } }),
+        app.prisma.track.update({ where: { id: failedItem.trackId }, data: { status: 'FAILED' } }),
+        app.prisma.upload.update({
+          where: { id: failedItem.uploadId },
+          data: { status: 'FAILED', errorMessage: 'Integration failure fixture.' }
+        }),
+        app.prisma.uploadBatchItem.update({
+          where: { id: failedItem.id },
+          data: { status: 'FAILED', errorCode: 'PROCESSING_FAILED', errorMessage: 'Integration failure fixture.' }
+        }),
+        app.prisma.uploadBatch.update({
+          where: { id: created.body.batchId },
+          data: { status: 'PARTIAL_READY' }
+        })
+      ]);
+
+      const strict = await supertest(app.server)
+        .post(`/api/uploads/batch/${created.body.batchId}/publish`)
+        .set('Cookie', artistCookie)
+        .send({ allowPartial: false });
+      expect(strict.statusCode).toBe(409);
+
+      const partial = await supertest(app.server)
+        .post(`/api/uploads/batch/${created.body.batchId}/publish`)
+        .set('Cookie', artistCookie)
+        .send({ allowPartial: true });
+      expect(partial.statusCode).toBe(200);
+      expect(partial.body.partial).toBe(true);
+      expect(partial.body.batch.status).toBe('PARTIAL_READY');
+
+      const persistedReady = await app.prisma.track.findUnique({ where: { id: readyItem.trackId } });
+      const persistedFailed = await app.prisma.track.findUnique({ where: { id: failedItem.trackId } });
+      expect(persistedReady.status).toBe('PUBLISHED');
+      expect(persistedReady.isPublic).toBe(false);
+      expect(persistedFailed.status).toBe('FAILED');
+
+      const anonymous = await supertest(app.server).get(`/api/tracks/${readyItem.trackId}`);
+      const owner = await supertest(app.server)
+        .get(`/api/tracks/${readyItem.trackId}`)
+        .set('Cookie', artistCookie);
+      const catalog = await supertest(app.server).get('/api/tracks');
+      expect(anonymous.statusCode).toBe(404);
+      expect(owner.statusCode).toBe(200);
+      expect(catalog.body.data.some((track) => track.id === readyItem.trackId)).toBe(false);
+      expect(await app.prisma.playEvent.count()).toBe(beforePlayEvents);
+    });
+  });
+
   describe('admin console API', () => {
     it('rejects non-admins and allows admins to read the overview', async () => {
       const forbidden = await supertest(app.server)

@@ -182,6 +182,15 @@ describe('trackMeta', () => {
     expect(m.jsonLd.duration).toBe('PT1M58S');
     expect(m.jsonLd.byArtist.name).toBe('Nova');
   });
+
+  it('uses the canonical English label (with correct punctuation) in both the OG description and JSON-LD genre', () => {
+    const m = trackMeta({ ...track, genre: 'hip_hop', description: '' }, BASE);
+    // Regression guard: a naive `replace(/[_-]+/g,' ')` humanizer would produce
+    // "Hip Hop" (missing the hyphen). Must match the on-site label exactly.
+    expect(m.description).toContain('Hip-Hop');
+    expect(m.description).not.toContain('Hip Hop ');
+    expect(m.jsonLd.genre).toBe('Hip-Hop');
+  });
 });
 
 describe('unavailable / suspended fallbacks', () => {
@@ -221,5 +230,23 @@ describe('duration + genre helpers', () => {
   it('humanizes genre labels', () => {
     expect(genreLabel('lo-fi_house')).toBe('Lo Fi House');
     expect(genreLabel(null)).toBeNull();
+  });
+
+  it('prefers the canonical taxonomy label for known genre keys/aliases (never a naive humanization)', () => {
+    // Correct punctuation/casing that naive title-casing would get wrong.
+    expect(genreLabel('hip_hop')).toBe('Hip-Hop');
+    expect(genreLabel('rnb')).toBe('R&B');
+    expect(genreLabel('lofi')).toBe('Lo-fi');
+    expect(genreLabel('other')).toBe('Other');
+    // Legacy/alias values still normalize to the canonical label.
+    expect(genreLabel('Hip Hop')).toBe('Hip-Hop');
+    expect(genreLabel('Dark Synth')).toBe('Synthwave');
+  });
+
+  it('never returns a localized genre label (backend has no locale/request-language handling)', () => {
+    // The backend is English-only end to end; this is a regression guard, not
+    // a locale switch (there is nothing to switch — see
+    // NOIRSOUND_GENRE_ENGLISH_ONLY_REPORT.md).
+    expect(genreLabel('hip_hop')).not.toMatch(/[Ѐ-ӿ]/); // no Cyrillic
   });
 });

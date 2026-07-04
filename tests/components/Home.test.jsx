@@ -98,8 +98,10 @@ describe('Home real API states', () => {
     const user = userEvent.setup();
     renderHome();
 
+    // Genre chip text is English by design (never an i18n lookup) — see
+    // NOIRSOUND_GENRE_ENGLISH_ONLY_REPORT.md.
     const genreBrowser = screen.getByTestId('home-genre-browser');
-    await user.click(within(genreBrowser).getByRole('button', { name: i18n.t('genres.hip_hop') }));
+    await user.click(within(genreBrowser).getByRole('button', { name: 'Hip-Hop' }));
 
     expect(screen.getByTestId('location-probe')).toHaveTextContent('/discover?genre=hip_hop');
   });
@@ -111,5 +113,19 @@ describe('Home real API states', () => {
     expect(screen.getByText(i18n.t('home.feat1Title'))).toBeInTheDocument();
     expect(screen.getByText(i18n.t('home.feat4Desc'))).toBeInTheDocument();
     expect(screen.queryByText('Find your next sound')).not.toBeInTheDocument();
+  });
+
+  it('keeps Browse-by-Genre chips in English under a non-English UI language', async () => {
+    await i18n.changeLanguage('uk');
+    renderHome();
+
+    const genreBrowser = screen.getByTestId('home-genre-browser');
+    expect(within(genreBrowser).getByRole('button', { name: 'Hip-Hop' })).toBeInTheDocument();
+    expect(within(genreBrowser).getByRole('button', { name: 'Electronic' })).toBeInTheDocument();
+    expect(within(genreBrowser).getByRole('button', { name: 'World' })).toBeInTheDocument();
+    expect(within(genreBrowser).queryByText('Електроніка')).not.toBeInTheDocument();
+    expect(within(genreBrowser).queryByText('Світова')).not.toBeInTheDocument();
+
+    await i18n.changeLanguage('en');
   });
 });

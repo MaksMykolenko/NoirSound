@@ -1,17 +1,26 @@
 import React from 'react';
 import { ChevronRight, Tags } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { getGenreLabel } from '../../utils/genreLabels';
+import { QUICK_GROUP_LABELS } from '../../constants/musicGenres';
 
+// Genre/group NAMES here are always English (see NOIRSOUND_GENRE_ENGLISH_ONLY_REPORT.md)
+// — only the surrounding chrome (heading, "More genres") is translated via i18n.
 const HOME_GENRES = [
-  { id: 'hip_hop', kind: 'genre', value: 'hip_hop', labelKey: 'genres.hip_hop' },
-  { id: 'pop', kind: 'genre', value: 'pop', labelKey: 'genres.pop' },
-  { id: 'electronic', kind: 'genre', value: 'electronic', labelKey: 'genres.electronic' },
-  { id: 'rock', kind: 'genre', value: 'rock', labelKey: 'genres.rock' },
-  { id: 'rnb', kind: 'genre', value: 'rnb', labelKey: 'genres.rnb' },
-  { id: 'jazz', kind: 'genre', value: 'jazz', labelKey: 'genres.jazz' },
-  { id: 'chill', kind: 'group', value: 'chill', labelKey: 'discover.tabs.chill' },
-  { id: 'world', kind: 'group', value: 'world', labelKey: 'discover.tabs.world' },
+  { id: 'hip_hop', kind: 'genre', value: 'hip_hop' },
+  { id: 'pop', kind: 'genre', value: 'pop' },
+  { id: 'electronic', kind: 'genre', value: 'electronic' },
+  { id: 'rock', kind: 'genre', value: 'rock' },
+  { id: 'rnb', kind: 'genre', value: 'rnb' },
+  { id: 'jazz', kind: 'genre', value: 'jazz' },
+  { id: 'chill', kind: 'group', value: 'chill' },
+  { id: 'world', kind: 'group', value: 'world' },
 ];
+
+/** English-only display text for a HOME_GENRES entry (genre key or group key). */
+function homeGenreLabel(item) {
+  return item.kind === 'group' ? QUICK_GROUP_LABELS[item.value] : getGenreLabel(item.value);
+}
 
 export default function BrowseByGenre({ onSelect }) {
   const { t } = useTranslation();
@@ -41,7 +50,7 @@ export default function BrowseByGenre({ onSelect }) {
             onClick={() => onSelect(item)}
             className="min-h-9 sm:min-h-10 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-full border border-zinc-800/80 bg-zinc-950/65 text-[11px] sm:text-xs font-semibold text-zinc-300 hover:text-zinc-100 hover:border-brand-red/35 hover:bg-brand-red/8 transition-all cursor-pointer"
           >
-            {t(item.labelKey)}
+            {homeGenreLabel(item)}
           </button>
         ))}
         <button

@@ -17,6 +17,7 @@ import {
   StatusBadge,
 } from '../../components/admin/AdminUI';
 import { formatAdminDate, useAdminData } from '../../components/admin/adminUtils';
+import { getGenreLabel } from '../../utils/genreLabels';
 
 export default function AdminTracks() {
   const { t, i18n } = useTranslation();
@@ -57,7 +58,7 @@ export default function AdminTracks() {
               <tr key={track.id} className="border-t border-[var(--ns-border-subtle)]">
                 <td className="px-4 py-3 font-semibold">{track.title}</td>
                 <td className="px-4 py-3 text-xs text-[var(--ns-text-secondary)]">{track.artist?.user?.displayName}</td>
-                <td className="px-4 py-3 text-xs text-[var(--ns-text-muted)]">{track.genre || '—'}</td>
+                <td className="px-4 py-3 text-xs text-[var(--ns-text-muted)]">{track.genre ? getGenreLabel(track.genre) : '—'}</td>
                 <td className="px-4 py-3"><StatusBadge status={track.status} /></td>
                 <td className="px-4 py-3">{track.plays}</td>
                 <td className="px-4 py-3">{track.reportsCount}</td>

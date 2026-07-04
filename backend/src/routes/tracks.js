@@ -1,6 +1,7 @@
 const { userOrIpKey } = require('../lib/rateLimitKeys');
 const { serializePublicTrack } = require('../lib/publicTrack');
 const { scaledRateLimitMax } = require('../lib/rateLimit');
+const { optionalAuthenticatedUserId } = require('../lib/optionalAuth');
 
 async function tracksRoutes(fastify, _options) {
   // GET /api/tracks
@@ -9,6 +10,7 @@ async function tracksRoutes(fastify, _options) {
       const tracks = await fastify.prisma.track.findMany({
         where: {
           status: 'PUBLISHED',
+          isPublic: true,
           artist: { isHidden: false, user: { status: 'ACTIVE' } }
         },
         include: {
@@ -37,10 +39,15 @@ async function tracksRoutes(fastify, _options) {
   // GET /api/tracks/:id
   fastify.get('/:id', async (request, reply) => {
     try {
+      const viewerId = await optionalAuthenticatedUserId(fastify, request);
       const track = await fastify.prisma.track.findFirst({
         where: {
           id: request.params.id,
           status: 'PUBLISHED',
+          OR: [
+            { isPublic: true },
+            ...(viewerId ? [{ artist: { userId: viewerId } }] : [])
+          ],
           artist: { isHidden: false, user: { status: 'ACTIVE' } }
         },
         include: {
@@ -72,9 +79,14 @@ async function tracksRoutes(fastify, _options) {
     try {
       const track = await fastify.prisma.track.findUnique({
         where: { id: request.params.id },
-        include: { artist: { include: { user: { select: { status: true } } } } }
+        include: { artist: { include: { user: { select: { id: true, status: true } } } } }
       });
-      if (!track || track.status !== 'PUBLISHED') {
+      const viewerId = track?.isPublic ? null : await optionalAuthenticatedUserId(fastify, request);
+      if (
+        !track
+        || track.status !== 'PUBLISHED'
+        || (!track.isPublic && track.artist?.user?.id !== viewerId)
+      ) {
         return reply.status(404).send({ error: 'Track not found or not published' });
       }
       // Block streaming for tracks owned by a suspended/banned/deleted artist.
@@ -100,10 +112,15 @@ async function tracksRoutes(fastify, _options) {
   // GET /api/tracks/:id/cover
   fastify.get('/:id/cover', async (request, reply) => {
     try {
+      const viewerId = await optionalAuthenticatedUserId(fastify, request);
       const track = await fastify.prisma.track.findFirst({
         where: {
           id: request.params.id,
           status: 'PUBLISHED',
+          OR: [
+            { isPublic: true },
+            ...(viewerId ? [{ artist: { userId: viewerId } }] : [])
+          ],
           artist: { isHidden: false, user: { status: 'ACTIVE' } }
         },
         select: { coverImageKey: true }
@@ -190,6 +207,7 @@ async function tracksRoutes(fastify, _options) {
         where: {
           id: request.params.id,
           status: 'PUBLISHED',
+          isPublic: true,
           artist: { isHidden: false, user: { status: 'ACTIVE' } }
         }
       });
@@ -233,6 +251,7 @@ async function tracksRoutes(fastify, _options) {
         where: {
           id: request.params.id,
           status: 'PUBLISHED',
+          isPublic: true,
           artist: { isHidden: false, user: { status: 'ACTIVE' } }
         }
       });

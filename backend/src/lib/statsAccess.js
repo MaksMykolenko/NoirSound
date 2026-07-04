@@ -61,7 +61,7 @@ async function computeArtistMonthlyListeners(prisma, artistId, ownerUserId, now 
       // taken down for a copyright claim). This is deliberately different
       // from Track.plays, which is a lifetime count of a specific track's
       // own history and is never revised by a later visibility change.
-      track: { status: 'PUBLISHED' }
+      track: { status: 'PUBLISHED', isPublic: true }
     },
     select: { userId: true },
     distinct: ['userId']

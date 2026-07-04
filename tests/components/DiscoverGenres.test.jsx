@@ -62,17 +62,19 @@ describe('Discover genre filters', () => {
       track({ id: '1', title: 'HouseSong', genre: 'house' }),
       track({ id: '2', title: 'RockSong', genre: 'rock' }),
     ]);
-    fireEvent.click(screen.getByText(i18n.t('discover.tabs.electronic')));
+    // Quick-tab text is an English genre-group name, never an i18n lookup —
+    // see NOIRSOUND_GENRE_ENGLISH_ONLY_REPORT.md.
+    fireEvent.click(screen.getByText('Electronic'));
     expect(screen.getAllByText('HouseSong').length).toBeGreaterThan(0);
     expect(screen.queryByText('RockSong')).not.toBeInTheDocument();
   });
 
-  it('normalizes a legacy genre value safely and localizes it', () => {
+  it('normalizes a legacy genre value safely and labels it in English', () => {
     setup([track({ id: '1', title: 'LegacyTrack', genre: 'Dark Synth' })]);
-    // Legacy "Dark Synth" displays as its localized canonical label.
+    // Legacy "Dark Synth" displays as its canonical English label.
     expect(screen.getAllByText('Synthwave').length).toBeGreaterThan(0);
     // ...and is grouped under Electronic.
-    fireEvent.click(screen.getByText(i18n.t('discover.tabs.electronic')));
+    fireEvent.click(screen.getByText('Electronic'));
     expect(screen.getAllByText('LegacyTrack').length).toBeGreaterThan(0);
   });
 
@@ -87,5 +89,30 @@ describe('Discover genre filters', () => {
     setup([track({ id: '1', genre: 'electronic' })]);
     expect(screen.queryByText('ADMIN')).not.toBeInTheDocument();
     expect(screen.queryByText('LISTENER')).not.toBeInTheDocument();
+  });
+
+  it.each(['uk', 'pl', 'ru'])('keeps quick tabs, the picker, and the active chip in English under %s UI', async (lng) => {
+    await i18n.changeLanguage(lng);
+    setup([track({ id: '1', title: 'HouseSong', genre: 'house' })]);
+
+    // Quick tabs stay English.
+    const tabs = screen.getByTestId('genre-quick-tabs');
+    expect(within(tabs).getByText('Hip-Hop')).toBeInTheDocument();
+    expect(within(tabs).getByText('Electronic')).toBeInTheDocument();
+    expect(within(tabs).getByText('World')).toBeInTheDocument();
+
+    // The full picker's grouped labels and option labels stay English.
+    fireEvent.click(within(tabs).getByText(i18n.t('discover.tabs.more')));
+    fireEvent.click(screen.getByTestId('genre-picker-trigger'));
+    const panel = screen.getByTestId('genre-picker-panel');
+    expect(within(panel).getByText('Hip-Hop & Urban')).toBeInTheDocument();
+    const jazzOption = panel.querySelector('[data-genre-option="jazz"]');
+    expect(jazzOption).toHaveTextContent('Jazz');
+
+    // Selecting a genre sets an English chip.
+    fireEvent.click(panel.querySelector('[data-genre-option="house"]'));
+    expect(screen.getAllByText('House').length).toBeGreaterThan(0);
+
+    await i18n.changeLanguage('en');
   });
 });

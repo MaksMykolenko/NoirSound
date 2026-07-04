@@ -42,6 +42,40 @@ enum UploadStatus {
   CANCELLED
 }
 
+enum UploadBatchMode {
+  MIXED
+  SINGLES_ONLY
+  PLAYLIST
+}
+
+enum UploadBatchStatus {
+  DRAFT
+  UPLOADING
+  PROCESSING
+  PARTIAL_READY
+  READY
+  PUBLISHED
+  FAILED
+  CANCELLED
+}
+
+enum UploadBatchItemStatus {
+  DRAFT
+  UPLOADING
+  UPLOADED
+  PROCESSING
+  READY
+  FAILED
+  EXCLUDED
+  PUBLISHED
+}
+
+enum UploadBatchItemTarget {
+  SINGLE
+  PLAYLIST
+  EXCLUDED
+}
+
 enum ReportStatus {
   OPEN
   REVIEWED
@@ -78,6 +112,7 @@ model User {
   playEvents     PlayEvent[]
   listeningStats ListeningAggregate?
   uploads        Upload[]
+  uploadBatches  UploadBatch[]
   reportsMade    Report[]
   notifications  Notification[]
   auditLogs      AuditLog[]          @relation("AuditActor")
@@ -116,10 +151,12 @@ model ArtistProfile {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
-  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tracks    Track[]
-  albums    Album[]
-  followers ArtistFollow[]
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tracks        Track[]
+  albums        Album[]
+  uploadBatches UploadBatch[]
+  playlists     Playlist[]
+  followers     ArtistFollow[]
 }
 
 enum UploadType {
@@ -149,7 +186,11 @@ model Track {
   coverImageKey      String?
   mimeType           String?
   fileSize           Int?
-  copyrightConfirmed Boolean @default(false)
+  copyrightConfirmed Boolean  @default(false)
+  primaryArtistName  String?
+  featuredArtists    String[] @default([])
+  explicit           Boolean  @default(false)
+  isPublic           Boolean  @default(true)
 
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -164,6 +205,7 @@ model Track {
   comments   Comment[]
   playEvents PlayEvent[]
   uploads    Upload[]
+  batchItem  UploadBatchItem?
 
   @@index([status])
   @@index([artistId])
@@ -194,19 +236,26 @@ model Album {
 }
 
 model Playlist {
-  id          String   @id @default(uuid())
-  name        String
-  description String?
-  coverUrl    String?
-  creatorId   String
-  isPublic    Boolean  @default(true)
-  likes       Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id              String   @id @default(uuid())
+  name            String
+  description     String?
+  coverUrl        String?
+  creatorId       String
+  artistProfileId String?
+  isPublic        Boolean  @default(true)
+  tags            String[] @default([])
+  coverImageKey   String?
+  likes           Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
-  creator User            @relation(fields: [creatorId], references: [id], onDelete: Cascade)
-  tracks  PlaylistTrack[]
-  likedBy PlaylistLike[]
+  creator       User            @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  artistProfile ArtistProfile?  @relation(fields: [artistProfileId], references: [id], onDelete: SetNull)
+  tracks        PlaylistTrack[]
+  likedBy       PlaylistLike[]
+  sourceBatch   UploadBatch?
+
+  @@index([artistProfileId])
 }
 
 model PlaylistTrack {
@@ -343,11 +392,75 @@ model Upload {
   createdAt        DateTime     @default(now())
   updatedAt        DateTime     @updatedAt
 
-  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  track Track? @relation(fields: [trackId], references: [id])
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  track     Track?           @relation(fields: [trackId], references: [id])
+  batchItem UploadBatchItem?
 
   @@index([status])
   @@index([trackId])
+}
+
+model UploadBatch {
+  id                      String            @id @default(uuid())
+  clientId                String?
+  userId                  String
+  artistProfileId         String
+  mode                    UploadBatchMode   @default(MIXED)
+  status                  UploadBatchStatus @default(DRAFT)
+  playlistId              String?           @unique
+  playlistTitle           String?
+  playlistDescription     String?
+  playlistCoverStorageKey String?
+  playlistCoverMimeType   String?
+  playlistCoverSizeBytes  Int?
+  playlistIsPublic        Boolean           @default(true)
+  playlistTags            String[]          @default([])
+  createdAt               DateTime          @default(now())
+  updatedAt               DateTime          @updatedAt
+
+  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  artistProfile ArtistProfile     @relation(fields: [artistProfileId], references: [id], onDelete: Cascade)
+  playlist      Playlist?         @relation(fields: [playlistId], references: [id], onDelete: SetNull)
+  items         UploadBatchItem[]
+
+  @@unique([userId, clientId])
+  @@index([userId, status])
+  @@index([artistProfileId])
+}
+
+model UploadBatchItem {
+  id                 String                @id @default(uuid())
+  batchId            String
+  clientId           String
+  fileName           String
+  fileSize           Int
+  mimeType           String
+  trackId            String?               @unique
+  uploadId           String?               @unique
+  status             UploadBatchItemStatus @default(DRAFT)
+  target             UploadBatchItemTarget @default(SINGLE)
+  playlistOrder      Int?
+  title              String
+  primaryArtistName  String
+  featuredArtists    String[]              @default([])
+  genre              String?
+  tags               String[]              @default([])
+  description        String?
+  explicit           Boolean               @default(false)
+  isPublic           Boolean               @default(true)
+  copyrightConfirmed Boolean               @default(false)
+  errorCode          String?
+  errorMessage       String?
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+
+  batch  UploadBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  track  Track?      @relation(fields: [trackId], references: [id], onDelete: SetNull)
+  upload Upload?     @relation(fields: [uploadId], references: [id], onDelete: SetNull)
+
+  @@unique([batchId, clientId])
+  @@index([batchId, status])
+  @@index([batchId, target, playlistOrder])
 }
 
 model Report {

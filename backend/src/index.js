@@ -130,6 +130,7 @@ function buildServer(options = {}) {
   fastify.register(require('./routes/artists'), { prefix: '/api/artists' });
   fastify.register(require('./routes/playlists'), { prefix: '/api/playlists' });
   fastify.register(require('./routes/uploads'), { prefix: '/api/uploads' });
+  fastify.register(require('./routes/uploadBatches'), { prefix: '/api/uploads/batch' });
   fastify.register(require('./routes/comments'), { prefix: '/api/comments' });
   fastify.register(require('./routes/reports'), { prefix: '/api/reports' });
   fastify.register(require('./routes/admin'), { prefix: '/api/admin' });

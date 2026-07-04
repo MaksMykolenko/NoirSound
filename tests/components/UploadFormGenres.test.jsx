@@ -50,10 +50,29 @@ describe('UploadForm genre selection', () => {
     expect(panel.querySelector('[data-genre-option="rock"]')).toBeFalsy();
   });
 
-  it('selecting a genre updates the trigger to the localized label', () => {
+  it('selecting a genre updates the trigger to the English label', () => {
     render(<UploadForm />);
     fireEvent.click(screen.getByTestId('genre-picker-trigger'));
     fireEvent.click(screen.getByTestId('genre-picker-panel').querySelector('[data-genre-option="hip_hop"]'));
     expect(screen.getByTestId('genre-picker-trigger')).toHaveTextContent('Hip-Hop');
+  });
+
+  it('shows English genre labels under a Ukrainian UI', async () => {
+    await i18n.changeLanguage('uk');
+    render(<UploadForm />);
+    fireEvent.click(screen.getByTestId('genre-picker-trigger'));
+    const panel = screen.getByTestId('genre-picker-panel');
+
+    // Group header stays English ("Хіп-хоп та урбан" would be the old, removed behavior).
+    expect(panel.querySelector('[data-genre-group="urban"]')).toHaveTextContent('Hip-Hop & Urban');
+    // Option labels stay English.
+    expect(panel.querySelector('[data-genre-option="hip_hop"]')).toHaveTextContent('Hip-Hop');
+    expect(panel.querySelector('[data-genre-option="rock"]')).toHaveTextContent('Rock');
+
+    fireEvent.click(panel.querySelector('[data-genre-option="hip_hop"]'));
+    expect(screen.getByTestId('genre-picker-trigger')).toHaveTextContent('Hip-Hop');
+    expect(screen.getByTestId('genre-picker-trigger')).not.toHaveTextContent('Хіп-хоп');
+
+    await i18n.changeLanguage('en');
   });
 });

@@ -3,8 +3,10 @@
 // Reads the SAME shared/musicGenres.json that the frontend consumes, so the set
 // of supported genre keys can never drift between client and server.
 //
-// The database stores the stable snake_case `key`. Display labels are a frontend
-// i18n concern and must never be written to the database.
+// The database stores the stable snake_case `key`. Display labels are English-
+// only (taxonomy.label / taxonomy.groupLabels) and are never request-language
+// dependent — the backend has no i18n/locale handling and must never return a
+// localized genre label. See NOIRSOUND_GENRE_ENGLISH_ONLY_REPORT.md.
 
 const fs = require('fs');
 const path = require('path');
@@ -24,6 +26,7 @@ if (fs.existsSync(rootShared)) {
 const GENRE_GROUPS = taxonomy.groups.slice();
 const MUSIC_GENRES = taxonomy.genres.map((g) => ({ ...g, aliases: g.aliases.slice() }));
 const GENRE_KEYS = MUSIC_GENRES.map((g) => g.key);
+const GROUP_LABELS = { ...taxonomy.groupLabels };
 
 const KEY_SET = new Set(GENRE_KEYS);
 
@@ -34,6 +37,11 @@ const GENRES_BY_GROUP = MUSIC_GENRES.reduce((acc, g) => {
 
 const GROUP_OF = MUSIC_GENRES.reduce((acc, g) => {
   acc[g.key] = g.group;
+  return acc;
+}, {});
+
+const LABEL_OF = MUSIC_GENRES.reduce((acc, g) => {
+  acc[g.key] = g.label;
   return acc;
 }, {});
 
@@ -85,10 +93,21 @@ function getGroupKeys() {
   return GENRE_GROUPS.slice();
 }
 
+/** English display label for an already-canonical genre key. Undefined if unknown. */
+function getLabelOfKey(key) {
+  return LABEL_OF[key];
+}
+
+/** English display label for a group key. Undefined if unknown. */
+function getLabelOfGroup(groupKey) {
+  return GROUP_LABELS[groupKey];
+}
+
 module.exports = {
   GENRE_GROUPS,
   MUSIC_GENRES,
   GENRE_KEYS,
+  GROUP_LABELS,
   slugifyGenre,
   normalizeGenre,
   isSupportedGenre,
@@ -96,4 +115,6 @@ module.exports = {
   getGroupOf,
   getAllGenreKeys,
   getGroupKeys,
+  getLabelOfKey,
+  getLabelOfGroup,
 };

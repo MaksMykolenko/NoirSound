@@ -12,7 +12,7 @@ import ErrorState from '../components/ui/ErrorState';
 import LoadingState from '../components/ui/LoadingState';
 import { Search, SlidersHorizontal, X, ChevronDown } from 'lucide-react';
 import FallbackAvatar from '../components/ui/FallbackAvatar';
-import { normalizeGenre, getGroupOf, isGenreGroup } from '../constants/musicGenres';
+import { normalizeGenre, getGroupOf, isGenreGroup, QUICK_GROUP_LABELS } from '../constants/musicGenres';
 import { getGenreLabel } from '../utils/genreLabels';
 import { formatNumber } from '../utils/formatLocale';
 import {
@@ -23,15 +23,19 @@ import {
 
 // Quick-filter tabs: a small, curated set of groups so the bar never overflows
 // on mobile. The full taxonomy lives behind the "More" picker.
+//
+// Tab labels are genre-group NAMES, so they are always English (see
+// NOIRSOUND_GENRE_ENGLISH_ONLY_REPORT.md) — only "All" is translated via i18n,
+// since it's UI chrome, not a taxonomy term.
 const QUICK_TABS = [
   { id: 'all', kind: 'all' },
-  { id: 'popular', kind: 'group', group: 'popular' },
-  { id: 'urban', kind: 'group', group: 'urban' },
-  { id: 'electronic', kind: 'group', group: 'electronic' },
-  { id: 'rock', kind: 'group', group: 'rock' },
-  { id: 'chill', kind: 'group', group: 'chill' },
-  { id: 'jazz', kind: 'group', group: 'jazz_blues' },
-  { id: 'world', kind: 'group', group: 'world' },
+  { id: 'popular', kind: 'group', group: 'popular', label: QUICK_GROUP_LABELS.popular },
+  { id: 'urban', kind: 'group', group: 'urban', label: QUICK_GROUP_LABELS.urban },
+  { id: 'electronic', kind: 'group', group: 'electronic', label: QUICK_GROUP_LABELS.electronic },
+  { id: 'rock', kind: 'group', group: 'rock', label: QUICK_GROUP_LABELS.rock },
+  { id: 'chill', kind: 'group', group: 'chill', label: QUICK_GROUP_LABELS.chill },
+  { id: 'jazz', kind: 'group', group: 'jazz_blues', label: QUICK_GROUP_LABELS.jazz_blues },
+  { id: 'world', kind: 'group', group: 'world', label: QUICK_GROUP_LABELS.world },
 ];
 
 const ALL_FILTER = { kind: 'all' };
@@ -238,7 +242,7 @@ export default function Discover() {
           {QUICK_TABS.map((tab) => (
             <GenrePill
               key={tab.id}
-              label={t(`discover.tabs.${tab.id}`)}
+              label={tab.kind === 'all' ? t('discover.tabs.all') : tab.label}
               active={isTabActive(tab)}
               onClick={() => {
                 setFilter(tab.kind === 'all' ? ALL_FILTER : { kind: 'group', group: tab.group });

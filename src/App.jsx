@@ -26,6 +26,7 @@ const TrackPage = lazy(() => import('./pages/TrackPage'));
 const ArtistPage = lazy(() => import('./pages/ArtistPage'));
 const Library = lazy(() => import('./pages/Library'));
 const Upload = lazy(() => import('./pages/Upload'));
+const BatchUploadPage = lazy(() => import('./pages/upload/BatchUploadPage'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Profile = lazy(() => import('./pages/Profile'));
 const PlaylistPage = lazy(() => import('./pages/PlaylistPage'));
@@ -131,6 +132,7 @@ export default function App() {
               <Route path="/artist/:id" element={<ArtistPage />} />
               <Route path="/library" element={<Library />} />
               <Route path="/upload" element={<Upload />} />
+              <Route path="/upload/batch" element={<BatchUploadPage />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/playlist/:id" element={<PlaylistPage />} />

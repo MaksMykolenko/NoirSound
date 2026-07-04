@@ -3,12 +3,16 @@ import {
   MUSIC_GENRES,
   GENRE_GROUPS,
   GENRE_KEYS,
+  GROUP_LABELS,
+  QUICK_GROUP_LABELS,
   normalizeGenre,
   isSupportedGenre,
   getGenresByGroup,
   getGroupOf,
   getAllGenreKeys,
   getGroupKeys,
+  getLabelOfKey,
+  getLabelOfGroup,
 } from '../musicGenres';
 
 describe('music genre taxonomy', () => {
@@ -73,5 +77,40 @@ describe('music genre taxonomy', () => {
     expect(getGroupOf('Vinyl Crackle')).toBeNull();
     expect(getGenresByGroup('urban').map((g) => g.key)).toContain('rap');
     expect(getGenresByGroup('jazz_blues').map((g) => g.key)).toContain('jazz');
+  });
+});
+
+describe('English-only display labels (genre names are never translated)', () => {
+  it('every genre carries a non-empty English label on the taxonomy itself', () => {
+    for (const genre of MUSIC_GENRES) {
+      expect(typeof genre.label).toBe('string');
+      expect(genre.label.length).toBeGreaterThan(0);
+    }
+    expect(MUSIC_GENRES.find((g) => g.key === 'hip_hop').label).toBe('Hip-Hop');
+    expect(MUSIC_GENRES.find((g) => g.key === 'other').label).toBe('Other');
+  });
+
+  it('every group has an English label, both full and compact (quick-filter) forms', () => {
+    for (const group of GENRE_GROUPS) {
+      expect(typeof GROUP_LABELS[group]).toBe('string');
+      expect(GROUP_LABELS[group].length).toBeGreaterThan(0);
+    }
+    expect(GROUP_LABELS.urban).toBe('Hip-Hop & Urban');
+    // QUICK_GROUP_LABELS is a deliberately smaller set (space-constrained UI),
+    // so it need not cover every group — only that every key it does define
+    // resolves to a known group with non-empty English text.
+    for (const [group, label] of Object.entries(QUICK_GROUP_LABELS)) {
+      expect(GENRE_GROUPS).toContain(group);
+      expect(typeof label).toBe('string');
+      expect(label.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('getLabelOfKey / getLabelOfGroup resolve canonical keys without normalizing or localizing', () => {
+    expect(getLabelOfKey('hip_hop')).toBe('Hip-Hop');
+    expect(getLabelOfKey('rnb')).toBe('R&B');
+    expect(getLabelOfKey('not_a_real_key')).toBeUndefined();
+    expect(getLabelOfGroup('urban')).toBe('Hip-Hop & Urban');
+    expect(getLabelOfGroup('not_a_real_group')).toBeUndefined();
   });
 });

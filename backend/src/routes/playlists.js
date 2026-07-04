@@ -1,4 +1,6 @@
 const { serializePublicTrack } = require('../lib/publicTrack');
+const { serializePublicPlaylist } = require('../lib/publicPlaylist');
+const { optionalAuthenticatedUserId } = require('../lib/optionalAuth');
 
 async function playlistsRoutes(fastify, _options) {
   // GET /api/playlists
@@ -8,7 +10,7 @@ async function playlistsRoutes(fastify, _options) {
         where: { isPublic: true },
         include: { creator: { select: { displayName: true } } }
       });
-      return { data: playlists };
+      return { data: playlists.map(serializePublicPlaylist) };
     } catch (error) {
       fastify.log.error(error);
       return reply.status(500).send({ error: 'Internal Server Error' });
@@ -18,14 +20,27 @@ async function playlistsRoutes(fastify, _options) {
   // GET /api/playlists/:id
   fastify.get('/:id', async (request, reply) => {
     try {
+      const viewerId = await optionalAuthenticatedUserId(fastify, request);
       const playlist = await fastify.prisma.playlist.findFirst({
-        where: { id: request.params.id, isPublic: true },
+        where: {
+          id: request.params.id,
+          OR: [
+            { isPublic: true },
+            ...(viewerId ? [{ creatorId: viewerId }] : [])
+          ]
+        },
         include: { 
           creator: { select: { displayName: true } },
           tracks: {
             where: {
               track: {
                 status: 'PUBLISHED',
+                ...(viewerId ? {
+                  OR: [
+                    { isPublic: true },
+                    { artist: { userId: viewerId } }
+                  ]
+                } : { isPublic: true }),
                 artist: { isHidden: false, user: { status: 'ACTIVE' } }
               }
             },
@@ -55,7 +70,7 @@ async function playlistsRoutes(fastify, _options) {
       }
       return {
         playlist: {
-          ...playlist,
+          ...serializePublicPlaylist(playlist),
           tracks: playlist.tracks.map((entry) => ({
             ...entry,
             track: serializePublicTrack(entry.track)
@@ -76,7 +91,7 @@ async function playlistsRoutes(fastify, _options) {
         orderBy: { createdAt: 'desc' },
         include: { creator: { select: { displayName: true, username: true } } }
       });
-      return { data: playlists };
+      return { data: playlists.map(serializePublicPlaylist) };
     } catch (error) {
       fastify.log.error(error);
       return reply.status(500).send({ error: 'Internal Server Error' });
@@ -96,7 +111,7 @@ async function playlistsRoutes(fastify, _options) {
         },
         include: { creator: { select: { displayName: true, username: true } } }
       });
-      return { playlist };
+      return { playlist: serializePublicPlaylist(playlist) };
     } catch (error) {
       fastify.log.error(error);
       return reply.status(500).send({ error: 'Internal Server Error' });

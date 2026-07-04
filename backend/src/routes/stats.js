@@ -36,6 +36,7 @@ async function statsRoutes(fastify, _options) {
         where: {
           id: request.params.id,
           status: 'PUBLISHED',
+          isPublic: true,
           artist: { isHidden: false, user: { status: 'ACTIVE' } }
         }
       });
@@ -215,6 +216,7 @@ async function statsRoutes(fastify, _options) {
           qualified: true,
           track: {
             status: 'PUBLISHED',
+            isPublic: true,
             artist: { isHidden: false, user: { status: 'ACTIVE' } }
           }
         },
@@ -350,6 +352,7 @@ async function statsRoutes(fastify, _options) {
           userId: request.user.id,
           track: {
             status: 'PUBLISHED',
+            isPublic: true,
             artist: { isHidden: false, user: { status: 'ACTIVE' } }
           }
         },

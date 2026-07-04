@@ -3,7 +3,7 @@ import taxonomy from '../src/constants/musicGenres.js';
 import uploadsRoutes from '../src/routes/uploads.js';
 import seedModule from '../prisma/seed.js';
 
-const { normalizeGenre, isSupportedGenre, getAllGenreKeys, getGroupKeys } = taxonomy;
+const { normalizeGenre, isSupportedGenre, getAllGenreKeys, getGroupKeys, MUSIC_GENRES, GROUP_LABELS, getLabelOfKey, getLabelOfGroup } = taxonomy;
 const { validateInitBody } = uploadsRoutes;
 const { DEMO_TRACKS, DEMO_ARTISTS, MINIMAL_USERS } = seedModule;
 
@@ -31,6 +31,28 @@ describe('backend genre taxonomy', () => {
     expect(normalizeGenre('Hip Hop')).toBe('hip_hop');
     expect(isSupportedGenre('ADMIN')).toBe(false);
     expect(isSupportedGenre('LISTENER')).toBe(false);
+  });
+});
+
+describe('backend genre labels are English-only data, not translations', () => {
+  it('every genre and group carries a non-empty English label on the taxonomy itself', () => {
+    for (const genre of MUSIC_GENRES) {
+      expect(typeof genre.label).toBe('string');
+      expect(genre.label.length).toBeGreaterThan(0);
+    }
+    for (const group of getGroupKeys()) {
+      expect(typeof GROUP_LABELS[group]).toBe('string');
+      expect(GROUP_LABELS[group].length).toBeGreaterThan(0);
+    }
+    expect(getLabelOfKey('hip_hop')).toBe('Hip-Hop');
+    expect(getLabelOfGroup('urban')).toBe('Hip-Hop & Urban');
+  });
+
+  it('the taxonomy label lookups have no request-language/locale parameter at all', () => {
+    // The backend must never be able to return a per-request-language label:
+    // there is no lng/locale argument anywhere on the taxonomy API surface.
+    expect(getLabelOfKey.length).toBe(1); // (key) — no language arg
+    expect(getLabelOfGroup.length).toBe(1); // (groupKey) — no language arg
   });
 });
 

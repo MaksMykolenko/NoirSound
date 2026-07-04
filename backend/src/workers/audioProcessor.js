@@ -14,6 +14,7 @@ const {
   isAllowedAudioSignature,
   signatureMatchesDeclared
 } = require('../lib/fileSignature');
+const { syncBatchStatus } = require('../lib/batchUpload');
 
 // Hardening limits (override via env).
 const FFPROBE_TIMEOUT_MS = Number(process.env.FFPROBE_TIMEOUT_MS || 30 * 1000);
@@ -145,6 +146,12 @@ function safeProcessingError(error, tempDir = '') {
   return withoutTempPath.slice(0, 1000);
 }
 
+function isFinalJobAttempt(job) {
+  const maxAttempts = Math.max(1, Number(job?.opts?.attempts || 1));
+  const completedAttemptsBeforeCurrent = Math.max(0, Number(job?.attemptsMade || 0));
+  return completedAttemptsBeforeCurrent + 1 >= maxAttempts;
+}
+
 function assertMediaToolsAvailable() {
   for (const command of ['ffmpeg', 'ffprobe']) {
     try {
@@ -160,6 +167,10 @@ function assertMediaToolsAvailable() {
 
 async function markProcessingFailed(prisma, uploadId, trackId, error, tempDir = '') {
   const safeMessage = safeProcessingError(error, tempDir);
+  const batchItem = await prisma.uploadBatchItem.findUnique({
+    where: { uploadId },
+    select: { id: true, batchId: true }
+  });
   await prisma.$transaction([
     prisma.track.update({
       where: { id: trackId },
@@ -172,8 +183,19 @@ async function markProcessingFailed(prisma, uploadId, trackId, error, tempDir = 
         processingError: safeMessage,
         errorMessage: 'Audio processing failed. Please verify the file and try again.'
       }
-    })
+    }),
+    ...(batchItem ? [
+      prisma.uploadBatchItem.update({
+        where: { id: batchItem.id },
+        data: {
+          status: 'FAILED',
+          errorCode: 'PROCESSING_FAILED',
+          errorMessage: 'Audio processing failed. Please verify the file and try again.'
+        }
+      })
+    ] : [])
   ]);
+  if (batchItem) await syncBatchStatus(prisma, batchItem.batchId);
   return safeMessage;
 }
 
@@ -184,7 +206,12 @@ function createProcessAudioJob({ prisma, storageService = storage, logger = cons
 
     const upload = await prisma.upload.findUnique({
       where: { id: uploadId },
-      include: { track: true }
+      include: {
+        track: true,
+        batchItem: {
+          select: { id: true, batchId: true, target: true }
+        }
+      }
     });
     if (!upload || !upload.track) {
       throw new Error('Upload or linked Track not found.');
@@ -227,6 +254,7 @@ function createProcessAudioJob({ prisma, storageService = storage, logger = cons
       );
       logger.info(`[audio:${job.id}] processed object uploaded`);
 
+      const isBatchTrack = Boolean(upload.batchItem);
       await prisma.$transaction([
         prisma.track.update({
           where: { id: trackId },
@@ -234,8 +262,11 @@ function createProcessAudioJob({ prisma, storageService = storage, logger = cons
             durationSeconds,
             waveformJson,
             processedAudioKey,
-            status: 'PUBLISHED',
-            publishedAt: new Date()
+            // Single uploads preserve their established immediate-publish
+            // behavior. Batch tracks stop at a processed draft until the
+            // owner explicitly publishes the batch.
+            status: isBatchTrack ? 'DRAFT' : 'PUBLISHED',
+            publishedAt: isBatchTrack ? null : new Date()
           }
         }),
         prisma.upload.update({
@@ -245,8 +276,21 @@ function createProcessAudioJob({ prisma, storageService = storage, logger = cons
             processingError: null,
             errorMessage: null
           }
-        })
+        }),
+        ...(isBatchTrack ? [
+          prisma.uploadBatchItem.update({
+            where: { id: upload.batchItem.id },
+            data: {
+              status: upload.batchItem.target === 'EXCLUDED' ? 'EXCLUDED' : 'READY',
+              errorCode: null,
+              errorMessage: null
+            }
+          })
+        ] : [])
       ]);
+      if (isBatchTrack) {
+        await syncBatchStatus(prisma, upload.batchItem.batchId);
+      }
       logger.info(`[audio:${job.id}] database updated`);
       logger.info(`[audio:${job.id}] job completed`);
 
@@ -258,10 +302,12 @@ function createProcessAudioJob({ prisma, storageService = storage, logger = cons
       };
     } catch (error) {
       logger.error(`[audio:${job.id}] processing failed`, error);
-      try {
-        await markProcessingFailed(prisma, uploadId, trackId, error, tempDir);
-      } catch (statusError) {
-        logger.error(`[audio:${job.id}] failed to persist failure state`, statusError);
+      if (isFinalJobAttempt(job)) {
+        try {
+          await markProcessingFailed(prisma, uploadId, trackId, error, tempDir);
+        } catch (statusError) {
+          logger.error(`[audio:${job.id}] failed to persist failure state`, statusError);
+        }
       }
       throw error;
     } finally {
@@ -311,6 +357,7 @@ module.exports = {
   assertMediaToolsAvailable,
   createProcessAudioJob,
   generateWaveform,
+  isFinalJobAttempt,
   markProcessingFailed,
   probeDuration,
   safeProcessingError,

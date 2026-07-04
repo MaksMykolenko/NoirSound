@@ -6,6 +6,8 @@
  * base URL, and returns a plain meta object consumed by metaRenderer. No I/O.
  */
 
+const { normalizeGenre, getLabelOfKey } = require('../constants/musicGenres');
+
 const SITE_NAME = 'NoirSound';
 const DEFAULT_DESCRIPTION =
   'Discover independent music, upload your own tracks, and build your audience on NoirSound.';
@@ -57,8 +59,19 @@ function humanDuration(seconds) {
   return `${minutes}:${String(rest).padStart(2, '0')}`;
 }
 
+// English-only genre label for metadata (OG description + JSON-LD). The
+// backend has no i18n/locale handling anywhere, so this is never
+// request-language dependent -- it either resolves to the same canonical
+// English label the frontend shows (known taxonomy key/alias) or humanizes an
+// unrecognized/custom value as a last resort. Never localized either way. See
+// NOIRSOUND_GENRE_ENGLISH_ONLY_REPORT.md.
 function genreLabel(genre) {
   if (!genre) return null;
+  const canonicalKey = normalizeGenre(genre);
+  if (canonicalKey) {
+    const label = getLabelOfKey(canonicalKey);
+    if (label) return label;
+  }
   return String(genre)
     .replace(/[_-]+/g, ' ')
     .replace(/\s+/g, ' ')

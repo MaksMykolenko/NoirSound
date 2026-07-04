@@ -20,6 +20,7 @@ import {
   StatusBadge,
 } from '../../components/admin/AdminUI';
 import { formatAdminDate, useAdminData } from '../../components/admin/adminUtils';
+import { getGenreLabel } from '../../utils/genreLabels';
 
 export default function AdminTrackDetail() {
   const { id } = useParams();
@@ -65,7 +66,7 @@ export default function AdminTrackDetail() {
           <dl className="mt-4 grid gap-4 sm:grid-cols-2">
             {[
               [t('admin.status'), <StatusBadge key="status" status={track.status} />],
-              [t('admin.genre'), track.genre || '—'],
+              [t('admin.genre'), track.genre ? getGenreLabel(track.genre) : '—'],
               [t('admin.tags'), track.tags?.join(', ') || '—'],
               [t('admin.plays'), track.plays],
               [t('admin.comments'), track._count?.comments ?? 0],

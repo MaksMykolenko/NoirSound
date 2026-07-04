@@ -13,6 +13,7 @@ import {
   StatusBadge,
 } from '../../components/admin/AdminUI';
 import { useAdminData } from '../../components/admin/adminUtils';
+import { getGenreLabel } from '../../utils/genreLabels';
 
 export default function AdminArtistDetail() {
   const { id } = useParams();
@@ -51,7 +52,7 @@ export default function AdminArtistDetail() {
             <div><dt className="text-[10px] font-bold uppercase text-[var(--ns-text-muted)]">{t('admin.status')}</dt><dd className="mt-1"><StatusBadge status={artist.isHidden ? 'HIDDEN' : artist.user?.status} /></dd></div>
             <div><dt className="text-[10px] font-bold uppercase text-[var(--ns-text-muted)]">{t('admin.email')}</dt><dd className="mt-1 text-sm">{artist.user?.email}</dd></div>
             <div><dt className="text-[10px] font-bold uppercase text-[var(--ns-text-muted)]">{t('admin.followers')}</dt><dd className="mt-1 text-sm">{artist._count?.followers ?? 0}</dd></div>
-            <div><dt className="text-[10px] font-bold uppercase text-[var(--ns-text-muted)]">{t('admin.genres')}</dt><dd className="mt-1 text-sm">{artist.genres?.join(', ') || '—'}</dd></div>
+            <div><dt className="text-[10px] font-bold uppercase text-[var(--ns-text-muted)]">{t('admin.genres')}</dt><dd className="mt-1 text-sm">{artist.genres?.length ? artist.genres.map(getGenreLabel).join(', ') : '—'}</dd></div>
           </dl>
         </AdminPanel>
         <AdminPanel className="p-4">
