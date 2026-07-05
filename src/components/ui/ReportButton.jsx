@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Flag } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { submitReport, REPORT_REASONS } from '../../api/moderation';
 import { useUserStore } from '../../store/userStore';
 import { useToastStore } from '../../store/toastStore';
@@ -18,6 +19,7 @@ const REASON_LABELS = {
  * Renders a small button that opens a reason modal and submits to /api/reports.
  */
 export default function ReportButton({ targetType, targetId, className = '', label = 'Report' }) {
+  const { t } = useTranslation();
   const user = useUserStore((s) => s.user);
   const setAuthModalOpen = useUserStore((s) => s.setAuthModalOpen);
   const addToast = useToastStore((s) => s.addToast);
@@ -26,6 +28,12 @@ export default function ReportButton({ targetType, targetId, className = '', lab
   const [reason, setReason] = useState('COPYRIGHT');
   const [details, setDetails] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const reasonLabels = {
+    ...REASON_LABELS,
+    LYRICS_COPYRIGHT: t('reports.reasonLyricsCopyright'),
+    LYRICS_OFFENSIVE: t('reports.reasonLyricsOffensive'),
+    LYRICS_INCORRECT: t('reports.reasonLyricsIncorrect'),
+  };
 
   function handleOpen() {
     if (!user) {
@@ -78,7 +86,7 @@ export default function ReportButton({ targetType, targetId, className = '', lab
               className="w-full mb-4 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-100"
             >
               {REPORT_REASONS.map((r) => (
-                <option key={r} value={r}>{REASON_LABELS[r] || r}</option>
+                <option key={r} value={r}>{reasonLabels[r] || r}</option>
               ))}
             </select>
 

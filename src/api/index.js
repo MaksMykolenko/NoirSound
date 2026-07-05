@@ -6,3 +6,4 @@ export * from './user';
 export * from './uploads';
 export * from './stats';
 export * from './mode';
+export * from './lyrics';

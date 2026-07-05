@@ -108,6 +108,8 @@ export const mockTracks = [
     duration: 372,
     plays: 1420500,
     likes: 87400,
+    hasLyrics: true,
+    lyricsType: "PLAIN",
     description: "The ultimate track for late night city highway racing. Heavy cowbell, crushing 808s, and a relentless groove that keeps your heart pumping.",
     releaseDate: "2026-01-15"
   },
@@ -123,6 +125,8 @@ export const mockTracks = [
     duration: 423,
     plays: 3204900,
     likes: 198200,
+    hasLyrics: false,
+    lyricsType: "NONE",
     description: "Warm Rhodes piano chords over a gentle rain background. Perfect companion for late-night coding, studying, or winding down.",
     releaseDate: "2026-02-10"
   },

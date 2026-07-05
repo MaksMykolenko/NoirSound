@@ -2,6 +2,8 @@ const { userOrIpKey } = require('../lib/rateLimitKeys');
 const { serializePublicTrack } = require('../lib/publicTrack');
 const { scaledRateLimitMax } = require('../lib/rateLimit');
 const { optionalAuthenticatedUserId } = require('../lib/optionalAuth');
+const { auditData, createAudit } = require('../lib/auditLog');
+const { hasLyrics, serializeLyrics, validateLyricsPayload } = require('../lib/lyrics');
 
 async function tracksRoutes(fastify, _options) {
   // GET /api/tracks
@@ -72,6 +74,119 @@ async function tracksRoutes(fastify, _options) {
       fastify.log.error(error);
       return reply.status(500).send({ error: 'Internal Server Error' });
     }
+  });
+
+  // GET /api/tracks/:id/lyrics — lazy public lyrics payload.
+  fastify.get('/:id/lyrics', async (request, reply) => {
+    try {
+      const track = await fastify.prisma.track.findFirst({
+        where: {
+          id: request.params.id,
+          status: 'PUBLISHED',
+          isPublic: true,
+          artist: { isHidden: false, user: { status: 'ACTIVE' } }
+        }
+      });
+      if (!track) {
+        return reply.status(404).send({
+          error: 'LYRICS_NOT_AVAILABLE',
+          message: 'Lyrics are not available for this track.'
+        });
+      }
+      return serializeLyrics(track);
+    } catch (error) {
+      fastify.log.error(error);
+      return reply.status(500).send({ error: 'Internal Server Error' });
+    }
+  });
+
+  // GET /api/tracks/:id/lyrics/manage — full owner/admin editing payload,
+  // including non-public moderation states. Never used for public display.
+  fastify.get('/:id/lyrics/manage', {
+    preValidation: [fastify.authenticate]
+  }, async (request, reply) => {
+    const track = await fastify.prisma.track.findUnique({
+      where: { id: request.params.id },
+      include: {
+        artist: { select: { userId: true } }
+      }
+    });
+    if (!track) {
+      return reply.status(404).send({ error: 'Track not found' });
+    }
+    if (request.user.role !== 'ADMIN' && track.artist.userId !== request.user.id) {
+      return reply.status(403).send({ error: 'You cannot edit lyrics for this track.' });
+    }
+    return serializeLyrics(track);
+  });
+
+  // PATCH /api/tracks/:id/lyrics — owner/admin lyrics editing. The global
+  // CSRF hook protects this state-changing browser request.
+  fastify.patch('/:id/lyrics', {
+    preValidation: [fastify.authenticate],
+    config: {
+      rateLimit: {
+        max: scaledRateLimitMax(30),
+        timeWindow: '1 hour',
+        keyGenerator: userOrIpKey
+      }
+    }
+  }, async (request, reply) => {
+    const track = await fastify.prisma.track.findUnique({
+      where: { id: request.params.id },
+      include: {
+        artist: { select: { userId: true } }
+      }
+    });
+    if (!track) {
+      return reply.status(404).send({ error: 'Track not found' });
+    }
+    const isAdmin = request.user.role === 'ADMIN';
+    if (!isAdmin && track.artist.userId !== request.user.id) {
+      return reply.status(403).send({ error: 'You cannot edit lyrics for this track.' });
+    }
+
+    const lyricsResult = validateLyricsPayload(request.body);
+    if (!lyricsResult.ok) {
+      return reply.status(400).send({
+        error: lyricsResult.error,
+        message: lyricsResult.message
+      });
+    }
+    const { hasLyrics: nextHasLyrics, ...lyricsData } = lyricsResult.data;
+    const previousHasLyrics = hasLyrics(track);
+    const lyricsUpdatedAt = new Date();
+    await fastify.prisma.$transaction(async (tx) => {
+      await tx.track.update({
+        where: { id: track.id },
+        data: { ...lyricsData, lyricsUpdatedAt }
+      });
+      await createAudit(tx, auditData(
+        request.user.id,
+        isAdmin
+          ? 'TRACK_LYRICS_MODERATED'
+          : nextHasLyrics
+            ? 'TRACK_LYRICS_UPDATED'
+            : 'TRACK_LYRICS_REMOVED',
+        'TRACK',
+        track.id,
+        isAdmin ? 'Administrator updated track lyrics.' : 'Track owner updated lyrics.',
+        {
+          previousHasLyrics,
+          hasLyrics: nextHasLyrics,
+          lyricsType: lyricsData.lyricsType,
+          lyricsLanguage: lyricsData.lyricsLanguage
+        }
+      ));
+    });
+
+    return {
+      id: track.id,
+      hasLyrics: nextHasLyrics,
+      lyricsType: lyricsData.lyricsType,
+      lyricsLanguage: lyricsData.lyricsLanguage,
+      lyricsUpdatedAt
+    };
   });
 
   // GET /api/tracks/:id/stream

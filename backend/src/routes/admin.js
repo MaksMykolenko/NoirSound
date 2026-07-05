@@ -29,6 +29,7 @@ const {
   recalculateAllTrackPlayCounts
 } = require('../lib/statsAccess');
 const { runStatsIntegrityCheck } = require('../lib/statsIntegrity');
+const { hasLyrics } = require('../lib/lyrics');
 
 const execFileAsync = promisify(execFile);
 const USER_ROLES = ['LISTENER', 'ARTIST', 'ADMIN'];
@@ -1016,6 +1017,12 @@ async function adminRoutes(fastify) {
         mimeType: true,
         fileSize: true,
         copyrightConfirmed: true,
+        lyricsText: true,
+        lyricsType: true,
+        lyricsLanguage: true,
+        lyricsSynced: true,
+        lyricsRightsConfirmed: true,
+        lyricsUpdatedAt: true,
         createdAt: true,
         updatedAt: true,
         publishedAt: true,
@@ -1067,6 +1074,7 @@ async function adminRoutes(fastify) {
     return {
       track: {
         ...safeTrack,
+        hasLyrics: hasLyrics(track),
         streamAvailable: Boolean(processedAudioKey && track.status === 'PUBLISHED'),
         uploads: uploads.map(publicUpload)
       },
@@ -1101,6 +1109,44 @@ async function adminRoutes(fastify) {
     setTrackStatus(request, reply, 'REJECTED', 'TRACK_REJECT', ['PUBLISHED', 'PENDING_REVIEW', 'HIDDEN']));
   fastify.post('/tracks/:id/restore', mutate, (request, reply) =>
     setTrackStatus(request, reply, 'PENDING_REVIEW', 'TRACK_RESTORE', ['REJECTED']));
+
+  fastify.post('/tracks/:id/lyrics/remove', mutate, async (request, reply) => {
+    const reason = requiredReason(request.body);
+    if (!reason) return sendAdminError(reply, 400, 'ADMIN_REASON_REQUIRED', 'A reason is required.');
+    const track = await fastify.prisma.track.findUnique({ where: { id: request.params.id } });
+    if (!track) return sendAdminError(reply, 404, 'ADMIN_TRACK_NOT_FOUND', 'Track not found.');
+    const previousHasLyrics = hasLyrics(track);
+    const lyricsUpdatedAt = new Date();
+    await fastify.prisma.$transaction(async (tx) => {
+      await tx.track.update({
+        where: { id: track.id },
+        data: {
+          lyricsText: null,
+          lyricsType: 'NONE',
+          lyricsLanguage: null,
+          lyricsSynced: null,
+          lyricsRightsConfirmed: false,
+          lyricsUpdatedAt
+        }
+      });
+      await createAudit(tx, auditData(
+        request.user.id,
+        'TRACK_LYRICS_MODERATED',
+        'TRACK',
+        track.id,
+        reason,
+        { previousHasLyrics, hasLyrics: false, action: 'REMOVE' }
+      ));
+    });
+    return {
+      track: {
+        id: track.id,
+        hasLyrics: false,
+        lyricsType: 'NONE',
+        lyricsUpdatedAt
+      }
+    };
+  });
 
   fastify.post('/tracks/:id/force-reprocess', mutate, async (request, reply) => {
     const reason = requiredReason(request.body);

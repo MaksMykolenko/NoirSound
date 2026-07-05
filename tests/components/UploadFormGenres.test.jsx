@@ -1,5 +1,6 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { act, render, screen, fireEvent } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import i18n from '../../src/i18n';
 import UploadForm from '../../src/components/upload/UploadForm';
@@ -58,7 +59,9 @@ describe('UploadForm genre selection', () => {
   });
 
   it('shows English genre labels under a Ukrainian UI', async () => {
-    await i18n.changeLanguage('uk');
+    await act(async () => {
+      await i18n.changeLanguage('uk');
+    });
     render(<UploadForm />);
     fireEvent.click(screen.getByTestId('genre-picker-trigger'));
     const panel = screen.getByTestId('genre-picker-panel');
@@ -73,6 +76,22 @@ describe('UploadForm genre selection', () => {
     expect(screen.getByTestId('genre-picker-trigger')).toHaveTextContent('Hip-Hop');
     expect(screen.getByTestId('genre-picker-trigger')).not.toHaveTextContent('Хіп-хоп');
 
-    await i18n.changeLanguage('en');
+    await act(async () => {
+      await i18n.changeLanguage('en');
+    });
+  });
+
+  it('keeps lyrics optional and requires lyrics rights only after text is entered', async () => {
+    const user = userEvent.setup();
+    render(<UploadForm />);
+    const summary = screen.getAllByText(i18n.t('upload.lyricsSection'))
+      .find((element) => element.tagName === 'SUMMARY');
+    await user.click(summary);
+    const textarea = screen.getByPlaceholderText(i18n.t('lyrics.textPlaceholder'));
+    expect(screen.queryByText(i18n.t('lyrics.rightsRequired'))).toBeNull();
+    await user.type(textarea, 'An original line');
+    expect(screen.getByText(i18n.t('lyrics.rightsRequired'))).toBeInTheDocument();
+    await user.click(screen.getByRole('checkbox', { name: i18n.t('lyrics.rightsConfirm') }));
+    expect(screen.queryByText(i18n.t('lyrics.rightsRequired'))).toBeNull();
   });
 });

@@ -9,6 +9,10 @@ export async function uploadTrack(trackData) {
       genre: trackData.genre,
       tags: trackData.tags || [],
       copyrightConfirmed: trackData.copyrightConfirmed === true,
+      lyricsText: trackData.lyricsText || '',
+      lyricsType: trackData.lyricsText?.trim() ? (trackData.lyricsType || 'PLAIN') : 'NONE',
+      lyricsLanguage: trackData.lyricsLanguage || null,
+      lyricsRightsConfirmed: trackData.lyricsRightsConfirmed === true,
       audio: {
         filename: trackData.audioFile.name,
         mimeType: trackData.audioFile.type,

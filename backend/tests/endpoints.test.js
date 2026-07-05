@@ -434,6 +434,161 @@ describe('NoirSound backend integration', () => {
     });
   });
 
+  describe('lyrics API and upload integration', () => {
+    async function createLyricsTrack(overrides = {}) {
+      const artist = await app.prisma.artistProfile.findFirst({
+        where: { user: { email: 'artist@noirsound.com' } }
+      });
+      return app.prisma.track.create({
+        data: {
+          artistId: artist.id,
+          title: `Lyrics Fixture ${Date.now()}-${Math.random()}`,
+          status: 'PUBLISHED',
+          isPublic: true,
+          lyricsText: 'First original line\n\nSecond original line',
+          lyricsType: 'PLAIN',
+          lyricsLanguage: 'en',
+          lyricsRightsConfirmed: true,
+          lyricsUpdatedAt: new Date(),
+          ...overrides
+        }
+      });
+    }
+
+    it('keeps single upload lyrics optional and rejects lyrics without separate rights', async () => {
+      const withoutLyrics = await initializeUpload(validUploadBody({ cover: null }));
+      expect(withoutLyrics.statusCode).toBe(200);
+      const plainTrack = await app.prisma.track.findUnique({ where: { id: withoutLyrics.body.trackId } });
+      expect(plainTrack.lyricsText).toBeNull();
+      expect(plainTrack.lyricsType).toBe('NONE');
+      expect(plainTrack.lyricsRightsConfirmed).toBe(false);
+
+      const missingRights = await initializeUpload(validUploadBody({
+        cover: null,
+        lyricsText: 'Original words',
+        lyricsType: 'PLAIN',
+        lyricsLanguage: 'en',
+        lyricsRightsConfirmed: false
+      }));
+      expect(missingRights.statusCode).toBe(400);
+      expect(missingRights.body.error).toBe('LYRICS_RIGHTS_REQUIRED');
+    });
+
+    it('persists rights-confirmed lyrics during single upload initialization', async () => {
+      const response = await initializeUpload(validUploadBody({
+        cover: null,
+        lyricsText: 'Verse one\r\n\r\nVerse two',
+        lyricsType: 'PLAIN',
+        lyricsLanguage: 'uk',
+        lyricsRightsConfirmed: true
+      }));
+      expect(response.statusCode).toBe(200);
+      const track = await app.prisma.track.findUnique({ where: { id: response.body.trackId } });
+      expect(track.lyricsText).toBe('Verse one\n\nVerse two');
+      expect(track.lyricsType).toBe('PLAIN');
+      expect(track.lyricsLanguage).toBe('uk');
+      expect(track.lyricsRightsConfirmed).toBe(true);
+      expect(track.lyricsUpdatedAt).toBeInstanceOf(Date);
+    });
+
+    it('returns public lyrics lazily while list/detail payloads expose only flags', async () => {
+      const track = await createLyricsTrack();
+      const lyrics = await supertest(app.server).get(`/api/tracks/${track.id}/lyrics`);
+      const detail = await supertest(app.server).get(`/api/tracks/${track.id}`);
+      const list = await supertest(app.server).get('/api/tracks');
+
+      expect(lyrics.statusCode).toBe(200);
+      expect(lyrics.body).toMatchObject({
+        trackId: track.id,
+        hasLyrics: true,
+        lyricsType: 'PLAIN',
+        lyricsText: 'First original line\n\nSecond original line'
+      });
+      expect(detail.body.track).toMatchObject({ hasLyrics: true, lyricsType: 'PLAIN' });
+      expect(detail.body.track).not.toHaveProperty('lyricsText');
+      const listed = list.body.data.find((entry) => entry.id === track.id);
+      expect(listed).toMatchObject({ hasLyrics: true, lyricsType: 'PLAIN' });
+      expect(JSON.stringify(list.body)).not.toContain('First original line');
+    });
+
+    it('returns a clean empty payload and hides non-public lyrics', async () => {
+      const noLyrics = await createLyricsTrack({
+        lyricsText: null,
+        lyricsType: 'NONE',
+        lyricsLanguage: null,
+        lyricsRightsConfirmed: false,
+        lyricsUpdatedAt: null
+      });
+      const empty = await supertest(app.server).get(`/api/tracks/${noLyrics.id}/lyrics`);
+      expect(empty.statusCode).toBe(200);
+      expect(empty.body).toEqual({ trackId: noLyrics.id, hasLyrics: false });
+
+      for (const updates of [
+        { status: 'HIDDEN' },
+        { status: 'DRAFT' },
+        { status: 'PUBLISHED', isPublic: false }
+      ]) {
+        const hidden = await createLyricsTrack(updates);
+        const response = await supertest(app.server).get(`/api/tracks/${hidden.id}/lyrics`);
+        expect(response.statusCode).toBe(404);
+        expect(response.body.error).toBe('LYRICS_NOT_AVAILABLE');
+      }
+    });
+
+    it('allows the owner to edit, blocks non-owners, and lets admins remove with audit', async () => {
+      const track = await createLyricsTrack();
+      const blocked = await supertest(app.server)
+        .patch(`/api/tracks/${track.id}/lyrics`)
+        .set('Cookie', listenerCookie)
+        .send({
+          lyricsText: 'Not mine',
+          lyricsType: 'PLAIN',
+          lyricsRightsConfirmed: true
+        });
+      expect(blocked.statusCode).toBe(403);
+
+      const edited = await supertest(app.server)
+        .patch(`/api/tracks/${track.id}/lyrics`)
+        .set('Cookie', artistCookie)
+        .send({
+          lyricsText: 'Owner revision',
+          lyricsType: 'PLAIN',
+          lyricsLanguage: 'pl',
+          lyricsRightsConfirmed: true
+        });
+      expect(edited.statusCode).toBe(200);
+      expect(edited.body).toMatchObject({
+        id: track.id,
+        hasLyrics: true,
+        lyricsType: 'PLAIN',
+        lyricsLanguage: 'pl'
+      });
+
+      const managed = await supertest(app.server)
+        .get(`/api/tracks/${track.id}/lyrics/manage`)
+        .set('Cookie', artistCookie);
+      expect(managed.statusCode).toBe(200);
+      expect(managed.body.lyricsText).toBe('Owner revision');
+
+      const removed = await supertest(app.server)
+        .post(`/api/admin/tracks/${track.id}/lyrics/remove`)
+        .set('Cookie', adminCookie)
+        .send({ reason: 'Confirmed lyrics moderation fixture.' });
+      expect(removed.statusCode).toBe(200);
+      const persisted = await app.prisma.track.findUnique({ where: { id: track.id } });
+      expect(persisted.lyricsText).toBeNull();
+      expect(persisted.lyricsType).toBe('NONE');
+      expect(persisted.lyricsRightsConfirmed).toBe(false);
+      expect(await app.prisma.auditLog.count({
+        where: {
+          targetType: 'TRACK',
+          targetId: track.id,
+          action: 'TRACK_LYRICS_MODERATED'
+        }
+      })).toBe(1);
+    });
+  });
+
   describe('batch upload studio API', () => {
     function batchFiles(count = 2) {
       return Array.from({ length: count }, (_, index) => ({
@@ -769,6 +924,93 @@ describe('NoirSound backend integration', () => {
       expect(owner.statusCode).toBe(200);
       expect(catalog.body.data.some((track) => track.id === readyItem.trackId)).toBe(false);
       expect(await app.prisma.playEvent.count()).toBe(beforePlayEvents);
+    });
+
+    it('persists batch draft lyrics and keeps them through processing and publish', async () => {
+      const created = await initializeBatch(batchFiles(1));
+      const state = (await supertest(app.server)
+        .get(`/api/uploads/batch/${created.body.batchId}`)
+        .set('Cookie', artistCookie)).body.batch;
+      const item = state.items[0];
+      const updated = await supertest(app.server)
+        .patch(`/api/uploads/batch/${created.body.batchId}/items/${item.id}`)
+        .set('Cookie', artistCookie)
+        .send({
+          title: item.title,
+          primaryArtistName: item.primaryArtistName,
+          genre: 'electronic',
+          tags: ['lyrics'],
+          copyrightConfirmed: true,
+          visibility: 'PUBLIC',
+          target: 'SINGLE',
+          lyricsText: 'Batch line one\r\nBatch line two',
+          lyricsType: 'PLAIN',
+          lyricsLanguage: 'en',
+          lyricsRightsConfirmed: true
+        });
+      expect(updated.statusCode).toBe(200);
+      expect(updated.body.batch.items[0]).toMatchObject({
+        hasLyrics: true,
+        lyricsText: 'Batch line one\nBatch line two',
+        lyricsType: 'PLAIN',
+        lyricsLanguage: 'en',
+        lyricsRightsConfirmed: true
+      });
+
+      const beforeComplete = await app.prisma.uploadBatch.findUnique({
+        where: { id: created.body.batchId },
+        include: { items: { include: { upload: true } } }
+      });
+      const persistedItem = beforeComplete.items[0];
+      objectMetadata.set(persistedItem.upload.storageKey, {
+        exists: true,
+        mimeType: persistedItem.upload.mimeType,
+        size: persistedItem.upload.sizeBytes
+      });
+      const complete = await supertest(app.server)
+        .post(`/api/uploads/batch/${created.body.batchId}/complete`)
+        .set('Cookie', artistCookie);
+      expect(complete.statusCode).toBe(200);
+
+      const processing = await app.prisma.uploadBatchItem.findUnique({
+        where: { id: item.id },
+        include: { track: true }
+      });
+      expect(processing.track).toMatchObject({
+        lyricsText: 'Batch line one\nBatch line two',
+        lyricsType: 'PLAIN',
+        lyricsLanguage: 'en',
+        lyricsRightsConfirmed: true
+      });
+
+      await app.prisma.$transaction([
+        app.prisma.track.update({
+          where: { id: processing.trackId },
+          data: {
+            status: 'DRAFT',
+            processedAudioKey: `processed/test/${processing.trackId}.mp3`,
+            durationSeconds: 90
+          }
+        }),
+        app.prisma.upload.update({ where: { id: processing.uploadId }, data: { status: 'READY' } }),
+        app.prisma.uploadBatchItem.update({ where: { id: processing.id }, data: { status: 'READY' } }),
+        app.prisma.uploadBatch.update({ where: { id: created.body.batchId }, data: { status: 'READY' } })
+      ]);
+
+      const publish = await supertest(app.server)
+        .post(`/api/uploads/batch/${created.body.batchId}/publish`)
+        .set('Cookie', artistCookie)
+        .send({ allowPartial: false });
+      expect(publish.statusCode).toBe(200);
+      const published = await app.prisma.track.findUnique({ where: { id: processing.trackId } });
+      expect(published).toMatchObject({
+        status: 'PUBLISHED',
+        lyricsText: 'Batch line one\nBatch line two',
+        lyricsType: 'PLAIN',
+        lyricsLanguage: 'en',
+        lyricsRightsConfirmed: true
+      });
+      expect(published.lyricsUpdatedAt).toBeInstanceOf(Date);
     });
   });
 

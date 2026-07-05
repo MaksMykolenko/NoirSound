@@ -17,6 +17,8 @@ import FallbackCover from '../components/ui/FallbackCover';
 import { sortTracksNewest } from '../utils/presentation';
 import { getLocalizedGenre } from '../i18n/genreLabels';
 import { normalizeGenre } from '../constants/musicGenres';
+import TrackLyricsCard from '../components/lyrics/TrackLyricsCard';
+import { useUserStore } from '../store/userStore';
 
 function formatReleaseDate(iso, lang) {
   if (!iso) return null;
@@ -34,6 +36,7 @@ export default function TrackPage() {
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
   const addToast = useToastStore((s) => s.addToast);
+  const user = useUserStore((state) => state.user);
 
   const {
     currentTrack,
@@ -47,7 +50,8 @@ export default function TrackPage() {
     toggleLikeTrack,
     queue,
     addToQueue,
-    removeFromQueue
+    removeFromQueue,
+    updateTrackMetadata
   } = usePlayerStore();
 
   const [track, setTrack] = useState(null);
@@ -115,6 +119,7 @@ export default function TrackPage() {
   const isLiked = likedTracks.includes(track.id);
   const inQueue = queue.some((qt) => qt.id === track.id);
   const canPlay = track.isStreamable ?? Boolean(track.audioUrl);
+  const canEditLyrics = user?.role === 'ADMIN' || user?.artistProfileId === track.artistId;
 
   const genreLabel = getLocalizedGenre(track.genre);
   const showGenre = Boolean(genreLabel) && genreLabel !== 'No genre';
@@ -145,6 +150,16 @@ export default function TrackPage() {
     }
     try { await navigator?.clipboard?.writeText(url); } catch { /* clipboard may be blocked */ }
     addToast(t('trackPage.linkCopied'), 'success');
+  };
+
+  const handleLyricsChanged = (result) => {
+    const updates = {
+      hasLyrics: result.hasLyrics,
+      lyricsType: result.hasLyrics ? result.lyricsType : 'NONE',
+    };
+    setTrack((current) => current ? { ...current, ...updates } : current);
+    updateTrackMetadata(track.id, updates);
+    addToast(t('lyrics.saved'), 'success');
   };
 
   const iconActionClass = (active) =>
@@ -317,6 +332,12 @@ export default function TrackPage() {
           )}
         </section>
       </div>
+
+      <TrackLyricsCard
+        track={track}
+        canEdit={canEditLyrics}
+        onLyricsChanged={handleLyricsChanged}
+      />
 
       {/* Description + Comments / Related */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">

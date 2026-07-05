@@ -20,7 +20,17 @@ async function reportsRoutes(fastify, _options) {
       return reply.status(400).send({ error: 'Invalid target type' });
     }
 
-    const validReasons = ['COPYRIGHT', 'SPAM', 'HARASSMENT', 'HATE', 'NSFW', 'OTHER'];
+    const validReasons = [
+      'COPYRIGHT',
+      'LYRICS_COPYRIGHT',
+      'LYRICS_OFFENSIVE',
+      'LYRICS_INCORRECT',
+      'SPAM',
+      'HARASSMENT',
+      'HATE',
+      'NSFW',
+      'OTHER'
+    ];
     if (!validReasons.includes(reason)) {
       return reply.status(400).send({ error: 'Invalid reason' });
     }

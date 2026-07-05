@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePlayerStore } from '../../store/playerStore';
 import { formatTime } from '../../utils/formatTime';
@@ -15,9 +15,11 @@ import {
   Heart,
   X,
   Music,
-  ChevronDown
+  ChevronDown,
+  FileText
 } from 'lucide-react';
 import FallbackCover from '../ui/FallbackCover';
+import LyricsPanel from '../lyrics/LyricsPanel';
 
 export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
   const { t } = useTranslation();
@@ -43,8 +45,10 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
     collapsePlayer,
     expandPlayer
   } = usePlayerStore();
+  const [lyricsOpen, setLyricsOpen] = useState(false);
 
   const isLiked = currentTrack ? likedTracks.includes(currentTrack.id) : false;
+  const lyricsAvailable = Boolean(currentTrack?.hasLyrics);
   const desktopPlayerHeight = currentTrack ? 'h-[90px]' : 'h-[48px]';
   const desktopHiddenPosition = currentTrack ? 'bottom-[-90px]' : 'bottom-[-48px]';
 
@@ -63,13 +67,19 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
   // Keyboard shortcut: Escape key collapses player
   useEffect(() => {
     const handleGlobalKeyDown = (e) => {
-      if (e.key === 'Escape' && !isPlayerCollapsed) {
+      if (e.key === 'Escape' && lyricsOpen) {
+        setLyricsOpen(false);
+      } else if (e.key === 'Escape' && !isPlayerCollapsed) {
         collapsePlayer();
       }
     };
     window.addEventListener('keydown', handleGlobalKeyDown);
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, [isPlayerCollapsed, collapsePlayer]);
+  }, [isPlayerCollapsed, collapsePlayer, lyricsOpen]);
+
+  useEffect(() => {
+    setLyricsOpen(false);
+  }, [currentTrack?.id]);
 
   return (
     <>
@@ -107,6 +117,18 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
                 <p className="text-[12px] text-zinc-400 truncate mt-0.5 font-medium">{currentTrack.artistName}</p>
               </div>
               <div className="flex items-center space-x-2 shrink-0">
+                {lyricsAvailable && (
+                  <button
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setLyricsOpen(true);
+                    }}
+                    className="w-8 h-8 rounded-xl border border-zinc-800 bg-zinc-900 text-zinc-300 flex items-center justify-center hover:text-brand-red"
+                    aria-label={t('player.lyrics')}
+                  >
+                    <FileText size={14} />
+                  </button>
+                )}
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -282,6 +304,22 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
             {/* Right: Sound options & Panel toggles */}
             <div className="flex items-center justify-end space-x-3 w-1/4 min-w-[150px]">
               <button
+                onClick={() => lyricsAvailable && setLyricsOpen(true)}
+                disabled={!lyricsAvailable}
+                className={`p-2 transition-all focus:outline-none ${
+                  lyricsAvailable
+                    ? lyricsOpen
+                      ? 'text-brand-red bg-zinc-900 border border-brand-red/30 rounded-xl'
+                      : 'text-zinc-500 hover:text-zinc-200 cursor-pointer'
+                    : 'text-zinc-700 cursor-not-allowed'
+                }`}
+                title={lyricsAvailable ? t('player.lyrics') : t('player.lyricsUnavailable')}
+                aria-label={lyricsAvailable ? t('player.lyrics') : t('player.lyricsUnavailable')}
+                aria-pressed={lyricsOpen}
+              >
+                <FileText size={18} />
+              </button>
+              <button
                 onClick={onToggleQueue}
                 className={`p-2 transition-all cursor-pointer focus:outline-none focus:text-brand-red ${
                   isQueueOpen
@@ -376,6 +414,18 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
               </div>
               {/* Controls */}
               <div className="flex items-center space-x-3 shrink-0">
+                {lyricsAvailable && (
+                  <button
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setLyricsOpen(true);
+                    }}
+                    className="w-9 h-9 rounded-xl border border-zinc-800 bg-zinc-900 text-zinc-300 flex items-center justify-center"
+                    aria-label={t('player.lyrics')}
+                  >
+                    <FileText size={15} />
+                  </button>
+                )}
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -427,17 +477,31 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
               <ChevronDown size={20} />
             </button>
             <span className="text-[12px] font-bold uppercase tracking-widest text-zinc-400">{t('player.nowPlaying')}</span>
-            <button
-              onClick={onToggleQueue}
-              className={`ns-icon-button !bg-zinc-900/80 cursor-pointer ${
-                isQueueOpen ? 'text-brand-red !border-brand-red/30' : 'text-zinc-500'
-              }`}
-              title="Queue"
-              aria-label="Open play queue"
-              aria-expanded={isQueueOpen}
-            >
-              <ListMusic size={18} />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => lyricsAvailable && setLyricsOpen(true)}
+                disabled={!lyricsAvailable}
+                className={`ns-icon-button !bg-zinc-900/80 ${
+                  lyricsAvailable ? 'cursor-pointer' : 'cursor-not-allowed opacity-35'
+                } ${lyricsOpen ? 'text-brand-red !border-brand-red/30' : 'text-zinc-500'}`}
+                title={lyricsAvailable ? t('player.lyrics') : t('player.lyricsUnavailable')}
+                aria-label={lyricsAvailable ? t('player.lyrics') : t('player.lyricsUnavailable')}
+                aria-pressed={lyricsOpen}
+              >
+                <FileText size={18} />
+              </button>
+              <button
+                onClick={onToggleQueue}
+                className={`ns-icon-button !bg-zinc-900/80 cursor-pointer ${
+                  isQueueOpen ? 'text-brand-red !border-brand-red/30' : 'text-zinc-500'
+                }`}
+                title="Queue"
+                aria-label="Open play queue"
+                aria-expanded={isQueueOpen}
+              >
+                <ListMusic size={18} />
+              </button>
+            </div>
           </div>
 
           {/* Large cover art */}
@@ -573,6 +637,11 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
           </div>
         </div>
       )}
+      <LyricsPanel
+        open={lyricsOpen}
+        track={currentTrack}
+        onClose={() => setLyricsOpen(false)}
+      />
     </>
   );
 }

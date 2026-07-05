@@ -33,7 +33,9 @@
     "queue": "Kolejka odtwarzania",
     "emptyQueue": "Kolejka jest pusta",
     "audioUnavailable": "Dźwięk niedostępny",
-    "openPlayer": "Otwórz odtwarzacz"
+    "openPlayer": "Otwórz odtwarzacz",
+    "lyrics": "Tekst utworu",
+    "lyricsUnavailable": "Tekst utworu niedostępny"
   },
   "profile": {
     "overview": "Przegląd",
@@ -404,7 +406,17 @@
     "retryStarted": "Rozpoczęto ponowną próbę.",
     "signInRequired": "Zaloguj się, aby użyć studia przesyłania wsadowego",
     "creatorRequired": "Wymagany dostęp twórcy",
-    "creatorRequiredHelp": "Do tworzenia i publikowania wsadów wymagany jest aktywny ArtistProfile."
+    "creatorRequiredHelp": "Do tworzenia i publikowania wsadów wymagany jest aktywny ArtistProfile.",
+    "tabs": {
+      "details": "Szczegóły",
+      "artwork": "Okładka",
+      "lyrics": "Tekst",
+      "rights": "Prawa"
+    },
+    "lyricsAdded": "Dodano tekst",
+    "lyricsRightsConfirmed": "Potwierdzono prawa do tekstu",
+    "noLyrics": "Brak tekstu",
+    "audioLyricsRightsSeparate": "Prawa do audio i tekstu są potwierdzane osobno."
   },
   "admin": {
     "admin": "Administracja",
@@ -450,6 +462,8 @@
     "confirm": "Potwierdź",
     "unavailable": "Niedostępne",
     "available": "Dostępne",
+    "confirmed": "Potwierdzone",
+    "lyricsModeration": "Moderacja tekstu",
     "yes": "Tak",
     "no": "Nie",
     "previous": "Poprzednia",
@@ -664,5 +678,43 @@
         "orphanFollows": "Osierocone obserwacje"
       }
     }
+  },
+  "lyrics": {
+    "title": "Tekst utworu",
+    "optional": "Tekst utworu (opcjonalnie)",
+    "addLyrics": "Dodaj tekst",
+    "editLyrics": "Edytuj tekst",
+    "noLyrics": "Tekst tego utworu nie jest jeszcze dostępny.",
+    "unavailable": "Nie udało się załadować tekstu.",
+    "providedByArtist": "Tekst dostarczony przez artystę",
+    "language": "Język tekstu",
+    "type": "Typ tekstu",
+    "plain": "Zwykły tekst",
+    "synced": "Tekst zsynchronizowany",
+    "textPlaceholder": "Wpisz tekst dokładnie tak, jak mają go czytać słuchacze…",
+    "rightsConfirm": "Potwierdzam, że posiadam ten tekst lub mam zgodę na jego publikację.",
+    "rightsRequired": "Po dodaniu tekstu wymagane jest potwierdzenie praw.",
+    "tooLong": "Tekst przekracza dozwolony limit znaków lub wierszy.",
+    "open": "Otwórz tekst",
+    "close": "Zamknij tekst",
+    "preview": "Podgląd",
+    "remove": "Usuń tekst",
+    "saved": "Tekst zapisany.",
+    "saveFailed": "Nie udało się zapisać tekstu.",
+    "save": "Zapisz tekst",
+    "saving": "Zapisywanie…",
+    "loading": "Ładowanie tekstu",
+    "characters": "znaków",
+    "lines": "wierszy",
+    "legalCopy": "Dodawaj tylko teksty, które napisałeś, posiadasz lub masz zgodę publikować w NoirSound."
+  },
+  "upload": {
+    "lyricsSection": "Tekst utworu (opcjonalnie)",
+    "lyricsHelp": "Dodaj oryginalny tekst, aby słuchacze mogli śledzić go podczas odtwarzania."
+  },
+  "reports": {
+    "reasonLyricsCopyright": "Problem praw autorskich w tekście",
+    "reasonLyricsOffensive": "Obraźliwa treść tekstu",
+    "reasonLyricsIncorrect": "Niepoprawny lub mylący tekst"
   }
 }

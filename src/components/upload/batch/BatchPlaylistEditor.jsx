@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ArrowDown, ArrowUp, GripVertical, ImagePlus, ListMusic, Save } from 'lucide-react';
+import { ArrowDown, ArrowUp, FileText, GripVertical, ImagePlus, ListMusic, Save } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { getGenreLabel } from '../../../utils/genreLabels';
 
@@ -114,6 +114,11 @@ export default function BatchPlaylistEditor({ batch, onSave, onOpenTrack, saving
                     <p className="text-sm font-bold text-zinc-200 truncate">{item.title || t('batchUpload.untitledTrack')}</p>
                     <p className="text-[11px] text-zinc-500 truncate">{item.primaryArtistName} · {item.genre ? getGenreLabel(item.genre, i18n.language) : t('batchUpload.missingGenre')} · {item.status}</p>
                   </button>
+                  {item.hasLyrics && (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-brand-red/25 bg-brand-red/10 px-2 py-1 text-[10px] font-bold text-brand-red">
+                      <FileText size={11} /> {t('lyrics.title')}
+                    </span>
+                  )}
                   {item.missingFields?.length > 0 && <span className="text-[10px] rounded-full bg-amber-400/10 border border-amber-400/25 text-amber-300 px-2 py-1">{item.missingFields.length} {t('batchUpload.missing')}</span>}
                   <div className="flex gap-1">
                     <button type="button" className="ns-icon-button" aria-label={t('batchUpload.moveUp')} onClick={() => move(item.id, -1)} disabled={index === 0}><ArrowUp size={14} /></button>

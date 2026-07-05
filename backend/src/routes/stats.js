@@ -3,6 +3,7 @@ const { userOrIpKey } = require('../lib/rateLimitKeys');
 const { serializePublicTrack } = require('../lib/publicTrack');
 const { scaledRateLimitMax } = require('../lib/rateLimit');
 const { isQualifiedPlay, recalculateArtistMonthlyListeners } = require('../lib/statsAccess');
+const { hasLyrics } = require('../lib/lyrics');
 
 async function statsRoutes(fastify, _options) {
   // POST /api/tracks/:id/play-event
@@ -298,6 +299,10 @@ async function statsRoutes(fastify, _options) {
           likes: true,
           coverUrl: true,
           genre: true,
+          lyricsText: true,
+          lyricsType: true,
+          lyricsSynced: true,
+          lyricsRightsConfirmed: true,
           createdAt: true,
           updatedAt: true,
           publishedAt: true
@@ -305,12 +310,26 @@ async function statsRoutes(fastify, _options) {
         orderBy: { updatedAt: 'desc' }
       });
 
-      const publishedTracks = tracks.filter((track) => track.status === 'PUBLISHED');
+      const safeTracks = tracks.map((track) => {
+        const {
+          lyricsText: _lyricsText,
+          lyricsSynced: _lyricsSynced,
+          lyricsRightsConfirmed: _lyricsRightsConfirmed,
+          ...safeTrack
+        } = track;
+        const available = hasLyrics(track);
+        return {
+          ...safeTrack,
+          hasLyrics: available,
+          lyricsType: available ? track.lyricsType : 'NONE'
+        };
+      });
+      const publishedTracks = safeTracks.filter((track) => track.status === 'PUBLISHED');
       const topTracks = [...publishedTracks].sort((a, b) => b.plays - a.plays).slice(0, 10);
       // FAILED = processing/transcoding failed; REJECTED = failed moderation
       // review. Both belong in "failed", kept out of the published list.
-      const failedUploads = tracks.filter((track) => track.status === 'FAILED' || track.status === 'REJECTED');
-      const recentUploads = tracks.slice(0, 10); // already ordered by updatedAt desc
+      const failedUploads = safeTracks.filter((track) => track.status === 'FAILED' || track.status === 'REJECTED');
+      const recentUploads = safeTracks.slice(0, 10); // already ordered by updatedAt desc
       const totalPlays = publishedTracks.reduce((sum, track) => sum + (track.plays || 0), 0);
       const totalLikes = publishedTracks.reduce((sum, track) => sum + (track.likes || 0), 0);
 
@@ -328,7 +347,7 @@ async function statsRoutes(fastify, _options) {
         // artists have published more recently. This dashboard must never
         // depend on that capped, unrelated ordering for "do my own counts
         // match the database" to hold.
-        tracks,
+        tracks: safeTracks,
         topTracks,
         recentUploads,
         failedUploads,

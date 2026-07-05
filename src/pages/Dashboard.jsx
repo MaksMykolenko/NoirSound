@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Eye, PlusCircle, UploadCloud } from 'lucide-react';
+import { Eye, FileText, PlusCircle, UploadCloud } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getArtistDashboard } from '../api';
 import { useUserStore } from '../store/userStore';
@@ -11,6 +11,7 @@ import LoadingState from '../components/ui/LoadingState';
 import FallbackCover from '../components/ui/FallbackCover';
 import { formatNumber } from '../utils/formatLocale';
 import { getLocalizedGenre } from '../i18n/genreLabels';
+import LyricsEditModal from '../components/lyrics/LyricsEditModal';
 
 const FAILED_STATUS_TONE = 'text-rose-300 bg-rose-500/10 border-rose-500/25';
 const STATUS_TONES = {
@@ -31,27 +32,37 @@ function TrackStatusBadge({ status }) {
   );
 }
 
-function TrackRow({ track, onOpen, trailing }) {
+function TrackRow({ track, onOpen, onEditLyrics, trailing }) {
   return (
-    <button
-      onClick={onOpen}
-      className="w-full flex items-center justify-between p-2 hover:bg-zinc-900/40 rounded-xl text-left cursor-pointer"
-    >
-      <div className="flex items-center gap-3 min-w-0">
-        <FallbackCover
-          src={track.coverUrl}
-          title={track.title}
-          genre={track.genre}
-          className="w-10 h-10 rounded-lg"
-          imageClassName="object-cover"
-        />
-        <div className="min-w-0">
-          <h3 className="text-sm font-bold text-zinc-200 truncate">{track.title}</h3>
-          <p className="text-xs text-zinc-500">{getLocalizedGenre(track.genre) || 'Uncategorized'}</p>
-        </div>
+    <div className="w-full flex items-center justify-between gap-2 p-2 hover:bg-zinc-900/40 rounded-xl">
+      <button onClick={onOpen} className="flex min-w-0 flex-1 items-center gap-3 text-left cursor-pointer">
+          <FallbackCover
+            src={track.coverUrl}
+            title={track.title}
+            genre={track.genre}
+            className="w-10 h-10 rounded-lg"
+            imageClassName="object-cover"
+          />
+          <div className="min-w-0">
+            <h3 className="flex items-center gap-1.5 text-sm font-bold text-zinc-200 truncate">
+              {track.title}
+              {track.hasLyrics && <FileText size={12} className="shrink-0 text-brand-red" />}
+            </h3>
+            <p className="text-xs text-zinc-500">{getLocalizedGenre(track.genre) || 'Uncategorized'}</p>
+          </div>
+      </button>
+      <div className="flex shrink-0 items-center gap-2">
+        <button
+          type="button"
+          onClick={() => onEditLyrics(track)}
+          className="ns-icon-button"
+          aria-label={`Edit lyrics for ${track.title}`}
+        >
+          <FileText size={14} />
+        </button>
+        <div>{trailing}</div>
       </div>
-      {trailing}
-    </button>
+    </div>
   );
 }
 
@@ -62,6 +73,7 @@ export default function Dashboard() {
   const [dashboardStats, setDashboardStats] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [lyricsTrack, setLyricsTrack] = useState(null);
   const canCreate = ['ARTIST', 'ADMIN'].includes(user?.role);
 
   useEffect(() => {
@@ -117,6 +129,19 @@ export default function Dashboard() {
   const recentUploads = dashboardStats?.recentUploads || [];
   const failedUploads = dashboardStats?.failedUploads || [];
 
+  const handleLyricsSaved = (result) => {
+    const updateTrack = (track) => track.id === result.id
+      ? { ...track, hasLyrics: result.hasLyrics, lyricsType: result.lyricsType }
+      : track;
+    setDashboardStats((current) => current ? {
+      ...current,
+      tracks: (current.tracks || []).map(updateTrack),
+      topTracks: (current.topTracks || []).map(updateTrack),
+      recentUploads: (current.recentUploads || []).map(updateTrack),
+      failedUploads: (current.failedUploads || []).map(updateTrack),
+    } : current);
+  };
+
   return (
     <div className="ns-page-stack animate-fade-in pb-10">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-zinc-900 pb-5">
@@ -160,6 +185,7 @@ export default function Dashboard() {
                     key={track.id}
                     track={track}
                     onOpen={() => navigate(`/track/${track.id}`)}
+                    onEditLyrics={setLyricsTrack}
                     trailing={
                       <span className="text-xs text-zinc-500 font-semibold shrink-0">
                         {formatNumber(track.plays)} {t('trackPage.plays')}
@@ -182,6 +208,7 @@ export default function Dashboard() {
                     key={track.id}
                     track={track}
                     onOpen={() => navigate(`/track/${track.id}`)}
+                    onEditLyrics={setLyricsTrack}
                     trailing={<Eye size={15} className="text-zinc-500 shrink-0" />}
                   />
                 ))
@@ -197,6 +224,7 @@ export default function Dashboard() {
                   key={track.id}
                   track={track}
                   onOpen={() => navigate(`/track/${track.id}`)}
+                  onEditLyrics={setLyricsTrack}
                   trailing={<TrackStatusBadge status={track.status} />}
                 />
               ))}
@@ -214,6 +242,7 @@ export default function Dashboard() {
                     key={track.id}
                     track={track}
                     onOpen={() => navigate(`/track/${track.id}`)}
+                    onEditLyrics={setLyricsTrack}
                     trailing={<TrackStatusBadge status={track.status} />}
                   />
                 ))
@@ -238,6 +267,12 @@ export default function Dashboard() {
               <span>{t('dashboard.uploadNew')}</span>
             </button>
           </div>
+          <LyricsEditModal
+            open={Boolean(lyricsTrack)}
+            track={lyricsTrack}
+            onClose={() => setLyricsTrack(null)}
+            onSaved={handleLyricsSaved}
+          />
         </>
       )}
     </div>

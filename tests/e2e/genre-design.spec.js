@@ -18,7 +18,7 @@ async function horizontalOverflow(page) {
 }
 
 async function openMorePicker(page) {
-  await page.getByRole('button', { name: 'More' }).click();
+  await page.getByTestId('genre-quick-tabs').getByRole('button').last().click();
   await expect(page.getByTestId('genre-more-panel')).toBeVisible();
   await page.getByTestId('genre-picker-trigger').click();
   await expect(page.getByTestId('genre-picker-panel')).toBeVisible();
@@ -49,7 +49,7 @@ test.describe('Discover genre filters — desktop', () => {
     // Selecting updates the visible, removable chip with the localized label.
     await page.locator('[data-genre-option="jazz"]').click();
     await expect(page.getByTestId('genre-picker-panel')).toHaveCount(0);
-    const chip = page.getByRole('button', { name: /Clear genre/ });
+    const chip = page.getByTestId('active-genre-chip');
     await expect(chip).toBeVisible();
     await expect(chip).toContainText('Jazz');
   });
@@ -137,7 +137,7 @@ test.describe('Genre i18n does not break layout — genre names stay English', (
       await expect(jazzOption).toContainText('Jazz');
 
       await jazzOption.click();
-      const chip = page.getByRole('button', { name: /Clear genre/ });
+      const chip = page.getByTestId('active-genre-chip');
       await expect(chip).toBeVisible();
       await expect(chip).toContainText('Jazz');
     });

@@ -209,6 +209,21 @@ export const usePlayerStore = create((set, get) => {
       }
     },
 
+    updateTrackMetadata: (trackId, updates) => {
+      set((state) => ({
+        currentTrack: state.currentTrack?.id === trackId
+          ? { ...state.currentTrack, ...updates }
+          : state.currentTrack,
+        queue: state.queue.map((track) => track.id === trackId ? { ...track, ...updates } : track),
+        originalQueue: state.originalQueue.map((track) =>
+          track.id === trackId ? { ...track, ...updates } : track
+        ),
+        recentlyPlayed: state.recentlyPlayed.map((track) =>
+          track.id === trackId ? { ...track, ...updates } : track
+        ),
+      }));
+    },
+
     toggleLikeTrack: async (trackId) => {
       const { likedTracks } = get();
       const willLike = !likedTracks.includes(trackId);

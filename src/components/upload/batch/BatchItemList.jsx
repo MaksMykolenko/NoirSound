@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AlertTriangle, CheckCircle2, ChevronRight, GripVertical, RotateCcw } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, ChevronRight, FileText, GripVertical, RotateCcw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { getGenreLabel } from '../../../utils/genreLabels';
 import { formatBytes } from './batchUploadUtils';
@@ -39,8 +39,14 @@ export default function BatchItemList({ items, onOpen, onTarget, onReorder, onRe
                 <p className="text-sm font-bold text-zinc-200 truncate">{item.title}</p>
                 {item.missingFields?.length > 0 && <AlertTriangle size={14} className="text-amber-300 shrink-0" />}
                 {item.status === 'READY' && <CheckCircle2 size={14} className="text-emerald-400 shrink-0" />}
+                {item.hasLyrics && <FileText size={14} className="text-brand-red shrink-0" aria-label={t('lyrics.title')} />}
               </div>
               <p className="text-[11px] text-zinc-500 truncate">{item.fileName} · {formatBytes(item.fileSize)} · {item.genre ? getGenreLabel(item.genre, i18n.language) : t('batchUpload.missingGenre')}</p>
+              <p className="text-[10px] text-zinc-600">
+                {item.hasLyrics
+                  ? `${t('batchUpload.lyricsAdded')} · ${item.lyricsRightsConfirmed ? t('batchUpload.lyricsRightsConfirmed') : t('lyrics.rightsRequired')}`
+                  : t('batchUpload.noLyrics')}
+              </p>
             </button>
             <span className={`hidden sm:inline-flex text-[10px] border rounded-full px-2 py-1 font-bold uppercase tracking-wider ${STATUS_STYLE[item.status] || 'text-zinc-400 border-zinc-700'}`}>{item.status}</span>
             <span className="w-28 sm:w-36 shrink-0">

@@ -1,6 +1,7 @@
 'use strict';
 
 const { normalizeGenre } = require('../constants/musicGenres');
+const { hasLyrics } = require('./lyrics');
 
 const REQUIRED_ITEM_FIELDS = Object.freeze([
   'title',
@@ -40,6 +41,10 @@ function itemMissingFields(item) {
   if (!item.primaryArtistName?.trim()) missing.push('primaryArtistName');
   if (!item.genre || !normalizeGenre(item.genre)) missing.push('genre');
   if (item.copyrightConfirmed !== true) missing.push('copyrightConfirmed');
+  if ((item.lyricsText?.trim() || item.lyricsType === 'SYNCED')
+      && item.lyricsRightsConfirmed !== true) {
+    missing.push('lyricsRightsConfirmed');
+  }
   return missing;
 }
 
@@ -116,6 +121,12 @@ function serializeBatch(batch) {
       explicit: item.explicit,
       visibility: item.isPublic ? 'PUBLIC' : 'PRIVATE',
       copyrightConfirmed: item.copyrightConfirmed,
+      hasLyrics: hasLyrics(item),
+      lyricsText: item.lyricsText || '',
+      lyricsType: item.lyricsType || 'NONE',
+      lyricsLanguage: item.lyricsLanguage || null,
+      lyricsSynced: item.lyricsType === 'SYNCED' ? item.lyricsSynced : null,
+      lyricsRightsConfirmed: item.lyricsRightsConfirmed,
       hasCover: Boolean(item.upload?.coverStorageKey),
       errorCode: item.errorCode,
       errorMessage: item.errorMessage || item.upload?.errorMessage || null,

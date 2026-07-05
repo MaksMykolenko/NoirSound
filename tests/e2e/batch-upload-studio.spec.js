@@ -34,10 +34,20 @@ test.describe('Batch Upload Studio', () => {
       await expect(drawer).toBeVisible();
       await drawer.getByTestId('genre-picker-trigger').click();
       await drawer.locator('[data-genre-option="electronic"]').click();
-      await drawer.getByRole('checkbox', { name: /own or control the rights/i }).check();
       if (index >= 2) {
         await drawer.getByRole('combobox', { name: 'Release target', exact: true }).selectOption('PLAYLIST');
       }
+      if (index === 0) {
+        await drawer.getByRole('button', { name: 'Lyrics' }).click();
+        await drawer.getByPlaceholder('Enter the lyrics exactly as listeners should read them…')
+          .fill('Batch browser lyric line one\nBatch browser lyric line two');
+        await drawer.getByLabel('Lyrics language').fill('en');
+        await drawer.getByRole('checkbox', {
+          name: 'I confirm that I own these lyrics or have permission to publish them.',
+        }).check();
+      }
+      await drawer.getByRole('button', { name: 'Rights' }).click();
+      await drawer.getByRole('checkbox', { name: /own or control the rights/i }).check();
       await drawer.getByRole('button', { name: 'Save draft' }).click();
       await expect(drawer).toBeHidden();
     }
@@ -65,6 +75,12 @@ test.describe('Batch Upload Studio', () => {
     for (const name of names) {
       expect(tracks.some((track) => track.title === name)).toBeTruthy();
     }
+    const lyricsTrack = tracks.find((track) => track.title === names[0]);
+    expect(lyricsTrack).toMatchObject({ hasLyrics: true, lyricsType: 'PLAIN' });
+    const batchLyrics = await page.request.get(`${API_BASE}/tracks/${lyricsTrack.id}/lyrics`);
+    expect((await batchLyrics.json()).lyricsText).toBe(
+      'Batch browser lyric line one\nBatch browser lyric line two'
+    );
 
     const playlistLink = page.getByRole('link', { name: 'Open playlist' });
     const href = await playlistLink.getAttribute('href');
@@ -144,6 +160,12 @@ test.describe('Batch Upload Studio', () => {
         copyrightConfirmed: true,
         target: 'SINGLE',
         visibility: file.clientId.startsWith('private-') ? 'PRIVATE' : 'PUBLIC',
+        ...(file.clientId.startsWith('good-') ? {
+          lyricsText: 'Partial batch lyric',
+          lyricsType: 'PLAIN',
+          lyricsLanguage: 'en',
+          lyricsRightsConfirmed: true,
+        } : {}),
       });
       expect(response.ok()).toBeTruthy();
     }
@@ -194,6 +216,8 @@ test.describe('Batch Upload Studio', () => {
     const catalog = (await (await page.request.get(`${API_BASE}/tracks`)).json()).data;
     expect(catalog.some((track) => track.id === publicTrack.trackId)).toBeTruthy();
     expect(catalog.some((track) => track.id === privateTrack.trackId)).toBeFalsy();
+    const publicLyrics = await page.request.get(`${API_BASE}/tracks/${publicTrack.trackId}/lyrics`);
+    expect((await publicLyrics.json()).lyricsText).toBe('Partial batch lyric');
     const ownerPrivate = await page.request.get(`${API_BASE}/tracks/${privateTrack.trackId}`);
     expect(ownerPrivate.ok()).toBeTruthy();
     const anonymous = await playwright.request.newContext();

@@ -8,6 +8,8 @@ import { ensureMyArtistProfile } from '../../api/user';
 import LoadingState from '../ui/LoadingState';
 import GenrePicker from '../ui/GenrePicker';
 import { getLocalizedGenre } from '../../i18n/genreLabels';
+import LyricsEditor from '../lyrics/LyricsEditor';
+import { lyricsCounts, MAX_LYRICS_LINES } from '../lyrics/lyricsUtils';
 
 export default function UploadForm() {
   const { t } = useTranslation();
@@ -32,6 +34,12 @@ export default function UploadForm() {
   const [description, setDescription] = useState('');
   const [tags, setTags] = useState('');
   const [rightsChecked, setRightsChecked] = useState(false);
+  const [lyricsForm, setLyricsForm] = useState({
+    lyricsText: '',
+    lyricsType: 'NONE',
+    lyricsLanguage: '',
+    lyricsRightsConfirmed: false,
+  });
   const [audioFile, setAudioFile] = useState(null);
   const [coverFile, setCoverFile] = useState(null);
   const [coverPreviewUrl, setCoverPreviewUrl] = useState('');
@@ -52,6 +60,12 @@ export default function UploadForm() {
     if (!title.trim()) return setErrorMsg('Please enter a track title.');
     if (!genre) return setErrorMsg('Please choose a genre for your track.');
     if (!rightsChecked) return setErrorMsg('You must confirm ownership rights to publish.');
+    if (lyricsCounts(lyricsForm.lyricsText).lines > MAX_LYRICS_LINES) {
+      return setErrorMsg(t('lyrics.tooLong'));
+    }
+    if (lyricsForm.lyricsText.trim() && !lyricsForm.lyricsRightsConfirmed) {
+      return setErrorMsg(t('lyrics.rightsRequired'));
+    }
 
     setUploadStatus('uploading');
     setUploadProgress(0);
@@ -60,7 +74,10 @@ export default function UploadForm() {
       // 1. Execute upload (gets S3 urls and puts them)
       const res = await uploadMutation.mutateAsync({
         title, genre, description, tags: tags.split(',').map(t => t.trim()).filter(Boolean),
-        audioFile, coverFile, copyrightConfirmed: rightsChecked
+        audioFile,
+        coverFile,
+        copyrightConfirmed: rightsChecked,
+        ...lyricsForm,
       });
       
       setUploadProgress(100);
@@ -132,6 +149,12 @@ export default function UploadForm() {
     setDescription('');
     setTags('');
     setRightsChecked(false);
+    setLyricsForm({
+      lyricsText: '',
+      lyricsType: 'NONE',
+      lyricsLanguage: '',
+      lyricsRightsConfirmed: false,
+    });
     setAudioFile(null);
     setCoverFile(null);
     setErrorMsg('');
@@ -462,6 +485,19 @@ export default function UploadForm() {
         />
         <p className="text-[11px] text-zinc-500 leading-relaxed pt-0.5">{t('uploadForm.tagsHelper')}</p>
       </div>
+
+      <details className="rounded-2xl border border-zinc-800 bg-zinc-950/30 p-4 sm:p-5">
+        <summary className="cursor-pointer text-sm font-bold text-zinc-200 marker:text-brand-red">
+          {t('upload.lyricsSection')}
+        </summary>
+        <div className="pt-5">
+          <LyricsEditor
+            value={lyricsForm}
+            onChange={setLyricsForm}
+            idPrefix="single-upload-lyrics"
+          />
+        </div>
+      </details>
 
       {/* Confirmation Checkbox */}
       <label className="flex items-start space-x-3 p-4 min-h-14 bg-zinc-950/40 border border-zinc-800/70 rounded-2xl cursor-pointer select-none">

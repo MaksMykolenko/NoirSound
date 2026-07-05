@@ -6,6 +6,7 @@ import {
   getAdminTrack,
   hideTrack,
   rejectTrack,
+  removeTrackLyrics,
   restoreTrack,
   unhideTrack,
 } from '../../api/admin';
@@ -40,6 +41,7 @@ export default function AdminTrackDetail() {
     reject: (reason) => rejectTrack(id, reason),
     restore: (reason) => restoreTrack(id, reason),
     reprocess: (reason) => forceReprocessTrack(id, reason),
+    removeLyrics: (reason) => removeTrackLyrics(id, reason),
   };
 
   async function confirm(reason) {
@@ -89,11 +91,42 @@ export default function AdminTrackDetail() {
             {['PUBLISHED', 'PENDING_REVIEW', 'HIDDEN'].includes(track.status) && <button type="button" onClick={() => setPendingAction('reject')} className="rounded-lg bg-[var(--ns-danger)] px-3 py-2 text-xs font-bold text-white">{t('admin.reject')}</button>}
             {track.status === 'REJECTED' && <button type="button" onClick={() => setPendingAction('restore')} className="ns-button-secondary rounded-lg px-3 py-2 text-xs">{t('admin.restore')}</button>}
             {['FAILED', 'REJECTED'].includes(track.status) && <button type="button" onClick={() => setPendingAction('reprocess')} className="ns-button-secondary rounded-lg px-3 py-2 text-xs">{t('admin.forceReprocess')}</button>}
+            {track.hasLyrics && <button type="button" onClick={() => setPendingAction('removeLyrics')} className="rounded-lg bg-[var(--ns-danger)] px-3 py-2 text-xs font-bold text-white">{t('lyrics.remove')}</button>}
             {track.status === 'PUBLISHED' && <Link to={`/track/${track.id}`} className="ns-button-secondary rounded-lg px-3 py-2 text-center text-xs">{t('admin.openPublicPage')}</Link>}
             {track.artist?.id && <Link to={`/admin/artists/${track.artist.id}`} className="ns-button-secondary rounded-lg px-3 py-2 text-center text-xs">{t('admin.viewArtist')}</Link>}
           </div>
         </AdminPanel>
       </div>
+      <AdminPanel className="p-4">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-sm font-bold">{t('admin.lyricsModeration')}</h2>
+          <StatusBadge status={track.hasLyrics ? 'AVAILABLE' : 'NONE'} />
+        </div>
+        <dl className="mt-4 grid gap-4 sm:grid-cols-3">
+          <div>
+            <dt className="text-[10px] font-bold uppercase tracking-wide text-[var(--ns-text-muted)]">{t('lyrics.type')}</dt>
+            <dd className="mt-1 text-sm text-[var(--ns-text-secondary)]">{track.lyricsType || 'NONE'}</dd>
+          </div>
+          <div>
+            <dt className="text-[10px] font-bold uppercase tracking-wide text-[var(--ns-text-muted)]">{t('lyrics.language')}</dt>
+            <dd className="mt-1 text-sm text-[var(--ns-text-secondary)]">{track.lyricsLanguage || '—'}</dd>
+          </div>
+          <div>
+            <dt className="text-[10px] font-bold uppercase tracking-wide text-[var(--ns-text-muted)]">{t('lyrics.rightsConfirm')}</dt>
+            <dd className="mt-1 text-sm text-[var(--ns-text-secondary)]">{track.lyricsRightsConfirmed ? t('admin.confirmed') : t('admin.unavailable')}</dd>
+          </div>
+        </dl>
+        <div className="mt-4 max-h-80 overflow-y-auto rounded-xl border border-[var(--ns-border-subtle)] bg-black/20 p-4">
+          {track.hasLyrics
+            ? <p className="whitespace-pre-wrap text-sm leading-7 text-[var(--ns-text-secondary)]">{track.lyricsText}</p>
+            : <p className="text-sm text-[var(--ns-text-muted)]">{t('lyrics.noLyrics')}</p>}
+        </div>
+        {track.lyricsUpdatedAt && (
+          <p className="mt-3 text-xs text-[var(--ns-text-muted)]">
+            {t('admin.updated')}: {formatAdminDate(track.lyricsUpdatedAt, i18n.language)}
+          </p>
+        )}
+      </AdminPanel>
       <AdminPanel className="p-4">
         <h2 className="mb-3 text-sm font-bold">{t('admin.reports')}</h2>
         {!data.reports?.length ? <AdminEmpty text={t('admin.noReportsYet')} /> : data.reports.map((report) => (

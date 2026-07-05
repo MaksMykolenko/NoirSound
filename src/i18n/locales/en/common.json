@@ -36,7 +36,9 @@
     "emptyQueue": "Queue is empty",
     "audioUnavailable": "Audio Unavailable",
     "openPlayer": "Open Player",
-    "expand": "Expand"
+    "expand": "Expand",
+    "lyrics": "Lyrics",
+    "lyricsUnavailable": "Lyrics unavailable"
   },
   "playlistModal": {
     "newPlaylist": "New Playlist",
@@ -427,7 +429,17 @@
     "retryStarted": "Retry started.",
     "signInRequired": "Sign in to use Batch Upload Studio",
     "creatorRequired": "Creator access required",
-    "creatorRequiredHelp": "An active ArtistProfile is required to create and publish batch uploads."
+    "creatorRequiredHelp": "An active ArtistProfile is required to create and publish batch uploads.",
+    "tabs": {
+      "details": "Details",
+      "artwork": "Artwork",
+      "lyrics": "Lyrics",
+      "rights": "Rights"
+    },
+    "lyricsAdded": "Lyrics added",
+    "lyricsRightsConfirmed": "Lyrics rights confirmed",
+    "noLyrics": "No lyrics",
+    "audioLyricsRightsSeparate": "Audio rights and lyrics rights are separate confirmations."
   },
   "admin": {
     "admin": "Admin",
@@ -468,6 +480,8 @@
     "confirm": "Confirm",
     "unavailable": "Unavailable",
     "available": "Available",
+    "confirmed": "Confirmed",
+    "lyricsModeration": "Lyrics moderation",
     "yes": "Yes",
     "no": "No",
     "previous": "Previous",
@@ -729,5 +743,43 @@
         "orphanFollows": "Orphan follows"
       }
     }
+  },
+  "lyrics": {
+    "title": "Lyrics",
+    "optional": "Lyrics (optional)",
+    "addLyrics": "Add lyrics",
+    "editLyrics": "Edit lyrics",
+    "noLyrics": "Lyrics are not available for this track yet.",
+    "unavailable": "Lyrics could not be loaded.",
+    "providedByArtist": "Lyrics provided by the artist",
+    "language": "Lyrics language",
+    "type": "Lyrics type",
+    "plain": "Plain lyrics",
+    "synced": "Synced lyrics",
+    "textPlaceholder": "Enter the lyrics exactly as listeners should read them…",
+    "rightsConfirm": "I confirm that I own these lyrics or have permission to publish them.",
+    "rightsRequired": "Lyrics rights confirmation is required when lyrics are provided.",
+    "tooLong": "Lyrics exceed the allowed character or line limit.",
+    "open": "Open lyrics",
+    "close": "Close lyrics",
+    "preview": "Preview",
+    "remove": "Remove lyrics",
+    "saved": "Lyrics saved.",
+    "saveFailed": "Lyrics could not be saved.",
+    "save": "Save lyrics",
+    "saving": "Saving…",
+    "loading": "Loading lyrics",
+    "characters": "characters",
+    "lines": "lines",
+    "legalCopy": "Only add lyrics you wrote, own, or have permission to publish on NoirSound."
+  },
+  "upload": {
+    "lyricsSection": "Lyrics (optional)",
+    "lyricsHelp": "Add original lyrics so listeners can follow along while your track plays."
+  },
+  "reports": {
+    "reasonLyricsCopyright": "Lyrics copyright issue",
+    "reasonLyricsOffensive": "Lyrics offensive content",
+    "reasonLyricsIncorrect": "Lyrics incorrect or misleading"
   }
 }

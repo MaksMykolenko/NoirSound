@@ -112,6 +112,7 @@ describe('Batch Upload Studio components', () => {
     expect(hipHop).toHaveTextContent('Hip-Hop');
     expect(hipHop).not.toHaveTextContent('Хіп-хоп');
     fireEvent.click(hipHop);
+    await user.click(screen.getByRole('button', { name: 'Права' }));
     await user.click(screen.getByRole('checkbox', { name: /володію|контролюю/i }));
     await user.click(screen.getByRole('button', { name: /зберегти чернетку/i }));
 
@@ -145,5 +146,50 @@ describe('Batch Upload Studio components', () => {
     expect(title).toHaveValue('Night Drive');
     expect(screen.getAllByRole('button', { name: 'Move track down' })).toHaveLength(2);
     expect(screen.getAllByRole('button', { name: 'Move track up' })).toHaveLength(2);
+  });
+
+  it('edits lyrics in the batch drawer and keeps a separate lyrics rights confirmation', async () => {
+    const onSave = vi.fn().mockResolvedValue();
+    const user = userEvent.setup();
+    render(
+      <BatchTrackSettingsDrawer
+        item={item()}
+        open
+        onClose={vi.fn()}
+        onSave={onSave}
+        saving={false}
+      />
+    );
+    await user.click(screen.getByRole('button', { name: 'Lyrics' }));
+    await user.type(screen.getByPlaceholderText(i18n.t('lyrics.textPlaceholder')), 'Batch original line');
+    await user.type(screen.getByLabelText(i18n.t('lyrics.language')), 'en');
+    await user.click(screen.getByRole('checkbox', { name: i18n.t('lyrics.rightsConfirm') }));
+    await user.click(screen.getByRole('button', { name: /save draft/i }));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        lyricsText: 'Batch original line',
+        lyricsType: 'PLAIN',
+        lyricsLanguage: 'en',
+        lyricsRightsConfirmed: true,
+      }),
+      null
+    ));
+  });
+
+  it('shows a lyrics badge in the playlist preview', () => {
+    render(
+      <BatchPlaylistEditor
+        batch={{
+          playlist: { title: 'Night Drive', description: '', visibility: 'PUBLIC', tags: [], hasCover: false },
+          creator: { displayName: 'Noir Artist' },
+          items: [item({ hasLyrics: true, lyricsRightsConfirmed: true })],
+        }}
+        onSave={vi.fn()}
+        onOpenTrack={vi.fn()}
+        saving={false}
+      />
+    );
+    expect(screen.getByText(i18n.t('lyrics.title'))).toBeInTheDocument();
   });
 });

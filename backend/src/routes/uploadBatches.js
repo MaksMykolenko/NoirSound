@@ -4,6 +4,7 @@ const { v4: uuidv4 } = require('uuid');
 const { normalizeGenre } = require('../constants/musicGenres');
 const { evaluateUploadAccess, ensureArtistProfile } = require('../lib/artistAccess');
 const { auditData, createAudit } = require('../lib/auditLog');
+const { validateLyricsPayload } = require('../lib/lyrics');
 const { userOrIpKey } = require('../lib/rateLimitKeys');
 const { scaledRateLimitMax } = require('../lib/rateLimit');
 const {
@@ -150,6 +151,12 @@ function trackDataFromItem(item, batch) {
     explicit: item.explicit,
     isPublic: item.isPublic,
     copyrightConfirmed: item.copyrightConfirmed,
+    lyricsText: item.lyricsText,
+    lyricsType: item.lyricsType,
+    lyricsLanguage: item.lyricsLanguage,
+    lyricsSynced: item.lyricsSynced,
+    lyricsRightsConfirmed: item.lyricsRightsConfirmed,
+    lyricsUpdatedAt: item.lyricsText || item.lyricsType === 'SYNCED' ? item.updatedAt : null,
     originalAudioKey: item.upload.storageKey,
     coverImageKey: item.upload.coverStorageKey,
     mimeType: item.mimeType,
@@ -505,6 +512,36 @@ async function uploadBatchesRoutes(fastify) {
       }
       data.description = cleanString(body.description, 2000) || null;
     }
+    const lyricsFields = [
+      'lyricsText',
+      'lyricsType',
+      'lyricsLanguage',
+      'lyricsSynced',
+      'lyricsRightsConfirmed'
+    ];
+    if (lyricsFields.some((field) => field in body)) {
+      const lyricsResult = validateLyricsPayload({
+        lyricsText: 'lyricsText' in body ? body.lyricsText : item.lyricsText,
+        lyricsType: 'lyricsType' in body
+          ? body.lyricsType
+          : 'lyricsText' in body
+            ? String(body.lyricsText || '').trim() ? 'PLAIN' : 'NONE'
+            : item.lyricsType,
+        lyricsLanguage: 'lyricsLanguage' in body ? body.lyricsLanguage : item.lyricsLanguage,
+        lyricsSynced: 'lyricsSynced' in body ? body.lyricsSynced : item.lyricsSynced,
+        lyricsRightsConfirmed: 'lyricsRightsConfirmed' in body
+          ? body.lyricsRightsConfirmed
+          : item.lyricsRightsConfirmed
+      });
+      if (!lyricsResult.ok) {
+        return reply.status(400).send({
+          error: lyricsResult.error,
+          message: lyricsResult.message
+        });
+      }
+      Object.assign(data, lyricsResult.data);
+      delete data.hasLyrics;
+    }
     for (const field of ['explicit', 'copyrightConfirmed']) {
       if (field in body) {
         if (typeof body[field] !== 'boolean') return reply.status(400).send({ error: `${field} must be boolean.` });
@@ -585,7 +622,15 @@ async function uploadBatchesRoutes(fastify) {
           description: latest.description,
           explicit: latest.explicit,
           isPublic: latest.isPublic,
-          copyrightConfirmed: latest.copyrightConfirmed
+          copyrightConfirmed: latest.copyrightConfirmed,
+          lyricsText: latest.lyricsText,
+          lyricsType: latest.lyricsType,
+          lyricsLanguage: latest.lyricsLanguage,
+          lyricsSynced: latest.lyricsSynced,
+          lyricsRightsConfirmed: latest.lyricsRightsConfirmed,
+          ...(lyricsFields.some((field) => field in body)
+            ? { lyricsUpdatedAt: latest.lyricsText || latest.lyricsType === 'SYNCED' ? new Date() : null }
+            : {})
         }
       });
     }
@@ -1030,6 +1075,14 @@ async function uploadBatchesRoutes(fastify) {
               explicit: item.explicit,
               isPublic: item.isPublic,
               copyrightConfirmed: item.copyrightConfirmed,
+              lyricsText: item.lyricsText,
+              lyricsType: item.lyricsType,
+              lyricsLanguage: item.lyricsLanguage,
+              lyricsSynced: item.lyricsSynced,
+              lyricsRightsConfirmed: item.lyricsRightsConfirmed,
+              lyricsUpdatedAt: item.lyricsText || item.lyricsType === 'SYNCED'
+                ? item.updatedAt
+                : null,
               status: 'PUBLISHED',
               publishedAt: new Date()
             }

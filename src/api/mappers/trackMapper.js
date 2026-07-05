@@ -14,6 +14,8 @@ export function mapTrackResponse(backendTrack) {
       plays: Number(backendTrack.plays || 0),
       likes: Number(backendTrack.likes || 0),
       isStreamable: backendTrack.isStreamable ?? Boolean(backendTrack.audioUrl),
+      hasLyrics: Boolean(backendTrack.hasLyrics),
+      lyricsType: backendTrack.hasLyrics ? (backendTrack.lyricsType || 'PLAIN') : 'NONE',
     };
   }
   
@@ -55,6 +57,8 @@ export function mapTrackResponse(backendTrack) {
     durationSeconds: duration > 0 ? duration : null,
     audioUrl: isStreamable ? `${API_BASE_URL}/tracks/${backendTrack.id}/stream` : null,
     isStreamable,
+    hasLyrics: Boolean(backendTrack.hasLyrics),
+    lyricsType: backendTrack.hasLyrics ? (backendTrack.lyricsType || 'PLAIN') : 'NONE',
     tags: backendTrack.tags || [],
     description: backendTrack.description || '',
     releaseDate: backendTrack.releaseDate

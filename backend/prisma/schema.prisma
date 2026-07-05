@@ -33,6 +33,12 @@ enum TrackStatus {
   HIDDEN
 }
 
+enum LyricsType {
+  NONE
+  PLAIN
+  SYNCED
+}
+
 enum UploadStatus {
   INITIATED
   UPLOADING
@@ -181,16 +187,22 @@ model Track {
   likes           Int         @default(0)
   releaseDate     DateTime    @default(now())
 
-  originalAudioKey   String?
-  processedAudioKey  String?
-  coverImageKey      String?
-  mimeType           String?
-  fileSize           Int?
-  copyrightConfirmed Boolean  @default(false)
-  primaryArtistName  String?
-  featuredArtists    String[] @default([])
-  explicit           Boolean  @default(false)
-  isPublic           Boolean  @default(true)
+  originalAudioKey      String?
+  processedAudioKey     String?
+  coverImageKey         String?
+  mimeType              String?
+  fileSize              Int?
+  copyrightConfirmed    Boolean    @default(false)
+  primaryArtistName     String?
+  featuredArtists       String[]   @default([])
+  explicit              Boolean    @default(false)
+  isPublic              Boolean    @default(true)
+  lyricsText            String?
+  lyricsType            LyricsType @default(NONE)
+  lyricsLanguage        String?
+  lyricsSynced          Json?
+  lyricsRightsConfirmed Boolean    @default(false)
+  lyricsUpdatedAt       DateTime?
 
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -429,30 +441,35 @@ model UploadBatch {
 }
 
 model UploadBatchItem {
-  id                 String                @id @default(uuid())
-  batchId            String
-  clientId           String
-  fileName           String
-  fileSize           Int
-  mimeType           String
-  trackId            String?               @unique
-  uploadId           String?               @unique
-  status             UploadBatchItemStatus @default(DRAFT)
-  target             UploadBatchItemTarget @default(SINGLE)
-  playlistOrder      Int?
-  title              String
-  primaryArtistName  String
-  featuredArtists    String[]              @default([])
-  genre              String?
-  tags               String[]              @default([])
-  description        String?
-  explicit           Boolean               @default(false)
-  isPublic           Boolean               @default(true)
-  copyrightConfirmed Boolean               @default(false)
-  errorCode          String?
-  errorMessage       String?
-  createdAt          DateTime              @default(now())
-  updatedAt          DateTime              @updatedAt
+  id                    String                @id @default(uuid())
+  batchId               String
+  clientId              String
+  fileName              String
+  fileSize              Int
+  mimeType              String
+  trackId               String?               @unique
+  uploadId              String?               @unique
+  status                UploadBatchItemStatus @default(DRAFT)
+  target                UploadBatchItemTarget @default(SINGLE)
+  playlistOrder         Int?
+  title                 String
+  primaryArtistName     String
+  featuredArtists       String[]              @default([])
+  genre                 String?
+  tags                  String[]              @default([])
+  description           String?
+  explicit              Boolean               @default(false)
+  isPublic              Boolean               @default(true)
+  copyrightConfirmed    Boolean               @default(false)
+  lyricsText            String?
+  lyricsType            LyricsType            @default(NONE)
+  lyricsLanguage        String?
+  lyricsSynced          Json?
+  lyricsRightsConfirmed Boolean               @default(false)
+  errorCode             String?
+  errorMessage          String?
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
 
   batch  UploadBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
   track  Track?      @relation(fields: [trackId], references: [id], onDelete: SetNull)

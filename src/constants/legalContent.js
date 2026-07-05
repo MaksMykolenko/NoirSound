@@ -143,6 +143,7 @@ export const LEGAL_DOCS = {
         heading: 'Upload only what you own',
         body: [
           'When you upload, you must confirm that you own the rights to the audio or have explicit permission to distribute it.',
+          'Lyrics are creator-provided content. Only publish lyrics you wrote, own, or have permission to publish.',
           'Uploading copyrighted material without rights is prohibited and may result in removal and account action.'
         ]
       },
@@ -221,7 +222,8 @@ export const LEGAL_DOCS = {
         heading: 'Rights',
         body: [
           'You own the track or have explicit permission to distribute it, including any samples.',
-          'You confirm rights at upload — this confirmation is required and recorded.'
+          'You confirm audio rights at upload — this confirmation is required and recorded.',
+          'If you add lyrics, you separately confirm that you wrote, own, or have permission to publish those lyrics.'
         ]
       },
       {
@@ -236,7 +238,8 @@ export const LEGAL_DOCS = {
         heading: 'Metadata',
         body: [
           'Use accurate titles, a supported genre, and relevant tags (max 20).',
-          'No misleading metadata or keyword stuffing.'
+          'No misleading metadata or keyword stuffing.',
+          'Lyrics must remain plain creator-provided text. Do not add lyrics copied from another artist without permission; listeners can report copyright or content issues.'
         ]
       },
       {

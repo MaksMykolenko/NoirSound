@@ -115,6 +115,7 @@ export default function BatchUploadPage() {
       processing: items.filter((item) => item.status === 'PROCESSING').length,
       failed: items.filter((item) => item.status === 'FAILED').length,
       published: items.filter((item) => item.status === 'PUBLISHED').length,
+      lyrics: items.filter((item) => item.hasLyrics).length,
     };
   }, [batch]);
 
@@ -442,6 +443,7 @@ export default function BatchUploadPage() {
                     [counts.singles, t('batchUpload.standaloneSingles')],
                     [counts.playlist, t('batchUpload.playlistTracks')],
                     [counts.excluded, t('batchUpload.excluded')],
+                    [counts.lyrics, t('batchUpload.lyricsAdded')],
                     [batch.missingFields.length, t('batchUpload.blockingErrors')],
                   ].map(([value, label]) => (
                     <div key={label} className="ns-card p-4"><p className="text-2xl font-black text-zinc-100">{value}</p><p className="text-xs text-zinc-500 mt-1">{label}</p></div>

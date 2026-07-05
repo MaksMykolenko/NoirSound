@@ -282,6 +282,7 @@ export default function Discover() {
           <div className="flex items-center gap-2">
             <button
               type="button"
+              data-testid="active-genre-chip"
               onClick={clearAll}
               aria-label={`${t('discover.clearGenre')}: ${getGenreLabel(filter.key)}`}
               className="group inline-flex items-center gap-1.5 max-w-full pl-3 pr-2 py-1.5 rounded-full bg-brand-red/15 border border-brand-red/30 text-xs font-semibold text-rose-200 hover:bg-brand-red/25 hover:border-brand-red/50 transition-colors cursor-pointer"

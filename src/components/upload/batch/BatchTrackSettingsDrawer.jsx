@@ -2,12 +2,16 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { FileAudio, ImagePlus, Save, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import GenrePicker from '../../ui/GenrePicker';
+import LyricsEditor from '../../lyrics/LyricsEditor';
 import { formatBytes } from './batchUploadUtils';
+
+const TABS = ['details', 'artwork', 'lyrics', 'rights'];
 
 export default function BatchTrackSettingsDrawer({ item, open, onClose, onSave, saving, stagedCover }) {
   const { t } = useTranslation();
   const [form, setForm] = useState(null);
   const [coverFile, setCoverFile] = useState(null);
+  const [activeTab, setActiveTab] = useState('details');
 
   useEffect(() => {
     if (!item) return;
@@ -21,10 +25,15 @@ export default function BatchTrackSettingsDrawer({ item, open, onClose, onSave, 
       explicit: Boolean(item.explicit),
       visibility: item.visibility || 'PUBLIC',
       copyrightConfirmed: Boolean(item.copyrightConfirmed),
+      lyricsText: item.lyricsText || '',
+      lyricsType: item.lyricsType || 'NONE',
+      lyricsLanguage: item.lyricsLanguage || '',
+      lyricsRightsConfirmed: Boolean(item.lyricsRightsConfirmed),
       target: item.target || 'SINGLE',
       playlistOrder: item.playlistOrder || 1,
     });
     setCoverFile(stagedCover || null);
+    setActiveTab('details');
   }, [item, stagedCover]);
 
   const coverPreview = useMemo(() => {
@@ -49,6 +58,10 @@ export default function BatchTrackSettingsDrawer({ item, open, onClose, onSave, 
       explicit: form.explicit,
       visibility: form.visibility,
       copyrightConfirmed: form.copyrightConfirmed,
+      lyricsText: form.lyricsText,
+      lyricsType: form.lyricsText.trim() ? 'PLAIN' : 'NONE',
+      lyricsLanguage: form.lyricsText.trim() ? form.lyricsLanguage || null : null,
+      lyricsRightsConfirmed: form.lyricsText.trim() ? form.lyricsRightsConfirmed : false,
       target: form.target,
       playlistOrder: form.target === 'PLAYLIST' ? Number(form.playlistOrder) || 1 : null,
     }, coverFile);
@@ -81,78 +94,105 @@ export default function BatchTrackSettingsDrawer({ item, open, onClose, onSave, 
             <span className="ml-auto text-[10px] font-bold uppercase tracking-wider text-zinc-400">{item.status}</span>
           </div>
 
-          <div className="grid sm:grid-cols-2 gap-4">
-            <label className="space-y-1.5">
-              <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">{t('batchUpload.trackTitle')}</span>
-              <input className="ns-field px-4" value={form.title} onChange={(event) => set('title', event.target.value)} />
-            </label>
-            <label className="space-y-1.5">
-              <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">{t('batchUpload.primaryArtist')}</span>
-              <input className="ns-field px-4" value={form.primaryArtistName} onChange={(event) => set('primaryArtistName', event.target.value)} />
-            </label>
-          </div>
-          <label className="space-y-1.5 block">
-            <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">{t('batchUpload.featuredArtists')}</span>
-            <input className="ns-field px-4" value={form.featuredArtists} onChange={(event) => set('featuredArtists', event.target.value)} placeholder={t('batchUpload.commaSeparated')} />
-          </label>
-          <div className="grid sm:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">{t('batchUpload.genre')}</span>
-              <GenrePicker value={form.genre} onChange={(value) => set('genre', value)} id={`batch-genre-${item.id}`} />
-            </div>
-            <label className="space-y-1.5">
-              <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">{t('batchUpload.tags')}</span>
-              <input className="ns-field px-4" value={form.tags} onChange={(event) => set('tags', event.target.value)} placeholder={t('batchUpload.commaSeparated')} />
-            </label>
-          </div>
-          <label className="space-y-1.5 block">
-            <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">{t('batchUpload.description')}</span>
-            <textarea rows={4} className="ns-field px-4 py-3 resize-none" value={form.description} onChange={(event) => set('description', event.target.value)} />
-          </label>
+          <nav className="flex gap-1 overflow-x-auto rounded-xl border border-zinc-800 bg-zinc-950/50 p-1" aria-label={t('batchUpload.trackSettings')}>
+            {TABS.map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                className={`min-h-10 flex-1 rounded-lg px-3 text-xs font-bold ${
+                  activeTab === tab ? 'bg-brand-red text-white' : 'text-zinc-500 hover:text-zinc-200'
+                }`}
+                onClick={() => setActiveTab(tab)}
+              >
+                {t(`batchUpload.tabs.${tab}`)}
+              </button>
+            ))}
+          </nav>
 
-          <div className="grid sm:grid-cols-2 gap-4">
-            <label className="space-y-1.5">
-              <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">{t('batchUpload.target')}</span>
-              <select aria-label={t('batchUpload.target')} className="ns-field px-4" value={form.target} onChange={(event) => set('target', event.target.value)}>
-                <option value="SINGLE">{t('batchUpload.standaloneSingle')}</option>
-                <option value="PLAYLIST">{t('batchUpload.addToPlaylist')}</option>
-                <option value="EXCLUDED">{t('batchUpload.exclude')}</option>
-              </select>
-            </label>
-            <label className="space-y-1.5">
-              <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">{t('batchUpload.visibility')}</span>
-              <select className="ns-field px-4" value={form.visibility} onChange={(event) => set('visibility', event.target.value)}>
-                <option value="PUBLIC">{t('batchUpload.public')}</option>
-                <option value="PRIVATE">{t('batchUpload.private')}</option>
-              </select>
-            </label>
-          </div>
-          {form.target === 'PLAYLIST' && (
-            <label className="space-y-1.5 block">
-              <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">{t('batchUpload.playlistOrder')}</span>
-              <input type="number" min="1" className="ns-field px-4" value={form.playlistOrder} onChange={(event) => set('playlistOrder', event.target.value)} />
+          {activeTab === 'details' && (
+            <div className="space-y-5" data-testid="batch-details-tab">
+              <div className="grid sm:grid-cols-2 gap-4">
+                <label className="space-y-1.5">
+                  <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">{t('batchUpload.trackTitle')}</span>
+                  <input className="ns-field px-4" value={form.title} onChange={(event) => set('title', event.target.value)} />
+                </label>
+                <label className="space-y-1.5">
+                  <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">{t('batchUpload.primaryArtist')}</span>
+                  <input className="ns-field px-4" value={form.primaryArtistName} onChange={(event) => set('primaryArtistName', event.target.value)} />
+                </label>
+              </div>
+              <label className="space-y-1.5 block">
+                <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">{t('batchUpload.featuredArtists')}</span>
+                <input className="ns-field px-4" value={form.featuredArtists} onChange={(event) => set('featuredArtists', event.target.value)} placeholder={t('batchUpload.commaSeparated')} />
+              </label>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">{t('batchUpload.genre')}</span>
+                  <GenrePicker value={form.genre} onChange={(value) => set('genre', value)} id={`batch-genre-${item.id}`} />
+                </div>
+                <label className="space-y-1.5">
+                  <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">{t('batchUpload.tags')}</span>
+                  <input className="ns-field px-4" value={form.tags} onChange={(event) => set('tags', event.target.value)} placeholder={t('batchUpload.commaSeparated')} />
+                </label>
+              </div>
+              <label className="space-y-1.5 block">
+                <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">{t('batchUpload.description')}</span>
+                <textarea rows={4} className="ns-field px-4 py-3 resize-none" value={form.description} onChange={(event) => set('description', event.target.value)} />
+              </label>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <label className="space-y-1.5">
+                  <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">{t('batchUpload.target')}</span>
+                  <select aria-label={t('batchUpload.target')} className="ns-field px-4" value={form.target} onChange={(event) => set('target', event.target.value)}>
+                    <option value="SINGLE">{t('batchUpload.standaloneSingle')}</option>
+                    <option value="PLAYLIST">{t('batchUpload.addToPlaylist')}</option>
+                    <option value="EXCLUDED">{t('batchUpload.exclude')}</option>
+                  </select>
+                </label>
+                <label className="space-y-1.5">
+                  <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">{t('batchUpload.visibility')}</span>
+                  <select className="ns-field px-4" value={form.visibility} onChange={(event) => set('visibility', event.target.value)}>
+                    <option value="PUBLIC">{t('batchUpload.public')}</option>
+                    <option value="PRIVATE">{t('batchUpload.private')}</option>
+                  </select>
+                </label>
+              </div>
+              {form.target === 'PLAYLIST' && (
+                <label className="space-y-1.5 block">
+                  <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">{t('batchUpload.playlistOrder')}</span>
+                  <input type="number" min="1" className="ns-field px-4" value={form.playlistOrder} onChange={(event) => set('playlistOrder', event.target.value)} />
+                </label>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'artwork' && (
+            <label className="rounded-2xl border border-dashed border-zinc-700 p-5 flex items-center gap-4 cursor-pointer" data-testid="batch-artwork-tab">
+              <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(event) => setCoverFile(event.target.files?.[0] || null)} />
+              {coverPreview ? <img src={coverPreview} alt="" className="w-24 h-24 rounded-xl object-cover" /> : <div className="w-24 h-24 rounded-xl bg-zinc-900 grid place-items-center"><ImagePlus className="text-zinc-500" /></div>}
+              <div>
+                <p className="text-sm font-bold text-zinc-200">{t('batchUpload.cover')}</p>
+                <p className="text-xs text-zinc-500">{coverFile?.name || (item.hasCover ? t('batchUpload.coverReady') : t('batchUpload.coverOptional'))}</p>
+              </div>
             </label>
           )}
 
-          <label className="rounded-2xl border border-dashed border-zinc-700 p-4 flex items-center gap-4 cursor-pointer">
-            <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(event) => setCoverFile(event.target.files?.[0] || null)} />
-            {coverPreview ? <img src={coverPreview} alt="" className="w-16 h-16 rounded-xl object-cover" /> : <div className="w-16 h-16 rounded-xl bg-zinc-900 grid place-items-center"><ImagePlus className="text-zinc-500" /></div>}
-            <div>
-              <p className="text-sm font-bold text-zinc-200">{t('batchUpload.cover')}</p>
-              <p className="text-xs text-zinc-500">{coverFile?.name || (item.hasCover ? t('batchUpload.coverReady') : t('batchUpload.coverOptional'))}</p>
-            </div>
-          </label>
+          {activeTab === 'lyrics' && (
+            <LyricsEditor value={form} onChange={setForm} idPrefix={`batch-lyrics-${item.id}`} compact />
+          )}
 
-          <div className="grid sm:grid-cols-2 gap-3">
-            <label className="rounded-xl border border-zinc-800 p-4 flex items-center gap-3 cursor-pointer">
-              <input type="checkbox" checked={form.explicit} onChange={(event) => set('explicit', event.target.checked)} className="w-5 h-5 accent-brand-red" />
-              <span className="text-sm text-zinc-300">{t('batchUpload.explicit')}</span>
-            </label>
-            <label className="rounded-xl border border-zinc-800 p-4 flex items-start gap-3 cursor-pointer">
-              <input type="checkbox" checked={form.copyrightConfirmed} onChange={(event) => set('copyrightConfirmed', event.target.checked)} className="w-5 h-5 accent-brand-red mt-0.5" />
-              <span className="text-sm text-zinc-300">{t('batchUpload.copyright')}</span>
-            </label>
-          </div>
+          {activeTab === 'rights' && (
+            <div className="space-y-3" data-testid="batch-rights-tab">
+              <label className="rounded-xl border border-zinc-800 p-4 flex items-center gap-3 cursor-pointer">
+                <input type="checkbox" checked={form.explicit} onChange={(event) => set('explicit', event.target.checked)} className="w-5 h-5 accent-brand-red" />
+                <span className="text-sm text-zinc-300">{t('batchUpload.explicit')}</span>
+              </label>
+              <label className="rounded-xl border border-zinc-800 p-4 flex items-start gap-3 cursor-pointer">
+                <input type="checkbox" checked={form.copyrightConfirmed} onChange={(event) => set('copyrightConfirmed', event.target.checked)} className="w-5 h-5 accent-brand-red mt-0.5" />
+                <span className="text-sm text-zinc-300">{t('batchUpload.copyright')}</span>
+              </label>
+              <p className="text-xs text-zinc-500">{t('batchUpload.audioLyricsRightsSeparate')}</p>
+            </div>
+          )}
         </div>
 
         <div className="sticky bottom-0 bg-brand-black pt-4 border-t border-zinc-800">

@@ -4,6 +4,7 @@ const { userOrIpKey } = require('../lib/rateLimitKeys');
 const { scaledRateLimitMax } = require('../lib/rateLimit');
 const { auditData, createAudit } = require('../lib/auditLog');
 const { evaluateUploadAccess, ensureArtistProfile } = require('../lib/artistAccess');
+const { validateLyricsPayload } = require('../lib/lyrics');
 
 const MAX_AUDIO_BYTES = 50 * 1024 * 1024;
 const MAX_COVER_BYTES = 5 * 1024 * 1024;
@@ -122,6 +123,14 @@ async function uploadsRoutes(fastify) {
     if (validationError) {
       return reply.status(400).send({ error: validationError });
     }
+    const lyricsResult = validateLyricsPayload(request.body);
+    if (!lyricsResult.ok) {
+      return reply.status(400).send({
+        error: lyricsResult.error,
+        message: lyricsResult.message
+      });
+    }
+    const { hasLyrics: lyricsPresent, ...lyricsData } = lyricsResult.data;
 
     // Single source of truth for "does this user have working artist upload
     // access" — see backend/src/lib/artistAccess.js. Admins keep the narrow,
@@ -192,6 +201,8 @@ async function uploadsRoutes(fastify) {
             tags: [...new Set(tags.map((tag) => tag.trim()))],
             status: 'DRAFT',
             copyrightConfirmed,
+            ...lyricsData,
+            lyricsUpdatedAt: lyricsPresent ? new Date() : null,
             originalAudioKey,
             coverImageKey,
             mimeType: audio.mimeType,
