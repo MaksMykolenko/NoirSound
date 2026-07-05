@@ -85,7 +85,7 @@ test.describe('Lyrics system', () => {
     await expect(panel).toHaveAttribute('aria-label', `Fullscreen lyrics player for ${title}`);
     await expect(panel.getByText(originalLyrics)).toBeVisible();
     await expect(panel.getByRole('button', { name: 'Pause' })).toBeVisible();
-    await panel.getByRole('button', { name: 'Close fullscreen lyrics' }).click();
+    await panel.getByTestId('fullscreen-lyrics-back').click();
     await expect(panel).toBeHidden();
     await expect(desktopPlayer.getByRole('button', { name: 'Pause' })).toBeVisible();
 

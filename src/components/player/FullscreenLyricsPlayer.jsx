@@ -3,20 +3,19 @@ import { useTranslation } from 'react-i18next';
 import {
   ArrowLeft,
   FileText,
-  Pause,
-  Play,
-  Repeat,
+  ListMusic,
   RotateCcw,
-  Shuffle,
-  SkipBack,
-  SkipForward,
-  Volume2,
-  VolumeX,
 } from 'lucide-react';
 import { getTrackLyrics } from '../../api/lyrics';
 import { usePlayerStore } from '../../store/playerStore';
-import { formatTime } from '../../utils/formatTime';
 import FallbackCover from '../ui/FallbackCover';
+import QueuePanel from './QueuePanel';
+import {
+  DesktopPlayerBarContent,
+  MobilePlayerProgress,
+  MobilePlayerTransportControls,
+  PlayerTrackInfo,
+} from './PlayerBarShared';
 import {
   cacheFullscreenLyrics,
   deleteCachedFullscreenLyrics,
@@ -24,8 +23,13 @@ import {
 } from './fullscreenLyricsCache';
 
 const HISTORY_STATE_KEY = '__noirsoundLyricsFullscreen';
+const noop = () => {};
 
-export default function FullscreenLyricsPlayer() {
+export default function FullscreenLyricsPlayer({
+  isQueueOpen = false,
+  onToggleQueue = noop,
+  onCloseQueue = noop,
+}) {
   const { t } = useTranslation();
   const dialogRef = useRef(null);
   const closeRef = useRef(null);
@@ -43,6 +47,7 @@ export default function FullscreenLyricsPlayer() {
     shuffle,
     repeatMode,
     playbackError,
+    likedTracks,
     closeLyricsFullscreen,
     togglePlay,
     previous,
@@ -51,6 +56,7 @@ export default function FullscreenLyricsPlayer() {
     setVolume,
     toggleShuffle,
     toggleRepeat,
+    toggleLikeTrack,
   } = usePlayerStore();
 
   const closeWithHistory = useCallback(() => {
@@ -125,7 +131,11 @@ export default function FullscreenLyricsPlayer() {
       if (event.key === 'Escape') {
         event.preventDefault();
         event.stopPropagation();
-        closeWithHistory();
+        if (isQueueOpen) {
+          onCloseQueue();
+        } else {
+          closeWithHistory();
+        }
         return;
       }
 
@@ -159,12 +169,11 @@ export default function FullscreenLyricsPlayer() {
       document.body.style.overscrollBehavior = previousBodyOverscrollBehavior;
       previousFocusRef.current?.focus?.();
     };
-  }, [closeLyricsFullscreen, closeWithHistory]);
+  }, [closeLyricsFullscreen, closeWithHistory, isQueueOpen, onCloseQueue]);
 
   if (!currentTrack) return null;
 
-  const progressPercent = Math.min(100, Math.max(0, (progress / (duration || 100)) * 100));
-  const toggleMute = () => setVolume(volume > 0 ? 0 : 0.5);
+  const isLiked = likedTracks.includes(currentTrack.id);
   const retry = () => {
     deleteCachedFullscreenLyrics(currentTrack.id);
     setRetryVersion((version) => version + 1);
@@ -199,6 +208,7 @@ export default function FullscreenLyricsPlayer() {
           className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-2xl border border-white/10 bg-black/25 text-zinc-200 backdrop-blur-xl transition-colors hover:border-white/20 hover:bg-white/8 hover:text-white"
           aria-label={t('player.closeLyrics')}
           title={t('lyrics.backToPlayer')}
+          data-testid="fullscreen-lyrics-back"
         >
           <ArrowLeft size={21} />
         </button>
@@ -282,101 +292,86 @@ export default function FullscreenLyricsPlayer() {
         </div>
       </main>
 
-      <footer
-        className="relative z-10 shrink-0 border-t border-white/10 bg-black/35 px-4 pb-[calc(.75rem+env(safe-area-inset-bottom))] pt-2 backdrop-blur-2xl sm:px-8 sm:pb-[calc(1rem+env(safe-area-inset-bottom))] sm:pt-3 lg:px-12"
-        data-testid="fullscreen-lyrics-controls"
-      >
-        <div className="mx-auto max-w-6xl">
-          <div className="flex items-center gap-2 font-mono text-[11px] font-semibold text-zinc-400 sm:gap-3 sm:text-xs">
-            <span className="w-9 text-right">{formatTime(progress)}</span>
-            <input
-              type="range"
-              min="0"
-              max={duration || 100}
-              step="0.1"
-              value={progress}
-              onChange={(event) => seek(parseFloat(event.target.value))}
-              className="premium-slider min-w-0 flex-1"
-              aria-label="Track progress"
-              style={{ '--slider-progress': `${progressPercent}%` }}
+      <footer className="relative z-10 shrink-0" data-testid="fullscreen-lyrics-controls">
+        <div
+          className="hidden h-[90px] items-center justify-between border-t border-zinc-800/60 bg-zinc-950/92 px-4 backdrop-blur-xl glass-panel select-none md:px-8 lg:flex"
+          data-testid="fullscreen-standard-desktop-playerbar"
+        >
+          <DesktopPlayerBarContent
+            track={currentTrack}
+            isPlaying={isPlaying}
+            volume={volume}
+            progress={progress}
+            duration={duration}
+            repeatMode={repeatMode}
+            shuffle={shuffle}
+            isLiked={isLiked}
+            playbackError={playbackError}
+            lyricsAvailable
+            lyricsActive
+            isQueueOpen={isQueueOpen}
+            onTogglePlay={togglePlay}
+            onPrevious={previous}
+            onNext={next}
+            onSeek={seek}
+            onSetVolume={setVolume}
+            onToggleShuffle={toggleShuffle}
+            onToggleRepeat={toggleRepeat}
+            onToggleLike={() => toggleLikeTrack(currentTrack.id)}
+            onLyrics={closeWithHistory}
+            onToggleQueue={onToggleQueue}
+            onClose={closeWithHistory}
+            closeLabel={t('player.closeLyrics')}
+          />
+        </div>
+
+        <div
+          className="space-y-2 border-t border-zinc-800/60 bg-zinc-950/94 px-4 pb-[calc(.65rem+env(safe-area-inset-bottom))] pt-2 backdrop-blur-xl glass-panel select-none lg:hidden"
+          data-testid="fullscreen-standard-mobile-playerbar"
+        >
+          <div className="flex min-w-0 items-center gap-1">
+            <PlayerTrackInfo
+              track={currentTrack}
+              isLiked={isLiked}
+              onToggleLike={() => toggleLikeTrack(currentTrack.id)}
+              playbackError={playbackError}
+              className="min-w-0 flex-1"
             />
-            <span className="w-9">{formatTime(duration)}</span>
-          </div>
-
-          <div className="mt-1 flex items-center justify-center gap-3 sm:gap-5">
             <button
               type="button"
-              onClick={toggleShuffle}
-              className={`hidden min-h-11 min-w-11 items-center justify-center rounded-xl transition-colors sm:inline-flex ${
-                shuffle ? 'text-rose-300' : 'text-zinc-500 hover:text-white'
+              onClick={closeWithHistory}
+              className="ns-icon-button !min-h-10 !min-w-10 !bg-zinc-900/80 text-brand-red !border-brand-red/30"
+              aria-label={t('player.closeLyrics')}
+              aria-pressed={true}
+            >
+              <FileText size={17} />
+            </button>
+            <button
+              type="button"
+              onClick={onToggleQueue}
+              className={`ns-icon-button !min-h-10 !min-w-10 !bg-zinc-900/80 ${
+                isQueueOpen ? 'text-brand-red !border-brand-red/30' : 'text-zinc-500'
               }`}
-              aria-label="Toggle shuffle"
-              aria-pressed={shuffle}
+              aria-label="Open play queue"
+              aria-expanded={isQueueOpen}
             >
-              <Shuffle size={18} />
+              <ListMusic size={17} />
             </button>
-            <button
-              type="button"
-              onClick={previous}
-              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl text-zinc-300 transition-colors hover:bg-white/5 hover:text-white"
-              aria-label="Previous track"
-            >
-              <SkipBack size={22} fill="currentColor" />
-            </button>
-            <button
-              type="button"
-              onClick={togglePlay}
-              className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-rose-500 to-purple-500 text-white shadow-[0_12px_34px_color-mix(in_srgb,var(--ns-accent)_28%,transparent)] transition-transform hover:scale-105 sm:h-16 sm:w-16"
-              aria-label={isPlaying ? 'Pause' : 'Play'}
-            >
-              {isPlaying
-                ? <Pause size={23} fill="currentColor" strokeWidth={0} />
-                : <Play size={23} fill="currentColor" strokeWidth={0} className="translate-x-0.5" />}
-            </button>
-            <button
-              type="button"
-              onClick={next}
-              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl text-zinc-300 transition-colors hover:bg-white/5 hover:text-white"
-              aria-label="Next track"
-            >
-              <SkipForward size={22} fill="currentColor" />
-            </button>
-            <button
-              type="button"
-              onClick={toggleRepeat}
-              className={`hidden min-h-11 min-w-11 items-center justify-center rounded-xl transition-colors sm:inline-flex ${
-                repeatMode !== 'none' ? 'text-rose-300' : 'text-zinc-500 hover:text-white'
-              }`}
-              aria-label={`Change repeat mode. Current mode: ${repeatMode}`}
-            >
-              <Repeat size={18} />
-            </button>
-
-            <div className="absolute right-6 hidden items-center gap-2 lg:flex xl:right-12">
-              <button
-                type="button"
-                onClick={toggleMute}
-                className="inline-flex min-h-11 min-w-11 items-center justify-center text-zinc-400 hover:text-white"
-                aria-label={volume === 0 ? 'Unmute' : 'Mute'}
-              >
-                {volume === 0 ? <VolumeX size={18} /> : <Volume2 size={18} />}
-              </button>
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.01"
-                value={volume}
-                onChange={(event) => setVolume(parseFloat(event.target.value))}
-                className="premium-slider w-24"
-                aria-label="Volume"
-                style={{ '--slider-progress': `${volume * 100}%` }}
-              />
-            </div>
           </div>
-          {playbackError && <p className="mt-1 text-center text-xs text-rose-200" role="alert">{playbackError}</p>}
+          <MobilePlayerProgress progress={progress} duration={duration} onSeek={seek} />
+          <MobilePlayerTransportControls
+            isPlaying={isPlaying}
+            shuffle={shuffle}
+            repeatMode={repeatMode}
+            onTogglePlay={togglePlay}
+            onPrevious={previous}
+            onNext={next}
+            onToggleShuffle={toggleShuffle}
+            onToggleRepeat={toggleRepeat}
+          />
         </div>
       </footer>
+      <QueuePanel isOpen={isQueueOpen} onClose={onCloseQueue} surface="fullscreen" />
     </section>
   );
 }

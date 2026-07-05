@@ -18,12 +18,31 @@ test.describe('Fullscreen lyrics player — mock smoke', () => {
     await openLyrics.click();
 
     const fullscreen = page.getByTestId('fullscreen-lyrics-player');
+    const standardBar = page.getByTestId('fullscreen-standard-desktop-playerbar');
     await expect(fullscreen).toBeVisible();
     await expect(fullscreen.getByText('City lights dissolve in rain')).toBeVisible();
-    await expect(fullscreen.getByRole('button', { name: 'Previous track' })).toBeVisible();
-    await expect(fullscreen.getByRole('button', { name: 'Next track' })).toBeVisible();
-    await expect(fullscreen.getByRole('slider', { name: 'Track progress' })).toBeVisible();
+    await expect(standardBar.getByTestId('standard-player-track-info')).toContainText('Nightcrawler');
+    await expect(standardBar.getByTestId('standard-player-transport')).toBeVisible();
+    await expect(standardBar.getByRole('button', { name: 'Previous track' })).toBeVisible();
+    await expect(standardBar.getByRole('button', { name: 'Next track' })).toBeVisible();
+    await expect(standardBar.getByRole('slider', { name: 'Track progress' })).toBeVisible();
+    await expect(standardBar.getByRole('slider', { name: 'Volume' })).toBeVisible();
+    await expect(standardBar.getByTestId('standard-player-play-button')).toHaveClass(/w-8/);
+    await expect(standardBar.locator('[class*="from-rose-500"]')).toHaveCount(0);
+    await expect(
+      standardBar.getByTestId('standard-player-actions').locator('button[aria-pressed="true"]')
+    ).toHaveCount(1);
     await expect(page.locator('[inert]')).toHaveCount(1);
+
+    await standardBar.getByRole('slider', { name: 'Track progress' }).fill('20');
+    await expect(standardBar.getByRole('slider', { name: 'Track progress' })).toHaveValue('20');
+    await standardBar.getByRole('slider', { name: 'Volume' }).fill('0.25');
+    await expect(standardBar.getByRole('slider', { name: 'Volume' })).toHaveValue('0.25');
+    await standardBar.getByRole('button', { name: 'Open play queue' }).click();
+    await expect(fullscreen.getByRole('dialog', { name: 'Play Queue' })).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(fullscreen.getByRole('dialog', { name: 'Play Queue' })).toBeHidden();
+    await expect(fullscreen).toBeVisible();
     await page.waitForTimeout(250);
 
     const geometry = await fullscreen.evaluate((element) => {
@@ -64,15 +83,18 @@ test.describe('Fullscreen lyrics player — mock smoke', () => {
     await mobileLyricsButton.click();
 
     const fullscreen = page.getByTestId('fullscreen-lyrics-player');
-    const controls = page.getByTestId('fullscreen-lyrics-controls');
+    const controls = page.getByTestId('fullscreen-standard-mobile-playerbar');
     await expect(fullscreen).toBeVisible();
-    await expect(fullscreen.getByRole('button', { name: 'Close fullscreen lyrics' })).toBeVisible();
+    await expect(fullscreen.getByTestId('fullscreen-lyrics-back')).toBeVisible();
+    await expect(controls.getByTestId('standard-player-track-info')).toContainText('Nightcrawler');
+    await expect(controls.getByTestId('standard-mobile-player-progress')).toBeVisible();
+    await expect(controls.getByTestId('standard-mobile-player-transport')).toBeVisible();
     await expect(controls.getByRole('button', { name: 'Previous track' })).toBeVisible();
     await expect(controls.getByRole('button', { name: 'Next track' })).toBeVisible();
     await expect(controls.getByRole('button', { name: /Play|Pause/ })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
 
-    await fullscreen.getByRole('button', { name: 'Close fullscreen lyrics' }).click();
+    await fullscreen.getByTestId('fullscreen-lyrics-back').click();
     await page.goto('/track/2');
     await page.getByRole('button', { name: 'Play track' }).click();
     const unavailableLyricsButton = page.locator('button[aria-label="Lyrics unavailable"]:visible');

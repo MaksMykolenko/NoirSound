@@ -8,7 +8,7 @@ import TrackLyricsCard from '../../src/components/lyrics/TrackLyricsCard';
 import PlayerBar from '../../src/components/player/PlayerBar';
 import FullscreenLyricsPlayer from '../../src/components/player/FullscreenLyricsPlayer';
 import { clearFullscreenLyricsCache } from '../../src/components/player/fullscreenLyricsCache';
-import { usePlayerStore } from '../../src/store/playerStore';
+import { __getAudioElementForTests, usePlayerStore } from '../../src/store/playerStore';
 import { getTrackLyrics } from '../../src/api/lyrics';
 
 vi.mock('../../src/api/lyrics', () => ({
@@ -29,13 +29,25 @@ const track = {
   hasLyrics: true,
   lyricsType: 'PLAIN',
 };
+const originalPlayerActions = {
+  togglePlay: usePlayerStore.getState().togglePlay,
+  seek: usePlayerStore.getState().seek,
+  setVolume: usePlayerStore.getState().setVolume,
+};
 
 function PlayerLyricsFixture() {
   const lyricsFullscreenOpen = usePlayerStore((state) => state.lyricsFullscreenOpen);
+  const [isQueueOpen, setIsQueueOpen] = React.useState(false);
   return (
     <>
-      <PlayerBar onToggleQueue={vi.fn()} isQueueOpen={false} />
-      {lyricsFullscreenOpen && <FullscreenLyricsPlayer />}
+      <PlayerBar onToggleQueue={() => setIsQueueOpen((open) => !open)} isQueueOpen={isQueueOpen} />
+      {lyricsFullscreenOpen && (
+        <FullscreenLyricsPlayer
+          isQueueOpen={isQueueOpen}
+          onToggleQueue={() => setIsQueueOpen((open) => !open)}
+          onCloseQueue={() => setIsQueueOpen(false)}
+        />
+      )}
     </>
   );
 }
@@ -61,6 +73,7 @@ describe('lyrics UI', () => {
       likedTracks: [],
       isPlayerCollapsed: false,
       lyricsFullscreenOpen: false,
+      ...originalPlayerActions,
     });
   });
 
@@ -129,7 +142,7 @@ describe('lyrics UI', () => {
     expect(await within(dialog).findByText('Player panel line')).toBeInTheDocument();
     expect(getTrackLyrics).toHaveBeenCalledTimes(1);
     expect(usePlayerStore.getState()).toMatchObject({ isPlaying: true, progress: 21 });
-    await userEvent.click(within(dialog).getByRole('button', { name: i18n.t('player.closeLyrics') }));
+    await userEvent.click(within(dialog).getByTestId('fullscreen-lyrics-back'));
     await waitFor(() => expect(screen.queryByTestId('fullscreen-lyrics-player')).toBeNull());
     expect(usePlayerStore.getState().isPlaying).toBe(true);
   });
@@ -201,7 +214,7 @@ describe('lyrics UI', () => {
     opener.focus();
     await userEvent.click(opener);
     const dialog = screen.getByTestId('fullscreen-lyrics-player');
-    const closeButton = within(dialog).getByRole('button', { name: i18n.t('player.closeLyrics') });
+    const closeButton = within(dialog).getByTestId('fullscreen-lyrics-back');
     expect(closeButton).toHaveFocus();
 
     fireEvent.keyDown(document, { key: 'Tab', shiftKey: true });
@@ -231,15 +244,63 @@ describe('lyrics UI', () => {
     render(<PlayerLyricsFixture />);
     await userEvent.click(screen.getAllByRole('button', { name: i18n.t('player.openLyrics') })[0]);
 
-    const controls = screen.getByTestId('fullscreen-lyrics-controls');
+    const controls = screen.getByTestId('fullscreen-standard-desktop-playerbar');
+    expect(within(controls).getByTestId('standard-player-track-info')).toHaveTextContent(track.title);
+    expect(within(controls).getByTestId('standard-player-transport')).toBeInTheDocument();
     expect(within(controls).getByRole('button', { name: 'Previous track' })).toBeInTheDocument();
     expect(within(controls).getByRole('button', { name: 'Next track' })).toBeInTheDocument();
-    expect(within(controls).getByRole('button', { name: 'Play' })).toBeInTheDocument();
+    expect(within(controls).getByRole('button', { name: 'Play' })).toHaveClass('w-8', 'h-8');
+    expect(
+      within(controls).getByTestId('standard-player-actions')
+        .querySelector('button[aria-pressed="true"]')
+    ).toHaveAttribute('aria-label', i18n.t('player.closeLyrics'));
     fireEvent.change(within(controls).getByRole('slider', { name: 'Track progress' }), {
       target: { value: '45' },
     });
     expect(usePlayerStore.getState().progress).toBe(45);
     expect(within(controls).getByRole('slider', { name: 'Volume' })).toBeInTheDocument();
+    expect(controls.querySelector('[class*="from-rose-500"]')).toBeNull();
+  });
+
+  it('routes fullscreen play, seek, volume, and queue through existing player mechanics', async () => {
+    const togglePlay = vi.fn();
+    const seek = vi.fn();
+    const setVolume = vi.fn();
+    const audioBeforeOpen = __getAudioElementForTests();
+    getTrackLyrics.mockResolvedValue({
+      trackId: track.id,
+      hasLyrics: true,
+      lyricsType: 'PLAIN',
+      lyricsText: 'Shared control words',
+    });
+    usePlayerStore.setState({
+      currentTrack: track,
+      togglePlay,
+      seek,
+      setVolume,
+    });
+    render(<PlayerLyricsFixture />);
+    await userEvent.click(screen.getAllByRole('button', { name: i18n.t('player.openLyrics') })[0]);
+
+    const desktopBar = screen.getByTestId('fullscreen-standard-desktop-playerbar');
+    await userEvent.click(within(desktopBar).getByTestId('standard-player-play-button'));
+    fireEvent.change(within(desktopBar).getByRole('slider', { name: 'Track progress' }), {
+      target: { value: '36' },
+    });
+    fireEvent.change(within(desktopBar).getByRole('slider', { name: 'Volume' }), {
+      target: { value: '0.25' },
+    });
+
+    expect(togglePlay).toHaveBeenCalledTimes(1);
+    expect(seek).toHaveBeenCalledWith(36);
+    expect(setVolume).toHaveBeenCalledWith(0.25);
+    expect(__getAudioElementForTests()).toBe(audioBeforeOpen);
+
+    await userEvent.click(within(desktopBar).getByRole('button', { name: 'Open play queue' }));
+    expect(screen.getByRole('dialog', { name: 'Play Queue' })).toBeInTheDocument();
+    fireEvent.keyDown(document, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Play Queue' })).toBeNull());
+    expect(screen.getByTestId('fullscreen-lyrics-player')).toBeInTheDocument();
   });
 
   it('disables lyrics controls for a track without lyrics', () => {

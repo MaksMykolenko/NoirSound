@@ -4,7 +4,7 @@ import { X, Play, Trash2, Music } from 'lucide-react';
 import { formatDuration } from '../../utils/formatTime';
 import FallbackCover from '../ui/FallbackCover';
 
-export default function QueuePanel({ isOpen, onClose }) {
+export default function QueuePanel({ isOpen, onClose, surface = 'standard' }) {
   const { queue, currentTrack, playTrack, removeFromQueue, setQueue } = usePlayerStore();
 
   useEffect(() => {
@@ -22,9 +22,12 @@ export default function QueuePanel({ isOpen, onClose }) {
   const handleClearQueue = () => {
     setQueue([]);
   };
+  const positionClass = surface === 'fullscreen'
+    ? 'right-0 bottom-[210px] top-[73px] z-[220] lg:bottom-[90px]'
+    : 'right-0 bottom-16 top-0 z-[60] lg:bottom-[90px] lg:top-[73px] lg:z-30';
 
   return (
-    <div className="fixed right-0 bottom-16 top-0 lg:bottom-[90px] lg:top-[73px] w-full sm:w-80 md:w-96 bg-zinc-950/98 border-l border-zinc-800/80 backdrop-blur-xl z-[60] lg:z-30 shadow-2xl flex flex-col glass-panel animate-slide-in" role="dialog" aria-modal="true" aria-labelledby="queue-title">
+    <div className={`fixed ${positionClass} w-full sm:w-80 md:w-96 bg-zinc-950/98 border-l border-zinc-800/80 backdrop-blur-xl shadow-2xl flex flex-col glass-panel animate-slide-in`} role="dialog" aria-modal="true" aria-labelledby="queue-title">
       {/* Queue Header */}
       <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-900">
         <div className="flex items-center space-x-2">

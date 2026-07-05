@@ -70,12 +70,20 @@ export default function AppLayout({ children }) {
       <LibraryDrawer isOpen={isDrawerOpen} onClose={() => setIsDrawerOpen(false)} />
 
       {/* Slide-out Music Queue panel */}
-      <QueuePanel isOpen={isQueueOpen} onClose={() => setIsQueueOpen(false)} />
+      {!lyricsFullscreenOpen && (
+        <QueuePanel isOpen={isQueueOpen} onClose={() => setIsQueueOpen(false)} />
+      )}
 
       {/* Sticky Bottom Music Player */}
       <PlayerBar onToggleQueue={() => setIsQueueOpen(!isQueueOpen)} isQueueOpen={isQueueOpen} />
       </div>
-      {lyricsFullscreenOpen && <FullscreenLyricsPlayer />}
+      {lyricsFullscreenOpen && (
+        <FullscreenLyricsPlayer
+          isQueueOpen={isQueueOpen}
+          onToggleQueue={() => setIsQueueOpen(!isQueueOpen)}
+          onCloseQueue={() => setIsQueueOpen(false)}
+        />
+      )}
     </>
   );
 }
