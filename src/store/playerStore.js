@@ -186,6 +186,17 @@ export const usePlayerStore = create((set, get) => {
     recentlyPlayed: [],
     recentlyPlayedError: null,
     isPlayerCollapsed: typeof window !== 'undefined' ? localStorage.getItem("noirsound.playerCollapsed") === "true" : false,
+    lyricsFullscreenOpen: false,
+
+    openLyricsFullscreen: () => {
+      if (get().currentTrack) {
+        set({ lyricsFullscreenOpen: true });
+      }
+    },
+
+    closeLyricsFullscreen: () => {
+      set({ lyricsFullscreenOpen: false });
+    },
 
     collapsePlayer: () => {
       set({ isPlayerCollapsed: true });

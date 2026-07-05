@@ -595,6 +595,27 @@ main {
   max-height: min(300px, 38vh);
 }
 
+.ns-lyrics-fullscreen {
+  animation: ns-lyrics-enter 220ms ease-out both;
+}
+
+@keyframes ns-lyrics-enter {
+  from {
+    opacity: 0;
+    transform: translateY(0.75rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ns-lyrics-fullscreen {
+    animation: none;
+  }
+}
+
 /* Premium Slider Custom CSS */
 input[type="range"].premium-slider {
   -webkit-appearance: none;

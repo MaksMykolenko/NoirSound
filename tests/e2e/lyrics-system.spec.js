@@ -75,15 +75,25 @@ test.describe('Lyrics system', () => {
     await expect(lyricsCard.getByText(originalLyrics)).toBeVisible();
     await page.getByRole('button', { name: 'Play track' }).click();
     const desktopPlayer = page.getByTestId('desktop-player');
-    const playerLyricsButton = desktopPlayer.getByRole('button', { name: 'Lyrics', exact: true });
+    const playerLyricsButton = desktopPlayer.getByRole('button', {
+      name: 'Open fullscreen lyrics',
+      exact: true,
+    });
     await expect(playerLyricsButton).toBeEnabled();
     await playerLyricsButton.click();
-    const panel = page.getByRole('dialog', { name: title });
+    const panel = page.getByTestId('fullscreen-lyrics-player');
+    await expect(panel).toHaveAttribute('aria-label', `Fullscreen lyrics player for ${title}`);
     await expect(panel.getByText(originalLyrics)).toBeVisible();
-    await expect(desktopPlayer.getByRole('button', { name: 'Pause' })).toBeVisible();
-    await panel.getByRole('button', { name: 'Close lyrics' }).click();
+    await expect(panel.getByRole('button', { name: 'Pause' })).toBeVisible();
+    await panel.getByRole('button', { name: 'Close fullscreen lyrics' }).click();
     await expect(panel).toBeHidden();
     await expect(desktopPlayer.getByRole('button', { name: 'Pause' })).toBeVisible();
+
+    await playerLyricsButton.click();
+    await expect(panel).toBeVisible();
+    await page.goBack();
+    await expect(panel).toBeHidden();
+    await expect(page).toHaveURL(new RegExp(`/track/${uploadedTrack.id}$`));
 
     const noLyricsTitle = `No Lyrics E2E ${suffix}`;
     const noLyricsTrack = await uploadTrackViaApi(page.request, { title: noLyricsTitle });

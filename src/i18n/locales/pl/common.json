@@ -35,7 +35,10 @@
     "audioUnavailable": "Dźwięk niedostępny",
     "openPlayer": "Otwórz odtwarzacz",
     "lyrics": "Tekst utworu",
-    "lyricsUnavailable": "Tekst utworu niedostępny"
+    "lyricsUnavailable": "Tekst utworu niedostępny",
+    "openLyrics": "Otwórz tekst na pełnym ekranie",
+    "closeLyrics": "Zamknij pełnoekranowy tekst",
+    "lyricsFullscreenTitle": "Odtwarzacz tekstu"
   },
   "profile": {
     "overview": "Przegląd",
@@ -697,6 +700,8 @@
     "tooLong": "Tekst przekracza dozwolony limit znaków lub wierszy.",
     "open": "Otwórz tekst",
     "close": "Zamknij tekst",
+    "backToPlayer": "Wróć do odtwarzacza",
+    "fullscreenLabel": "Pełnoekranowy odtwarzacz tekstu dla {{title}}",
     "preview": "Podgląd",
     "remove": "Usuń tekst",
     "saved": "Tekst zapisany.",
@@ -704,6 +709,7 @@
     "save": "Zapisz tekst",
     "saving": "Zapisywanie…",
     "loading": "Ładowanie tekstu",
+    "retry": "Spróbuj ponownie",
     "characters": "znaków",
     "lines": "wierszy",
     "legalCopy": "Dodawaj tylko teksty, które napisałeś, posiadasz lub masz zgodę publikować w NoirSound."

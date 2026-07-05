@@ -6,6 +6,7 @@ import MobileHeader from './MobileHeader';
 import LibraryDrawer from './LibraryDrawer';
 import PlayerBar from '../player/PlayerBar';
 import QueuePanel from '../player/QueuePanel';
+import FullscreenLyricsPlayer from '../player/FullscreenLyricsPlayer';
 import MobileNavbar from './MobileNavbar';
 import Footer from './Footer';
 import { usePlayerStore } from '../../store/playerStore';
@@ -15,7 +16,7 @@ export default function AppLayout({ children }) {
   useAnimatedFavicon();
   const [isQueueOpen, setIsQueueOpen] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const { isPlayerCollapsed, currentTrack } = usePlayerStore();
+  const { isPlayerCollapsed, currentTrack, lyricsFullscreenOpen } = usePlayerStore();
   const location = useLocation();
   const mainRef = useRef(null);
 
@@ -36,7 +37,12 @@ export default function AppLayout({ children }) {
       : 'pb-32 sm:pb-28 lg:pb-16'; // compact empty desktop player clearance
 
   return (
-    <div className="flex h-[100dvh] overflow-hidden bg-brand-dark text-zinc-100 font-sans ns-app-background">
+    <>
+      <div
+        className="flex h-[100dvh] overflow-hidden bg-brand-dark text-zinc-100 font-sans ns-app-background"
+        aria-hidden={lyricsFullscreenOpen || undefined}
+        inert={lyricsFullscreenOpen || undefined}
+      >
       {/* Sidebar - Left Navigation for Desktop */}
       <Sidebar />
 
@@ -68,6 +74,8 @@ export default function AppLayout({ children }) {
 
       {/* Sticky Bottom Music Player */}
       <PlayerBar onToggleQueue={() => setIsQueueOpen(!isQueueOpen)} isQueueOpen={isQueueOpen} />
-    </div>
+      </div>
+      {lyricsFullscreenOpen && <FullscreenLyricsPlayer />}
+    </>
   );
 }

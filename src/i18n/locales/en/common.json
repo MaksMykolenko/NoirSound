@@ -38,7 +38,10 @@
     "openPlayer": "Open Player",
     "expand": "Expand",
     "lyrics": "Lyrics",
-    "lyricsUnavailable": "Lyrics unavailable"
+    "lyricsUnavailable": "Lyrics unavailable",
+    "openLyrics": "Open fullscreen lyrics",
+    "closeLyrics": "Close fullscreen lyrics",
+    "lyricsFullscreenTitle": "Lyrics player"
   },
   "playlistModal": {
     "newPlaylist": "New Playlist",
@@ -762,6 +765,8 @@
     "tooLong": "Lyrics exceed the allowed character or line limit.",
     "open": "Open lyrics",
     "close": "Close lyrics",
+    "backToPlayer": "Back to player",
+    "fullscreenLabel": "Fullscreen lyrics player for {{title}}",
     "preview": "Preview",
     "remove": "Remove lyrics",
     "saved": "Lyrics saved.",
@@ -769,6 +774,7 @@
     "save": "Save lyrics",
     "saving": "Saving…",
     "loading": "Loading lyrics",
+    "retry": "Try again",
     "characters": "characters",
     "lines": "lines",
     "legalCopy": "Only add lyrics you wrote, own, or have permission to publish on NoirSound."

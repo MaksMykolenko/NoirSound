@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePlayerStore } from '../../store/playerStore';
 import { formatTime } from '../../utils/formatTime';
@@ -19,7 +19,6 @@ import {
   FileText
 } from 'lucide-react';
 import FallbackCover from '../ui/FallbackCover';
-import LyricsPanel from '../lyrics/LyricsPanel';
 
 export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
   const { t } = useTranslation();
@@ -42,10 +41,11 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
     toggleLikeTrack,
     playbackError,
     isPlayerCollapsed,
+    lyricsFullscreenOpen,
+    openLyricsFullscreen,
     collapsePlayer,
     expandPlayer
   } = usePlayerStore();
-  const [lyricsOpen, setLyricsOpen] = useState(false);
 
   const isLiked = currentTrack ? likedTracks.includes(currentTrack.id) : false;
   const lyricsAvailable = Boolean(currentTrack?.hasLyrics);
@@ -67,19 +67,13 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
   // Keyboard shortcut: Escape key collapses player
   useEffect(() => {
     const handleGlobalKeyDown = (e) => {
-      if (e.key === 'Escape' && lyricsOpen) {
-        setLyricsOpen(false);
-      } else if (e.key === 'Escape' && !isPlayerCollapsed) {
+      if (e.key === 'Escape' && !lyricsFullscreenOpen && !isPlayerCollapsed) {
         collapsePlayer();
       }
     };
     window.addEventListener('keydown', handleGlobalKeyDown);
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, [isPlayerCollapsed, collapsePlayer, lyricsOpen]);
-
-  useEffect(() => {
-    setLyricsOpen(false);
-  }, [currentTrack?.id]);
+  }, [isPlayerCollapsed, collapsePlayer, lyricsFullscreenOpen]);
 
   return (
     <>
@@ -121,10 +115,11 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
                   <button
                     onClick={(event) => {
                       event.stopPropagation();
-                      setLyricsOpen(true);
+                      openLyricsFullscreen();
                     }}
                     className="w-8 h-8 rounded-xl border border-zinc-800 bg-zinc-900 text-zinc-300 flex items-center justify-center hover:text-brand-red"
-                    aria-label={t('player.lyrics')}
+                    aria-label={t('player.openLyrics')}
+                    aria-pressed={lyricsFullscreenOpen}
                   >
                     <FileText size={14} />
                   </button>
@@ -304,18 +299,18 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
             {/* Right: Sound options & Panel toggles */}
             <div className="flex items-center justify-end space-x-3 w-1/4 min-w-[150px]">
               <button
-                onClick={() => lyricsAvailable && setLyricsOpen(true)}
+                onClick={() => lyricsAvailable && openLyricsFullscreen()}
                 disabled={!lyricsAvailable}
                 className={`p-2 transition-all focus:outline-none ${
                   lyricsAvailable
-                    ? lyricsOpen
+                    ? lyricsFullscreenOpen
                       ? 'text-brand-red bg-zinc-900 border border-brand-red/30 rounded-xl'
                       : 'text-zinc-500 hover:text-zinc-200 cursor-pointer'
                     : 'text-zinc-700 cursor-not-allowed'
                 }`}
                 title={lyricsAvailable ? t('player.lyrics') : t('player.lyricsUnavailable')}
-                aria-label={lyricsAvailable ? t('player.lyrics') : t('player.lyricsUnavailable')}
-                aria-pressed={lyricsOpen}
+                aria-label={lyricsAvailable ? t('player.openLyrics') : t('player.lyricsUnavailable')}
+                aria-pressed={lyricsFullscreenOpen}
               >
                 <FileText size={18} />
               </button>
@@ -418,10 +413,11 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
                   <button
                     onClick={(event) => {
                       event.stopPropagation();
-                      setLyricsOpen(true);
+                      openLyricsFullscreen();
                     }}
                     className="w-9 h-9 rounded-xl border border-zinc-800 bg-zinc-900 text-zinc-300 flex items-center justify-center"
-                    aria-label={t('player.lyrics')}
+                    aria-label={t('player.openLyrics')}
+                    aria-pressed={lyricsFullscreenOpen}
                   >
                     <FileText size={15} />
                   </button>
@@ -479,14 +475,14 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
             <span className="text-[12px] font-bold uppercase tracking-widest text-zinc-400">{t('player.nowPlaying')}</span>
             <div className="flex items-center gap-2">
               <button
-                onClick={() => lyricsAvailable && setLyricsOpen(true)}
+                onClick={() => lyricsAvailable && openLyricsFullscreen()}
                 disabled={!lyricsAvailable}
                 className={`ns-icon-button !bg-zinc-900/80 ${
                   lyricsAvailable ? 'cursor-pointer' : 'cursor-not-allowed opacity-35'
-                } ${lyricsOpen ? 'text-brand-red !border-brand-red/30' : 'text-zinc-500'}`}
+                } ${lyricsFullscreenOpen ? 'text-brand-red !border-brand-red/30' : 'text-zinc-500'}`}
                 title={lyricsAvailable ? t('player.lyrics') : t('player.lyricsUnavailable')}
-                aria-label={lyricsAvailable ? t('player.lyrics') : t('player.lyricsUnavailable')}
-                aria-pressed={lyricsOpen}
+                aria-label={lyricsAvailable ? t('player.openLyrics') : t('player.lyricsUnavailable')}
+                aria-pressed={lyricsFullscreenOpen}
               >
                 <FileText size={18} />
               </button>
@@ -637,11 +633,6 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
           </div>
         </div>
       )}
-      <LyricsPanel
-        open={lyricsOpen}
-        track={currentTrack}
-        onClose={() => setLyricsOpen(false)}
-      />
     </>
   );
 }
