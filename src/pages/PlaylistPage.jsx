@@ -1,8 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  ArrowDown,
   ArrowLeft,
-  ArrowUp,
   Clock,
   Edit3,
   Heart,
@@ -29,22 +27,53 @@ import { usePlaylist } from '../hooks/queries/usePlaylists';
 import { usePlaylistContextMenu } from '../hooks/useEntityContextMenu';
 import { usePlayerStore } from '../store/playerStore';
 import { useToastStore } from '../store/toastStore';
-import TrackListItem from '../components/tracks/TrackListItem';
+import PlaylistTrackTable from '../components/playlists/PlaylistTrackTable';
 import EditPlaylistModal from '../components/playlists/EditPlaylistModal';
 import EmptyState from '../components/ui/EmptyState';
 import ErrorState from '../components/ui/ErrorState';
 import LoadingState from '../components/ui/LoadingState';
 import FallbackCover from '../components/ui/FallbackCover';
 import { dedupeById } from '../utils/presentation';
+import { formatDurationLong } from '../utils/formatTime';
 import PageMeta from '../components/meta/PageMeta';
 
 function formatPlaylistDuration(seconds, t) {
-  if (!Number.isFinite(seconds) || seconds <= 0) return t('playlists.durationUnavailable');
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  return hours > 0
-    ? t('playlists.hourMinute', { hours, minutes })
-    : t('playlists.minute', { minutes });
+  return formatDurationLong(seconds, t) || t('playlists.durationUnavailable');
+}
+
+function PlaylistCoverArt({ playlist, tracks }) {
+  const coverTracks = !playlist.coverUrl
+    ? tracks.filter((track) => track.coverUrl).slice(0, 4)
+    : [];
+  if (playlist.coverUrl || coverTracks.length < 2) {
+    return (
+      <FallbackCover
+        src={playlist.coverUrl}
+        title={playlist.name}
+        artistName={playlist.creator}
+        genre="Playlist"
+        className="h-full w-full"
+        imageClassName="object-cover"
+      />
+    );
+  }
+  // Frontend-only collage fallback (no server-side image generation): a
+  // simple 2x2 grid built from up to the first four tracks that have a
+  // cover, padded with the NoirSound gradient tile when there are fewer
+  // than four. Only used once a playlist has at least two real covers to
+  // arrange -- otherwise the single gradient FallbackCover above is used.
+  const tiles = [0, 1, 2, 3].map((slot) => coverTracks[slot] || null);
+  return (
+    <div className="grid h-full w-full grid-cols-2 grid-rows-2 gap-0.5 overflow-hidden" aria-hidden="true">
+      {tiles.map((track, slot) => (
+        track ? (
+          <img key={track.id} src={track.coverUrl} alt="" className="h-full w-full object-cover" />
+        ) : (
+          <div key={`empty-${slot}`} className="h-full w-full bg-gradient-to-br from-zinc-900 to-black" />
+        )
+      ))}
+    </div>
+  );
 }
 
 function DeletePlaylistDialog({ playlist, busy, onCancel, onConfirm, t }) {
@@ -68,6 +97,26 @@ function DeletePlaylistDialog({ playlist, busy, onCancel, onConfirm, t }) {
   );
 }
 
+function RemoveTrackDialog({ track, busy, onCancel, onConfirm, t }) {
+  if (!track) return null;
+  return (
+    <div className="fixed inset-0 z-[260] flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm" onMouseDown={busy ? undefined : onCancel}>
+      <section role="alertdialog" aria-modal="true" aria-labelledby="remove-track-title" className="w-full max-w-sm rounded-3xl border border-rose-500/30 bg-zinc-950 p-6 shadow-2xl" onMouseDown={(event) => event.stopPropagation()}>
+        <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-full bg-rose-500/10 text-rose-300">
+          <Trash2 size={19} />
+        </div>
+        <h2 id="remove-track-title" className="text-xl font-bold text-zinc-100">{t('playlists.removeTrackConfirm', { title: track.title })}</h2>
+        <div className="mt-6 flex gap-3">
+          <button type="button" onClick={onCancel} disabled={busy} className="ns-button-secondary min-h-11 flex-1">{t('playlists.cancel')}</button>
+          <button type="button" onClick={onConfirm} disabled={busy} className="min-h-11 flex-1 rounded-xl bg-rose-600 px-4 text-sm font-bold text-white hover:bg-rose-500 disabled:opacity-50">
+            {t('playlists.removeTrack')}
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
 export default function PlaylistPage() {
   const { id } = useParams();
   const { t, i18n } = useTranslation();
@@ -80,6 +129,7 @@ export default function PlaylistPage() {
   const [tracks, setTracks] = useState([]);
   const [isEditOpen, setEditOpen] = useState(false);
   const [deleteCandidate, setDeleteCandidate] = useState(null);
+  const [removeCandidate, setRemoveCandidate] = useState(null);
   const [pending, setPending] = useState('');
 
   useEffect(() => {
@@ -202,6 +252,17 @@ export default function PlaylistPage() {
     }
   };
 
+  const requestRemoveTrack = (track) => {
+    if (!owner || pending) return;
+    setRemoveCandidate(track);
+  };
+
+  const confirmRemoveTrack = async () => {
+    if (!removeCandidate) return;
+    await handleRemove(removeCandidate);
+    setRemoveCandidate(null);
+  };
+
   const handleMove = async (index, direction) => {
     const nextIndex = index + direction;
     if (!owner || nextIndex < 0 || nextIndex >= tracks.length || pending) return;
@@ -272,10 +333,11 @@ export default function PlaylistPage() {
           <MoreHorizontal size={18} />
         </button>
         <div className="w-48 h-48 md:w-56 md:h-56 rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-900 shrink-0">
-          <FallbackCover src={playlist.coverUrl} title={playlist.name} artistName={playlist.creator} genre="Playlist" className="w-full h-full" imageClassName="object-cover" />
+          <PlaylistCoverArt playlist={playlist} tracks={tracks} />
         </div>
 
         <div className="flex-1 space-y-4 text-center md:text-left min-w-0">
+          <p className="ns-eyebrow">{t('playlists.typeLabel')}</p>
           <span className="inline-flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full bg-brand-red/10 border border-brand-red/30 text-rose-300">
             {playlist.isPublic === false && <Lock size={11} />}
             {playlist.isPublic === false ? t('playlists.private') : t('playlists.public')}
@@ -336,24 +398,15 @@ export default function PlaylistPage() {
         {tracks.length === 0 ? (
           <EmptyState iconName="Music2" title={t('playlists.empty')} description={owner ? t('playlists.emptyOwner') : t('playlists.emptyVisitor')} />
         ) : (
-          <div className="ns-card p-2 sm:p-4 space-y-1">
-            {tracks.map((track, index) => (
-              <div key={track.id} className="flex items-center gap-1">
-                <div className="min-w-0 flex-1">
-                  <TrackListItem track={track} index={index} tracksContext={tracks} queueSource={source} onRemoveFromPlaylist={owner ? handleRemove : undefined} />
-                </div>
-                {owner && (
-                  <div className="flex shrink-0 flex-col">
-                    <button type="button" onClick={() => handleMove(index, -1)} disabled={index === 0 || Boolean(pending)} className="ns-icon-button !min-h-8 !min-w-8 text-zinc-500 disabled:opacity-20" aria-label={`Move ${track.title} up`}>
-                      <ArrowUp size={13} />
-                    </button>
-                    <button type="button" onClick={() => handleMove(index, 1)} disabled={index === tracks.length - 1 || Boolean(pending)} className="ns-icon-button !min-h-8 !min-w-8 text-zinc-500 disabled:opacity-20" aria-label={`Move ${track.title} down`}>
-                      <ArrowDown size={13} />
-                    </button>
-                  </div>
-                )}
-              </div>
-            ))}
+          <div className="ns-card p-2 sm:p-4">
+            <PlaylistTrackTable
+              tracks={tracks}
+              playlist={playlist}
+              owner={owner}
+              onRemoveTrack={requestRemoveTrack}
+              onMoveTrack={handleMove}
+              pending={pending}
+            />
           </div>
         )}
       </section>
@@ -369,6 +422,13 @@ export default function PlaylistPage() {
         }}
       />
       <DeletePlaylistDialog playlist={deleteCandidate} busy={pending === 'delete'} onCancel={() => setDeleteCandidate(null)} onConfirm={handleDelete} t={t} />
+      <RemoveTrackDialog
+        track={removeCandidate}
+        busy={Boolean(removeCandidate) && pending === `remove:${removeCandidate?.id}`}
+        onCancel={() => setRemoveCandidate(null)}
+        onConfirm={confirmRemoveTrack}
+        t={t}
+      />
     </div>
   );
 }

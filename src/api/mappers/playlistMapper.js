@@ -5,8 +5,26 @@ export function mapPlaylistResponse(backendPlaylist) {
   if (!backendPlaylist) return null;
   const creator = backendPlaylist.creator || backendPlaylist.owner;
   const trackEntries = Array.isArray(backendPlaylist.tracks) ? backendPlaylist.tracks : [];
+  // Each row's playlist-membership metadata (when it was added, by whom,
+  // its position) is merged directly onto the mapped track so components
+  // like PlaylistTrackTable can read track.addedAt / track.playlistTrackId
+  // without a second lookup. Previously this metadata was only kept in the
+  // separate `trackEntries` array below, which nothing else in the app
+  // ever read -- addedAt reached the frontend API layer and was then
+  // silently dropped before any component saw it.
   const tracks = trackEntries
-    .map((entry) => mapTrackResponse(entry.track || entry))
+    .map((entry, index) => {
+      const mapped = mapTrackResponse(entry.track || entry);
+      if (!mapped) return null;
+      return {
+        ...mapped,
+        playlistTrackId: entry.playlistTrackId || entry.id
+          || `${backendPlaylist.id}:${mapped.id}`,
+        position: Number(entry.position ?? entry.order ?? index + 1),
+        addedAt: entry.addedAt || null,
+        addedBy: entry.addedBy || null,
+      };
+    })
     .filter(Boolean);
   const creatorName = typeof creator === 'string'
     ? creator

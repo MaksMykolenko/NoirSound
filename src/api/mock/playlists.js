@@ -8,10 +8,42 @@ let playlistState = mockPlaylists.map((playlist) => ({
   isSaved: !playlist.createdByCurrentUser,
 }));
 
+// Mirrors the mock-mode seed in playerStore (`likedTracks: ["1", "2", "5"]`)
+// so a synthesized `isLiked` field can never contradict the heart button,
+// even though the real like UI reads player.likedTracks, not this field.
+const DEMO_LIKED_TRACK_IDS = new Set(['1', '2', '5']);
+// Fixed anchor (2026-01-01) rather than "now" so demo "date added" values
+// are stable across sessions instead of drifting with the calendar.
+const ADDED_AT_ANCHOR = Date.UTC(2026, 0, 1);
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+// Builds the same playlist-track shape the real API now returns (Phase 2):
+// playlistTrackId/position/addedAt/addedBy plus the album/release fallback
+// fields, so the playlist detail table renders identically in demo mode.
+// The mock catalogue has no Album model and no batch-release relationship,
+// so album/release fields are honestly left null -- every demo track falls
+// through to the "Single" tier rather than inventing fake album data.
+function buildPlaylistTrackEntry(track, index, playlist) {
+  return {
+    ...track,
+    playlistTrackId: `${playlist.id}:${track.id}`,
+    position: index,
+    addedAt: new Date(ADDED_AT_ANCHOR + index * 3 * DAY_MS).toISOString(),
+    addedBy: playlist.creator,
+    isAvailable: true,
+    isLiked: DEMO_LIKED_TRACK_IDS.has(track.id),
+    albumTitle: null,
+    albumId: null,
+    releaseTitle: null,
+    releasePlaylistId: null,
+  };
+}
+
 function detail(playlist) {
   const tracks = (playlist.trackIds || [])
     .map((trackId) => mockTracks.find((track) => track.id === trackId))
-    .filter(Boolean);
+    .filter(Boolean)
+    .map((track, index) => buildPlaylistTrackEntry(track, index, playlist));
   return {
     ...playlist,
     tracks,
@@ -92,7 +124,8 @@ export async function addTrackToPlaylist(id, trackId) {
   if (!track) throw new Error('Track is unavailable.');
   playlist.trackIds.push(trackId);
   playlist.updatedAt = new Date().toISOString();
-  return { entry: { trackId, position: playlist.trackIds.length, track } };
+  const entry = buildPlaylistTrackEntry(track, playlist.trackIds.length - 1, playlist);
+  return { entry: { trackId, position: entry.position, track: entry } };
 }
 
 export async function removeTrackFromPlaylist(id, trackId) {

@@ -434,6 +434,100 @@ describe('NoirSound backend integration', () => {
       expect(deleted.statusCode).toBe(204);
       expect((await supertest(app.server).get(`/api/playlists/${playlistId}`)).statusCode).toBe(404);
     });
+
+    it('returns addedAt/duration/album-release/isLiked on the detail payload and hides an unavailable track from non-owners while the owner still sees it', async () => {
+      const tracks = await app.prisma.track.findMany({
+        where: {
+          status: 'PUBLISHED',
+          isPublic: true,
+          processedAudioKey: { not: null }
+        },
+        take: 2,
+        orderBy: { createdAt: 'asc' }
+      });
+      expect(tracks).toHaveLength(2);
+      const expectedDuration = tracks.reduce(
+        (total, track) => total + Number(track.durationSeconds || track.duration || 0),
+        0
+      );
+
+      const created = await supertest(app.server)
+        .post('/api/playlists')
+        .set('Cookie', listenerCookie)
+        .send({ name: 'Detail Table Fixture', isPublic: true });
+      expect(created.statusCode).toBe(201);
+      const playlistId = created.body.playlist.id;
+      const ownerId = created.body.playlist.creatorId;
+
+      const addedFirst = await supertest(app.server)
+        .post(`/api/playlists/${playlistId}/tracks`)
+        .set('Cookie', listenerCookie)
+        .send({ trackId: tracks[0].id });
+      expect(addedFirst.statusCode).toBe(201);
+      expect(addedFirst.body.entry.addedAt).toBeTruthy();
+      expect(addedFirst.body.entry.playlistTrackId).toBe(addedFirst.body.entry.id);
+      expect(addedFirst.body.entry.addedBy.id).toBe(ownerId);
+      expect(addedFirst.body.entry.track.isAvailable).toBe(true);
+      // No real Album usage exists anywhere in this app yet (see the audit),
+      // and this seeded track was not published via a playlist/release
+      // batch, so both fallback levels are null -- the client renders
+      // "Single". This should not regress into a thrown error or a fake value.
+      expect(addedFirst.body.entry.track.albumTitle).toBeNull();
+      expect(addedFirst.body.entry.track.releaseTitle).toBeNull();
+
+      const addedSecond = await supertest(app.server)
+        .post(`/api/playlists/${playlistId}/tracks`)
+        .set('Cookie', listenerCookie)
+        .send({ trackId: tracks[1].id });
+      expect(addedSecond.statusCode).toBe(201);
+
+      await supertest(app.server).post(`/api/tracks/${tracks[0].id}/like`).set('Cookie', listenerCookie);
+
+      const ownerView = await supertest(app.server)
+        .get(`/api/playlists/${playlistId}`)
+        .set('Cookie', listenerCookie);
+      expect(ownerView.statusCode).toBe(200);
+      expect(ownerView.body.playlist.trackCount).toBe(2);
+      expect(ownerView.body.playlist.durationSeconds).toBe(expectedDuration);
+      expect(ownerView.body.playlist.canReorder).toBe(true);
+      const likedRow = ownerView.body.playlist.tracks.find((entry) => entry.trackId === tracks[0].id);
+      expect(likedRow.track.isLiked).toBe(true);
+
+      // Simulate a track becoming unavailable (e.g. moderation) after it was
+      // already sitting in an otherwise-public playlist.
+      await app.prisma.track.update({ where: { id: tracks[1].id }, data: { status: 'HIDDEN' } });
+
+      try {
+        const anonymousView = await supertest(app.server).get(`/api/playlists/${playlistId}`);
+        expect(anonymousView.statusCode).toBe(200);
+        const hiddenRowForStranger = anonymousView.body.playlist.tracks.find((entry) => entry.trackId === tracks[1].id);
+        expect(hiddenRowForStranger.track).toEqual({ id: tracks[1].id, isAvailable: false });
+        expect(JSON.stringify(hiddenRowForStranger)).not.toContain(tracks[1].title);
+        // Count/duration stay accurate for every viewer regardless of what
+        // that viewer is individually allowed to see per row.
+        expect(anonymousView.body.playlist.trackCount).toBe(2);
+        expect(anonymousView.body.playlist.durationSeconds).toBe(expectedDuration);
+        const stillVisibleRow = anonymousView.body.playlist.tracks.find((entry) => entry.trackId === tracks[0].id);
+        expect(stillVisibleRow.track.title).toBe(tracks[0].title);
+        expect(stillVisibleRow.track.isLiked).toBe(false);
+
+        const otherLoggedInView = await supertest(app.server)
+          .get(`/api/playlists/${playlistId}`)
+          .set('Cookie', artistCookie);
+        const hiddenRowForOtherUser = otherLoggedInView.body.playlist.tracks.find((entry) => entry.trackId === tracks[1].id);
+        expect(hiddenRowForOtherUser.track).toEqual({ id: tracks[1].id, isAvailable: false });
+
+        const ownerViewAfterHide = await supertest(app.server)
+          .get(`/api/playlists/${playlistId}`)
+          .set('Cookie', listenerCookie);
+        const hiddenRowForOwner = ownerViewAfterHide.body.playlist.tracks.find((entry) => entry.trackId === tracks[1].id);
+        expect(hiddenRowForOwner.track.title).toBe(tracks[1].title);
+        expect(hiddenRowForOwner.track.isAvailable).toBe(false);
+      } finally {
+        await app.prisma.track.update({ where: { id: tracks[1].id }, data: { status: 'PUBLISHED' } });
+        await supertest(app.server).delete(`/api/playlists/${playlistId}`).set('Cookie', listenerCookie);
+      }
+    });
   });
 
   describe('upload runtime', () => {

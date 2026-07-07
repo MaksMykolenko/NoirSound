@@ -16,6 +16,13 @@ export function mapTrackResponse(backendTrack) {
       isStreamable: backendTrack.isStreamable ?? Boolean(backendTrack.audioUrl),
       hasLyrics: Boolean(backendTrack.hasLyrics),
       lyricsType: backendTrack.hasLyrics ? (backendTrack.lyricsType || 'PLAIN') : 'NONE',
+      explicit: Boolean(backendTrack.explicit),
+      isAvailable: backendTrack.isAvailable ?? true,
+      isLiked: Boolean(backendTrack.isLiked),
+      albumTitle: backendTrack.albumTitle || null,
+      albumId: backendTrack.albumId || null,
+      releaseTitle: backendTrack.releaseTitle || null,
+      releasePlaylistId: backendTrack.releasePlaylistId || null,
     };
   }
   
@@ -67,6 +74,19 @@ export function mapTrackResponse(backendTrack) {
     createdAt: backendTrack.createdAt || null,
     publishedAt: backendTrack.publishedAt || null,
     status: backendTrack.status,
-    waveform
+    waveform,
+    explicit: Boolean(backendTrack.explicit),
+    // Defaults to true for any track shape that predates this field (e.g.
+    // mock data, or other endpoints that don't send it) so nothing outside
+    // the playlist table starts treating every track as unavailable.
+    isAvailable: backendTrack.isAvailable ?? true,
+    isLiked: Boolean(backendTrack.isLiked),
+    // Album/release fallback chain resolved server-side (real album title,
+    // then the playlist a batch release published it under, else null so
+    // the UI shows "Single"). See playlistTrackView.js on the backend.
+    albumTitle: backendTrack.albumTitle || null,
+    albumId: backendTrack.albumId || null,
+    releaseTitle: backendTrack.releaseTitle || null,
+    releasePlaylistId: backendTrack.releasePlaylistId || null,
   };
 }

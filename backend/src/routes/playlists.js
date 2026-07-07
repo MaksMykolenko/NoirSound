@@ -1,9 +1,9 @@
 'use strict';
 
-const { serializePublicTrack } = require('../lib/publicTrack');
 const { optionalAuthenticatedUserId } = require('../lib/optionalAuth');
 const { userOrIpKey } = require('../lib/rateLimitKeys');
 const { scaledRateLimitMax } = require('../lib/rateLimit');
+const { buildPlaylistTrackEntry } = require('../lib/playlistTrackView');
 
 const MAX_TITLE_LENGTH = 120;
 const MAX_DESCRIPTION_LENGTH = 1000;
@@ -26,7 +26,27 @@ const trackInclude = {
         select: {
           displayName: true,
           username: true,
-          avatarUrl: true
+          avatarUrl: true,
+          // Fetched only so playlistTrackView can compute per-track
+          // isAvailable server-side; sanitizeTrackForSerialization strips
+          // this before any track view is sent to a client.
+          status: true
+        }
+      }
+    }
+  },
+  // Real album usage today is zero (see NOIRSOUND_PLAYLIST_DETAIL_TABLE_AUDIT.md),
+  // but the relation is fetched so resolveAlbumRelease can use it the moment
+  // it is populated instead of only ever falling back to "Single".
+  album: { select: { id: true, title: true } },
+  // Lets resolveAlbumRelease treat the playlist an UploadBatch generated as
+  // this track's "release" when it was published as part of one.
+  batchItem: {
+    select: {
+      target: true,
+      batch: {
+        select: {
+          playlist: { select: { id: true, name: true, isPublic: true, creatorId: true } }
         }
       }
     }
@@ -53,22 +73,20 @@ function playlistPermissions(playlist, viewer) {
   };
 }
 
-function serializePlaylist(playlist, viewer, { includeTracks = false } = {}) {
+function serializePlaylist(playlist, viewer, { includeTracks = false, likedTrackIds = null } = {}) {
   const trackRows = includeTracks
-    ? (playlist.tracks || []).map((entry) => ({
-        id: `${entry.playlistId}:${entry.trackId}`,
-        playlistId: entry.playlistId,
-        trackId: entry.trackId,
-        position: entry.order,
-        order: entry.order,
-        addedAt: entry.addedAt,
-        track: serializePublicTrack(entry.track)
+    ? (playlist.tracks || []).map((entry) => buildPlaylistTrackEntry({
+        entry, playlist, viewer, likedTrackIds
       }))
     : undefined;
   const trackCount = Number(playlist._count?.tracks ?? trackRows?.length ?? 0);
-  const durationSeconds = trackRows
-    ? trackRows.reduce(
-        (total, entry) => total + Number(entry.track.durationSeconds || entry.track.duration || 0),
+  // Summed from the raw (pre-sanitization) rows, not `trackRows`, so an
+  // unavailable track hidden from a non-owner viewer still counts toward
+  // the real total duration -- the aggregate must not change depending on
+  // who is looking at it, only the per-row display does.
+  const durationSeconds = includeTracks
+    ? (playlist.tracks || []).reduce(
+        (total, entry) => total + Number(entry.track?.durationSeconds || entry.track?.duration || 0),
         0
       )
     : undefined;
@@ -224,7 +242,20 @@ async function playlistsRoutes(fastify) {
       if (!playlist.isPublic && playlist.creatorId !== viewer?.id && viewer?.role !== 'ADMIN') {
         return apiError(reply, viewer ? 403 : 404, 'PLAYLIST_PRIVATE', 'This playlist is private.');
       }
-      return { playlist: serializePlaylist(playlist, viewer, { includeTracks: true }) };
+      let likedTrackIds = null;
+      if (viewer && playlist.tracks?.length) {
+        const likedRows = await fastify.prisma.trackLike.findMany({
+          where: {
+            userId: viewer.id,
+            trackId: { in: playlist.tracks.map((entry) => entry.trackId) }
+          },
+          select: { trackId: true }
+        });
+        likedTrackIds = new Set(likedRows.map((row) => row.trackId));
+      }
+      return {
+        playlist: serializePlaylist(playlist, viewer, { includeTracks: true, likedTrackIds })
+      };
     } catch (error) {
       fastify.log.error(error);
       return apiError(reply, 500, 'PLAYLISTS_UNAVAILABLE', 'Playlist could not be loaded.');
@@ -322,15 +353,17 @@ async function playlistsRoutes(fastify) {
         data: { playlistId: access.playlist.id, trackId, order },
         include: { track: { include: trackInclude } }
       });
+      // Route through the same enrichment/sanitization used by GET /:id
+      // rather than calling serializePublicTrack directly: trackInclude now
+      // also fetches album/batchItem/artist.user.status for availability
+      // and release-fallback computation, and those must never reach the
+      // client unsanitized. request.user is always the owner or an admin
+      // here (ownedPlaylist above requires it), so this always returns the
+      // full, available-track view.
       return reply.status(201).send({
-        entry: {
-          playlistId: entry.playlistId,
-          trackId: entry.trackId,
-          position: entry.order,
-          order: entry.order,
-          addedAt: entry.addedAt,
-          track: serializePublicTrack(entry.track)
-        }
+        entry: buildPlaylistTrackEntry({
+          entry, playlist: access.playlist, viewer: request.user, likedTrackIds: null
+        })
       });
     } catch (error) {
       if (error.code === 'P2002') {
