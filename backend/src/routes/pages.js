@@ -9,6 +9,8 @@ const {
   trackUnavailableMeta,
   artistMeta,
   artistUnavailableMeta,
+  playlistMeta,
+  playlistUnavailableMeta,
   trimSlash
 } = require('../lib/pageMeta');
 
@@ -113,6 +115,32 @@ module.exports = async function pages(fastify) {
     return sendPage(request, reply, meta);
   });
 
+  fastify.get('/playlist/:id', async (request, reply) => {
+    const base = baseUrl(request);
+    let meta;
+    try {
+      const playlist = await fastify.prisma.playlist.findFirst({
+        where: {
+          id: request.params.id,
+          isPublic: true,
+          creator: { status: 'ACTIVE' }
+        },
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          creator: { select: { displayName: true } },
+          _count: { select: { tracks: true } }
+        }
+      });
+      meta = playlist ? playlistMeta(playlist, base) : playlistUnavailableMeta(base, request.params.id);
+    } catch (err) {
+      fastify.log.error({ err }, 'meta: playlist lookup failed');
+      meta = playlistUnavailableMeta(base, request.params.id);
+    }
+    return sendPage(request, reply, meta);
+  });
+
   for (const slug of Object.keys(LEGAL_PAGES)) {
     fastify.get(`/${slug}`, async (request, reply) =>
       sendPage(request, reply, legalMeta(slug, baseUrl(request)))
@@ -155,6 +183,17 @@ module.exports = async function pages(fastify) {
       fastify.log.error({ err }, 'sitemap: artist query failed');
     }
 
+    let playlists = [];
+    try {
+      playlists = await fastify.prisma.playlist.findMany({
+        where: { isPublic: true, creator: { status: 'ACTIVE' } },
+        select: { id: true, updatedAt: true },
+        take: 5000
+      });
+    } catch (err) {
+      fastify.log.error({ err }, 'sitemap: playlist query failed');
+    }
+
     const loc = (path) => escapeHtml(`${base}${path}`);
     const lines = ['<?xml version="1.0" encoding="UTF-8"?>', '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'];
     for (const [path, priority] of staticPages) {
@@ -167,6 +206,10 @@ module.exports = async function pages(fastify) {
     for (const artist of artists) {
       const lastmod = artist.updatedAt ? `<lastmod>${new Date(artist.updatedAt).toISOString()}</lastmod>` : '';
       lines.push(`  <url><loc>${loc(`/artist/${artist.id}`)}</loc>${lastmod}<priority>0.6</priority></url>`);
+    }
+    for (const playlist of playlists) {
+      const lastmod = playlist.updatedAt ? `<lastmod>${new Date(playlist.updatedAt).toISOString()}</lastmod>` : '';
+      lines.push(`  <url><loc>${loc(`/playlist/${playlist.id}`)}</loc>${lastmod}<priority>0.5</priority></url>`);
     }
     lines.push('</urlset>');
 

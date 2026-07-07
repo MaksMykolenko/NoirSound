@@ -35,7 +35,7 @@
 	# /favicon*, and client-only routes like /discover) fall through to the
 	# static file_server below. `/index.html` is NOT matched here, so the
 	# backend can fetch the shell from this server without looping.
-	@ssr path / /track/* /artist/* /terms /privacy /guidelines /copyright /abuse /creator-rules /sitemap.xml
+	@ssr path / /track/* /artist/* /playlist/* /terms /privacy /guidelines /copyright /abuse /creator-rules /sitemap.xml
 	handle @ssr {
 		reverse_proxy backend:3000
 	}

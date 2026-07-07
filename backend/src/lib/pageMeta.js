@@ -241,6 +241,64 @@ function artistUnavailableMeta(base, id) {
   };
 }
 
+/** playlist: { id, name, description, creator: { displayName }, _count: { tracks: number } } */
+function playlistMeta(playlist, base) {
+  const creatorName = playlist?.creator?.displayName || 'NoirSound user';
+  const url = `${trimSlash(base)}/playlist/${playlist.id}`;
+  const trackCount = playlist?._count?.tracks || 0;
+
+  const parts = [];
+  parts.push(trackCount === 1 ? '1 track' : `${trackCount} tracks`);
+  if (playlist.description) {
+    parts.push(truncate(playlist.description, 120));
+  } else {
+    parts.push(`Listen to ${playlist.name}, a playlist by ${creatorName} on NoirSound.`);
+  }
+  const description = parts.join(' · ');
+
+  const image = `${trimSlash(base)}/api/public/playlist-covers/${playlist.id}`;
+
+  return {
+    title: `${playlist.name} — Playlist by ${creatorName} | NoirSound`,
+    ogTitle: `${playlist.name} — Playlist by ${creatorName}`,
+    description: truncate(description, 200),
+    canonical: url,
+    url,
+    type: 'music.playlist',
+    siteName: SITE_NAME,
+    image,
+    imageType: 'image/jpeg',
+    imageAlt: `${playlist.name} — playlist cover`,
+    twitterCard: 'summary_large_image',
+    jsonLd: {
+      '@context': 'https://schema.org',
+      '@type': 'MusicPlaylist',
+      name: playlist.name,
+      numTracks: trackCount,
+      creator: { '@type': 'Person', name: creatorName },
+      url
+    }
+  };
+}
+
+function playlistUnavailableMeta(base, id) {
+  const url = id ? `${trimSlash(base)}/playlist/${id}` : `${trimSlash(base)}/`;
+  return {
+    title: 'Playlist unavailable — NoirSound',
+    description: 'This playlist is not available on NoirSound.',
+    url,
+    type: 'website',
+    siteName: SITE_NAME,
+    image: abs(base, '/og/default-track.png'),
+    imageType: 'image/png',
+    imageWidth: 1200,
+    imageHeight: 630,
+    imageAlt: 'NoirSound',
+    twitterCard: 'summary_large_image',
+    robots: 'noindex'
+  };
+}
+
 module.exports = {
   SITE_NAME,
   DEFAULT_DESCRIPTION,
@@ -257,5 +315,7 @@ module.exports = {
   trackMeta,
   trackUnavailableMeta,
   artistMeta,
-  artistUnavailableMeta
+  artistUnavailableMeta,
+  playlistMeta,
+  playlistUnavailableMeta
 };

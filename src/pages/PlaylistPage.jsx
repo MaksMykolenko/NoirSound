@@ -36,6 +36,7 @@ import ErrorState from '../components/ui/ErrorState';
 import LoadingState from '../components/ui/LoadingState';
 import FallbackCover from '../components/ui/FallbackCover';
 import { dedupeById } from '../utils/presentation';
+import PageMeta from '../components/meta/PageMeta';
 
 function formatPlaylistDuration(seconds, t) {
   if (!Number.isFinite(seconds) || seconds <= 0) return t('playlists.durationUnavailable');
@@ -249,6 +250,11 @@ export default function PlaylistPage() {
 
   return (
     <div className="ns-page-stack animate-fade-in pb-16">
+      <PageMeta
+        title={`${playlist.name} — Playlist by ${playlist.creator} | NoirSound`}
+        description={`${tracks.length === 1 ? '1 track' : `${tracks.length} tracks`}${playlist.description ? ` · ${playlist.description}` : ` · Listen to ${playlist.name}, a playlist by ${playlist.creator} on NoirSound.`}`}
+        canonical={`https://noirsound.co/playlist/${playlist.id}`}
+      />
       <button onClick={() => navigate(-1)} className="min-h-11 px-2 flex items-center gap-2 text-zinc-400 hover:text-white text-xs font-bold uppercase tracking-wider">
         <ArrowLeft size={14} />
         <span>Back</span>

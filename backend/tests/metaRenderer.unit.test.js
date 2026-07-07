@@ -11,6 +11,8 @@ import {
   trackUnavailableMeta,
   artistMeta,
   artistUnavailableMeta,
+  playlistMeta,
+  playlistUnavailableMeta,
   isoDuration,
   humanDuration,
   genreLabel
@@ -218,6 +220,43 @@ describe('artistMeta', () => {
   it('uses an absolute avatar URL when present', () => {
     const m = artistMeta({ id: 'art_1', user: { displayName: 'Nova', avatarUrl: 'https://cdn.example/a.jpg' } }, BASE);
     expect(m.image).toBe('https://cdn.example/a.jpg');
+  });
+});
+
+describe('playlistMeta', () => {
+  const playlist = {
+    id: 'pl_123',
+    name: 'My Chill Vibes',
+    description: 'Vibe out to these beats.',
+    creator: { displayName: 'Alice' },
+    _count: { tracks: 4 }
+  };
+
+  it('uses playlist name, creator, track count, and the public cover route', () => {
+    const m = playlistMeta(playlist, BASE);
+    expect(m.title).toBe('My Chill Vibes — Playlist by Alice | NoirSound');
+    expect(m.type).toBe('music.playlist');
+    expect(m.url).toBe('https://noirsound.co/playlist/pl_123');
+    expect(m.image).toBe('https://noirsound.co/api/public/playlist-covers/pl_123');
+    expect(m.description).toBe('4 tracks · Vibe out to these beats.');
+    expect(m.jsonLd['@type']).toBe('MusicPlaylist');
+    expect(m.jsonLd.numTracks).toBe(4);
+    expect(m.jsonLd.creator.name).toBe('Alice');
+  });
+
+  it('provides fallback description when description is blank', () => {
+    const m = playlistMeta({ ...playlist, description: '' }, BASE);
+    expect(m.description).toBe('4 tracks · Listen to My Chill Vibes, a playlist by Alice on NoirSound.');
+  });
+});
+
+describe('playlistUnavailableMeta', () => {
+  it('returns generic unavailable title + noindex', () => {
+    const m = playlistUnavailableMeta(BASE, 'pl_999');
+    expect(m.title).toBe('Playlist unavailable — NoirSound');
+    expect(m.robots).toBe('noindex');
+    expect(m.image).toBe('https://noirsound.co/og/default-track.png');
+    expect(m.url).toBe('https://noirsound.co/playlist/pl_999');
   });
 });
 
