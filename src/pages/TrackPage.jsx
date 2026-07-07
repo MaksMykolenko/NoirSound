@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import PageMeta from '../components/meta/PageMeta';
 import { useTranslation } from 'react-i18next';
-import { Play, Pause, Heart, Plus, Check, Clock, Headphones, Share2 } from 'lucide-react';
+import { Play, Pause, Heart, Plus, Check, Clock, Headphones, Share2, MoreHorizontal } from 'lucide-react';
 import { usePlayerStore } from '../store/playerStore';
 import { useToastStore } from '../store/toastStore';
 import { getTrackById, getTracks } from '../api';
@@ -19,6 +19,7 @@ import { getLocalizedGenre } from '../i18n/genreLabels';
 import { normalizeGenre } from '../constants/musicGenres';
 import TrackLyricsCard from '../components/lyrics/TrackLyricsCard';
 import { useUserStore } from '../store/userStore';
+import { useTrackContextMenu } from '../hooks/useEntityContextMenu';
 
 function formatReleaseDate(iso, lang) {
   if (!iso) return null;
@@ -58,6 +59,7 @@ export default function TrackPage() {
   const [relatedTracks, setRelatedTracks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const { contextMenuProps, openFromButton } = useTrackContextMenu(track);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -181,7 +183,22 @@ export default function TrackPage() {
       <div className="space-y-4">
 
         {/* HERO */}
-        <section className="relative overflow-hidden isolate ns-card rounded-[1.75rem] p-5 sm:p-7 md:p-8">
+        <section
+          className="relative overflow-hidden isolate ns-card rounded-[1.75rem] p-5 sm:p-7 md:p-8"
+          onContextMenu={contextMenuProps.onContextMenu}
+          onKeyDown={contextMenuProps.onKeyDown}
+          tabIndex={0}
+          data-testid="track-hero"
+        >
+          <button
+            type="button"
+            onClick={openFromButton}
+            className="absolute right-4 top-4 z-20 ns-icon-button !min-h-10 !min-w-10 bg-zinc-950/70 text-zinc-300"
+            aria-label={`More actions for ${track.title}`}
+            aria-haspopup="menu"
+          >
+            <MoreHorizontal size={17} />
+          </button>
           {/* Blurred cover wash for a music-forward backdrop */}
           <div
             className="absolute inset-0 -z-10 bg-cover bg-center opacity-[0.13] blur-3xl scale-110"

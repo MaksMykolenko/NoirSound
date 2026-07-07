@@ -67,24 +67,29 @@ export default function Profile() {
   const [playlists, setPlaylists] = useState([]);
   const [followedArtists, setFollowedArtists] = useState([]);
   const [collectionsLoading, setCollectionsLoading] = useState(false);
+  const [playlistRevision, setPlaylistRevision] = useState(0);
+
+  useEffect(() => {
+    const refresh = () => setPlaylistRevision((current) => current + 1);
+    window.addEventListener('noirsound:playlists-changed', refresh);
+    return () => window.removeEventListener('noirsound:playlists-changed', refresh);
+  }, []);
 
   useEffect(() => {
     if (!user) return;
     fetchListeningStats().catch(() => {});
     loadRecentlyPlayed().catch(() => {});
 
-    if (!demoMode) {
-      setCollectionsLoading(true);
-      Promise.all([getLikedTracks(), getMyPlaylists(), getFollowedArtists()])
-        .then(([liked, myPlaylists, artists]) => {
-          setLikedTracks(liked);
-          setPlaylists(myPlaylists);
-          setFollowedArtists(artists);
-        })
-        .catch(() => {})
-        .finally(() => setCollectionsLoading(false));
-    }
-  }, [demoMode, fetchListeningStats, loadRecentlyPlayed, user]);
+    setCollectionsLoading(true);
+    Promise.all([getLikedTracks(), getMyPlaylists(), getFollowedArtists()])
+      .then(([liked, myPlaylists, artists]) => {
+        setLikedTracks(liked);
+        setPlaylists(myPlaylists);
+        setFollowedArtists(artists);
+      })
+      .catch(() => {})
+      .finally(() => setCollectionsLoading(false));
+  }, [demoMode, fetchListeningStats, loadRecentlyPlayed, playlistRevision, user]);
 
   if (!authHydrated) return <LoadingState type="list" count={4} />;
   if (authError) return <ErrorState title="Session unavailable" message={authError} />;

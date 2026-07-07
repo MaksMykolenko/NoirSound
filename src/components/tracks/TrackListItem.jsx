@@ -1,13 +1,20 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Play, Pause, Heart, Plus, Check } from 'lucide-react';
+import { Play, Pause, Heart, Plus, Check, MoreHorizontal } from 'lucide-react';
 import { usePlayerStore } from '../../store/playerStore';
 import { formatDuration } from '../../utils/formatTime';
 import { formatNumber } from '../../utils/formatLocale';
 import FallbackCover from '../ui/FallbackCover';
 import { getLocalizedGenre } from '../../i18n/genreLabels';
+import { useTrackContextMenu } from '../../hooks/useEntityContextMenu';
 
-export default function TrackListItem({ track, index, tracksContext = [] }) {
+export default function TrackListItem({
+  track,
+  index,
+  tracksContext = [],
+  onRemoveFromPlaylist,
+  queueSource = null,
+}) {
   const navigate = useNavigate();
   const {
     currentTrack,
@@ -26,6 +33,11 @@ export default function TrackListItem({ track, index, tracksContext = [] }) {
   const isLiked = likedTracks.includes(track.id);
   const inQueue = queue.some(t => t.id === track.id);
   const canPlay = track.isStreamable ?? Boolean(track.audioUrl);
+  const { contextMenuProps, openFromButton } = useTrackContextMenu(track, {
+    removeFromPlaylist: onRemoveFromPlaylist
+      ? () => onRemoveFromPlaylist(track)
+      : undefined,
+  });
 
   const handlePlay = (e) => {
     e.stopPropagation();
@@ -34,7 +46,7 @@ export default function TrackListItem({ track, index, tracksContext = [] }) {
       togglePlay();
     } else {
       const queueList = tracksContext.length > 0 ? tracksContext : [track];
-      playTrack(track, queueList);
+      playTrack(track, queueList, queueSource);
     }
   };
 
@@ -56,11 +68,14 @@ export default function TrackListItem({ track, index, tracksContext = [] }) {
     <div
       onClick={() => navigate(`/track/${track.id}`)}
       onKeyDown={(event) => {
+        contextMenuProps.onKeyDown(event);
+        if (event.defaultPrevented) return;
         if (event.key === 'Enter' || event.key === ' ') {
           event.preventDefault();
           navigate(`/track/${track.id}`);
         }
       }}
+      onContextMenu={contextMenuProps.onContextMenu}
       role="link"
       tabIndex={0}
       data-track-id={track.id}
@@ -146,6 +161,15 @@ export default function TrackListItem({ track, index, tracksContext = [] }) {
 
       {/* Right section: Hover Action buttons */}
       <div className="flex items-center space-x-1.5 ml-4 shrink-0">
+        <button
+          type="button"
+          onClick={openFromButton}
+          className="ns-icon-button !min-h-10 !min-w-10 rounded-lg text-zinc-500 hover:text-zinc-200 md:opacity-0 md:group-hover:opacity-100"
+          aria-label={`More actions for ${track.title}`}
+          aria-haspopup="menu"
+        >
+          <MoreHorizontal size={15} />
+        </button>
         {/* Like */}
         <button
           onClick={handleLike}

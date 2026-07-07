@@ -1,19 +1,33 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Pin, Play } from 'lucide-react';
+import { MoreHorizontal, Pin, Play } from 'lucide-react';
 import { usePlayerStore } from '../../store/playerStore';
 import FallbackCover from '../ui/FallbackCover';
+import { usePlaylistContextMenu } from '../../hooks/useEntityContextMenu';
+import { getPlaylistById } from '../../api/playlists';
 
-export default function SidebarPlaylistItem({ playlist }) {
+export default function SidebarPlaylistItem({ playlist, onToggleSaved, onEdit, onDelete }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { playTrack } = usePlayerStore();
+  const { contextMenuProps, openFromButton } = usePlaylistContextMenu(playlist, {
+    onToggleSaved,
+    onEdit,
+    onDelete,
+  });
 
   const isActive = location.pathname === `/playlist/${playlist.id}`;
 
-  const handlePlayClick = (e) => {
+  const handlePlayClick = async (e) => {
     e.stopPropagation();
-    const tracksInPlaylist = playlist.tracks || [];
+    let tracksInPlaylist = playlist.tracks || [];
+    if (tracksInPlaylist.length === 0 && Number(playlist.trackCount || 0) > 0) {
+      try {
+        tracksInPlaylist = (await getPlaylistById(playlist.id))?.tracks || [];
+      } catch {
+        return;
+      }
+    }
     if (tracksInPlaylist.length > 0) {
       playTrack(tracksInPlaylist[0], tracksInPlaylist);
     }
@@ -26,6 +40,17 @@ export default function SidebarPlaylistItem({ playlist }) {
   return (
     <div
       onClick={handleRowClick}
+      onContextMenu={contextMenuProps.onContextMenu}
+      onKeyDown={(event) => {
+        contextMenuProps.onKeyDown(event);
+        if (event.defaultPrevented) return;
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          handleRowClick();
+        }
+      }}
+      role="link"
+      tabIndex={0}
       className={`group flex items-center justify-between p-2.5 rounded-xl transition-all duration-200 cursor-pointer border h-[64px] ${
         isActive
           ? 'bg-brand-red/10 border-brand-red/20 text-brand-red shadow-[0_0_12px_var(--ns-accent-glow-soft)]'
@@ -61,12 +86,21 @@ export default function SidebarPlaylistItem({ playlist }) {
             {playlist.name}
           </h5>
           <p className="text-[12.5px] text-zinc-400 truncate mt-0.5 font-medium">
-            {playlist.createdByCurrentUser ? 'Playlist' : `by ${playlist.creator}`} • {(playlist.trackIds || playlist.tracks || []).length} tracks
+            {playlist.createdByCurrentUser ? 'Playlist' : `by ${playlist.creator}`} • {playlist.trackCount ?? (playlist.trackIds || playlist.tracks || []).length} tracks
           </p>
         </div>
       </div>
 
       {/* Pin Indicator */}
+      <button
+        type="button"
+        onClick={openFromButton}
+        className="ns-icon-button !min-h-9 !min-w-9 shrink-0 text-zinc-500 opacity-0 group-hover:opacity-100 focus:opacity-100"
+        aria-label={`More actions for ${playlist.name}`}
+        aria-haspopup="menu"
+      >
+        <MoreHorizontal size={14} />
+      </button>
       {playlist.isPinned && (
         <span className="text-brand-red opacity-60 shrink-0 ml-2" title="Pinned Playlist">
           <Pin size={11} className="rotate-45" fill="currentColor" />

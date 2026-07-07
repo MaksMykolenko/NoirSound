@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Check } from 'lucide-react';
+import { Check, MoreHorizontal } from 'lucide-react';
 import { followArtist, unfollowArtist } from '../../api/artists';
 import { useUserStore } from '../../store/userStore';
 import { formatNumber } from '../../utils/formatLocale';
 import FallbackAvatar from '../ui/FallbackAvatar';
+import { useArtistContextMenu } from '../../hooks/useEntityContextMenu';
 
 export default function ArtistCard({ artist }) {
   const { t } = useTranslation();
@@ -25,7 +26,7 @@ export default function ArtistCard({ artist }) {
   }, [artist.id, artist.isFollowing]);
 
   const handleFollowClick = async (e) => {
-    e.stopPropagation();
+    e?.stopPropagation?.();
     if (!user) {
       setAuthModalOpen(true);
       return;
@@ -46,21 +47,37 @@ export default function ArtistCard({ artist }) {
       setIsSubmitting(false);
     }
   };
+  const { contextMenuProps, openFromButton } = useArtistContextMenu(artist, {
+    isFollowing,
+    onToggleFollow: () => handleFollowClick(),
+  });
 
   return (
     <div
       onClick={() => navigate(`/artist/${artist.id}`)}
       onKeyDown={(event) => {
+        contextMenuProps.onKeyDown(event);
+        if (event.defaultPrevented) return;
         if (event.key === 'Enter' || event.key === ' ') {
           event.preventDefault();
           navigate(`/artist/${artist.id}`);
         }
       }}
+      onContextMenu={contextMenuProps.onContextMenu}
       role="link"
       tabIndex={0}
       aria-label={`Open artist ${artist.name}`}
-      className="p-4 ns-card ns-card-interactive cursor-pointer text-center group"
+      className="relative p-4 ns-card ns-card-interactive cursor-pointer text-center group"
     >
+      <button
+        type="button"
+        onClick={openFromButton}
+        className="absolute right-3 top-3 ns-icon-button !min-h-9 !min-w-9 text-zinc-500 md:opacity-0 md:group-hover:opacity-100 focus:opacity-100"
+        aria-label={`More actions for ${artist.name}`}
+        aria-haspopup="menu"
+      >
+        <MoreHorizontal size={15} />
+      </button>
       {/* Avatar Container */}
       <div className="relative w-28 h-28 mx-auto mb-4 rounded-full overflow-hidden border border-zinc-800 shadow-[0_5px_15px_rgba(0,0,0,0.5)] bg-zinc-950">
         <FallbackAvatar

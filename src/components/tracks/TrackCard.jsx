@@ -1,10 +1,11 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Play, Pause, Heart } from 'lucide-react';
+import { Play, Pause, Heart, MoreHorizontal } from 'lucide-react';
 import { usePlayerStore } from '../../store/playerStore';
 import { formatDuration } from '../../utils/formatTime';
 import FallbackCover from '../ui/FallbackCover';
 import { getLocalizedGenre } from '../../i18n/genreLabels';
+import { useTrackContextMenu } from '../../hooks/useEntityContextMenu';
 
 export default function TrackCard({ track, tracksContext = [] }) {
   const navigate = useNavigate();
@@ -14,6 +15,7 @@ export default function TrackCard({ track, tracksContext = [] }) {
   const isPlayingThis = isCurrent && isPlaying;
   const isLiked = likedTracks.includes(track.id);
   const canPlay = track.isStreamable ?? Boolean(track.audioUrl);
+  const { contextMenuProps, openFromButton } = useTrackContextMenu(track);
 
   const handlePlayClick = (e) => {
     e.stopPropagation();
@@ -40,11 +42,14 @@ export default function TrackCard({ track, tracksContext = [] }) {
     <div
       onClick={handleCardClick}
       onKeyDown={(event) => {
+        contextMenuProps.onKeyDown(event);
+        if (event.defaultPrevented) return;
         if (event.key === 'Enter' || event.key === ' ') {
           event.preventDefault();
           handleCardClick();
         }
       }}
+      onContextMenu={contextMenuProps.onContextMenu}
       role="link"
       tabIndex={0}
       aria-label={`Open ${track.title} by ${track.artistName}`}
@@ -92,6 +97,15 @@ export default function TrackCard({ track, tracksContext = [] }) {
             {getLocalizedGenre(track.genre)}
           </span>
         </div>
+        <button
+          type="button"
+          onClick={openFromButton}
+          className="absolute right-2 top-2 z-10 ns-icon-button !min-h-9 !min-w-9 bg-zinc-950/85 text-zinc-300 md:opacity-0 md:group-hover:opacity-100 focus:opacity-100"
+          aria-label={`More actions for ${track.title}`}
+          aria-haspopup="menu"
+        >
+          <MoreHorizontal size={15} />
+        </button>
 
         {/* Duration Overlay Bottom Right */}
         <div className="absolute bottom-2 right-2 text-[11.5px] font-bold font-mono px-1.5 py-0.5 rounded bg-zinc-950/75 border border-zinc-900/40 text-zinc-200 backdrop-blur-sm select-none">

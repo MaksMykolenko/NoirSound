@@ -175,6 +175,7 @@ export const usePlayerStore = create((set, get) => {
     currentTrack: null,
     queue: [],
     originalQueue: [],
+    queueSource: null,
     isPlaying: false,
     volume: 0.5,
     progress: 0,
@@ -268,7 +269,7 @@ export const usePlayerStore = create((set, get) => {
       }
     },
 
-    playTrack: async (track, newQueue = null) => {
+    playTrack: async (track, newQueue = null, queueSource = null) => {
       if (!audio) return;
       const canPlay = canStreamTrack(track);
       if (!canPlay) {
@@ -289,6 +290,7 @@ export const usePlayerStore = create((set, get) => {
         const streamableQueue = newQueue.filter(canStreamTrack);
         updates.queue = streamableQueue;
         updates.originalQueue = [...streamableQueue];
+        updates.queueSource = queueSource;
       }
 
       set(updates);
@@ -413,14 +415,46 @@ export const usePlayerStore = create((set, get) => {
       set({ queue: [...queue, track] });
     },
 
+    addTracksToQueue: (tracks) => {
+      const { queue } = get();
+      const existingIds = new Set(queue.map((track) => track.id));
+      const additions = (tracks || [])
+        .filter(canStreamTrack)
+        .filter((track) => !existingIds.has(track.id));
+      if (additions.length > 0) set({ queue: [...queue, ...additions] });
+    },
+
+    playNext: (track) => {
+      if (!canStreamTrack(track)) return;
+      const { queue, currentTrack } = get();
+      const withoutTrack = queue.filter((item) => item.id !== track.id);
+      const currentIndex = currentTrack
+        ? withoutTrack.findIndex((item) => item.id === currentTrack.id)
+        : -1;
+      const insertionIndex = currentIndex >= 0 ? currentIndex + 1 : 0;
+      const nextQueue = [...withoutTrack];
+      nextQueue.splice(insertionIndex, 0, track);
+      set({ queue: nextQueue });
+    },
+
     removeFromQueue: (trackId) => {
       const { queue } = get();
       set({ queue: queue.filter(t => t.id !== trackId) });
     },
 
-    setQueue: (newQueue) => {
+    moveQueueItem: (trackId, direction) => {
+      const { queue } = get();
+      const currentIndex = queue.findIndex((track) => track.id === trackId);
+      const nextIndex = currentIndex + direction;
+      if (currentIndex < 0 || nextIndex < 0 || nextIndex >= queue.length) return;
+      const nextQueue = [...queue];
+      [nextQueue[currentIndex], nextQueue[nextIndex]] = [nextQueue[nextIndex], nextQueue[currentIndex]];
+      set({ queue: nextQueue });
+    },
+
+    setQueue: (newQueue, queueSource = null) => {
       const streamableQueue = newQueue.filter(canStreamTrack);
-      set({ queue: streamableQueue, originalQueue: [...streamableQueue] });
+      set({ queue: streamableQueue, originalQueue: [...streamableQueue], queueSource });
     },
 
     toggleShuffle: () => {

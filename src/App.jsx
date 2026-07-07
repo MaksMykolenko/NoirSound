@@ -9,6 +9,7 @@ import { useToastStore } from './store/toastStore';
 import { useThemeStore } from './store/themeStore';
 import { isMockMode } from './api/mode';
 import { getApiErrorMessage } from './utils/apiErrorMessage';
+import ContextMenuProvider from './components/context-menu/ContextMenuProvider';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -118,6 +119,7 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <Router>
+        <ContextMenuProvider>
         {isMockMode() && (
           <div className="fixed top-2 left-1/2 -translate-x-1/2 z-[120] px-3 py-1 rounded-full bg-amber-400 text-black text-[10px] font-black uppercase tracking-widest shadow-lg">
             Demo mode
@@ -171,6 +173,7 @@ export default function App() {
           isOpen={isAuthModalOpen} 
           onClose={() => setAuthModalOpen(false)} 
         />
+        </ContextMenuProvider>
       </Router>
     </QueryClientProvider>
   );

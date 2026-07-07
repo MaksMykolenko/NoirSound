@@ -1,11 +1,74 @@
 import React, { useEffect } from 'react';
 import { usePlayerStore } from '../../store/playerStore';
-import { X, Play, Trash2, Music } from 'lucide-react';
-import { formatDuration } from '../../utils/formatTime';
+import { ArrowDown, ArrowUp, MoreHorizontal, X, Play, Trash2, Music } from 'lucide-react';
 import FallbackCover from '../ui/FallbackCover';
+import { useTrackContextMenu } from '../../hooks/useEntityContextMenu';
+
+function QueueTrackRow({ track, index, currentTrack, playTrack, removeFromQueue, moveQueueItem, queueLength }) {
+  const isPlayingThis = currentTrack?.id === track.id;
+  const { contextMenuProps, openFromButton } = useTrackContextMenu(track, {
+    removeFromQueue: () => removeFromQueue(track.id),
+    moveUp: { disabled: index === 0, action: () => moveQueueItem(track.id, -1) },
+    moveDown: { disabled: index === queueLength - 1, action: () => moveQueueItem(track.id, 1) },
+  });
+  return (
+    <div
+      onContextMenu={contextMenuProps.onContextMenu}
+      onKeyDown={contextMenuProps.onKeyDown}
+      tabIndex={0}
+      className={`group flex items-center space-x-3 p-2 rounded-xl transition-all duration-200 ${
+        isPlayingThis
+          ? 'bg-brand-red/10 border border-brand-red/20 shadow-[0_0_12px_var(--ns-accent-glow-soft)]'
+          : 'bg-zinc-900/30 border border-zinc-900/50 hover:bg-zinc-900/70 hover:border-zinc-800/80'
+      }`}
+    >
+      <div className="relative w-10 h-10 rounded-lg overflow-hidden shrink-0 group-hover:opacity-80">
+        <FallbackCover
+          src={track.coverUrl}
+          title={track.title}
+          artistName={track.artistName}
+          genre={track.genre}
+          className="w-full h-full"
+          imageClassName="object-cover"
+        />
+        <button
+          onClick={() => playTrack(track)}
+          className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+          aria-label={`Play ${track.title}`}
+        >
+          <Play size={14} className="text-white fill-white" />
+        </button>
+      </div>
+      <div className="flex-1 min-w-0">
+        <h5 className={`text-xs font-semibold truncate ${isPlayingThis ? 'text-brand-red' : 'text-zinc-200'}`}>
+          {track.title}
+        </h5>
+        <p className="text-[10px] text-zinc-500 truncate">by {track.artistName}</p>
+      </div>
+      <div className="flex items-center shrink-0">
+        <button type="button" onClick={() => moveQueueItem(track.id, -1)} disabled={index === 0} className="ns-icon-button !min-h-9 !min-w-8 text-zinc-500 disabled:opacity-20" aria-label={`Move ${track.title} up`}>
+          <ArrowUp size={12} />
+        </button>
+        <button type="button" onClick={() => moveQueueItem(track.id, 1)} disabled={index === queueLength - 1} className="ns-icon-button !min-h-9 !min-w-8 text-zinc-500 disabled:opacity-20" aria-label={`Move ${track.title} down`}>
+          <ArrowDown size={12} />
+        </button>
+        <button type="button" onClick={openFromButton} className="ns-icon-button !min-h-9 !min-w-8 text-zinc-500" aria-label={`More actions for ${track.title}`} aria-haspopup="menu">
+          <MoreHorizontal size={14} />
+        </button>
+        <button
+          onClick={() => removeFromQueue(track.id)}
+          className="ns-icon-button !min-h-9 !min-w-8 text-zinc-500 hover:text-rose-500 rounded-lg cursor-pointer"
+          aria-label={`Remove ${track.title} from queue`}
+        >
+          <X size={12} />
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export default function QueuePanel({ isOpen, onClose, surface = 'standard' }) {
-  const { queue, currentTrack, playTrack, removeFromQueue, setQueue } = usePlayerStore();
+  const { queue, currentTrack, playTrack, removeFromQueue, setQueue, moveQueueItem } = usePlayerStore();
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -67,64 +130,18 @@ export default function QueuePanel({ isOpen, onClose, surface = 'standard' }) {
             <p className="text-xs max-w-[200px]">Add tracks to play next.</p>
           </div>
         ) : (
-          queue.map((track, index) => {
-            const isPlayingThis = currentTrack?.id === track.id;
-            return (
-              <div
-                key={`${track.id}-${index}`}
-                className={`group flex items-center space-x-3 p-2 rounded-xl transition-all duration-200 ${
-                  isPlayingThis
-                    ? 'bg-brand-red/10 border border-brand-red/20 shadow-[0_0_12px_var(--ns-accent-glow-soft)]'
-                    : 'bg-zinc-900/30 border border-zinc-900/50 hover:bg-zinc-900/70 hover:border-zinc-800/80'
-                }`}
-              >
-                {/* Cover art thumb */}
-                <div className="relative w-10 h-10 rounded-lg overflow-hidden shrink-0 group-hover:opacity-80">
-                  <FallbackCover
-                    src={track.coverUrl}
-                    title={track.title}
-                    artistName={track.artistName}
-                    genre={track.genre}
-                    className="w-full h-full"
-                    imageClassName="object-cover"
-                  />
-                  <button
-                    onClick={() => playTrack(track)}
-                    className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                    aria-label={`Play ${track.title}`}
-                  >
-                    <Play size={14} className="text-white fill-white" />
-                  </button>
-                </div>
-
-                {/* Track Details */}
-                <div className="flex-1 min-w-0">
-                  <h5
-                    className={`text-xs font-semibold truncate ${
-                      isPlayingThis ? 'text-brand-red' : 'text-zinc-200'
-                    }`}
-                  >
-                    {track.title}
-                  </h5>
-                  <p className="text-[10px] text-zinc-500 truncate">by {track.artistName}</p>
-                </div>
-
-                {/* Duration and Actions */}
-                <div className="flex items-center space-x-2 shrink-0">
-                  <span className="text-[10px] text-zinc-500 font-mono">
-                    {formatDuration(track.duration)}
-                  </span>
-                  <button
-                    onClick={() => removeFromQueue(track.id)}
-                    className="ns-icon-button !min-h-10 !min-w-10 md:opacity-0 md:group-hover:opacity-100 text-zinc-500 hover:text-rose-500 transition-all rounded-lg cursor-pointer"
-                    aria-label={`Remove ${track.title} from queue`}
-                  >
-                    <X size={12} />
-                  </button>
-                </div>
-              </div>
-            );
-          })
+          queue.map((track, index) => (
+            <QueueTrackRow
+              key={`${track.id}-${index}`}
+              track={track}
+              index={index}
+              queueLength={queue.length}
+              currentTrack={currentTrack}
+              playTrack={playTrack}
+              removeFromQueue={removeFromQueue}
+              moveQueueItem={moveQueueItem}
+            />
+          ))
         )}
       </div>
     </div>

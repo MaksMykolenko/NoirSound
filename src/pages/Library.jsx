@@ -1,14 +1,15 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Heart, History, ListMusic, Users } from 'lucide-react';
+import { Heart, History, ListMusic, Plus, Users } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   getArtists,
   getFollowedArtists,
   getLikedTracks,
   getMyPlaylists,
-  getPlaylists,
   getTracks,
+  createPlaylist,
+  setPlaylistSaved,
 } from '../api';
 import { isMockMode } from '../api/mode';
 import { usePlayerStore } from '../store/playerStore';
@@ -19,6 +20,7 @@ import TrackListItem from '../components/tracks/TrackListItem';
 import EmptyState from '../components/ui/EmptyState';
 import ErrorState from '../components/ui/ErrorState';
 import LoadingState from '../components/ui/LoadingState';
+import CreatePlaylistModal from '../components/playlists/CreatePlaylistModal';
 
 export default function Library() {
   const { t } = useTranslation();
@@ -49,12 +51,20 @@ export default function Library() {
   const [playlists, setPlaylists] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isCreateOpen, setCreateOpen] = useState(false);
+  const [playlistRevision, setPlaylistRevision] = useState(0);
+
+  useEffect(() => {
+    const refresh = () => setPlaylistRevision((current) => current + 1);
+    window.addEventListener('noirsound:playlists-changed', refresh);
+    return () => window.removeEventListener('noirsound:playlists-changed', refresh);
+  }, []);
 
   useEffect(() => {
     if (!user) return;
     setLoading(true);
     if (demoMode) {
-      Promise.all([getTracks(), getArtists(), getPlaylists()])
+      Promise.all([getTracks(), getArtists(), getMyPlaylists()])
         .then(([nextTracks, nextArtists, nextPlaylists]) => {
           setTracks(nextTracks);
           setArtists(nextArtists);
@@ -80,7 +90,26 @@ export default function Library() {
     loadRecentlyPlayed().catch(() => {
       // Player store retains error for recently played tab
     });
-  }, [demoMode, loadRecentlyPlayed, user]);
+  }, [demoMode, loadRecentlyPlayed, playlistRevision, user]);
+
+  const handleCreatePlaylist = async (playlistData) => {
+    const created = await createPlaylist(playlistData);
+    setPlaylists((current) => [created, ...current]);
+    setCreateOpen(false);
+    window.dispatchEvent(new CustomEvent('noirsound:playlists-changed'));
+    navigate(`/playlist/${created.id}`);
+  };
+
+  const handleToggleSaved = async (playlist) => {
+    const nextSaved = !playlist.isSaved;
+    await setPlaylistSaved(playlist.id, nextSaved);
+    if (nextSaved) {
+      setPlaylists((current) => current.map((item) => item.id === playlist.id ? { ...item, isSaved: true } : item));
+    } else {
+      setPlaylists((current) => current.filter((item) => item.id !== playlist.id || item.isOwner));
+    }
+    window.dispatchEvent(new CustomEvent('noirsound:playlists-changed'));
+  };
 
   const likedSongs = useMemo(() => {
     if (demoMode) {
@@ -104,9 +133,14 @@ export default function Library() {
 
   return (
     <div className="ns-page-stack animate-fade-in">
-      <div>
-        <h1 className="ns-page-title">{t('nav.yourLibrary')}</h1>
-        <p className="ns-page-lede">{t('library.subtitle')}</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="ns-page-title">{t('nav.yourLibrary')}</h1>
+          <p className="ns-page-lede">{t('library.subtitle')}</p>
+        </div>
+        <button type="button" onClick={() => setCreateOpen(true)} className="ns-button-primary inline-flex min-h-11 shrink-0 items-center gap-2 px-4 text-xs">
+          <Plus size={15} /> New playlist
+        </button>
       </div>
 
       <div className="ns-tabs-scroll flex border-b border-zinc-800/60 gap-1 overflow-x-auto shrink-0" role="tablist">
@@ -178,7 +212,13 @@ export default function Library() {
             />
           ) : (
             <div className="grid grid-cols-1 min-[430px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {playlists.map((playlist) => <PlaylistCard key={playlist.id} playlist={playlist} />)}
+              {playlists.map((playlist) => (
+                <PlaylistCard
+                  key={playlist.id}
+                  playlist={playlist}
+                  onToggleSaved={!playlist.isOwner ? () => handleToggleSaved(playlist) : undefined}
+                />
+              ))}
             </div>
           )
         ) : (
@@ -197,6 +237,7 @@ export default function Library() {
           )
         )}
       </div>
+      <CreatePlaylistModal isOpen={isCreateOpen} onClose={() => setCreateOpen(false)} onCreate={handleCreatePlaylist} />
     </div>
   );
 }

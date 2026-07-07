@@ -11,7 +11,8 @@ import {
   X,
   Music,
   ChevronDown,
-  FileText
+  FileText,
+  MoreHorizontal
 } from 'lucide-react';
 import FallbackCover from '../ui/FallbackCover';
 import {
@@ -19,6 +20,7 @@ import {
   MobilePlayerProgress,
   MobilePlayerTransportControls,
 } from './PlayerBarShared';
+import { useTrackContextMenu } from '../../hooks/useEntityContextMenu';
 
 export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
   const { t } = useTranslation();
@@ -49,6 +51,8 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
 
   const isLiked = currentTrack ? likedTracks.includes(currentTrack.id) : false;
   const lyricsAvailable = Boolean(currentTrack?.hasLyrics);
+  const { contextMenuProps: trackContextMenuProps, openFromButton: openTrackActions } =
+    useTrackContextMenu(currentTrack);
   const desktopPlayerHeight = currentTrack ? 'h-[90px]' : 'h-[48px]';
   const desktopHiddenPosition = currentTrack ? 'bottom-[-90px]' : 'bottom-[-48px]';
 
@@ -225,11 +229,14 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
             <div
               onClick={() => expandPlayer()}
               onKeyDown={(event) => {
+                trackContextMenuProps.onKeyDown(event);
+                if (event.defaultPrevented) return;
                 if (event.key === 'Enter' || event.key === ' ') {
                   event.preventDefault();
                   expandPlayer();
                 }
               }}
+              onContextMenu={trackContextMenuProps.onContextMenu}
               role="button"
               tabIndex={0}
               aria-label="Expand player"
@@ -303,6 +310,7 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
       {/* Mobile Expanded Player Sheet (Slides up covering screen) */}
       {currentTrack && (
         <div
+          onContextMenu={trackContextMenuProps.onContextMenu}
           className={`lg:hidden fixed inset-0 bg-brand-dark z-50 flex flex-col justify-between px-5 sm:px-6 pt-[calc(1.25rem+env(safe-area-inset-top))] pb-[calc(1.5rem+env(safe-area-inset-bottom))] transition-transform duration-350 ease-out select-none overflow-hidden ${
             isPlayerCollapsed ? 'translate-y-full' : 'translate-y-0'
           }`}
@@ -324,6 +332,15 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
             </button>
             <span className="text-[12px] font-bold uppercase tracking-widest text-zinc-400">{t('player.nowPlaying')}</span>
             <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={openTrackActions}
+                className="ns-icon-button !bg-zinc-900/80 text-zinc-500"
+                aria-label={`More actions for ${currentTrack.title}`}
+                aria-haspopup="menu"
+              >
+                <MoreHorizontal size={18} />
+              </button>
               <button
                 onClick={() => lyricsAvailable && openLyricsFullscreen()}
                 disabled={!lyricsAvailable}

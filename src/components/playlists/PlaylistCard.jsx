@@ -1,17 +1,31 @@
 import React from 'react';
-import { Play } from 'lucide-react';
+import { MoreHorizontal, Play } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { usePlayerStore } from '../../store/playerStore';
 import { formatNumber } from '../../utils/formatLocale';
 import FallbackCover from '../ui/FallbackCover';
+import { usePlaylistContextMenu } from '../../hooks/useEntityContextMenu';
+import { getPlaylistById } from '../../api/playlists';
 
-export default function PlaylistCard({ playlist }) {
+export default function PlaylistCard({ playlist, onToggleSaved, onEdit, onDelete }) {
   const { playTrack } = usePlayerStore();
   const navigate = useNavigate();
+  const { contextMenuProps, openFromButton } = usePlaylistContextMenu(playlist, {
+    onToggleSaved,
+    onEdit,
+    onDelete,
+  });
 
-  const handlePlayClick = (e) => {
+  const handlePlayClick = async (e) => {
     e.stopPropagation();
-    const tracksInPlaylist = playlist.tracks || [];
+    let tracksInPlaylist = playlist.tracks || [];
+    if (tracksInPlaylist.length === 0 && Number(playlist.trackCount || 0) > 0) {
+      try {
+        tracksInPlaylist = (await getPlaylistById(playlist.id))?.tracks || [];
+      } catch {
+        return;
+      }
+    }
     if (tracksInPlaylist.length > 0) {
       // Play the first track and load the rest as the queue context
       playTrack(tracksInPlaylist[0], tracksInPlaylist);
@@ -23,13 +37,17 @@ export default function PlaylistCard({ playlist }) {
       className="p-3 ns-card ns-card-interactive cursor-pointer group"
       onClick={() => navigate(`/playlist/${playlist.id}`)}
       onKeyDown={(event) => {
+        contextMenuProps.onKeyDown(event);
+        if (event.defaultPrevented) return;
         if (event.key === 'Enter' || event.key === ' ') {
           event.preventDefault();
           navigate(`/playlist/${playlist.id}`);
         }
       }}
+      onContextMenu={contextMenuProps.onContextMenu}
       role="link"
       tabIndex={0}
+      data-playlist-id={playlist.id}
       aria-label={`Open playlist ${playlist.name}`}
     >
       {/* Cover wrapped */}
@@ -54,10 +72,19 @@ export default function PlaylistCard({ playlist }) {
             <Play size={20} className="translate-x-[1px]" fill="white" strokeWidth={0} />
           </button>
         </div>
+        <button
+          type="button"
+          onClick={openFromButton}
+          className="absolute right-2 top-2 z-10 ns-icon-button !min-h-9 !min-w-9 bg-zinc-950/85 text-zinc-300 md:opacity-0 md:group-hover:opacity-100 focus:opacity-100"
+          aria-label={`More actions for ${playlist.name}`}
+          aria-haspopup="menu"
+        >
+          <MoreHorizontal size={15} />
+        </button>
 
         {/* Tracks count tag */}
         <div className="absolute bottom-2 left-2 text-[11px] font-bold uppercase px-2 py-0.5 rounded bg-zinc-950/75 border border-zinc-900/40 text-zinc-200 backdrop-blur-sm select-none">
-          {(playlist.trackIds || playlist.tracks || []).length} tracks
+          {playlist.trackCount ?? (playlist.trackIds || playlist.tracks || []).length} tracks
         </div>
       </div>
 

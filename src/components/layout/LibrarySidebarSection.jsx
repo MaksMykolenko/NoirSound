@@ -8,7 +8,6 @@ import {
   getFollowedArtists,
   getLikedTracks,
   getMyPlaylists,
-  getPlaylists,
 } from '../../api';
 import { isMockMode } from '../../api/mode';
 import { usePlayerStore } from '../../store/playerStore';
@@ -27,6 +26,13 @@ export default function LibrarySidebarSection({ onItemClick }) {
   const [realLikedCount, setRealLikedCount] = useState(0);
   const [search, setSearch] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [playlistRevision, setPlaylistRevision] = useState(0);
+
+  useEffect(() => {
+    const refresh = () => setPlaylistRevision((current) => current + 1);
+    window.addEventListener('noirsound:playlists-changed', refresh);
+    return () => window.removeEventListener('noirsound:playlists-changed', refresh);
+  }, []);
 
   useEffect(() => {
     if (!user) {
@@ -36,7 +42,7 @@ export default function LibrarySidebarSection({ onItemClick }) {
       return;
     }
     if (demoMode) {
-      Promise.all([getPlaylists(), getArtists()])
+      Promise.all([getMyPlaylists(), getArtists()])
         .then(([playlistData, artistData]) => {
           setPlaylists(playlistData);
           setArtists(artistData.slice(0, 4));
@@ -52,7 +58,7 @@ export default function LibrarySidebarSection({ onItemClick }) {
         setRealLikedCount(likedData.length);
       })
       .catch(() => {});
-  }, [demoMode, user]);
+  }, [demoMode, playlistRevision, user]);
 
   const filteredPlaylists = useMemo(
     () => playlists.filter((playlist) =>
@@ -75,10 +81,11 @@ export default function LibrarySidebarSection({ onItemClick }) {
     setIsModalOpen(true);
   };
 
-  const handleCreatePlaylist = async (name) => {
-    const playlist = await createPlaylist({ name, description: '', isPublic: true });
+  const handleCreatePlaylist = async (playlistData) => {
+    const playlist = await createPlaylist(playlistData);
     setPlaylists((current) => [playlist, ...current]);
     setIsModalOpen(false);
+    window.dispatchEvent(new CustomEvent('noirsound:playlists-changed'));
   };
 
   const { t } = useTranslation();

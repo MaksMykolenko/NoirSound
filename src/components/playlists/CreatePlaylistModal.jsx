@@ -1,23 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { X, ListMusic, CheckCircle } from 'lucide-react';
+import useDialogFocusTrap from '../../hooks/useDialogFocusTrap';
 
 export default function CreatePlaylistModal({ isOpen, onClose, onCreate }) {
   const { t } = useTranslation();
   const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [isPublic, setIsPublic] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape') onClose();
-    };
-    if (isOpen) {
-      window.addEventListener('keydown', handleKeyDown);
-    }
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  const dialogRef = useDialogFocusTrap(isOpen && !isSubmitting, onClose);
 
   if (!isOpen) return null;
 
@@ -28,14 +22,24 @@ export default function CreatePlaylistModal({ isOpen, onClose, onCreate }) {
       setErrorMsg('Playlist name is required.');
       return;
     }
-    if (name.trim().length > 50) {
-      setErrorMsg('Playlist name must be under 50 characters.');
+    if (name.trim().length > 120) {
+      setErrorMsg('Playlist name must be at most 120 characters.');
+      return;
+    }
+    if (description.trim().length > 1000) {
+      setErrorMsg('Description must be at most 1000 characters.');
       return;
     }
     try {
       setIsSubmitting(true);
-      await onCreate(name.trim());
+      await onCreate({
+        name: name.trim(),
+        description: description.trim(),
+        isPublic,
+      });
       setName('');
+      setDescription('');
+      setIsPublic(false);
     } catch (error) {
       setErrorMsg(error.message || 'Playlist could not be created.');
     } finally {
@@ -45,7 +49,7 @@ export default function CreatePlaylistModal({ isOpen, onClose, onCreate }) {
 
   return createPortal(
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in select-none">
-      <div className="bg-brand-dark border border-zinc-800 rounded-3xl p-6 w-full max-w-sm shadow-[0_0_50px_rgba(0,0,0,0.8)] relative" role="dialog" aria-modal="true" aria-labelledby="playlist-modal-title">
+      <div ref={dialogRef} className="bg-brand-dark border border-zinc-800 rounded-3xl p-6 w-full max-w-sm shadow-[0_0_50px_rgba(0,0,0,0.8)] relative" role="dialog" aria-modal="true" aria-labelledby="playlist-modal-title">
         <button
           onClick={onClose}
           className="absolute top-4 right-4 ns-icon-button !min-h-10 !min-w-10 cursor-pointer"
@@ -74,12 +78,40 @@ export default function CreatePlaylistModal({ isOpen, onClose, onCreate }) {
               placeholder={t('playlistModal.playlistNamePlaceholder')}
               value={name}
               onChange={(e) => setName(e.target.value)}
+              maxLength={120}
               className="ns-field w-full px-4 text-sm placeholder-zinc-500"
               aria-invalid={Boolean(errorMsg)}
               aria-describedby={errorMsg ? 'playlist-name-error' : undefined}
               autoFocus
             />
           </div>
+          <div className="space-y-1">
+            <label htmlFor="playlist-description" className="text-xs font-bold text-zinc-300">
+              {t('playlists.description')} <span className="font-normal text-zinc-600">({t('playlists.optional')})</span>
+            </label>
+            <textarea
+              id="playlist-description"
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              maxLength={1000}
+              rows={3}
+              placeholder={t('playlists.descriptionPlaceholder')}
+              className="ns-field w-full resize-none px-4 py-3 text-sm placeholder-zinc-500"
+            />
+            <p className="text-right text-[10px] text-zinc-600">{description.length}/1000</p>
+          </div>
+          <label className="flex min-h-11 cursor-pointer items-center justify-between gap-4 rounded-xl border border-zinc-800 bg-zinc-900/40 px-3">
+            <span>
+              <strong className="block text-xs text-zinc-200">{t('playlists.public')}</strong>
+              <small className="text-[10px] text-zinc-500">{t('playlists.publicHelp')}</small>
+            </span>
+            <input
+              type="checkbox"
+              checked={isPublic}
+              onChange={(event) => setIsPublic(event.target.checked)}
+              className="h-4 w-4 accent-[var(--ns-accent)]"
+            />
+          </label>
 
           <button
             type="submit"

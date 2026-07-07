@@ -13,9 +13,11 @@ import {
   Volume2,
   VolumeX,
   X,
+  MoreHorizontal,
 } from 'lucide-react';
 import { formatTime } from '../../utils/formatTime';
 import FallbackCover from '../ui/FallbackCover';
+import { useTrackContextMenu } from '../../hooks/useEntityContextMenu';
 
 export function PlayerTrackInfo({
   track,
@@ -24,10 +26,14 @@ export function PlayerTrackInfo({
   playbackError,
   className = 'w-1/4 min-w-[180px]',
 }) {
+  const { contextMenuProps, openFromButton } = useTrackContextMenu(track);
   return (
     <div
       className={`flex items-center space-x-3 ${className}`}
       data-testid="standard-player-track-info"
+      onContextMenu={contextMenuProps.onContextMenu}
+      onKeyDown={contextMenuProps.onKeyDown}
+      tabIndex={0}
     >
       <FallbackCover
         src={track.coverUrl}
@@ -59,6 +65,15 @@ export function PlayerTrackInfo({
         aria-pressed={isLiked}
       >
         <Heart size={16} fill={isLiked ? 'currentColor' : 'none'} />
+      </button>
+      <button
+        type="button"
+        onClick={openFromButton}
+        className="ns-icon-button !min-h-10 !min-w-10 shrink-0 text-zinc-500 hover:text-zinc-200"
+        aria-label={`More actions for ${track.title}`}
+        aria-haspopup="menu"
+      >
+        <MoreHorizontal size={16} />
       </button>
     </div>
   );

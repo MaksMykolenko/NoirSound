@@ -37,6 +37,7 @@ describe('usePlayerStore in real API mode', () => {
       currentTrack: null,
       queue: [],
       originalQueue: [],
+      queueSource: null,
       isPlaying: false,
       volume: 0.5,
       progress: 0,
@@ -163,6 +164,30 @@ describe('usePlayerStore in real API mode', () => {
 
     expect(usePlayerStore.getState().queue).toEqual([track]);
     expect(usePlayerStore.getState().originalQueue).toEqual([track]);
+  });
+
+  it('inserts play-next after the current track without duplicating it', () => {
+    const second = { ...track, id: 'track-2' };
+    const next = { ...track, id: 'track-next' };
+    usePlayerStore.setState({ currentTrack: track, queue: [track, second] });
+
+    usePlayerStore.getState().playNext(next);
+    usePlayerStore.getState().playNext(next);
+
+    expect(usePlayerStore.getState().queue.map((item) => item.id))
+      .toEqual(['track-1', 'track-next', 'track-2']);
+  });
+
+  it('adds queue batches without duplicates and supports accessible reordering', () => {
+    const second = { ...track, id: 'track-2' };
+    const third = { ...track, id: 'track-3' };
+    usePlayerStore.setState({ queue: [track] });
+
+    usePlayerStore.getState().addTracksToQueue([track, second, third]);
+    usePlayerStore.getState().moveQueueItem(third.id, -1);
+
+    expect(usePlayerStore.getState().queue.map((item) => item.id))
+      .toEqual(['track-1', 'track-3', 'track-2']);
   });
 });
 

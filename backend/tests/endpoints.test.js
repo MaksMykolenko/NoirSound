@@ -274,6 +274,168 @@ describe('NoirSound backend integration', () => {
     });
   });
 
+  describe('playlist API', () => {
+    it('enforces authentication and validates playlist metadata', async () => {
+      const unauthenticated = await supertest(app.server)
+        .post('/api/playlists')
+        .send({ name: 'No session' });
+      const invalid = await supertest(app.server)
+        .post('/api/playlists')
+        .set('Cookie', listenerCookie)
+        .send({ name: ' ' });
+      const csrfRejected = await supertest(app.server)
+        .post('/api/playlists')
+        .set('Cookie', listenerCookie)
+        .set('Origin', 'https://evil.example')
+        .send({ name: 'Cross-site playlist' });
+
+      expect(unauthenticated.statusCode).toBe(401);
+      expect(invalid.statusCode).toBe(400);
+      expect(invalid.body.error).toBe('PLAYLIST_TITLE_REQUIRED');
+      expect(csrfRejected.statusCode).toBe(403);
+      expect(csrfRejected.body.error).toBe('CSRF_VALIDATION_FAILED');
+    });
+
+    it('supports the complete owner lifecycle, ordering, cover verification, and access control', async () => {
+      const tracks = await app.prisma.track.findMany({
+        where: {
+          status: 'PUBLISHED',
+          isPublic: true,
+          processedAudioKey: { not: null }
+        },
+        take: 2,
+        orderBy: { createdAt: 'asc' }
+      });
+      expect(tracks).toHaveLength(2);
+
+      const created = await supertest(app.server)
+        .post('/api/playlists')
+        .set('Cookie', listenerCookie)
+        .send({
+          name: 'Integration Private Playlist',
+          description: 'Owner-controlled fixture',
+          isPublic: false
+        });
+      expect(created.statusCode).toBe(201);
+      expect(created.body.playlist.isOwner).toBe(true);
+      expect(created.body.playlist.visibility).toBe('PRIVATE');
+      const playlistId = created.body.playlist.id;
+
+      const anonymousPrivate = await supertest(app.server).get(`/api/playlists/${playlistId}`);
+      const otherUserPrivate = await supertest(app.server)
+        .get(`/api/playlists/${playlistId}`)
+        .set('Cookie', artistCookie);
+      expect(anonymousPrivate.statusCode).toBe(404);
+      expect(anonymousPrivate.body.error).toBe('PLAYLIST_PRIVATE');
+      expect(otherUserPrivate.statusCode).toBe(403);
+      const ownerPrivate = await supertest(app.server)
+        .get(`/api/playlists/${playlistId}`)
+        .set('Cookie', listenerCookie);
+      expect(ownerPrivate.statusCode).toBe(200);
+
+      const forbiddenEdit = await supertest(app.server)
+        .patch(`/api/playlists/${playlistId}`)
+        .set('Cookie', artistCookie)
+        .send({ name: 'Unauthorized edit' });
+      expect(forbiddenEdit.statusCode).toBe(403);
+      expect(forbiddenEdit.body.error).toBe('PLAYLIST_FORBIDDEN');
+      const forbiddenDelete = await supertest(app.server)
+        .delete(`/api/playlists/${playlistId}`)
+        .set('Cookie', artistCookie);
+      expect(forbiddenDelete.statusCode).toBe(403);
+
+      const unavailableTrack = await supertest(app.server)
+        .post(`/api/playlists/${playlistId}/tracks`)
+        .set('Cookie', listenerCookie)
+        .send({ trackId: 'unavailable-track-id' });
+      expect(unavailableTrack.statusCode).toBe(404);
+      expect(unavailableTrack.body.error).toBe('PLAYLIST_TRACK_NOT_FOUND');
+
+      for (const track of tracks) {
+        const added = await supertest(app.server)
+          .post(`/api/playlists/${playlistId}/tracks`)
+          .set('Cookie', listenerCookie)
+          .send({ trackId: track.id });
+        expect(added.statusCode).toBe(201);
+      }
+      const duplicate = await supertest(app.server)
+        .post(`/api/playlists/${playlistId}/tracks`)
+        .set('Cookie', listenerCookie)
+        .send({ trackId: tracks[0].id });
+      expect(duplicate.statusCode).toBe(409);
+      expect(duplicate.body.error).toBe('PLAYLIST_TRACK_ALREADY_EXISTS');
+
+      const reorderedIds = [tracks[1].id, tracks[0].id];
+      const reordered = await supertest(app.server)
+        .patch(`/api/playlists/${playlistId}/tracks/reorder`)
+        .set('Cookie', listenerCookie)
+        .send({ trackIds: reorderedIds });
+      expect(reordered.statusCode).toBe(200);
+      expect(reordered.body.trackIds).toEqual(reorderedIds);
+
+      const published = await supertest(app.server)
+        .patch(`/api/playlists/${playlistId}`)
+        .set('Cookie', listenerCookie)
+        .send({ name: 'Integration Public Playlist', isPublic: true });
+      expect(published.statusCode).toBe(200);
+      expect(published.body.playlist.visibility).toBe('PUBLIC');
+
+      const detail = await supertest(app.server).get(`/api/playlists/${playlistId}`);
+      expect(detail.statusCode).toBe(200);
+      expect(detail.body.playlist.tracks.map((entry) => entry.trackId)).toEqual(reorderedIds);
+
+      const firstSave = await supertest(app.server)
+        .post(`/api/playlists/${playlistId}/save`)
+        .set('Cookie', artistCookie);
+      const duplicateSave = await supertest(app.server)
+        .post(`/api/playlists/${playlistId}/save`)
+        .set('Cookie', artistCookie);
+      expect(firstSave.statusCode).toBe(200);
+      expect(duplicateSave.statusCode).toBe(200);
+      expect(await app.prisma.playlistLike.count({
+        where: { playlistId, userId: (await app.prisma.user.findUnique({ where: { email: 'artist@noirsound.com' } })).id }
+      })).toBe(1);
+      const artistLibrary = await supertest(app.server)
+        .get('/api/playlists/me')
+        .set('Cookie', artistCookie);
+      expect(artistLibrary.statusCode).toBe(200);
+      expect(artistLibrary.body.data.some((item) => item.id === playlistId && item.isSaved)).toBe(true);
+
+      const coverInit = await supertest(app.server)
+        .post(`/api/playlists/${playlistId}/cover/init`)
+        .set('Cookie', listenerCookie)
+        .send({ fileName: 'cover.png', mimeType: 'image/png', fileSize: 1024 });
+      expect(coverInit.statusCode).toBe(200);
+      objectMetadata.set(coverInit.body.coverKey, {
+        exists: true,
+        size: 1024,
+        mimeType: 'image/png'
+      });
+      const coverComplete = await supertest(app.server)
+        .post(`/api/playlists/${playlistId}/cover/complete`)
+        .set('Cookie', listenerCookie)
+        .send({ coverKey: coverInit.body.coverKey });
+      expect(coverComplete.statusCode).toBe(200);
+      expect(coverComplete.body.playlist.hasCoverImage).toBe(true);
+
+      const removed = await supertest(app.server)
+        .delete(`/api/playlists/${playlistId}/tracks/${tracks[0].id}`)
+        .set('Cookie', listenerCookie);
+      expect(removed.statusCode).toBe(204);
+
+      const unsaved = await supertest(app.server)
+        .delete(`/api/playlists/${playlistId}/save`)
+        .set('Cookie', artistCookie);
+      expect(unsaved.statusCode).toBe(200);
+
+      const deleted = await supertest(app.server)
+        .delete(`/api/playlists/${playlistId}`)
+        .set('Cookie', listenerCookie);
+      expect(deleted.statusCode).toBe(204);
+      expect((await supertest(app.server).get(`/api/playlists/${playlistId}`)).statusCode).toBe(404);
+    });
+  });
+
   describe('upload runtime', () => {
     it('requires authentication and an artist role', async () => {
       const unauthenticated = await supertest(app.server)

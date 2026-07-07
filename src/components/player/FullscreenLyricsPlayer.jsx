@@ -221,9 +221,6 @@ export default function FullscreenLyricsPlayer({
           imageClassName="object-cover"
         />
         <div className="min-w-0">
-          <p className="text-[10px] font-black uppercase tracking-[0.22em] text-rose-300 sm:text-[11px]">
-            {t('player.lyricsFullscreenTitle')}
-          </p>
           <h1 className="truncate text-sm font-black text-white sm:text-base">{currentTrack.title}</h1>
           <p className="truncate text-xs font-medium text-zinc-400 sm:text-sm">{currentTrack.artistName}</p>
         </div>
