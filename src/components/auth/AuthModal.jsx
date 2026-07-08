@@ -113,7 +113,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="auth-modal-title"
-        className="w-full max-w-md max-h-[92dvh] overflow-y-auto bg-zinc-950 border border-zinc-800 shadow-2xl shadow-brand-red/10 rounded-t-[1.75rem] sm:rounded-[1.75rem] relative animate-in fade-in zoom-in-95 duration-200 mobile-safe-bottom"
+        className="w-full max-w-md max-h-[92dvh] overflow-y-auto bg-zinc-950 border border-zinc-800 shadow-2xl shadow-brand-red/10 rounded-t-[var(--ns-radius-hero)] sm:rounded-[var(--ns-radius-hero)] relative animate-in fade-in zoom-in-95 duration-200 mobile-safe-bottom"
         onClick={e => e.stopPropagation()}
       >
         <button 

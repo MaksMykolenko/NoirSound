@@ -112,7 +112,7 @@ export default function LyricsEditModal({ open, track, onClose, onSaved }) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="lyrics-edit-title"
-        className="relative max-h-[94vh] w-full overflow-y-auto rounded-t-[1.75rem] border border-zinc-800 bg-brand-black p-5 shadow-2xl sm:max-w-3xl sm:rounded-[1.75rem] sm:p-6"
+        className="relative max-h-[94vh] w-full overflow-y-auto rounded-t-[var(--ns-radius-hero)] border border-zinc-800 bg-brand-black p-5 shadow-2xl sm:max-w-3xl sm:rounded-[var(--ns-radius-hero)] sm:p-6"
       >
         <header className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-zinc-800 bg-brand-black pb-4">
           <div>

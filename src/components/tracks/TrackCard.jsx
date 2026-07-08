@@ -63,7 +63,7 @@ export default function TrackCard({ track, tracksContext = [] }) {
           title={track.title}
           artistName={track.artistName}
           genre={track.genre}
-          className="w-full h-full group-hover:scale-105 transition-transform duration-500"
+          className="w-full h-full"
           imageClassName="object-cover"
           loading="lazy"
         />
@@ -75,7 +75,7 @@ export default function TrackCard({ track, tracksContext = [] }) {
           {canPlay ? (
           <button
             onClick={handlePlayClick}
-            className="w-12 h-12 bg-brand-red text-[var(--ns-on-accent)] rounded-full flex items-center justify-center shadow-[0_0_18px_var(--ns-accent-glow)] transform scale-90 group-hover:scale-100 hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer"
+            className="w-12 h-12 bg-brand-red text-[var(--ns-on-accent)] rounded-full flex items-center justify-center shadow-[0_0_18px_var(--ns-accent-glow)] transform scale-90 group-hover:scale-100 transition-all duration-200 cursor-pointer"
             aria-label={isPlayingThis ? `Pause ${track.title}` : `Play ${track.title}`}
           >
             {isPlayingThis ? (

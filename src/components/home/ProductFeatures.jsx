@@ -25,7 +25,6 @@ export default function ProductFeatures() {
             key={key}
             className="group relative overflow-hidden p-5 ns-card ns-card-interactive min-h-44"
           >
-            <div className="absolute -right-10 -top-10 w-28 h-28 rounded-full bg-brand-red/0 blur-3xl group-hover:bg-brand-red/10 transition-colors duration-500" />
             <div className="relative">
               <span className="w-11 h-11 rounded-xl bg-zinc-950 border border-zinc-800 text-brand-red flex items-center justify-center mb-5 group-hover:border-brand-red/30 group-hover:shadow-[0_0_20px_var(--ns-accent-glow-soft)] transition-all">
                 <Icon size={20} aria-hidden="true" />

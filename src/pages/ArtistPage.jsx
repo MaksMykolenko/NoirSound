@@ -141,7 +141,7 @@ export default function ArtistPage() {
       />
 
       {/* Hero / Header Box */}
-      <section className="relative rounded-[1.75rem] overflow-hidden border border-zinc-800/70 bg-zinc-950 shadow-2xl">
+      <section className="relative ns-card-hero overflow-hidden border border-zinc-800/70 bg-zinc-950 shadow-2xl">
         <div 
           className="h-44 md:h-52 w-full transition-all duration-500"
           style={{ background: artist.bannerUrl || 'linear-gradient(135deg, var(--ns-accent-deep) 0%, var(--ns-bg) 100%)' }}
@@ -171,7 +171,7 @@ export default function ArtistPage() {
             
             <div className="flex items-center justify-center md:justify-start gap-2">
               {artist.username && <p className="text-sm text-zinc-400 font-medium">@{artist.username}</p>}
-              <span className="text-[10px] uppercase tracking-wider font-bold text-purple-300 border border-purple-400/20 bg-purple-500/10 rounded-full px-2 py-1">
+              <span className="text-[10px] uppercase tracking-wider font-bold text-brand-purple border border-brand-purple/20 bg-brand-purple/10 rounded-full px-2 py-1">
                 {t('profile.independentArtist')}
               </span>
             </div>

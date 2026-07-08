@@ -94,8 +94,8 @@ export default function TrackPage() {
   if (loading) {
     return (
       <div className="space-y-4 animate-pulse">
-        <section className="bg-brand-graphite/20 border border-zinc-900/60 p-6 md:p-8 rounded-[1.75rem] h-72"></section>
-        <div className="h-28 bg-brand-graphite/40 border border-zinc-900/60 rounded-[1.75rem]"></div>
+        <section className="bg-brand-graphite/20 border border-zinc-900/60 p-6 md:p-8 ns-card-hero h-72"></section>
+        <div className="h-28 bg-brand-graphite/40 border border-zinc-900/60 ns-card-hero"></div>
       </div>
     );
   }
@@ -184,7 +184,7 @@ export default function TrackPage() {
 
         {/* HERO */}
         <section
-          className="relative overflow-hidden isolate ns-card rounded-[1.75rem] p-5 sm:p-7 md:p-8"
+          className="relative overflow-hidden isolate ns-card ns-card-hero p-5 sm:p-7 md:p-8"
           onContextMenu={contextMenuProps.onContextMenu}
           onKeyDown={contextMenuProps.onKeyDown}
           tabIndex={0}

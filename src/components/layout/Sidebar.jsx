@@ -139,7 +139,7 @@ export default function Sidebar() {
                 className={({ isActive }) =>
                   `flex items-center space-x-3.5 px-3.5 py-2.5 min-h-11 rounded-xl text-sm font-semibold transition-all duration-200 cursor-pointer ${
                     isActive
-                      ? 'bg-gradient-to-r from-brand-red/14 to-purple-500/5 text-rose-300 border border-brand-red/25 shadow-[inset_3px_0_0_var(--ns-accent)]'
+                      ? 'bg-gradient-to-r from-brand-red/14 to-brand-purple/5 text-rose-300 border border-brand-red/25 shadow-[inset_3px_0_0_var(--ns-accent)]'
                       : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900/65 border border-transparent'
                   }`
                 }

@@ -6,9 +6,6 @@ export default function StatsCard({ title, value, change, iconName, trend = 'up'
 
   return (
     <div className="p-5 ns-card ns-card-interactive relative overflow-hidden group">
-      {/* Decorative background glow */}
-      <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-brand-red/5 rounded-full blur-2xl group-hover:bg-brand-red/10 transition-all duration-500"></div>
-
       <div className="flex justify-between items-start mb-4">
         <span className="text-[12px] uppercase text-zinc-400 font-bold tracking-wider">{title}</span>
         <div className="p-2.5 bg-zinc-900 border border-zinc-800 text-brand-red rounded-xl">

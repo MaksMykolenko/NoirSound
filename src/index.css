@@ -107,6 +107,7 @@
   --ns-card-padding: clamp(1rem, 2vw, 1.5rem);
   --ns-grid-gap: clamp(1rem, 2vw, 1.5rem);
   --ns-radius-card: 1.25rem;
+  --ns-radius-hero: 1.75rem;
   --ns-radius-control: 0.75rem;
   --ns-radius-modal: 1.5rem;
   --ns-shadow-card: 0 18px 50px color-mix(in srgb, var(--ns-shadow-color) 66%, transparent);
@@ -492,6 +493,27 @@ main {
   border-color: var(--ns-border-strong);
   box-shadow: 0 20px 56px var(--ns-shadow-color);
   transform: translateY(-3px);
+}
+
+/* Page-level hero/feature panels (playlist/track/artist headers, auth and
+   lyrics-edit modals, the home hero, the batch dropzone) share one radius,
+   deliberately larger than an ordinary .ns-card, so it gets its own named
+   token instead of being re-typed as an arbitrary rounded-[1.75rem] value
+   in every file that needs it. */
+.ns-card-hero {
+  border-radius: var(--ns-radius-hero);
+}
+
+/* Quiet hover for dense rows (track/playlist lists, tables): background and
+   border only, no lift or shadow growth. Kept distinct from
+   .ns-card-interactive (used by spacious card grids) so a list row can
+   never accidentally inherit a card's hover lift. */
+.ns-row-interactive {
+  transition: background-color 150ms ease, border-color 150ms ease;
+}
+
+.ns-row-interactive:hover {
+  background: var(--ns-hover-bg);
 }
 
 .ns-button-primary,

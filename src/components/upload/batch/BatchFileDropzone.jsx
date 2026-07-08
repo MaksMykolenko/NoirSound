@@ -30,7 +30,7 @@ export default function BatchFileDropzone({
   return (
     <section className="space-y-5" data-testid="batch-file-stage">
       <div
-        className={`min-h-64 rounded-[1.75rem] border-2 border-dashed p-7 flex flex-col items-center justify-center text-center transition-colors ${
+        className={`min-h-64 ns-card-hero border-2 border-dashed p-7 flex flex-col items-center justify-center text-center transition-colors ${
           dragging ? 'border-brand-red bg-brand-red/10' : 'border-zinc-700 bg-zinc-950/40 hover:border-zinc-600'
         }`}
         onDragEnter={(event) => { event.preventDefault(); setDragging(true); }}

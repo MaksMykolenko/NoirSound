@@ -9,7 +9,7 @@ export default function HomeHero({ onDiscover, onUpload }) {
   return (
     <section
       data-testid="home-hero"
-      className="relative min-h-[300px] sm:min-h-[320px] md:min-h-[340px] overflow-hidden rounded-[1.75rem] border border-zinc-800/70 bg-[var(--ns-hero-bg)] shadow-2xl flex items-center"
+      className="relative min-h-[300px] sm:min-h-[320px] md:min-h-[340px] overflow-hidden ns-card-hero border border-zinc-800/70 bg-[var(--ns-hero-bg)] shadow-2xl flex items-center"
     >
       <div
         className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-50 scale-100 hover:scale-[1.02] transition-transform duration-[6000ms]"

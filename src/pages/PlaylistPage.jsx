@@ -327,7 +327,7 @@ export default function PlaylistPage() {
         onContextMenu={contextMenuProps.onContextMenu}
         onKeyDown={contextMenuProps.onKeyDown}
         tabIndex={0}
-        className="relative flex flex-col md:flex-row gap-6 md:gap-8 items-center md:items-end p-5 sm:p-6 md:p-8 rounded-[1.75rem] ns-card focus:outline-none focus:ring-1 focus:ring-brand-red/50"
+        className="relative flex flex-col md:flex-row gap-6 md:gap-8 items-center md:items-end p-5 sm:p-6 md:p-8 ns-card ns-card-hero focus:outline-none focus:ring-1 focus:ring-brand-red/50"
       >
         <button type="button" onClick={openFromButton} className="absolute right-4 top-4 ns-icon-button !min-h-10 !min-w-10 text-zinc-400" aria-label={`More actions for ${playlist.name}`} aria-haspopup="menu">
           <MoreHorizontal size={18} />

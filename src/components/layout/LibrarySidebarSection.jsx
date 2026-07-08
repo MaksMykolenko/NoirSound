@@ -123,7 +123,7 @@ export default function LibrarySidebarSection({ onItemClick }) {
       <div className="flex-1 overflow-y-auto px-1 space-y-4 pb-6">
         <div className="space-y-1.5">
           <button onClick={() => handleNav('/library?tab=liked')} className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-zinc-900/55 text-left cursor-pointer transition-colors">
-            <span className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-red to-purple-600 text-[var(--ns-on-accent)] flex items-center justify-center shrink-0">
+            <span className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-red to-brand-purple text-[var(--ns-on-accent)] flex items-center justify-center shrink-0">
               <Heart size={15} fill="currentColor" />
             </span>
             <span className="min-w-0 flex-1 truncate">

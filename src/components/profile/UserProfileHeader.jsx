@@ -16,7 +16,7 @@ export default function UserProfileHeader({ user, onEditClick }) {
   };
 
   return (
-    <section className="relative rounded-[1.75rem] overflow-hidden border border-zinc-800/70 bg-zinc-950 shadow-2xl">
+    <section className="relative ns-card-hero overflow-hidden border border-zinc-800/70 bg-zinc-950 shadow-2xl">
       {/* Banner */}
       <div
         className="h-44 md:h-52 w-full transition-all duration-500"
@@ -44,11 +44,11 @@ export default function UserProfileHeader({ user, onEditClick }) {
             <div className="flex items-center justify-center md:justify-start gap-2">
               <p className="text-sm text-zinc-400 font-semibold">@{user.username || 'listener'}</p>
               {(user.artistProfileId || user.role === 'ARTIST') ? (
-                <span className="text-[10px] uppercase tracking-wider font-bold text-purple-300 border border-purple-400/20 bg-purple-500/10 rounded-full px-2.5 py-0.5">
+                <span className="text-[10px] uppercase tracking-wider font-bold text-brand-purple border border-brand-purple/20 bg-brand-purple/10 rounded-full px-2.5 py-0.5">
                   {t('profile.creator')}
                 </span>
               ) : (
-                <span className="text-[10px] uppercase tracking-wider font-bold text-blue-300 border border-blue-400/20 bg-blue-500/10 rounded-full px-2.5 py-0.5">
+                <span className="text-[10px] uppercase tracking-wider font-bold text-zinc-400 border border-zinc-700/50 bg-zinc-800/40 rounded-full px-2.5 py-0.5">
                   {t('profile.listener')}
                 </span>
               )}

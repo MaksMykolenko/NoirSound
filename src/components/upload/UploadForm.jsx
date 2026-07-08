@@ -401,7 +401,7 @@ export default function UploadForm() {
 
         {/* Cover image upload box */}
         <div className={`relative min-h-44 border-2 border-dashed rounded-2xl p-5 text-center transition-colors group overflow-hidden cursor-pointer ${
-          coverFile ? 'border-purple-400/35 bg-purple-500/5' : 'border-zinc-800 hover:border-zinc-700 bg-zinc-950/40'
+          coverFile ? 'border-brand-purple/35 bg-brand-purple/5' : 'border-zinc-800 hover:border-zinc-700 bg-zinc-950/40'
         }`}>
           <input
             id="track-artwork"

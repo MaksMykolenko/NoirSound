@@ -83,11 +83,9 @@ export default function ArtistCard({ artist }) {
         <FallbackAvatar
           src={artist.avatarUrl}
           name={artist.name}
-          className="w-full h-full text-[112px] group-hover:scale-105 transition-transform duration-500"
+          className="w-full h-full text-[112px]"
           imageClassName="object-cover"
         />
-        {/* Glow effect on hover */}
-        <div className="absolute inset-0 bg-brand-red/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
       </div>
 
       {/* Details */}

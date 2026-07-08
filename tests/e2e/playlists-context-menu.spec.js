@@ -50,7 +50,7 @@ test.describe('Playlists and custom context menu', () => {
     const createDialog = page.getByRole('dialog', { name: 'New Playlist' });
     await createDialog.getByLabel('Playlist name').fill(initialName);
     await createDialog.getByText('Public playlist').click();
-    await createDialog.getByRole('button', { name: 'Create Playlist' }).click();
+    await createDialog.getByRole('button', { name: 'Create Playlist', exact: true }).click();
 
     await expect(page.getByRole('heading', { level: 1, name: initialName })).toBeVisible();
     await page.getByRole('button', { name: 'Edit playlist' }).click();

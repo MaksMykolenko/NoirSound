@@ -9,7 +9,7 @@ export default function UserActivityItem({ item }) {
       case 'follow':
         return <UserPlus size={14} className="text-blue-400" />;
       case 'playlist':
-        return <ListMusic size={14} className="text-purple-400" />;
+        return <ListMusic size={14} className="text-brand-purple" />;
       case 'play':
         return <Play size={14} className="text-emerald-400 fill-emerald-400/20" />;
       case 'playlist-add':

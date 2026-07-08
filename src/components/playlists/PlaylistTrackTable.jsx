@@ -148,7 +148,19 @@ function DesktopRow({
       </td>
       <td className="min-w-0 py-2 pr-3">
         {isAvailable ? (
-          <div className="flex min-w-0 cursor-pointer items-center gap-3" onClick={handleOpenTrack}>
+          <div
+            role="link"
+            tabIndex={0}
+            aria-label={`Open ${track.title} by ${track.artistName}`}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                handleOpenTrack();
+              }
+            }}
+            className="flex min-w-0 cursor-pointer items-center gap-3"
+            onClick={handleOpenTrack}
+          >
             <FallbackCover
               src={track.coverUrl}
               title={track.title}

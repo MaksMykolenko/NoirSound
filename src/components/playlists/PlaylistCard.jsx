@@ -57,7 +57,7 @@ export default function PlaylistCard({ playlist, onToggleSaved, onEdit, onDelete
           title={playlist.name}
           artistName={playlist.creator}
           genre="Playlist"
-          className="w-full h-full group-hover:scale-105 transition-transform duration-500"
+          className="w-full h-full"
           imageClassName="object-cover"
           loading="lazy"
         />
@@ -66,7 +66,7 @@ export default function PlaylistCard({ playlist, onToggleSaved, onEdit, onDelete
         <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
           <button
             onClick={handlePlayClick}
-            className="w-12 h-12 bg-brand-red text-[var(--ns-on-accent)] rounded-full flex items-center justify-center shadow-[0_0_15px_var(--ns-accent-glow)] transform scale-90 group-hover:scale-100 hover:scale-110 active:scale-95 transition-all duration-200 cursor-pointer"
+            className="w-12 h-12 bg-brand-red text-[var(--ns-on-accent)] rounded-full flex items-center justify-center shadow-[0_0_15px_var(--ns-accent-glow)] transform scale-90 group-hover:scale-100 transition-all duration-200 cursor-pointer"
             aria-label={`Play ${playlist.name}`}
           >
             <Play size={20} className="translate-x-[1px]" fill="white" strokeWidth={0} />
