@@ -36,6 +36,7 @@ async function createFixture(page, { withTrack = false } = {}) {
 
 test.describe('Playlists and custom context menu', () => {
   test.beforeEach(async ({ page, request }) => {
+    page.on('console', (msg) => console.log(`[BROWSER] ${msg.text()}`));
     test.skip(!(await backendUp(request)), 'Backend not reachable — full-stack playlist test skipped.');
     await loginAsListener(page);
   });
