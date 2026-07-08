@@ -194,7 +194,7 @@ jobs:
             -e MINIO_ROOT_PASSWORD=minioadmin \
             minio/minio server /data
           sleep 5
-          docker run --rm --network host minio/mc sh -c "until mc alias set ns http://localhost:9000 minioadmin minioadmin; do sleep 1; done; mc mb --ignore-existing ns/noirsound-audio; mc anonymous set none ns/noirsound-audio"
+          docker run --rm --network host --entrypoint sh minio/mc -c "until mc alias set ns http://localhost:9000 minioadmin minioadmin; do sleep 1; done; mc mb --ignore-existing ns/noirsound-audio; mc anonymous set none ns/noirsound-audio"
       - name: Install dependencies
         run: npm ci && (cd backend && npm ci)
       - name: Migrate and seed
