@@ -80,7 +80,7 @@ function DesktopRow({
   const navigate = useNavigate();
   const { player, isCurrent, isPlayingThis, isAvailable, canPlay, isLiked } = useRowContext(track);
   const busy = Boolean(pending);
-  const { contextMenuProps, openFromButton } = useTrackContextMenu(track, {
+  const contextMenuOptions = useMemo(() => ({
     removeFromPlaylist: owner && onRemoveTrack ? () => onRemoveTrack(track) : undefined,
     moveUp: owner && isCustomOrder && onMoveTrack
       ? { action: () => onMoveTrack(index, -1), disabled: index === 0 || busy }
@@ -88,7 +88,9 @@ function DesktopRow({
     moveDown: owner && isCustomOrder && onMoveTrack
       ? { action: () => onMoveTrack(index, 1), disabled: index === queueTracks.length - 1 || busy }
       : undefined,
-  });
+  }), [owner, onRemoveTrack, track, isCustomOrder, onMoveTrack, index, busy, queueTracks.length]);
+
+  const { contextMenuProps, openFromButton } = useTrackContextMenu(track, contextMenuOptions);
 
   const handlePlay = (event) => {
     event.stopPropagation();
@@ -160,6 +162,7 @@ function DesktopRow({
             }}
             className="flex min-w-0 cursor-pointer items-center gap-3"
             onClick={handleOpenTrack}
+            onContextMenu={contextMenuProps.onContextMenu}
           >
             <FallbackCover
               src={track.coverUrl}
@@ -278,7 +281,7 @@ function MobileRow({
   const navigate = useNavigate();
   const { player, isCurrent, isPlayingThis, isAvailable, canPlay, isLiked } = useRowContext(track);
   const busy = Boolean(pending);
-  const { contextMenuProps, openFromButton } = useTrackContextMenu(track, {
+  const contextMenuOptions = useMemo(() => ({
     removeFromPlaylist: owner && onRemoveTrack ? () => onRemoveTrack(track) : undefined,
     moveUp: owner && isCustomOrder && onMoveTrack
       ? { action: () => onMoveTrack(index, -1), disabled: index === 0 || busy }
@@ -286,7 +289,9 @@ function MobileRow({
     moveDown: owner && isCustomOrder && onMoveTrack
       ? { action: () => onMoveTrack(index, 1), disabled: index === queueTracks.length - 1 || busy }
       : undefined,
-  });
+  }), [owner, onRemoveTrack, track, isCustomOrder, onMoveTrack, index, busy, queueTracks.length]);
+
+  const { contextMenuProps, openFromButton } = useTrackContextMenu(track, contextMenuOptions);
   const albumInfo = albumCellInfo(track, t);
 
   const handleTap = () => {
