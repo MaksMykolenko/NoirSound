@@ -49,7 +49,10 @@ export default function ContextMenu({
     const handlePointerDown = (event) => {
       if (!menuRef.current?.contains(event.target)) onClose();
     };
-    const handleResize = () => onClose();
+    const handleResize = (event) => {
+      console.log('[context-menu-debug] Scroll/resize event fired, type:', event.type);
+      onClose();
+    };
     document.addEventListener('pointerdown', handlePointerDown, true);
     window.addEventListener('resize', handleResize);
     window.addEventListener('scroll', handleResize, true);
