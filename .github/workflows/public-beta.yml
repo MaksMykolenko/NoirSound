@@ -140,6 +140,9 @@ jobs:
             --from-migrations prisma/migrations \
             --to-schema prisma/schema.prisma \
             --exit-code
+      - name: Generate Prisma Client
+        working-directory: backend
+        run: npx prisma generate
       - name: Run isolated security/unit tests
         working-directory: backend
         run: npm run test:unit

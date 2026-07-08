@@ -75,25 +75,25 @@ export default function ArtistPage() {
     return (
       <EmptyState
         iconName="Mic2"
-        title="Artist not found"
-        description="This artist profile does not exist."
-        actionText="Return to Discover"
+        title={t('profile.artistNotFound')}
+        description={t('profile.artistNotFoundDesc')}
+        actionText={t('profile.returnToDiscover')}
         onAction={() => navigate('/discover')}
       />
     );
   }
 
   if (error) {
-    return <div className="py-16"><ErrorState title="Artist profile unavailable" message={error} /></div>;
+    return <div className="py-16"><ErrorState title={t('profile.artistUnavailable')} message={error} /></div>;
   }
 
   if (!artist) {
     return (
       <EmptyState
         iconName="Mic2"
-        title="Artist not found"
-        description="This creator has left the night studio."
-        actionText="Return to Discover"
+        title={t('profile.artistNotFound')}
+        description={t('profile.artistGoneDesc')}
+        actionText={t('profile.returnToDiscover')}
         onAction={() => navigate('/discover')}
       />
     );
@@ -222,13 +222,13 @@ export default function ArtistPage() {
           
           {/* Top tracks list */}
           <section className="space-y-4">
-            <h2 className="ns-eyebrow px-1">Top Tracks</h2>
+            <h2 className="ns-eyebrow px-1">{t('profile.topTracks')}</h2>
             <div className="ns-card p-2 sm:p-4 space-y-2">
               {artistTracks.length === 0 ? (
                 <EmptyState
                   iconName="Music2"
-                  title="No releases yet"
-                  description="This artist has not published a track on NoirSound yet."
+                  title={t('empty.noReleasesYet')}
+                  description={t('profile.artistNoTracksDesc')}
                 />
               ) : (
                 artistTracks.map((track, idx) => (
@@ -245,7 +245,7 @@ export default function ArtistPage() {
 
           {/* Singles derived from this artist's published API tracks. */}
           <section className="space-y-4">
-            <h2 className="ns-eyebrow px-1">Singles & EPs</h2>
+            <h2 className="ns-eyebrow px-1">{t('profile.singlesAndEps')}</h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
               {artistTracks.map((track) => (
                 <div
