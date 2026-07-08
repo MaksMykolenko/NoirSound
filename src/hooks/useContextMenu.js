@@ -12,9 +12,13 @@ const NATIVE_TARGET_SELECTOR = [
 
 export function shouldKeepNativeContextMenu(target) {
   if (!(target instanceof Element)) return false;
-  if (target.closest(NATIVE_TARGET_SELECTOR)) return true;
+  const closest = target.closest(NATIVE_TARGET_SELECTOR);
+  console.log('[context-menu-debug] closest native:', closest ? closest.tagName : null);
+  if (closest) return true;
   const selection = window.getSelection?.();
-  return Boolean(selection && !selection.isCollapsed && selection.toString().trim());
+  const selectedText = selection && !selection.isCollapsed && selection.toString().trim();
+  console.log('[context-menu-debug] selectedText:', selectedText);
+  return Boolean(selectedText);
 }
 
 export default function useContextMenu(itemsOrFactory, dependencies = []) {
@@ -29,7 +33,11 @@ export default function useContextMenu(itemsOrFactory, dependencies = []) {
   const openAt = useCallback((eventOrPoint, invoker) => {
     const isEvent = typeof eventOrPoint?.preventDefault === 'function';
     const target = isEvent ? eventOrPoint.target : invoker;
-    if (isEvent && shouldKeepNativeContextMenu(target)) return false;
+    console.log('[context-menu-debug] openAt target:', target ? { tagName: target.tagName, className: target.className, role: target.getAttribute?.('role') } : null);
+    const keepNative = isEvent && shouldKeepNativeContextMenu(target);
+    console.log('[context-menu-debug] keepNative:', keepNative);
+    console.log('[context-menu-debug] items:', items ? items.length : null);
+    if (keepNative) return false;
     if (isEvent) {
       eventOrPoint.preventDefault();
       eventOrPoint.stopPropagation();
