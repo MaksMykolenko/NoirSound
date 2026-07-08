@@ -25,6 +25,11 @@ export default function ContextMenu({
   const { t } = useTranslation();
   const menuRef = useRef(null);
   const itemRefs = useRef([]);
+  const mountTimeRef = useRef(null);
+  if (mountTimeRef.current === null) {
+    mountTimeRef.current = Date.now();
+  }
+
   const [position, setPosition] = useState(anchor);
   const [activeIndex, setActiveIndex] = useState(() => nextEnabledIndex(items, -1, 1));
   const [pendingId, setPendingId] = useState(null);
@@ -50,7 +55,9 @@ export default function ContextMenu({
       if (!menuRef.current?.contains(event.target)) onClose();
     };
     const handleResize = (event) => {
-      console.log('[context-menu-debug] Scroll/resize event fired, type:', event.type);
+      if (event.type === 'scroll' && Date.now() - mountTimeRef.current < 250) {
+        return;
+      }
       onClose();
     };
     document.addEventListener('pointerdown', handlePointerDown, true);

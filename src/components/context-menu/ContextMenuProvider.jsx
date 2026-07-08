@@ -26,10 +26,7 @@ export default function ContextMenuProvider({ children }) {
   }, [closeContextMenu, setAuthModalOpen, user]);
 
   useEffect(() => {
-    const close = () => {
-      console.log('[context-menu-debug] Window blur closing menu');
-      closeContextMenu();
-    };
+    const close = () => closeContextMenu();
     window.addEventListener('blur', close);
     return () => window.removeEventListener('blur', close);
   }, [closeContextMenu]);
