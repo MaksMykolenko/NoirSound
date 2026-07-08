@@ -73,7 +73,7 @@ test.describe('Playlists and custom context menu', () => {
 
     const track = page.locator('[data-track-id]').filter({ visible: true });
     await expect(track).toHaveCount(1);
-    await track.click({ button: 'right', position: { x: 50, y: 15 } });
+    await track.getByRole('link').click({ button: 'right' });
     await expect(page.getByRole('menuitem', { name: 'Play next' })).toBeVisible();
     await expect(page.getByRole('menuitem', { name: 'Add to playlist' })).toBeVisible();
     await page.keyboard.press('Escape');
