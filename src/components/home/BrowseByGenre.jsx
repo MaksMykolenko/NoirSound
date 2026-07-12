@@ -28,10 +28,10 @@ export default function BrowseByGenre({ onSelect }) {
   return (
     <section
       data-testid="home-genre-browser"
-      className="flex flex-col gap-3 rounded-lg border border-zinc-800/60 bg-zinc-950/35 p-4 xl:flex-row xl:items-center"
+      className="flex flex-col gap-3 border-y border-zinc-800/60 py-4 xl:flex-row xl:items-center"
     >
       <div className="flex items-center gap-3 xl:w-64 xl:shrink-0">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded border border-brand-red/20 bg-brand-red/5 text-brand-red">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center text-brand-red">
           <Tags size={18} aria-hidden="true" />
         </span>
         <div className="min-w-0">
@@ -40,7 +40,7 @@ export default function BrowseByGenre({ onSelect }) {
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 min-w-0">
+      <div className="ns-tabs-scroll -mx-4 flex min-w-0 flex-nowrap items-center gap-1.5 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:gap-2 sm:overflow-visible sm:px-0 sm:pb-0">
         {HOME_GENRES.map((item) => (
           <button
             key={item.id}

@@ -20,8 +20,8 @@ export default function UserActivityItem({ item }) {
   };
 
   return (
-    <div className="flex items-start gap-3 rounded-md border border-zinc-800/60 bg-zinc-950/35 p-3 transition-colors hover:border-zinc-700/70 hover:bg-zinc-900/40">
-      <div className="mt-0.5 shrink-0 rounded border border-zinc-800 bg-zinc-950 p-2">
+    <div className="flex items-start gap-3 border-b border-zinc-800/60 px-1 py-3 transition-colors hover:bg-zinc-900/30">
+      <div className="mt-0.5 shrink-0 p-2">
         {getIcon()}
       </div>
       <div className="flex-1 min-w-0">

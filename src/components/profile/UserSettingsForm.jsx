@@ -64,7 +64,7 @@ export default function UserSettingsForm() {
         </div>
       )}
 
-      <ThemeSelector className="rounded-lg border border-zinc-800/70 bg-zinc-950/35 p-4" />
+      <ThemeSelector className="border-b border-zinc-800/70 pb-6" />
 
       {/* Inputs grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -160,7 +160,7 @@ export default function UserSettingsForm() {
       </div>
 
       {/* Language Preferences */}
-      <div className="rounded-md border border-zinc-800/60 bg-zinc-950/40 p-4">
+      <div className="border-y border-zinc-800/60 py-4">
         <LanguageSwitcher />
       </div>
 

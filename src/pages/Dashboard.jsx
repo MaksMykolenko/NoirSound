@@ -34,8 +34,8 @@ function TrackStatusBadge({ status }) {
 
 function TrackRow({ track, onOpen, onEditLyrics, trailing }) {
   return (
-    <div className="flex w-full items-center justify-between gap-2 rounded-md border border-transparent p-2 transition-colors hover:border-zinc-800/50 hover:bg-zinc-900/40">
-      <button onClick={onOpen} className="flex min-w-0 flex-1 items-center gap-3 text-left cursor-pointer">
+    <div className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-2 py-2.5 transition-colors hover:bg-zinc-900/35 sm:px-2">
+      <button onClick={onOpen} className="flex min-w-0 items-center gap-3 text-left cursor-pointer">
           <FallbackCover
             src={track.coverUrl}
             title={track.title}
@@ -43,15 +43,15 @@ function TrackRow({ track, onOpen, onEditLyrics, trailing }) {
             className="h-10 w-10 rounded"
             imageClassName="object-cover"
           />
-          <div className="min-w-0">
-            <h3 className="flex items-center gap-1.5 truncate text-ns-body-sm font-semibold text-zinc-200">
-              {track.title}
+          <div className="min-w-0 flex-1">
+            <h3 className="flex min-w-0 items-center gap-1.5 text-ns-body-sm font-semibold text-zinc-200">
+              <span className="truncate">{track.title}</span>
               {track.hasLyrics && <FileText size={12} className="shrink-0 text-brand-red" />}
             </h3>
             <p className="font-sans tabular-nums text-ns-meta text-zinc-500">{getLocalizedGenre(track.genre) || 'Uncategorized'}</p>
           </div>
       </button>
-      <div className="flex shrink-0 items-center gap-2">
+      <div className="flex min-w-0 shrink-0 items-center gap-1.5">
         <button
           type="button"
           onClick={() => onEditLyrics(track)}
@@ -60,7 +60,7 @@ function TrackRow({ track, onOpen, onEditLyrics, trailing }) {
         >
           <FileText size={14} />
         </button>
-        <div>{trailing}</div>
+        <div className="max-w-28 truncate sm:max-w-none">{trailing}</div>
       </div>
     </div>
   );
@@ -158,25 +158,24 @@ export default function Dashboard() {
       {loading ? (
         <LoadingState type="list" count={4} />
       ) : tracks.length === 0 ? (
-        <EmptyState
-          iconName="UploadCloud"
-          title={t('dashboard.emptyState')}
-          description="Only persisted, published releases and their backend metrics are shown."
-          actionText={t('actions.uploadTrack')}
-          onAction={() => navigate('/upload')}
-        />
+        <section className="mx-auto flex max-w-2xl flex-col items-center py-8 text-center sm:py-12" aria-labelledby="dashboard-empty-title">
+          <UploadCloud className="mb-3 h-7 w-7 text-brand-red" aria-hidden="true" />
+          <h2 id="dashboard-empty-title" className="ns-section-title">{t('dashboard.emptyState')}</h2>
+          <p className="mt-2 max-w-xl text-sm leading-relaxed text-zinc-500">{t('dashboard.emptyDescription')}</p>
+        </section>
       ) : (
         <>
-          <section className="grid grid-cols-1 min-[430px]:grid-cols-2 md:grid-cols-4 gap-4">
+          <section aria-label={t('dashboard.title')} className="grid grid-cols-1 divide-y divide-zinc-800/70 border-y border-zinc-800/70 min-[430px]:grid-cols-2 min-[430px]:divide-x min-[430px]:divide-y-0 lg:grid-cols-4">
             <StatsCard title={t('dashboard.totalStreams')} value={formatNumber(totalStreams)} iconName="Play" />
             <StatsCard title={t('dashboard.hearts')} value={formatNumber(totalLikes)} iconName="Heart" />
             <StatsCard title={t('dashboard.followers')} value={formatNumber(followers)} iconName="Users" />
             <StatsCard title={t('dashboard.monthlyListeners')} value={formatNumber(monthlyListeners)} iconName="Radio" />
           </section>
 
-          <section className="space-y-4">
-            <h2 className="ns-eyebrow px-1">{t('dashboard.topTracks')}</h2>
-            <div className="space-y-1 rounded-lg border border-zinc-800/60 bg-zinc-950/35 p-2 sm:p-3">
+          <div className="grid gap-8 xl:grid-cols-2">
+          <section className="space-y-3">
+            <h2 className="ns-section-title">{t('dashboard.topTracks')}</h2>
+            <div className="divide-y divide-zinc-800/60 border-y border-zinc-800/70">
               {topTracks.length === 0 ? (
                 <p className="text-sm text-zinc-500 p-2">{t('dashboard.noTopTracksYet')}</p>
               ) : (
@@ -197,9 +196,9 @@ export default function Dashboard() {
             </div>
           </section>
 
-          <section className="space-y-4">
-            <h2 className="ns-eyebrow px-1">Published Releases ({publishedTracks.length})</h2>
-            <div className="space-y-1 rounded-lg border border-zinc-800/60 bg-zinc-950/35 p-2 sm:p-3">
+          <section className="space-y-3">
+            <h2 className="ns-section-title">Published Releases ({publishedTracks.length})</h2>
+            <div className="divide-y divide-zinc-800/60 border-y border-zinc-800/70">
               {publishedTracks.length === 0 ? (
                 <p className="text-sm text-zinc-500 p-2">{t('empty.noReleasesYet')}</p>
               ) : (
@@ -216,9 +215,9 @@ export default function Dashboard() {
             </div>
           </section>
 
-          <section className="space-y-4">
-            <h2 className="ns-eyebrow px-1">{t('dashboard.recentUploads')}</h2>
-            <div className="space-y-1 rounded-lg border border-zinc-800/60 bg-zinc-950/35 p-2 sm:p-3">
+          <section className="space-y-3">
+            <h2 className="ns-section-title">{t('dashboard.recentUploads')}</h2>
+            <div className="divide-y divide-zinc-800/60 border-y border-zinc-800/70">
               {recentUploads.map((track) => (
                 <TrackRow
                   key={track.id}
@@ -231,9 +230,9 @@ export default function Dashboard() {
             </div>
           </section>
 
-          <section className="space-y-4">
-            <h2 className="ns-eyebrow px-1">{t('dashboard.failedUploads')}</h2>
-            <div className="space-y-1 rounded-lg border border-zinc-800/60 bg-zinc-950/35 p-2 sm:p-3">
+          <section className="space-y-3">
+            <h2 className="ns-section-title">{t('dashboard.failedUploads')}</h2>
+            <div className="divide-y divide-zinc-800/60 border-y border-zinc-800/70">
               {failedUploads.length === 0 ? (
                 <p className="text-sm text-zinc-500 p-2">{t('dashboard.noFailedUploads')}</p>
               ) : (
@@ -249,13 +248,14 @@ export default function Dashboard() {
               )}
             </div>
           </section>
+          </div>
 
-          <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="ns-state-panel !p-6">
+          <section className="grid grid-cols-1 divide-y divide-zinc-800/70 border-y border-zinc-800/70 md:grid-cols-2 md:divide-x md:divide-y-0">
+            <div className="p-5 sm:p-6">
               <h2 className="ns-eyebrow">{t('dashboard.geographyTitle')}</h2>
               <p className="text-sm text-zinc-400 mt-2">{t('dashboard.geographyUnavailable')}</p>
             </div>
-            <div className="ns-state-panel !p-6">
+            <div className="p-5 sm:p-6">
               <h2 className="ns-eyebrow">{t('dashboard.trendsTitle')}</h2>
               <p className="text-sm text-zinc-400 mt-2">{t('dashboard.trendsUnavailable')}</p>
             </div>

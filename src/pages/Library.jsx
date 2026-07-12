@@ -21,6 +21,8 @@ import EmptyState from '../components/ui/EmptyState';
 import ErrorState from '../components/ui/ErrorState';
 import LoadingState from '../components/ui/LoadingState';
 import CreatePlaylistModal from '../components/playlists/CreatePlaylistModal';
+import PageMeta from '../components/meta/PageMeta';
+import useScrollableTabs from '../hooks/useScrollableTabs';
 
 export default function Library() {
   const { t } = useTranslation();
@@ -36,6 +38,7 @@ export default function Library() {
   ];
 
   const activeTab = tabs.some((tab) => tab.id === requestedTab) ? requestedTab : 'liked';
+  const tabsRef = useScrollableTabs(activeTab);
   const demoMode = isMockMode();
 
   const { user, authHydrated, setAuthModalOpen } = useUserStore();
@@ -118,32 +121,44 @@ export default function Library() {
     return tracks;
   }, [demoMode, likedTracks, tracks]);
 
-  if (!authHydrated) return <LoadingState type="list" count={4} />;
+  const pageMeta = (
+    <PageMeta
+      title={`${t('nav.yourLibrary')} · NoirSound`}
+      description={t('library.subtitle')}
+      canonical="https://noirsound.co/library"
+    />
+  );
+
+  if (!authHydrated) return <>{pageMeta}<LoadingState type="list" count={4} /></>;
   if (!user) {
     return (
-      <EmptyState
-        iconName="Library"
-        title={t('empty.signInTitle')}
-        description={t('empty.signInDesc')}
-        actionText={t('header.signIn')}
-        onAction={() => setAuthModalOpen(true)}
-      />
+      <>
+        {pageMeta}
+        <EmptyState
+          iconName="Library"
+          title={t('empty.signInTitle')}
+          description={t('empty.signInDesc')}
+          actionText={t('header.signIn')}
+          onAction={() => setAuthModalOpen(true)}
+        />
+      </>
     );
   }
 
   return (
     <div className="ns-page-stack">
-      <div className="flex items-start justify-between gap-4">
+      {pageMeta}
+      <header className="flex flex-col items-start justify-between gap-4 sm:flex-row">
         <div>
           <h1 className="ns-page-title">{t('nav.yourLibrary')}</h1>
           <p className="ns-page-lede">{t('library.subtitle')}</p>
         </div>
         <button type="button" onClick={() => setCreateOpen(true)} className="ns-button-primary inline-flex min-h-11 shrink-0 items-center gap-2 px-4 text-sm">
-          <Plus size={15} /> New playlist
+          <Plus size={15} aria-hidden="true" /> {t('playlists.new')}
         </button>
-      </div>
+      </header>
 
-      <div className="ns-tabs-scroll flex shrink-0 gap-1 overflow-x-auto border-b border-zinc-800/60" role="tablist">
+      <div ref={tabsRef} className="ns-tabs-scroll ns-tabs-polish flex shrink-0 gap-1 overflow-x-auto border-b border-zinc-800/60" role="tablist">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const active = activeTab === tab.id;
@@ -153,6 +168,7 @@ export default function Library() {
               onClick={() => setSearchParams({ tab: tab.id })}
               role="tab"
               aria-selected={active}
+              aria-current={active ? 'page' : undefined}
               className={`ns-tab flex shrink-0 cursor-pointer items-center gap-2 whitespace-nowrap border-b-2 px-4 py-3 font-sans text-ns-label font-medium transition-colors sm:px-5 ${
                 active ? 'border-brand-red text-rose-300' : 'border-transparent text-zinc-500 hover:text-zinc-300'
               }`}
@@ -166,12 +182,20 @@ export default function Library() {
 
       <div className="pt-2">
         {error ? (
-          <ErrorState title="Library unavailable" message={error} />
+          <ErrorState
+            title="Library unavailable"
+            message={error}
+            onRetry={() => setPlaylistRevision((current) => current + 1)}
+          />
         ) : loading ? (
-          <LoadingState type="list" count={4} />
+          <LoadingState type={activeTab === 'playlists' || activeTab === 'artists' ? 'grid' : 'list'} count={4} />
         ) : activeTab === 'recently' ? (
           recentlyPlayedError ? (
-            <ErrorState title="Listening history unavailable" message={recentlyPlayedError} />
+            <ErrorState
+              title="Listening history unavailable"
+              message={recentlyPlayedError}
+              onRetry={() => loadRecentlyPlayed()}
+            />
           ) : recentlyPlayed.length === 0 ? (
             <EmptyState
               iconName="History"
@@ -181,7 +205,7 @@ export default function Library() {
               onAction={() => navigate('/discover')}
             />
           ) : (
-            <div className="space-y-1 rounded-lg border border-zinc-800/60 bg-zinc-950/35 p-2 sm:p-3">
+            <div className="space-y-1">
               {recentlyPlayed.map((track, index) => (
                 <TrackListItem key={track.id} track={track} index={index} tracksContext={recentlyPlayed} />
               ))}
@@ -192,12 +216,12 @@ export default function Library() {
             <EmptyState
               iconName="Heart"
               title={t('empty.noLikedSongs')}
-              description="Like a track while listening to build your collection."
+              description={t('profile.likeTracksDesc')}
               actionText={t('actions.discoverMusic')}
               onAction={() => navigate('/discover')}
             />
           ) : (
-            <div className="space-y-1 rounded-lg border border-zinc-800/60 bg-zinc-950/35 p-2 sm:p-3">
+            <div className="space-y-1">
               {likedSongs.map((track, index) => (
                 <TrackListItem key={track.id} track={track} index={index} tracksContext={likedSongs} />
               ))}
@@ -208,7 +232,9 @@ export default function Library() {
             <EmptyState
               iconName="ListMusic"
               title={t('empty.noPlaylists')}
-              description="Create custom playlists to organize your favorite late-night soundscapes."
+              description={t('profile.createPlaylistsDesc')}
+              actionText={t('playlists.new')}
+              onAction={() => setCreateOpen(true)}
             />
           ) : (
             <div className="grid grid-cols-1 gap-4 min-[430px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 min-[1440px]:grid-cols-5 min-[1800px]:grid-cols-6">
@@ -226,7 +252,7 @@ export default function Library() {
             <EmptyState
               iconName="Users"
               title={t('empty.noFollowedArtists')}
-              description="Follow creators from their profile pages to see them here."
+              description={t('profile.followArtistsDesc')}
               actionText={t('actions.discoverMusic')}
               onAction={() => navigate('/discover')}
             />

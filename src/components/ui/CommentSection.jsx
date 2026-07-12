@@ -40,10 +40,10 @@ export default function CommentSection({ trackId }) {
   return (
     <div className="w-full space-y-6">
       {/* Header */}
-      <div className="space-y-1 border-b border-zinc-800/70 pb-3">
+      <div className="space-y-1 pb-1">
         <div className="flex items-center gap-2">
-          <MessageSquare size={16} className="text-brand-red" aria-hidden="true" />
-          <h2 className="font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-zinc-300">
+          <MessageSquare size={18} className="text-brand-red" aria-hidden="true" />
+          <h2 className="ns-section-title">
             {t('comments.title')}
           </h2>
           {trackComments.length > 0 && (
@@ -61,7 +61,7 @@ export default function CommentSection({ trackId }) {
 
       {/* Main comment input */}
       {!user ? (
-        <div className="ns-state-panel !p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex flex-col justify-between gap-3 border-y border-zinc-800/60 px-1 py-4 sm:flex-row sm:items-center">
           <p className="text-sm text-zinc-400">{t('comments.signInPrompt')}</p>
           <button
             type="button"
@@ -107,9 +107,9 @@ export default function CommentSection({ trackId }) {
       )}
 
       {/* Comments list */}
-      <div className="space-y-4 max-h-[560px] overflow-y-auto pr-1">
+      <div className="space-y-4">
         {commentsError ? (
-          <div className="ns-state-panel ns-state-error !p-5 text-center text-sm text-rose-300" role="alert">
+          <div className="border-y border-rose-500/25 bg-rose-500/5 px-3 py-5 text-center text-sm text-rose-300" role="alert">
             {commentsError.message || t('comments.loadError')}
           </div>
         ) : isLoading ? (
@@ -117,7 +117,7 @@ export default function CommentSection({ trackId }) {
             <Loader2 size={24} className="animate-spin text-zinc-500" />
           </div>
         ) : trackComments.length === 0 ? (
-          <div className="ns-state-panel !p-6 text-center">
+          <div className="border-y border-zinc-800/60 px-3 py-8 text-center">
             <MessageSquare size={22} className="mx-auto text-zinc-600 mb-2" aria-hidden="true" />
             <p className="text-zinc-400 text-sm">{t('comments.empty')}</p>
           </div>

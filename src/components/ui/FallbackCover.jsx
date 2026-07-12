@@ -52,7 +52,7 @@ export default function FallbackCover({
         <span className="font-sans text-lg font-bold tracking-tight text-white/95 sm:text-xl">
           {initialsFor(title)}
         </span>
-        <span className="font-sans tabular-nums text-[7px] font-medium uppercase tracking-ns-label text-white/55 sm:text-[8px]">
+        <span className="font-sans tabular-nums text-ns-micro font-medium text-white/55">
           No artwork
         </span>
       </span>

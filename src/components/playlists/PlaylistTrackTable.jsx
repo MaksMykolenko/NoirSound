@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ArrowDown, ArrowUp, Heart, MoreHorizontal, Pause, Play } from 'lucide-react';
 import { usePlayerStore } from '../../store/playerStore';
@@ -98,10 +98,6 @@ function DesktopRow({
     if (isCurrent) player.togglePlay();
     else player.playTrack(track, queueTracks.filter((item) => item.isAvailable !== false), source);
   };
-  const handleOpenTrack = () => {
-    if (!isAvailable) return;
-    navigate(`/track/${track.id}`);
-  };
   const albumInfo = albumCellInfo(track, t);
   const dateLabel = track.addedAt
     ? formatDate(track.addedAt, { month: 'short', day: 'numeric', year: 'numeric' })
@@ -122,7 +118,7 @@ function DesktopRow({
       <td className="w-10 py-2 text-center align-middle">
         {isAvailable ? (
           <span className="relative flex h-6 items-center justify-center">
-            <span className={`font-sans tabular-nums text-ns-label text-zinc-500 ${canPlay ? 'group-hover:opacity-0' : ''}`}>
+            <span className={`font-sans tabular-nums text-ns-label text-zinc-500 ${canPlay ? 'group-hover:opacity-0 group-focus-within:opacity-0' : ''}`}>
               {isCurrent && player.isPlaying ? (
                 <span aria-hidden="true" className="flex h-3 items-end justify-center gap-[2px]">
                   <span className="h-full w-[2px] animate-bounce bg-brand-red" />
@@ -135,7 +131,7 @@ function DesktopRow({
               <button
                 type="button"
                 onClick={handlePlay}
-                className="absolute inset-0 hidden items-center justify-center text-zinc-100 group-hover:flex"
+                className="absolute inset-0 hidden items-center justify-center text-zinc-100 group-hover:flex group-focus-within:flex"
                 aria-label={isPlayingThis
                   ? t('playlists.pauseTrack', { title: track.title })
                   : t(isCurrent ? 'playlists.playTrack' : 'playlists.playFromHere', { title: track.title })}
@@ -150,30 +146,28 @@ function DesktopRow({
       </td>
       <td className="min-w-0 py-2 pr-3">
         {isAvailable ? (
-          <div
-            role="link"
-            tabIndex={0}
-            aria-label={`Open ${track.title} by ${track.artistName}`}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter' || event.key === ' ') {
-                event.preventDefault();
-                handleOpenTrack();
-              }
-            }}
-            className="flex min-w-0 cursor-pointer items-center gap-3"
-            onClick={handleOpenTrack}
-            onContextMenu={contextMenuProps.onContextMenu}
-          >
-            <FallbackCover
-              src={track.coverUrl}
-              title={track.title}
-              artistName={track.artistName}
-              genre={track.genre}
-              className="h-10 w-10 shrink-0 rounded border border-zinc-800/60"
-              imageClassName="object-cover"
-            />
+          <div className="flex min-w-0 items-center gap-3">
+            <Link
+              to={`/track/${track.id}`}
+              onKeyDown={contextMenuProps.onKeyDown}
+              aria-label={`Open ${track.title} by ${track.artistName}`}
+              className="shrink-0 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-red/60"
+            >
+              <FallbackCover
+                src={track.coverUrl}
+                title={track.title}
+                artistName={track.artistName}
+                genre={track.genre}
+                className="h-10 w-10 rounded border border-zinc-800/60"
+                imageClassName="object-cover"
+              />
+            </Link>
             <div className="min-w-0">
-              <div className="flex min-w-0 items-center gap-1.5">
+              <Link
+                to={`/track/${track.id}`}
+                onKeyDown={contextMenuProps.onKeyDown}
+                className="flex min-w-0 items-center gap-1.5 focus-visible:outline-none focus-visible:underline"
+              >
                 <span className={`truncate text-ns-body-sm font-semibold ${isCurrent ? 'text-brand-red' : 'text-zinc-100'}`}>
                   {track.title}
                 </span>
@@ -181,7 +175,7 @@ function DesktopRow({
                   <span className="shrink-0 rounded border border-zinc-700 bg-zinc-800 px-1 text-ns-meta font-bold uppercase tracking-ns-label text-zinc-400">E</span>
                 )}
                 {isCurrent && <span className="sr-only">{t('playlists.currentlyPlaying')}</span>}
-              </div>
+              </Link>
               <button
                 type="button"
                 onClick={(event) => { event.stopPropagation(); navigate(`/artist/${track.artistId}`); }}
@@ -290,7 +284,7 @@ function MobileRow({
   track, index, queueTracks, source, owner, isCustomOrder, onRemoveTrack, onMoveTrack, pending, t,
 }) {
   const navigate = useNavigate();
-  const { player, isCurrent, isPlayingThis, isAvailable, canPlay, isLiked } = useRowContext(track);
+  const { player, isCurrent, isPlayingThis, isAvailable, canPlay } = useRowContext(track);
   const busy = Boolean(pending);
   const contextMenuOptions = useMemo(() => ({
     removeFromPlaylist: owner && onRemoveTrack ? () => onRemoveTrack(track) : undefined,
@@ -319,63 +313,55 @@ function MobileRow({
     <div
       data-track-id={track.id}
       onContextMenu={contextMenuProps.onContextMenu}
-      onKeyDown={(event) => {
-        contextMenuProps.onKeyDown(event);
-        if (event.defaultPrevented) return;
-        if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); handleTap(); }
-      }}
-      onClick={handleTap}
-      role={isAvailable ? 'button' : undefined}
-      tabIndex={0}
       aria-current={isCurrent ? 'true' : undefined}
-      className={`flex min-h-14 items-center gap-3 rounded-md border p-2 transition-colors duration-150 focus:outline-none focus:ring-1 focus:ring-brand-red/40 ${
-        isCurrent ? 'border-brand-red/20 bg-brand-red/5' : 'border-transparent hover:bg-zinc-900/40'
+      className={`flex min-h-14 items-center gap-3 border-b border-zinc-900/70 p-2 transition-colors duration-150 last:border-b-0 focus-within:bg-zinc-900/50 ${
+        isCurrent ? 'bg-brand-red/5' : 'hover:bg-zinc-900/40'
       } ${!isAvailable ? 'opacity-50' : 'cursor-pointer'}`}
     >
-      <div className="relative shrink-0">
-        <FallbackCover
-          src={track.coverUrl}
-          title={track.title}
-          artistName={track.artistName}
-          genre={track.genre}
-          className="h-11 w-11 rounded border border-zinc-800/60"
-          imageClassName="object-cover"
-        />
-        {isCurrent && (
-          <span aria-hidden="true" className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/50">
-            {isPlayingThis ? <Pause size={14} className="text-brand-red" fill="currentColor" /> : <Play size={14} className="text-brand-red" fill="currentColor" />}
-          </span>
-        )}
-      </div>
-      <div className="min-w-0 flex-1">
-        {isAvailable ? (
+      <button
+        type="button"
+        onClick={handleTap}
+        onKeyDown={contextMenuProps.onKeyDown}
+        disabled={!isAvailable}
+        aria-label={canPlay
+          ? (isPlayingThis ? t('playlists.pauseTrack', { title: track.title }) : t('playlists.playFromHere', { title: track.title }))
+          : `Open ${track.title} by ${track.artistName}`}
+        className="flex min-w-0 flex-1 items-center gap-3 rounded text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-red/60 disabled:cursor-default"
+      >
+        <span className="relative shrink-0">
+          <FallbackCover
+            src={track.coverUrl}
+            title={track.title}
+            artistName={track.artistName}
+            genre={track.genre}
+            className="h-11 w-11 rounded border border-zinc-800/60"
+            imageClassName="object-cover"
+          />
+          {isCurrent && (
+            <span aria-hidden="true" className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/50">
+              {isPlayingThis ? <Pause size={14} className="text-brand-red" fill="currentColor" /> : <Play size={14} className="text-brand-red" fill="currentColor" />}
+            </span>
+          )}
+        </span>
+        <span className="min-w-0 flex-1">
+          {isAvailable ? (
           <>
-            <p className={`truncate text-ns-body-sm font-semibold ${isCurrent ? 'text-brand-red' : 'text-zinc-100'}`}>
+            <span className={`block truncate text-ns-body-sm font-semibold ${isCurrent ? 'text-brand-red' : 'text-zinc-100'}`}>
               {track.title}
               {track.explicit && <span className="ml-1.5 rounded border border-zinc-700 bg-zinc-800 px-1 align-middle text-ns-meta font-bold text-zinc-400">E</span>}
               {isCurrent && <span className="sr-only">{t('playlists.currentlyPlaying')}</span>}
-            </p>
-            <p className="truncate font-sans tabular-nums text-ns-label text-zinc-500">
+            </span>
+            <span className="block truncate font-sans tabular-nums text-ns-label text-zinc-500">
               {track.artistName}
               <span className="text-zinc-600"> • </span>
               {albumInfo.text}
-            </p>
+            </span>
           </>
         ) : (
-          <p className="text-[13px] italic text-zinc-600">{t('playlists.trackUnavailable')}</p>
+          <span className="text-[13px] italic text-zinc-600">{t('playlists.trackUnavailable')}</span>
         )}
-      </div>
-      {isAvailable && (
-        <button
-          type="button"
-          onClick={(event) => { event.stopPropagation(); player.toggleLikeTrack(track.id); }}
-          aria-pressed={isLiked}
-          aria-label={`${isLiked ? t('trackPage.unlike') : t('trackPage.like')} ${track.title}`}
-          className={`ns-icon-button !min-h-10 !min-w-10 shrink-0 ${isLiked ? 'text-brand-red' : 'text-zinc-500'}`}
-        >
-          <Heart size={14} fill={isLiked ? 'currentColor' : 'none'} />
-        </button>
-      )}
+        </span>
+      </button>
       <button
         type="button"
         onClick={(event) => { event.stopPropagation(); openFromButton(event); }}
@@ -415,8 +401,37 @@ export default function PlaylistTrackTable({
 
   return (
     <div>
-      <div className="flex flex-wrap items-center justify-between gap-2 px-1 pb-2">
-        <div className="flex flex-wrap items-center gap-1.5">
+      <div className="flex items-center justify-between gap-2 px-1 pb-3">
+        <div className="flex min-w-0 flex-1 items-center gap-2 sm:hidden">
+          <label className="min-w-0 flex-1">
+            <span className="sr-only">{t('playlists.customOrder')}</span>
+            <select
+              className="ns-field min-h-10 w-full px-3 text-base"
+              value={sortKey || ''}
+              onChange={(event) => {
+                const nextKey = event.target.value || null;
+                setSortKey(nextKey);
+                setSortDir('asc');
+              }}
+            >
+              <option value="">{t('playlists.customOrder')}</option>
+              {SORT_OPTIONS.map(({ key, labelKey }) => (
+                <option key={key} value={key}>{t(labelKey)}</option>
+              ))}
+            </select>
+          </label>
+          {sortKey && (
+            <button
+              type="button"
+              onClick={() => setSortDir((current) => (current === 'asc' ? 'desc' : 'asc'))}
+              className="ns-icon-button !min-h-10 !min-w-10 shrink-0"
+              aria-label={`${t(SORT_OPTIONS.find((option) => option.key === sortKey)?.labelKey)}: ${sortDir}`}
+            >
+              {sortDir === 'desc' ? <ArrowDown size={14} /> : <ArrowUp size={14} />}
+            </button>
+          )}
+        </div>
+        <div className="hidden flex-wrap items-center gap-1.5 sm:flex">
           <button
             type="button"
             onClick={() => { setSortKey(null); setSortDir('asc'); }}
@@ -441,7 +456,7 @@ export default function PlaylistTrackTable({
           ))}
         </div>
         {!isCustomOrder && owner && (
-          <p className="text-ns-label text-zinc-500">{t('playlists.reorderDisabledWhileSorted')}</p>
+          <p className="hidden text-ns-label text-zinc-500 lg:block">{t('playlists.reorderDisabledWhileSorted')}</p>
         )}
       </div>
 

@@ -106,12 +106,13 @@ describe('Home real API states', () => {
     expect(screen.getByTestId('location-probe')).toHaveTextContent('/discover?genre=hip_hop');
   });
 
-  it('renders product cards from the active locale', async () => {
+  it('renders the localized music-first hero without the removed product-card strip', async () => {
     await i18n.changeLanguage('uk');
     renderHome();
 
-    expect(screen.getByText(i18n.t('home.feat1Title'))).toBeInTheDocument();
-    expect(screen.getByText(i18n.t('home.feat4Desc'))).toBeInTheDocument();
+    expect(screen.getByText(i18n.t('home.title'))).toBeInTheDocument();
+    expect(screen.getByText(i18n.t('home.subtitle'))).toBeInTheDocument();
+    expect(screen.queryByTestId('home-features')).not.toBeInTheDocument();
     expect(screen.queryByText('Find your next sound')).not.toBeInTheDocument();
   });
 

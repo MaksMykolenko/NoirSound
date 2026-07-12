@@ -30,8 +30,8 @@ export default function BatchFileDropzone({
   return (
     <section className="space-y-5" data-testid="batch-file-stage">
       <div
-        className={`flex min-h-64 flex-col items-center justify-center rounded-md border border-dashed p-7 text-center transition-colors ${
-          dragging ? 'border-brand-red bg-brand-red/10' : 'border-zinc-700 bg-surface-noir/40 hover:border-zinc-600'
+        className={`flex min-h-64 flex-col items-center justify-center rounded-md border border-dashed p-6 text-center transition-colors sm:p-8 ${
+          dragging ? 'border-brand-red bg-brand-red/10' : 'border-zinc-700 bg-zinc-950/20 hover:border-zinc-600'
         }`}
         onDragEnter={(event) => { event.preventDefault(); setDragging(true); }}
         onDragOver={(event) => event.preventDefault()}
@@ -74,24 +74,24 @@ export default function BatchFileDropzone({
       )}
 
       {stagedFiles.length > 0 && (
-        <div className="space-y-4 rounded-md border border-zinc-800 bg-surface-noir/50 p-4 sm:p-5">
+        <div className="space-y-4 border-y border-zinc-800 py-4 sm:py-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h3 className="font-semibold text-zinc-100">{stagedFiles.length} / {BATCH_MAX_FILES} {t('batchUpload.filesSelected')}</h3>
               <p className="font-sans tabular-nums text-ns-meta text-zinc-500">{formatBytes(totalBytes)} / 500 MB</p>
             </div>
-            <label className="text-sm text-zinc-400">
+            <label className="w-full text-sm text-zinc-400 sm:w-auto">
               <span className="mb-1 block font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label">{t('batchUpload.batchMode')}</span>
-              <select className="ns-field min-w-44 !rounded px-3" value={mode} onChange={(event) => onModeChange(event.target.value)}>
+              <select className="ns-field w-full !rounded px-3 sm:min-w-44" value={mode} onChange={(event) => onModeChange(event.target.value)}>
                 <option value="MIXED">{t('batchUpload.mixed')}</option>
                 <option value="SINGLES_ONLY">{t('batchUpload.singlesOnly')}</option>
                 <option value="PLAYLIST">{t('batchUpload.playlistOnly')}</option>
               </select>
             </label>
           </div>
-          <div className="space-y-2">
+          <div className="divide-y divide-zinc-800/70 border-y border-zinc-800/70">
             {stagedFiles.map((entry) => (
-              <div key={entry.clientId} className="flex items-center gap-3 rounded border border-zinc-800 bg-zinc-950/50 p-3">
+              <div key={entry.clientId} className="flex items-center gap-3 py-3 sm:px-2">
                 <FileAudio size={18} className="text-brand-red shrink-0" />
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold text-zinc-200 truncate">{entry.file.name}</p>

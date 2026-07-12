@@ -9,6 +9,7 @@ export default function UserProfileHeader({ user, onEditClick }) {
   const { t } = useTranslation();
   const { addToast } = useToastStore();
   const joinedLabel = user.joinedAt ? formatDate(user.joinedAt) : 'recently';
+  const hasImageBanner = /^https?:\/\//i.test(user.bannerUrl || '');
 
   const handleShareClick = () => {
     navigator.clipboard.writeText(window.location.href);
@@ -16,11 +17,11 @@ export default function UserProfileHeader({ user, onEditClick }) {
   };
 
   return (
-    <section className="relative overflow-hidden rounded-lg border border-zinc-800/60 bg-zinc-950">
+    <section className="relative overflow-hidden border-b border-zinc-800/60 bg-zinc-950/30">
       {/* Banner */}
       <div
-        className="h-36 w-full opacity-70 transition-opacity duration-300 md:h-44"
-        style={{ background: user.bannerUrl || 'linear-gradient(135deg, var(--ns-accent-deep) 0%, var(--ns-bg) 100%)' }}
+        className="h-28 w-full bg-zinc-900 bg-cover bg-center opacity-80 transition-opacity duration-300 md:h-36"
+        style={hasImageBanner ? { backgroundImage: `url(${user.bannerUrl})` } : undefined}
       />
 
       {/* Info wrap */}
@@ -38,7 +39,7 @@ export default function UserProfileHeader({ user, onEditClick }) {
         {/* Text */}
         <div className="flex-1 space-y-2.5 min-w-0">
           <div className="space-y-1">
-            <h1 className="truncate font-sans text-2xl font-semibold leading-tight tracking-tight text-zinc-100 md:text-3xl">
+            <h1 className="break-words font-sans text-2xl font-semibold leading-tight tracking-tight text-zinc-100 md:text-3xl">
               {user.displayName || user.username || 'NoirSound Listener'}
             </h1>
             <div className="flex items-center justify-center md:justify-start gap-2">

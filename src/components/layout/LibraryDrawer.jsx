@@ -2,17 +2,10 @@ import React, { useEffect } from 'react';
 import { X } from 'lucide-react';
 import LibrarySidebarSection from './LibrarySidebarSection';
 import BrandLogo from './BrandLogo';
+import useDialogFocusTrap from '../../hooks/useDialogFocusTrap';
 
 export default function LibraryDrawer({ isOpen, onClose }) {
-  // Close drawer on Escape key press
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  const dialogRef = useDialogFocusTrap(isOpen, onClose);
 
   // Lock body scroll when drawer is open
   useEffect(() => {
@@ -39,7 +32,7 @@ export default function LibraryDrawer({ isOpen, onClose }) {
       />
 
       {/* Slide-out Panel */}
-      <div className="relative z-10 flex h-full w-[320px] max-w-[90vw] animate-slide-in-left flex-col border-r border-[var(--ns-border-subtle)] bg-brand-dark px-3.5 py-4 shadow-2xl" role="dialog" aria-modal="true" aria-label="Your library">
+      <div ref={dialogRef} className="relative z-10 flex h-full w-[320px] max-w-[90vw] animate-slide-in-left flex-col border-r border-[var(--ns-border-subtle)] bg-[var(--ns-bg-elevated)] px-3.5 py-4 shadow-2xl" role="dialog" aria-modal="true" aria-label="Your library">
         
         {/* Top Header Bar */}
         <div className="mb-2 flex shrink-0 items-center justify-between border-b border-zinc-900/80 pb-3 pl-0.5 pr-2">

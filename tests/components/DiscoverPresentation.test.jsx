@@ -44,7 +44,7 @@ describe('Discover real-data presentation', () => {
     vi.clearAllMocks();
   });
 
-  it('deduplicates Featured tracks and Recommended Artists by id', () => {
+  it('keeps editorial Featured tracks out of the release list and deduplicates artists by id', () => {
     useDiscoverTracks.mockReturnValue({
       data: [playableTrack, { ...playableTrack }],
       isLoading: false,
@@ -63,10 +63,9 @@ describe('Discover real-data presentation', () => {
     );
 
     const featured = screen.getByTestId('featured-tracks');
-    const allReleases = screen.getByTestId('all-releases');
     const recommended = screen.getByTestId('recommended-artists');
     expect(within(featured).getAllByRole('link')).toHaveLength(1);
-    expect(within(allReleases).getAllByRole('link')).toHaveLength(1);
+    expect(screen.queryByTestId('all-releases')).not.toBeInTheDocument();
     expect(within(recommended).getAllByText('Distinct Artist')).toHaveLength(1);
   });
 

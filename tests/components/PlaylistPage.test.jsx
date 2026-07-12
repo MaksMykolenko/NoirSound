@@ -409,6 +409,33 @@ describe('PlaylistPage — playlist detail table', () => {
       expect(mobileLists).toHaveLength(1);
       expect(mobileLists[0].querySelectorAll('[data-track-id]')).toHaveLength(4);
     });
+
+    it('keeps mobile rows to play and More while preserving secondary context actions', async () => {
+      getPlaylistById.mockResolvedValue(buildPlaylist({ isOwner: true }));
+      const { container } = renderPlaylistPage();
+      await screen.findByText('Late Night Circuit');
+
+      const mobileList = Array.from(container.querySelectorAll('.md\\:hidden'))
+        .find((element) => element.querySelector('[data-track-id="t-a"]'));
+      const mobileRow = mobileList.querySelector('[data-track-id="t-a"]');
+
+      expect(within(mobileRow).getByRole('button', {
+        name: i18n.t('playlists.playFromHere', { title: trackA.title }),
+      })).toBeInTheDocument();
+      expect(within(mobileRow).queryByRole('button', {
+        name: likeLabel(trackA.title, false),
+      })).not.toBeInTheDocument();
+
+      fireEvent.click(within(mobileRow).getByRole('button', {
+        name: i18n.t('playlists.moreActionsFor', { title: trackA.title }),
+      }));
+
+      const menu = screen.getByRole('menu');
+      expect(within(menu).getByText(i18n.t('contextMenu.likeTrack'))).toBeInTheDocument();
+      expect(within(menu).getByText(i18n.t('contextMenu.addToQueue'))).toBeInTheDocument();
+      expect(within(menu).getByText(i18n.t('contextMenu.addToPlaylist'))).toBeInTheDocument();
+      expect(within(menu).getByText(i18n.t('contextMenu.removeFromPlaylist'))).toBeInTheDocument();
+    });
   });
 
   describe('empty and unavailable states', () => {

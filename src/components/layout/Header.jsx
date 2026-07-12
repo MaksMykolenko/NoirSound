@@ -14,7 +14,7 @@ export default function Header() {
   const pillRef = useRef(null);
 
   return (
-    <header className="sticky top-0 z-[var(--ns-z-header)] hidden h-[var(--ns-header-height)] shrink-0 items-center justify-between gap-4 border-b border-[var(--ns-border-subtle)] bg-[color-mix(in_srgb,var(--ns-bg)_88%,transparent)] px-6 backdrop-blur-md lg:flex lg:px-8">
+    <header className="sticky top-0 z-[var(--ns-z-header)] hidden h-[var(--ns-header-height)] shrink-0 items-center justify-between gap-4 border-b border-[var(--ns-border-subtle)] bg-[var(--ns-bg)] px-6 lg:flex lg:px-8">
       {/* Navigation and search */}
       <div className="flex min-w-0 max-w-xl flex-1 items-center gap-3">
         <div className="hidden sm:flex items-center gap-2 shrink-0">
@@ -54,7 +54,7 @@ export default function Header() {
           <div className="relative" ref={pillRef}>
             <button
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-              className="flex min-h-10 cursor-pointer select-none items-center gap-2.5 rounded-lg border border-[var(--ns-border-subtle)] bg-surface-noir py-1 pl-3 pr-1 transition-colors hover:bg-surface-hover"
+              className="flex min-h-10 cursor-pointer select-none items-center gap-2.5 rounded-md py-1 pl-3 pr-1 transition-colors hover:bg-surface-hover"
               aria-expanded={isDropdownOpen}
               aria-haspopup="menu"
             >

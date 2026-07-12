@@ -62,22 +62,22 @@ export default function AdminLayout() {
   ];
 
   return (
-    <div className="flex min-h-[65vh] flex-col gap-4 [&_.ns-button-primary]:!rounded [&_.ns-button-secondary]:!rounded [&_.ns-field]:!rounded [&_.ns-icon-button]:!rounded xl:flex-row">
-      <aside className="xl:w-56 xl:shrink-0">
-        <div className="sticky top-0 rounded-md border border-[var(--ns-border-subtle)] bg-[color-mix(in_srgb,var(--ns-surface)_78%,transparent)] p-2">
-          <div className="mb-2 flex items-center gap-2 border-b border-[var(--ns-border-subtle)] px-2 py-2">
+    <div className="flex min-h-[65vh] flex-col gap-6 [&_.ns-button-primary]:!rounded [&_.ns-button-secondary]:!rounded [&_.ns-field]:!rounded [&_.ns-icon-button]:!rounded xl:flex-row xl:gap-0">
+      <aside className="border-b border-[var(--ns-border-subtle)] pb-2 xl:w-56 xl:shrink-0 xl:border-b-0 xl:border-r xl:pb-0 xl:pr-5">
+        <div className="sticky top-0">
+          <div className="mb-2 flex items-center gap-2 px-2 py-2">
             <ShieldAlert className="h-5 w-5 text-[var(--ns-accent)]" />
             <span className="font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label">{t('admin.admin')}</span>
           </div>
-          <nav className="flex gap-1 overflow-x-auto pb-1 xl:flex-col xl:overflow-visible">
+          <nav className="ns-tabs-scroll flex gap-1 overflow-x-auto pb-1 xl:flex-col xl:overflow-visible">
             {links.map(([path, key, Icon]) => (
               <NavLink
                 key={path}
                 to={`/admin/${path}`}
-                className={({ isActive }) => `flex min-h-10 shrink-0 items-center gap-2 rounded px-3 py-2 text-sm font-medium transition-colors ${
+                className={({ isActive }) => `flex min-h-10 shrink-0 items-center gap-2 border-l-2 px-3 py-2 text-sm font-medium transition-colors ${
                   isActive
-                    ? 'bg-[var(--ns-accent-soft)] text-[var(--ns-accent-text)]'
-                    : 'text-[var(--ns-text-muted)] hover:bg-[var(--ns-hover-bg)] hover:text-[var(--ns-text)]'
+                    ? 'border-[var(--ns-accent)] bg-[var(--ns-accent-soft)] text-[var(--ns-accent-text)]'
+                    : 'border-transparent text-[var(--ns-text-muted)] hover:bg-[var(--ns-hover-bg)] hover:text-[var(--ns-text)]'
                 }`}
               >
                 <Icon className="h-4 w-4" /> {t(`admin.${key}`)}
@@ -86,7 +86,7 @@ export default function AdminLayout() {
           </nav>
         </div>
       </aside>
-      <div className="min-w-0 flex-1 space-y-4">
+      <div className="min-w-0 flex-1 space-y-5 xl:pl-6">
         <Outlet />
       </div>
     </div>

@@ -350,178 +350,212 @@ export default function UploadForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mx-auto max-w-3xl space-y-6 rounded-md border border-zinc-800 bg-surface-noir/50 p-4 sm:p-6" noValidate>
-      <div className="border-b border-zinc-800/80 pb-4">
-        <h3 className="flex items-center space-x-2 text-base font-semibold text-zinc-100">
-          <UploadCloud className="text-brand-red" size={19} />
-          <span>{t('uploadForm.title')}</span>
-        </h3>
-        <p className="text-sm text-zinc-400 mt-1">{t('uploadForm.subtitle')}</p>
-      </div>
-
-      {errorMsg && (
-        <div id="upload-error" className="flex items-center space-x-2.5 rounded border border-rose-500/25 bg-rose-500/10 p-3.5 text-sm text-rose-300" role="alert">
-          <AlertCircle size={16} />
-          <span className="font-semibold">{errorMsg}</span>
+    <form onSubmit={handleSubmit} className="mx-auto grid max-w-6xl gap-7 xl:grid-cols-[minmax(0,1fr)_19rem] xl:items-start" noValidate>
+      <div className="min-w-0 space-y-8">
+        <div className="border-b border-zinc-800/80 pb-5">
+          <h2 className="flex items-center gap-2 text-lg font-semibold text-zinc-100">
+            <UploadCloud className="text-brand-red" size={19} />
+            <span>{t('uploadForm.title')}</span>
+          </h2>
+          <p className="mt-1 text-sm text-zinc-400">{t('uploadForm.subtitle')}</p>
         </div>
-      )}
 
-      {/* Files Row */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Audio upload box */}
-        <div className={`group relative min-h-44 cursor-pointer rounded-md border border-dashed p-6 text-center transition-colors ${
-          audioFile ? 'border-brand-red/35 bg-brand-red/5' : 'border-zinc-800 hover:border-zinc-700 bg-zinc-950/40'
-        }`}>
-          <input
-            id="track-audio"
-            type="file"
-            accept=".mp3,.wav,.flac,audio/mpeg,audio/wav,audio/flac"
-            onChange={(e) => setAudioFile(e.target.files[0])}
-            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-            aria-label="Select track audio file"
-            aria-describedby={errorMsg ? 'upload-error' : undefined}
-          />
-          <div className="flex flex-col items-center justify-center space-y-3.5">
-            <div className="rounded border border-zinc-800 bg-zinc-900 p-3 text-zinc-400 transition-colors group-hover:border-brand-red/35 group-hover:text-brand-red">
-              <FileAudio size={24} />
-            </div>
-            <div>
-              <span className="block text-sm font-bold text-zinc-200">
-                {audioFile ? audioFile.name : t('uploadForm.selectAudio')}
-              </span>
-              <span className="block text-ns-label text-zinc-400 mt-1">{t('uploadForm.audioFormats')}</span>
-              {audioFile && (
-                <span className="block text-ns-label text-emerald-400 mt-2">
-                  {(audioFile.size / (1024 * 1024)).toFixed(1)} MB selected
-                </span>
-              )}
-            </div>
+        {errorMsg && (
+          <div id="upload-error" className="flex items-start gap-2.5 border-l-2 border-rose-400 bg-rose-500/10 p-3.5 text-sm text-rose-200" role="alert">
+            <AlertCircle size={16} className="mt-0.5 shrink-0" />
+            <span className="font-semibold">{errorMsg}</span>
           </div>
-        </div>
+        )}
 
-        {/* Cover image upload box */}
-        <div className={`group relative min-h-44 cursor-pointer overflow-hidden rounded-md border border-dashed p-5 text-center transition-colors ${
-          coverFile ? 'border-brand-red/35 bg-brand-red/5' : 'border-zinc-800 hover:border-zinc-700 bg-zinc-950/40'
-        }`}>
-          <input
-            id="track-artwork"
-            type="file"
-            accept="image/*"
-            onChange={(e) => setCoverFile(e.target.files[0])}
-            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-            aria-label="Select track artwork"
-            aria-describedby={errorMsg ? 'upload-error' : undefined}
-          />
-          <div className="flex flex-col items-center justify-center space-y-3.5">
-            {coverPreviewUrl ? (
-              <img src={coverPreviewUrl} alt="Selected artwork preview" className="h-16 w-16 rounded object-cover border border-zinc-700" />
-            ) : (
-              <div className="rounded border border-zinc-800 bg-zinc-900 p-3 text-zinc-400 transition-colors group-hover:border-brand-red/35 group-hover:text-brand-red">
-                <ImageIcon size={24} />
+        <section className="space-y-4" aria-labelledby="upload-assets-title">
+          <div>
+            <h3 id="upload-assets-title" className="text-base font-semibold text-zinc-100">{t('uploadForm.assets')}</h3>
+            <p className="mt-1 text-sm text-zinc-500">{t('uploadForm.assetsHelp')}</p>
+          </div>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className={`group relative min-h-44 cursor-pointer rounded-md border border-dashed p-6 text-center transition-colors ${
+              audioFile ? 'border-brand-red/35 bg-brand-red/5' : 'border-zinc-800 bg-zinc-950/25 hover:border-zinc-700'
+            }`}>
+              <input
+                id="track-audio"
+                type="file"
+                accept=".mp3,.wav,.flac,audio/mpeg,audio/wav,audio/flac"
+                onChange={(e) => setAudioFile(e.target.files[0])}
+                className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                aria-label="Select track audio file"
+                aria-describedby={errorMsg ? 'upload-error' : undefined}
+              />
+              <div className="flex flex-col items-center justify-center space-y-3.5">
+                <div className="rounded border border-zinc-800 bg-zinc-900 p-3 text-zinc-400 transition-colors group-hover:border-brand-red/35 group-hover:text-brand-red">
+                  <FileAudio size={24} />
+                </div>
+                <div className="min-w-0 max-w-full">
+                  <span className="block truncate text-sm font-bold text-zinc-200">
+                    {audioFile ? audioFile.name : t('uploadForm.selectAudio')}
+                  </span>
+                  <span className="mt-1 block text-ns-label text-zinc-400">{t('uploadForm.audioFormats')}</span>
+                  {audioFile && (
+                    <span className="mt-2 block text-ns-label text-emerald-400">
+                      {(audioFile.size / (1024 * 1024)).toFixed(1)} MB selected
+                    </span>
+                  )}
+                </div>
               </div>
-            )}
-            <div>
-              <span className="block text-sm font-bold text-zinc-200">
-                {coverFile ? coverFile.name : t('uploadForm.selectArtwork')}
-              </span>
-              <span className="block text-ns-label text-zinc-400 mt-1">{t('uploadForm.artworkFormats')}</span>
+            </div>
+
+            <div className={`group relative min-h-44 cursor-pointer overflow-hidden rounded-md border border-dashed p-5 text-center transition-colors ${
+              coverFile ? 'border-brand-red/35 bg-brand-red/5' : 'border-zinc-800 bg-zinc-950/25 hover:border-zinc-700'
+            }`}>
+              <input
+                id="track-artwork"
+                type="file"
+                accept="image/*"
+                onChange={(e) => setCoverFile(e.target.files[0])}
+                className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                aria-label="Select track artwork"
+                aria-describedby={errorMsg ? 'upload-error' : undefined}
+              />
+              <div className="flex flex-col items-center justify-center space-y-3.5">
+                {coverPreviewUrl ? (
+                  <img src={coverPreviewUrl} alt="Selected artwork preview" className="h-20 w-20 rounded object-cover border border-zinc-700" />
+                ) : (
+                  <div className="rounded border border-zinc-800 bg-zinc-900 p-3 text-zinc-400 transition-colors group-hover:border-brand-red/35 group-hover:text-brand-red">
+                    <ImageIcon size={24} />
+                  </div>
+                )}
+                <div className="min-w-0 max-w-full">
+                  <span className="block truncate text-sm font-bold text-zinc-200">
+                    {coverFile ? coverFile.name : t('uploadForm.selectArtwork')}
+                  </span>
+                  <span className="mt-1 block text-ns-label text-zinc-400">{t('uploadForm.artworkFormats')}</span>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
+        </section>
+
+        <section className="space-y-5 border-t border-zinc-800/70 pt-6" aria-labelledby="upload-details-title">
+          <div>
+            <h3 id="upload-details-title" className="text-base font-semibold text-zinc-100">{t('uploadForm.releaseDetails')}</h3>
+            <p className="mt-1 text-sm text-zinc-500">{t('uploadForm.releaseDetailsHelp')}</p>
+          </div>
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+            <div className="space-y-1.5">
+              <label htmlFor="track-title" className="font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-zinc-400">{t('uploadForm.trackTitle')}</label>
+              <input
+                id="track-title"
+                type="text"
+                placeholder="e.g. Midnight Protocol"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="ns-field px-4 text-base sm:text-sm"
+                aria-invalid={Boolean(errorMsg && !title.trim())}
+                aria-describedby={errorMsg ? 'upload-error' : undefined}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label htmlFor="track-genre" className="font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-zinc-400">{t('uploadForm.primaryGenre')}</label>
+              <GenrePicker
+                id="track-genre"
+                value={genre}
+                onChange={setGenre}
+                ariaLabel={t('uploadForm.primaryGenre')}
+                placeholder={t('uploadForm.selectGenre')}
+              />
+              <p className="pt-0.5 text-ns-label leading-relaxed text-zinc-500">{t('uploadForm.genreHelper')}</p>
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label htmlFor="track-description" className="font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-zinc-400">{t('uploadForm.description')}</label>
+            <textarea
+              id="track-description"
+              rows={4}
+              placeholder={t('uploadForm.descriptionPlaceholder')}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="ns-field resize-none px-4 py-3 text-base sm:text-sm"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label htmlFor="track-tags" className="font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-zinc-400">{t('uploadForm.tags')}</label>
+            <input
+              id="track-tags"
+              type="text"
+              placeholder={t('uploadForm.tagsPlaceholder')}
+              value={tags}
+              onChange={(e) => setTags(e.target.value)}
+              className="ns-field px-4 text-base sm:text-sm"
+            />
+            <p className="pt-0.5 text-ns-label leading-relaxed text-zinc-500">{t('uploadForm.tagsHelper')}</p>
+          </div>
+        </section>
+
+        <details className="border-y border-zinc-800/70 py-4">
+          <summary className="cursor-pointer text-sm font-bold text-zinc-200 marker:text-brand-red">
+            {t('upload.lyricsSection')}
+          </summary>
+          <div className="pt-5">
+            <LyricsEditor
+              value={lyricsForm}
+              onChange={setLyricsForm}
+              idPrefix="single-upload-lyrics"
+            />
+          </div>
+        </details>
       </div>
 
-      {/* Title & Genre */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-1.5">
-          <label htmlFor="track-title" className="font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-zinc-400">{t('uploadForm.trackTitle')}</label>
+      <aside className="space-y-5 border-t border-zinc-800/80 pt-5 xl:sticky xl:top-6 xl:border-l xl:border-t-0 xl:pl-6 xl:pt-0">
+        <div>
+          <p className="font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-brand-red">
+            {t('uploadForm.releaseChecklist')}
+          </p>
+          <dl className="mt-3 divide-y divide-zinc-800/70 text-sm">
+            {[
+              [Boolean(audioFile), t('uploadForm.selectAudio')],
+              [Boolean(coverFile), t('uploadForm.selectArtwork')],
+              [Boolean(title.trim()), t('uploadForm.trackTitle')],
+              [Boolean(genre), t('uploadForm.primaryGenre')],
+            ].map(([ready, label]) => (
+              <div key={label} className="flex items-center justify-between gap-3 py-2.5">
+                <dt className="text-zinc-400">{label}</dt>
+                <dd className={ready ? 'text-[var(--ns-success)]' : 'text-zinc-600'}>
+                  {ready
+                    ? t('batchUpload.ready')
+                    : t('uploadForm.required')}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+
+        <label className="flex min-h-14 cursor-pointer select-none items-start gap-3 border-y border-zinc-800/70 py-4">
           <input
-            id="track-title"
-            type="text"
-            placeholder="e.g. Midnight Protocol"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className="ns-field px-4 text-base sm:text-sm"
-            aria-invalid={Boolean(errorMsg && !title.trim())}
+            type="checkbox"
+            checked={rightsChecked}
+            onChange={(e) => setRightsChecked(e.target.checked)}
+            className="mt-0.5 h-5 w-5 cursor-pointer rounded accent-brand-red"
+            aria-invalid={Boolean(errorMsg && !rightsChecked)}
             aria-describedby={errorMsg ? 'upload-error' : undefined}
           />
-        </div>
+          <span className="text-sm font-medium leading-relaxed text-zinc-300">
+            {t('uploadForm.rightsConfirmation')}
+          </span>
+        </label>
 
-        <div className="space-y-1.5">
-          <label htmlFor="track-genre" className="font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-zinc-400">{t('uploadForm.primaryGenre')}</label>
-          <GenrePicker
-            id="track-genre"
-            value={genre}
-            onChange={setGenre}
-            ariaLabel={t('uploadForm.primaryGenre')}
-            placeholder={t('uploadForm.selectGenre')}
-          />
-          <p className="text-ns-label text-zinc-500 leading-relaxed pt-0.5">{t('uploadForm.genreHelper')}</p>
-        </div>
-      </div>
-
-      {/* Description */}
-      <div className="space-y-1.5">
-        <label htmlFor="track-description" className="font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-zinc-400">{t('uploadForm.description')}</label>
-        <textarea
-          id="track-description"
-          rows={3}
-          placeholder={t('uploadForm.descriptionPlaceholder')}
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          className="ns-field px-4 py-3 text-base resize-none sm:text-sm"
-        />
-      </div>
-
-      {/* Tags */}
-      <div className="space-y-1.5">
-        <label htmlFor="track-tags" className="font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-zinc-400">{t('uploadForm.tags')}</label>
-        <input
-          id="track-tags"
-          type="text"
-          placeholder={t('uploadForm.tagsPlaceholder')}
-          value={tags}
-          onChange={(e) => setTags(e.target.value)}
-          className="ns-field px-4 text-base sm:text-sm"
-        />
-        <p className="text-ns-label text-zinc-500 leading-relaxed pt-0.5">{t('uploadForm.tagsHelper')}</p>
-      </div>
-
-      <details className="rounded border border-zinc-800 bg-zinc-950/30 p-4 sm:p-5">
-        <summary className="cursor-pointer text-sm font-bold text-zinc-200 marker:text-brand-red">
-          {t('upload.lyricsSection')}
-        </summary>
-        <div className="pt-5">
-          <LyricsEditor
-            value={lyricsForm}
-            onChange={setLyricsForm}
-            idPrefix="single-upload-lyrics"
-          />
-        </div>
-      </details>
-
-      {/* Confirmation Checkbox */}
-      <label className="flex min-h-14 cursor-pointer select-none items-start space-x-3 rounded border border-zinc-800/70 bg-zinc-950/40 p-4">
-        <input
-          type="checkbox"
-          checked={rightsChecked}
-          onChange={(e) => setRightsChecked(e.target.checked)}
-          className="mt-0.5 accent-brand-red w-5 h-5 rounded cursor-pointer"
-          aria-invalid={Boolean(errorMsg && !rightsChecked)}
-          aria-describedby={errorMsg ? 'upload-error' : undefined}
-        />
-        <span className="text-sm text-zinc-300 leading-relaxed font-medium">
-          {t('uploadForm.rightsConfirmation')}
-        </span>
-      </label>
-
-      {/* Submit Button */}
-      <button
-        type="submit"
-        disabled={uploadMutation.isPending}
-        className="w-full ns-button-primary px-5 text-sm cursor-pointer disabled:opacity-50"
-      >
-        {t('uploadForm.submit')}
-      </button>
+        <button
+          type="submit"
+          disabled={uploadMutation.isPending}
+          className="ns-button-primary w-full cursor-pointer px-5 text-sm disabled:opacity-50"
+        >
+          {t('uploadForm.submit')}
+        </button>
+        <p className="text-ns-label leading-relaxed text-zinc-500">
+          {t('uploadForm.processingNote')}
+        </p>
+      </aside>
     </form>
   );
 }

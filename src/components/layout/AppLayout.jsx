@@ -16,10 +16,27 @@ export default function AppLayout({ children }) {
   useAnimatedFavicon();
   const [isQueueOpen, setIsQueueOpen] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isMobileViewport, setIsMobileViewport] = useState(() => (
+    typeof window !== 'undefined'
+    && typeof window.matchMedia === 'function'
+    && window.matchMedia('(max-width: 1023px)').matches
+  ));
   const { isPlayerCollapsed, currentTrack, lyricsFullscreenOpen } = usePlayerStore();
   const location = useLocation();
   const mainRef = useRef(null);
+  const mobilePlayerIsModal = Boolean(
+    isMobileViewport && currentTrack && !isPlayerCollapsed && !lyricsFullscreenOpen
+  );
+  const shellIsInert = lyricsFullscreenOpen || isQueueOpen || isDrawerOpen || mobilePlayerIsModal;
 
+  useEffect(() => {
+    if (typeof window.matchMedia !== 'function') return undefined;
+    const query = window.matchMedia('(max-width: 1023px)');
+    const updateViewport = (event) => setIsMobileViewport(event.matches);
+    setIsMobileViewport(query.matches);
+    query.addEventListener?.('change', updateViewport);
+    return () => query.removeEventListener?.('change', updateViewport);
+  }, []);
 
   useEffect(() => {
     mainRef.current?.scrollTo?.({ top: 0, behavior: 'auto' });
@@ -38,8 +55,8 @@ export default function AppLayout({ children }) {
     <>
       <div
         className="ns-app-background flex h-[100dvh] overflow-hidden font-sans text-zinc-100"
-        aria-hidden={lyricsFullscreenOpen || undefined}
-        inert={lyricsFullscreenOpen || undefined}
+        aria-hidden={shellIsInert || undefined}
+        inert={shellIsInert || undefined}
       >
       {/* Sidebar - Left Navigation for Desktop */}
       <Sidebar />
@@ -53,7 +70,7 @@ export default function AppLayout({ children }) {
         <Header />
         
         {/* Scrollable page contents view */}
-        <main ref={mainRef} className={`flex-1 overflow-y-auto overflow-x-hidden py-5 transition-[padding] duration-200 sm:py-6 ${paddingClass}`}>
+        <main ref={mainRef} className={`ns-main-scroll flex-1 overflow-y-auto overflow-x-hidden py-5 transition-[padding] duration-200 sm:py-6 ${paddingClass}`}>
           <div className="ns-page-container">
             {children}
             <Footer />
@@ -64,17 +81,14 @@ export default function AppLayout({ children }) {
       {/* Mobile bottom nav menu */}
       <MobileNavbar />
 
-      {/* Mobile Library Drawer overlay */}
+      </div>
       <LibraryDrawer isOpen={isDrawerOpen} onClose={() => setIsDrawerOpen(false)} />
-
-      {/* Slide-out Music Queue panel */}
       {!lyricsFullscreenOpen && (
         <QueuePanel isOpen={isQueueOpen} onClose={() => setIsQueueOpen(false)} />
       )}
-
-      {/* Sticky Bottom Music Player */}
-      <PlayerBar onToggleQueue={() => setIsQueueOpen(!isQueueOpen)} isQueueOpen={isQueueOpen} />
-      </div>
+      {!lyricsFullscreenOpen && (
+        <PlayerBar onToggleQueue={() => setIsQueueOpen(!isQueueOpen)} isQueueOpen={isQueueOpen} />
+      )}
       {lyricsFullscreenOpen && (
         <FullscreenLyricsPlayer
           isQueueOpen={isQueueOpen}

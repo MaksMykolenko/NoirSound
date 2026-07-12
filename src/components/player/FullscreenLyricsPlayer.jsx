@@ -14,6 +14,7 @@ import {
   DesktopPlayerBarContent,
   MobilePlayerProgress,
   MobilePlayerTransportControls,
+  PlaybackErrorStatus,
   PlayerTrackInfo,
 } from './PlayerBarShared';
 import {
@@ -186,14 +187,14 @@ export default function FullscreenLyricsPlayer({
       aria-modal="true"
       aria-label={t('lyrics.fullscreenLabel', { title: currentTrack.title })}
       data-testid="fullscreen-lyrics-player"
-      className="ns-lyrics-fullscreen fixed inset-0 z-[var(--ns-z-fullscreen)] flex h-[100dvh] w-screen flex-col overflow-hidden bg-brand-dark text-white"
+      className="ns-lyrics-fullscreen fixed inset-0 z-[var(--ns-z-fullscreen)] flex h-[100dvh] w-screen flex-col overflow-hidden bg-[var(--ns-bg)] text-zinc-100"
     >
       <header className="relative z-10 flex min-h-[var(--ns-header-height)] shrink-0 items-center gap-3 border-b border-[var(--ns-border-subtle)] px-4 pb-3 pt-[calc(.75rem+env(safe-area-inset-top))] sm:px-6 lg:px-8 lg:py-3">
         <button
           ref={closeRef}
           type="button"
           onClick={closeWithHistory}
-          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md border border-[var(--ns-border)] bg-zinc-900 text-zinc-200 transition-colors hover:bg-surface-hover hover:text-white"
+          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md border border-[var(--ns-border)] bg-zinc-900 text-zinc-200 transition-colors hover:bg-surface-hover hover:text-zinc-100"
           aria-label={t('player.closeLyrics')}
           title={t('lyrics.backToPlayer')}
           data-testid="fullscreen-lyrics-back"
@@ -209,8 +210,9 @@ export default function FullscreenLyricsPlayer({
           imageClassName="object-cover"
         />
         <div className="min-w-0">
-          <h1 className="ns-fullscreen-compact-title truncate font-sans text-sm font-bold text-white sm:text-base">{currentTrack.title}</h1>
+          <h1 className="ns-fullscreen-compact-title truncate font-sans text-sm font-bold text-zinc-100 sm:text-base">{currentTrack.title}</h1>
           <p className="truncate font-sans tabular-nums text-ns-meta text-zinc-500 sm:text-xs">{currentTrack.artistName}</p>
+          <PlaybackErrorStatus error={playbackError} />
         </div>
       </header>
 
@@ -226,7 +228,7 @@ export default function FullscreenLyricsPlayer({
           />
           <div className="mt-6">
             <p className="font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-brand-red">{t('player.nowPlaying')}</p>
-            <h2 className="ns-display-title ns-display-title--fullscreen mt-2 text-white">{currentTrack.title}</h2>
+            <h2 className="ns-display-title ns-display-title--fullscreen mt-2 text-zinc-100">{currentTrack.title}</h2>
             <p className="mt-1 font-sans tabular-nums text-sm text-zinc-500">{currentTrack.artistName}</p>
           </div>
         </aside>
@@ -237,7 +239,7 @@ export default function FullscreenLyricsPlayer({
         >
           <div className="ns-fullscreen-mobile-display mb-8 lg:hidden">
             <p className="font-sans text-ns-meta font-medium uppercase tracking-ns-label text-brand-red">{t('player.nowPlaying')}</p>
-            <h2 className="ns-display-title ns-display-title--fullscreen mt-1 text-white">{currentTrack.title}</h2>
+            <h2 className="ns-display-title ns-display-title--fullscreen mt-1 text-zinc-100">{currentTrack.title}</h2>
             <p className="mt-1 font-sans text-sm text-zinc-500">{currentTrack.artistName}</p>
           </div>
           {loading ? (
@@ -253,7 +255,7 @@ export default function FullscreenLyricsPlayer({
                 <div className="mx-auto grid h-16 w-16 place-items-center rounded-lg border border-[var(--ns-border)] bg-surface-noir text-zinc-400">
                   <FileText size={28} />
                 </div>
-                <h2 className="mt-5 font-sans text-xl font-bold text-white">{t('lyrics.unavailable')}</h2>
+                <h2 className="mt-5 font-sans text-xl font-bold text-zinc-100">{t('lyrics.unavailable')}</h2>
                 <button type="button" onClick={retry} className="ns-button-primary mt-6 inline-flex items-center gap-2 px-5">
                   <RotateCcw size={16} />
                   {t('lyrics.retry')}
@@ -275,7 +277,7 @@ export default function FullscreenLyricsPlayer({
                 <div className="mx-auto grid h-16 w-16 place-items-center rounded-lg border border-[var(--ns-border)] bg-surface-noir text-zinc-400">
                   <FileText size={28} />
                 </div>
-                <h2 className="mt-5 font-sans text-xl font-bold text-white">{t('lyrics.noLyrics')}</h2>
+                <h2 className="mt-5 font-sans text-xl font-bold text-zinc-100">{t('lyrics.noLyrics')}</h2>
               </div>
             </div>
           )}
@@ -296,7 +298,6 @@ export default function FullscreenLyricsPlayer({
             repeatMode={repeatMode}
             shuffle={shuffle}
             isLiked={isLiked}
-            playbackError={playbackError}
             lyricsAvailable
             lyricsActive
             isQueueOpen={isQueueOpen}
@@ -316,7 +317,7 @@ export default function FullscreenLyricsPlayer({
         </div>
 
         <div
-          className="space-y-2 border-t border-[var(--ns-border-subtle)] bg-[var(--ns-player-bg)] px-4 pb-[calc(.65rem+env(safe-area-inset-bottom))] pt-2 select-none lg:hidden"
+          className="ns-fullscreen-mobile-controls space-y-2 border-t border-[var(--ns-border-subtle)] bg-[var(--ns-player-bg)] px-4 pb-[calc(.65rem+var(--ns-safe-area-bottom))] pt-2 select-none lg:hidden"
           data-testid="fullscreen-standard-mobile-playerbar"
         >
           <div className="flex min-w-0 items-center gap-1">
@@ -324,7 +325,6 @@ export default function FullscreenLyricsPlayer({
               track={currentTrack}
               isLiked={isLiked}
               onToggleLike={() => toggleLikeTrack(currentTrack.id)}
-              playbackError={playbackError}
               className="min-w-0 flex-1"
             />
             <button

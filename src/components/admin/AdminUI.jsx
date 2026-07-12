@@ -4,9 +4,9 @@ import { useTranslation } from 'react-i18next';
 
 export function AdminPageHeader({ title, description, actions }) {
   return (
-    <header className="flex flex-col gap-3 border-b border-[var(--ns-border-subtle)] pb-4 sm:flex-row sm:items-end sm:justify-between">
-      <div>
-        <h1 className="font-sans text-xl font-bold tracking-tight text-[var(--ns-text)] sm:text-2xl">{title}</h1>
+    <header className="flex flex-col gap-4 border-b border-[var(--ns-border-subtle)] pb-5 sm:flex-row sm:items-end sm:justify-between">
+      <div className="min-w-0">
+        <h1 className="font-sans text-2xl font-bold tracking-tight text-[var(--ns-text)]">{title}</h1>
         {description && <p className="mt-1 max-w-3xl font-sans tabular-nums text-ns-label leading-relaxed text-[var(--ns-text-muted)]">{description}</p>}
       </div>
       {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
@@ -16,7 +16,7 @@ export function AdminPageHeader({ title, description, actions }) {
 
 export function AdminPanel({ children, className = '', ...rest }) {
   return (
-    <section {...rest} className={`rounded-md border border-[var(--ns-border-subtle)] bg-[color-mix(in_srgb,var(--ns-surface)_72%,transparent)] ${className}`}>
+    <section {...rest} className={`rounded-md border border-[var(--ns-border-subtle)] bg-transparent ${className}`}>
       {children}
     </section>
   );
@@ -118,14 +118,14 @@ export function AdminSelect({ value, onChange, label, options }) {
 
 export function AdminTable({ children }) {
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full min-w-[760px] text-left text-sm [&_tbody_tr]:transition-colors [&_tbody_tr:hover]:bg-white/[0.02]">{children}</table>
+    <div className="relative max-h-[70dvh] overflow-auto">
+      <table className="w-full min-w-[760px] border-separate border-spacing-0 text-left text-sm [&_tbody_td]:border-b [&_tbody_td]:border-[var(--ns-border-subtle)] [&_tbody_tr]:transition-colors [&_tbody_tr:hover]:bg-[var(--ns-surface-hover)]">{children}</table>
     </div>
   );
 }
 
 export function AdminTableHead({ children }) {
-  return <th className="bg-black/10 px-4 py-3 font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-[var(--ns-text-muted)]">{children}</th>;
+  return <th className="sticky top-0 z-10 border-b border-[var(--ns-border-strong)] bg-[var(--ns-bg-elevated)] px-4 py-3 font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-[var(--ns-text-muted)]">{children}</th>;
 }
 
 export function AdminPagination({ pagination, onPage }) {

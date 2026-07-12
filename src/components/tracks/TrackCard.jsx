@@ -1,8 +1,9 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Play, Pause, Heart, MoreHorizontal } from 'lucide-react';
 import { usePlayerStore } from '../../store/playerStore';
 import { formatDuration } from '../../utils/formatTime';
+import { getLocalizedGenre } from '../../i18n/genreLabels';
 import FallbackCover from '../ui/FallbackCover';
 import { useTrackContextMenu } from '../../hooks/useEntityContextMenu';
 
@@ -33,30 +34,21 @@ export default function TrackCard({ track, tracksContext = [] }) {
     toggleLikeTrack(track.id);
   };
 
-  const handleCardClick = () => {
-    navigate(`/track/${track.id}`);
-  };
-
   return (
     <div
-      onClick={handleCardClick}
-      onKeyDown={(event) => {
-        contextMenuProps.onKeyDown(event);
-        if (event.defaultPrevented) return;
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          handleCardClick();
-        }
-      }}
       onContextMenu={contextMenuProps.onContextMenu}
-      role="link"
-      tabIndex={0}
-      aria-label={`Open ${track.title} by ${track.artistName}`}
       data-track-id={track.id}
-      className="group cursor-pointer border border-zinc-800/60 bg-zinc-950/35 p-3 transition-colors duration-150 hover:border-zinc-700/70 hover:bg-zinc-900/45 rounded-lg"
+      className="ns-media-card group"
     >
+      <Link
+        to={`/track/${track.id}`}
+        onKeyDown={contextMenuProps.onKeyDown}
+        className="absolute inset-0 z-0 rounded-lg"
+        aria-label={`Open ${track.title} by ${track.artistName}`}
+      />
+      <div className="pointer-events-none relative z-[1]">
       {/* Cover image wrap */}
-      <div className="relative mb-3 aspect-square overflow-hidden rounded-md border border-zinc-800/60 bg-zinc-950">
+      <div className="ns-media-card__artwork relative mb-3 aspect-square">
         <FallbackCover
           src={track.coverUrl}
           title={track.title}
@@ -68,13 +60,13 @@ export default function TrackCard({ track, tracksContext = [] }) {
         />
 
         {/* Hover/Active Play Overlay */}
-        <div className={`absolute inset-0 bg-black/55 flex items-center justify-center transition-opacity duration-150 ${
-          isCurrent ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+        <div className={`absolute inset-0 flex items-center justify-center bg-black/55 transition-opacity duration-150 ${
+          isCurrent ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'
         }`}>
           {canPlay ? (
           <button
             onClick={handlePlayClick}
-            className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-brand-red text-[var(--ns-on-accent)] transition-colors duration-150 hover:bg-rose-700"
+            className="pointer-events-auto flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-brand-red text-[var(--ns-on-accent)] transition-colors duration-150 hover:bg-rose-700"
             aria-label={isPlayingThis ? `Pause ${track.title}` : `Play ${track.title}`}
           >
             {isPlayingThis ? (
@@ -93,7 +85,7 @@ export default function TrackCard({ track, tracksContext = [] }) {
         <button
           type="button"
           onClick={openFromButton}
-          className="absolute right-2 top-2 z-10 ns-icon-button !min-h-9 !min-w-9 bg-zinc-950/85 text-zinc-300 md:opacity-0 md:group-hover:opacity-100 focus:opacity-100"
+          className="pointer-events-auto absolute right-2 top-2 z-10 ns-icon-button !min-h-9 !min-w-9 bg-zinc-950/85 text-zinc-300 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 focus:opacity-100"
           aria-label={`More actions for ${track.title}`}
           aria-haspopup="menu"
         >
@@ -110,14 +102,23 @@ export default function TrackCard({ track, tracksContext = [] }) {
             {track.title}
           </h4>
           <span className="mt-0.5 flex items-baseline justify-between gap-2">
-            <span
-              onClick={(e) => {
-                e.stopPropagation();
-                navigate(`/artist/${track.artistId}`);
-              }}
-              className="min-w-0 truncate font-sans tabular-nums text-ns-meta text-zinc-500 transition-colors hover:text-zinc-300"
-            >
-              {track.artistName}
+            <span className="flex min-w-0 items-baseline gap-1.5">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate(`/artist/${track.artistId}`);
+                }}
+                className="pointer-events-auto relative z-10 min-w-0 truncate text-left font-sans tabular-nums text-ns-meta text-zinc-500 transition-colors hover:text-zinc-300"
+              >
+                {track.artistName}
+              </button>
+              {track.genre && (
+                <span className="hidden shrink-0 font-sans text-ns-meta text-zinc-600 sm:inline">
+                  <span aria-hidden="true">· </span>
+                  <span>{getLocalizedGenre(track.genre)}</span>
+                </span>
+              )}
             </span>
             <span className="shrink-0 font-sans tabular-nums text-ns-meta text-zinc-600 select-none">
               {formatDuration(track.duration)}
@@ -127,7 +128,7 @@ export default function TrackCard({ track, tracksContext = [] }) {
 
         <button
           onClick={handleLikeClick}
-          className={`ns-icon-button !min-h-10 !min-w-10 shrink-0 transition-colors cursor-pointer ${
+          className={`pointer-events-auto relative z-10 ns-icon-button !min-h-10 !min-w-10 shrink-0 transition-colors cursor-pointer ${
             isLiked ? 'text-brand-red' : 'text-zinc-600 hover:text-zinc-300'
           }`}
           aria-label={isLiked ? `Unlike ${track.title}` : `Like ${track.title}`}
@@ -135,6 +136,7 @@ export default function TrackCard({ track, tracksContext = [] }) {
         >
           <Heart size={14} fill={isLiked ? 'currentColor' : 'none'} />
         </button>
+      </div>
       </div>
     </div>
   );

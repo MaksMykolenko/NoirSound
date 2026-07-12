@@ -17,7 +17,7 @@ export default function MobileNavbar() {
   ];
 
   return (
-    <nav aria-label="Mobile navigation" className="fixed inset-x-0 bottom-0 z-[var(--ns-z-mobile-nav)] flex min-h-[var(--ns-mobile-nav-height)] select-none items-center justify-around border-t border-[var(--ns-border-subtle)] bg-[color-mix(in_srgb,var(--ns-player-bg)_96%,transparent)] px-2 pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden">
+    <nav aria-label="Mobile navigation" className="fixed inset-x-0 bottom-0 z-[var(--ns-z-mobile-nav)] flex h-[var(--ns-mobile-nav-height)] select-none items-start justify-around border-t border-[var(--ns-border-subtle)] bg-[var(--ns-player-bg)] px-1 pb-[var(--ns-safe-area-bottom)] lg:hidden">
       {navItems.map((item) => {
         const Icon = item.icon;
         return (
@@ -25,13 +25,13 @@ export default function MobileNavbar() {
             key={item.to}
             to={item.to}
             className={({ isActive }) =>
-              `flex min-h-14 min-w-14 cursor-pointer flex-col items-center justify-center gap-1 rounded-md px-2 py-1 font-sans tabular-nums text-ns-meta font-medium transition-colors ${
-                isActive ? 'bg-zinc-900/70 text-brand-red' : 'text-zinc-500 hover:text-zinc-300'
+              `relative flex h-[var(--ns-mobile-nav-base-height)] min-w-0 flex-1 cursor-pointer flex-col items-center justify-center gap-1 px-1 py-1 font-sans tabular-nums text-ns-meta font-medium transition-colors before:absolute before:inset-x-3 before:top-0 before:h-0.5 before:rounded-full before:bg-transparent ${
+                isActive ? 'text-brand-red before:bg-brand-red' : 'text-zinc-500 hover:text-zinc-300'
               }`
             }
           >
             <Icon size={18} />
-            <span className="text-ns-meta">{item.label}</span>
+            <span className="w-full truncate text-center text-ns-meta">{item.label}</span>
           </NavLink>
         );
       })}

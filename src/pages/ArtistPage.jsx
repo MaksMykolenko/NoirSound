@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import PageMeta from '../components/meta/PageMeta';
 import { useTranslation } from 'react-i18next';
-import { Check, Users, Globe, Music, Edit } from 'lucide-react';
+import { Check, Users, Globe, Music, Edit, Pause, Play } from 'lucide-react';
 import { followArtist, unfollowArtist, getArtistById, getTracksByArtist } from '../api';
 import { useUserStore } from '../store/userStore';
 import { useToastStore } from '../store/toastStore';
@@ -14,6 +14,7 @@ import FallbackAvatar from '../components/ui/FallbackAvatar';
 import { sortTracksNewest } from '../utils/presentation';
 import { formatNumber } from '../utils/formatLocale';
 import { getLocalizedGenre } from '../i18n/genreLabels';
+import { usePlayerStore } from '../store/playerStore';
 
 export default function ArtistPage() {
   const { id } = useParams();
@@ -22,6 +23,7 @@ export default function ArtistPage() {
   const user = useUserStore((state) => state.user);
   const setAuthModalOpen = useUserStore((state) => state.setAuthModalOpen);
   const addToast = useToastStore((state) => state.addToast);
+  const player = usePlayerStore();
 
   const [artist, setArtist] = useState(null);
   const [artistTracks, setArtistTracks] = useState([]);
@@ -131,6 +133,24 @@ export default function ArtistPage() {
   };
 
   const isOwnProfile = user && (user.artistProfileId === artist.id || user.username === artist.username);
+  const playableTracks = artistTracks.filter((track) => track.isStreamable ?? Boolean(track.audioUrl));
+  const artistQueueSource = { type: 'artist', id: artist.id, name: artist.name };
+  const isArtistQueueCurrent = Boolean(
+    player.currentTrack
+    && playableTracks.some((track) => track.id === player.currentTrack.id)
+    && player.queueSource?.type === 'artist'
+    && player.queueSource?.id === artist.id
+  );
+  const isArtistPlaying = isArtistQueueCurrent && player.isPlaying;
+
+  const handlePlayArtist = () => {
+    if (playableTracks.length === 0) return;
+    if (isArtistQueueCurrent) {
+      player.togglePlay();
+      return;
+    }
+    player.playTrack(playableTracks[0], playableTracks, artistQueueSource);
+  };
 
   return (
     <div className="ns-page-stack pb-10">
@@ -140,24 +160,19 @@ export default function ArtistPage() {
         canonical={`https://noirsound.co/artist/${artist.id}`}
       />
 
-      {/* Hero / Header Box */}
-      <section className="relative overflow-hidden rounded-lg border border-zinc-800/60 bg-zinc-950">
-        <div 
-          className="h-40 w-full opacity-70 transition-opacity duration-300 md:h-52"
-          style={{ background: artist.bannerUrl || 'linear-gradient(135deg, var(--ns-accent-deep) 0%, var(--ns-bg) 100%)' }}
-        />
-        
-        <div className="relative z-10 -mt-9 flex flex-col items-center gap-4 p-4 pt-0 text-center sm:p-5 sm:pt-0 md:-mt-12 md:flex-row md:items-end md:text-left">
-          <div className="h-24 w-24 shrink-0 overflow-hidden rounded-full border-2 border-zinc-950 bg-zinc-900 md:h-28 md:w-28">
+      {/* Music-first artist hero */}
+      <section className="grid grid-cols-1 items-end gap-6 px-1 py-2 sm:py-4 md:grid-cols-[15rem_minmax(0,1fr)] md:gap-8">
+          <div className="mx-auto aspect-square w-48 shrink-0 overflow-hidden rounded-md border border-zinc-800/70 bg-zinc-900 shadow-xl shadow-black/20 sm:w-52 md:mx-0 md:w-60">
             <FallbackAvatar
               src={artist.avatarUrl}
               name={artist.name}
-              className="h-full w-full text-[112px]"
+              className="h-full w-full text-[240px]"
               imageClassName="object-cover"
             />
           </div>
 
-          <div className="flex-1 space-y-2 min-w-0">
+          <div className="min-w-0 space-y-4 text-center md:text-left">
+            <p className="ns-eyebrow">{t('profile.independentArtist')}</p>
             <div className="flex min-w-0 items-start justify-center gap-2 md:justify-start">
               <h1 className="ns-display-title ns-display-title--entity min-w-0 text-zinc-100">
                 {artist.name}
@@ -169,14 +184,11 @@ export default function ArtistPage() {
               )}
             </div>
             
-            <div className="flex items-center justify-center md:justify-start gap-2">
+            <div className="flex items-center justify-center gap-2 md:justify-start">
               {artist.username && <p className="font-sans tabular-nums text-ns-label text-zinc-400">@{artist.username}</p>}
-              <span className="rounded border border-brand-purple/20 bg-brand-purple/5 px-2 py-1 font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-purple-300">
-                {t('profile.independentArtist')}
-              </span>
             </div>
 
-            <div className="flex items-center justify-center space-x-4 pt-1 font-sans tabular-nums text-ns-label text-zinc-500 md:justify-start">
+            <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 font-sans tabular-nums text-ns-label text-zinc-500 md:justify-start">
               <span className="flex items-center space-x-1">
                 <Users size={14} className="text-zinc-500" />
                 <span className="text-zinc-300 font-bold">{formatNumber(followerDisplayCount)}</span>
@@ -186,33 +198,43 @@ export default function ArtistPage() {
               <span className="text-zinc-300 font-bold">{formatNumber(artist.monthlyListeners || 0)}</span>
               <span className="text-zinc-500 font-medium">{t('profile.monthlyListeners')}</span>
             </div>
-          </div>
 
-          {isOwnProfile ? (
-            <button
-              onClick={() => navigate('/profile?tab=settings')}
-              className="inline-flex min-h-11 shrink-0 cursor-pointer items-center justify-center gap-2 rounded-md border border-zinc-700/60 bg-zinc-800 px-5 text-ns-label font-semibold text-zinc-100 transition-colors hover:bg-zinc-700"
-            >
-              <Edit size={14} />
-              <span>{t('profile.editArtistProfile')}</span>
-            </button>
-          ) : (
-            <button
-              onClick={handleFollowClick}
-              disabled={followActionPending}
-              aria-pressed={isFollowing}
-              className={`min-h-11 shrink-0 cursor-pointer rounded-md px-5 text-ns-label font-semibold transition-colors disabled:cursor-wait disabled:opacity-60 ${
-                isFollowing
-                  ? 'bg-zinc-800 text-zinc-400 hover:text-zinc-100 border border-zinc-700/60'
-                  : 'ns-button-primary'
-              }`}
-            >
-              {followActionPending
-                ? t('actions.saving', { defaultValue: 'Saving…' })
-                : isFollowing ? t('actions.following') : t('actions.follow')}
-            </button>
-          )}
-        </div>
+            <div className="flex flex-wrap items-center justify-center gap-2 pt-1 md:justify-start">
+              <button
+                type="button"
+                onClick={handlePlayArtist}
+                disabled={playableTracks.length === 0}
+                className="ns-button-primary inline-flex items-center gap-2 px-6 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {isArtistPlaying ? <Pause size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" />}
+                <span>{isArtistPlaying ? t('contextMenu.pause') : t('contextMenu.play')}</span>
+              </button>
+              {isOwnProfile ? (
+                <button
+                  onClick={() => navigate('/profile?tab=settings')}
+                  className="ns-button-secondary inline-flex min-h-11 shrink-0 cursor-pointer items-center justify-center gap-2 px-5 text-ns-label"
+                >
+                  <Edit size={14} />
+                  <span>{t('profile.editArtistProfile')}</span>
+                </button>
+              ) : (
+                <button
+                  onClick={handleFollowClick}
+                  disabled={followActionPending}
+                  aria-pressed={isFollowing}
+                  className={`min-h-11 shrink-0 cursor-pointer rounded-md border px-5 text-ns-label font-semibold transition-colors disabled:cursor-wait disabled:opacity-60 ${
+                    isFollowing
+                      ? 'border-zinc-700/60 bg-zinc-800 text-zinc-400 hover:text-zinc-100'
+                      : 'border-zinc-700/70 bg-zinc-900 text-zinc-100 hover:border-brand-red/40'
+                  }`}
+                >
+                  {followActionPending
+                    ? t('actions.saving', { defaultValue: 'Saving…' })
+                    : isFollowing ? t('actions.following') : t('actions.follow')}
+                </button>
+              )}
+            </div>
+          </div>
       </section>
 
       {/* Split Columns: Tracks list vs About section */}
@@ -222,8 +244,8 @@ export default function ArtistPage() {
           
           {/* Top tracks list */}
           <section className="space-y-4">
-            <h2 className="ns-eyebrow px-1">{t('profile.topTracks')}</h2>
-            <div className="space-y-1 rounded-lg border border-zinc-800/60 bg-zinc-950/35 p-2 sm:p-3">
+            <h2 className="ns-section-title px-1">{t('profile.topTracks')}</h2>
+            <div className="border-y border-zinc-800/60 py-1">
               {artistTracks.length === 0 ? (
                 <EmptyState
                   iconName="Music2"
@@ -237,6 +259,7 @@ export default function ArtistPage() {
                     track={track}
                     index={idx}
                     tracksContext={artistTracks}
+                    queueSource={artistQueueSource}
                   />
                 ))
               )}
@@ -245,7 +268,7 @@ export default function ArtistPage() {
 
           {/* Singles derived from this artist's published API tracks. */}
           <section className="space-y-4">
-            <h2 className="ns-eyebrow px-1">{t('profile.singlesAndEps')}</h2>
+            <h2 className="ns-section-title px-1">{t('profile.singlesAndEps')}</h2>
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 2xl:grid-cols-4">
               {artistTracks.map((track) => (
                 <TrackCard key={track.id} track={track} tracksContext={artistTracks} />
@@ -255,10 +278,10 @@ export default function ArtistPage() {
         </div>
 
         {/* Right Column: About, Bio & Socials */}
-        <div className="space-y-6">
+        <div className="space-y-8 border-t border-zinc-800/60 pt-6 xl:border-l xl:border-t-0 xl:pl-6 xl:pt-0">
           {/* Bio Box */}
-          <section className="space-y-4 rounded-lg border border-zinc-800/60 bg-zinc-950/35 p-5">
-            <h2 className="ns-eyebrow">{t('profile.about')}</h2>
+          <section className="space-y-4">
+            <h2 className="ns-section-title">{t('profile.about')}</h2>
             <p className="text-sm md:text-base text-zinc-300 leading-relaxed">
               {artist.bio || t('profile.noBio')}
             </p>
@@ -281,8 +304,8 @@ export default function ArtistPage() {
           </section>
 
           {/* Social Links Box */}
-          <section className="space-y-3 rounded-lg border border-zinc-800/60 bg-zinc-950/35 p-5">
-            <h2 className="ns-eyebrow">{t('profile.socialLinks')}</h2>
+          <section className="space-y-3 border-t border-zinc-800/60 pt-6">
+            <h2 className="ns-section-title">{t('profile.socialLinks')}</h2>
             
             <div className="space-y-1">
               {!artist.socialLinks?.instagram

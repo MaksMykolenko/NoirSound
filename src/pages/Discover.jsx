@@ -12,6 +12,7 @@ import ErrorState from '../components/ui/ErrorState';
 import LoadingState from '../components/ui/LoadingState';
 import { Search, SlidersHorizontal, X, ChevronDown } from 'lucide-react';
 import FallbackAvatar from '../components/ui/FallbackAvatar';
+import PageMeta from '../components/meta/PageMeta';
 import { normalizeGenre, getGroupOf, isGenreGroup, QUICK_GROUP_LABELS } from '../constants/musicGenres';
 import { getGenreLabel } from '../utils/genreLabels';
 import { formatNumber } from '../utils/formatLocale';
@@ -59,14 +60,31 @@ export default function Discover() {
   const [filter, setFilter] = useState(() => filterFromQuery(requestedGenre, requestedGroup));
   const [moreOpen, setMoreOpen] = useState(() => browseAllRequested);
   const [searchQuery, setSearchQuery] = useState('');
+  const pageMeta = (
+    <PageMeta
+      title={`${t('discover.title')} · NoirSound`}
+      description={t('discover.subtitle')}
+      canonical="https://noirsound.co/discover"
+    />
+  );
 
   useEffect(() => {
     setFilter(filterFromQuery(requestedGenre, requestedGroup));
     setMoreOpen(browseAllRequested);
   }, [browseAllRequested, requestedGenre, requestedGroup]);
 
-  const { data: tracksData, isLoading: tracksLoading, error: tracksError } = useDiscoverTracks();
-  const { data: artistsData, isLoading: artistsLoading, error: artistsError } = useArtistsWithTracks();
+  const {
+    data: tracksData,
+    isLoading: tracksLoading,
+    error: tracksError,
+    refetch: refetchTracks,
+  } = useDiscoverTracks();
+  const {
+    data: artistsData,
+    isLoading: artistsLoading,
+    error: artistsError,
+    refetch: refetchArtists,
+  } = useArtistsWithTracks();
 
   const tracks = useMemo(() => sortTracksNewest(tracksData || []), [tracksData]);
   const artists = useMemo(
@@ -112,7 +130,15 @@ export default function Discover() {
   }, [artists, searchQuery]);
 
   const featuredTracks = useMemo(() => selectFeaturedTracks(filteredTracks, 4), [filteredTracks]);
-  const listTracks = useMemo(() => filteredTracks.slice(0, 10), [filteredTracks]);
+  const showFeatured = !searchQuery.trim() && filter.kind === 'all' && featuredTracks.length > 0;
+  const featuredTrackIds = useMemo(
+    () => new Set(showFeatured ? featuredTracks.map((track) => track.id) : []),
+    [featuredTracks, showFeatured]
+  );
+  const listTracks = useMemo(
+    () => filteredTracks.filter((track) => !featuredTrackIds.has(track.id)).slice(0, 10),
+    [featuredTrackIds, filteredTracks]
+  );
 
   const clearAll = () => {
     setSearchQuery('');
@@ -126,31 +152,6 @@ export default function Discover() {
   };
 
   const selectedGenreKey = filter.kind === 'genre' ? filter.key : '';
-
-  // Empty state for the featured grid (no upload CTA — that lives in the list).
-  const renderFeaturedEmpty = () => {
-    if (tracks.length === 0) {
-      return (
-        <EmptyState
-          iconName="AudioLines"
-          title={t('empty.noReleasesYet')}
-          description={t('empty.noTracksYet')}
-        />
-      );
-    }
-    const hasSearch = Boolean(searchQuery.trim());
-    return (
-      <EmptyState
-        iconName="SearchX"
-        title={hasSearch && filter.kind === 'all'
-          ? t('discover.styleEmptyTitle')
-          : t('discover.genreEmptyTitle')}
-        description={filter.kind === 'all' ? t('empty.noTracksYet') : t('discover.genreEmptyDesc')}
-        actionText={t('actions.clearFilters')}
-        onAction={clearAll}
-      />
-    );
-  };
 
   // Empty state for the All-releases list (carries the upload CTA).
   const renderListEmpty = () => {
@@ -194,6 +195,14 @@ export default function Discover() {
   if (isLoading) {
     return (
       <div className="ns-page-stack">
+        {pageMeta}
+        <div>
+          <h1 className="ns-page-title">{t('discover.title')}</h1>
+          <p className="ns-page-lede">{t('discover.subtitle')}</p>
+        </div>
+        <div className="border-y border-zinc-800/60 py-4" aria-hidden="true">
+          <div className="h-11 w-full animate-pulse rounded-md bg-zinc-900" />
+        </div>
         <LoadingState type="list" count={4} />
       </div>
     );
@@ -201,20 +210,35 @@ export default function Discover() {
 
   if (error) {
     return (
-      <ErrorState title="Discover is unavailable" message={error.message} />
+      <div className="ns-page-stack">
+        {pageMeta}
+        <div>
+          <h1 className="ns-page-title">{t('discover.title')}</h1>
+          <p className="ns-page-lede">{t('discover.subtitle')}</p>
+        </div>
+        <ErrorState
+          title="Discover is unavailable"
+          message={error.message}
+          onRetry={() => {
+            refetchTracks();
+            refetchArtists();
+          }}
+        />
+      </div>
     );
   }
 
   return (
     <div className="ns-page-stack">
+      {pageMeta}
       {/* Page Title Header */}
-      <div>
-        <h1 className="ns-page-title">{t('discover.title')}</h1>
-        <p className="ns-page-lede">{t('discover.subtitle')}</p>
-      </div>
+      <header className="space-y-5">
+        <div>
+          <h1 className="ns-page-title">{t('discover.title')}</h1>
+          <p className="ns-page-lede">{t('discover.subtitle')}</p>
+        </div>
 
-      {/* Search and filters */}
-      <div className="space-y-4 rounded-lg border border-zinc-800/60 bg-zinc-950/35 p-3 sm:p-4">
+        {/* Search stays prominent instead of reading as a dashboard filter card. */}
         <div className="flex flex-col md:flex-row md:items-center gap-3">
           <div className="relative flex-1">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" size={17} />
@@ -232,11 +256,14 @@ export default function Discover() {
             <span>{t('discover.resultsCount', { count: filteredTracks.length })}</span>
           </div>
         </div>
+      </header>
 
-        {/* Quick group tabs — wrap on mobile so nothing is clipped */}
+      {/* Search and filters */}
+      <div className="space-y-4 border-y border-zinc-800/60 py-4">
+        {/* Quick filters stay in one scrollable row on mobile. */}
         <div
           data-testid="genre-quick-tabs"
-          className="flex flex-wrap items-center gap-2"
+          className="ns-tabs-scroll -mx-4 flex items-center gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0"
           aria-label={t('discover.filterByGenre')}
         >
           {QUICK_TABS.map((tab) => (
@@ -294,27 +321,27 @@ export default function Discover() {
         )}
       </div>
 
-      {/* Grid: Featured in Genre */}
-      <section className="space-y-4">
-        <h2 className="ns-eyebrow">{t('discover.featured')}</h2>
-        {featuredTracks.length === 0 ? (
-          renderFeaturedEmpty()
-        ) : (
-          <div data-testid="featured-tracks" className="grid grid-cols-1 min-[480px]:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
+      {/* Featured is editorial browse content, not a duplicate search result. */}
+      {showFeatured && (
+        <section className="space-y-4">
+          <h2 className="ns-section-title">{t('discover.featured')}</h2>
+          <div data-testid="featured-tracks" className="ns-tabs-scroll -mx-4 flex gap-3 overflow-x-auto px-4 pb-2 min-[480px]:mx-0 min-[480px]:grid min-[480px]:grid-cols-2 min-[480px]:px-0 md:grid-cols-3 xl:grid-cols-4 sm:gap-5">
             {featuredTracks.map((track) => (
-              <TrackCard key={track.id} track={track} tracksContext={filteredTracks} />
+              <div key={track.id} className="w-[min(74vw,18rem)] shrink-0 min-[480px]:w-auto">
+                <TrackCard track={track} tracksContext={filteredTracks} />
+              </div>
             ))}
           </div>
-        )}
-      </section>
+        </section>
+      )}
 
       {/* Grid: Artists + List of Tracks Split */}
       <div className="grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(17rem,22rem)]">
 
         {/* Left 2 Cols: Tracks list */}
-        <section className="min-w-0 space-y-4">
-          <h2 className="ns-eyebrow">{t('discover.allReleases')}</h2>
-          <div data-testid="all-releases" className="space-y-1 rounded-lg border border-zinc-800/60 bg-zinc-950/35 p-2 sm:p-3">
+        {(!showFeatured || listTracks.length > 0) && <section className="min-w-0 space-y-4">
+          <h2 className="ns-section-title">{t('discover.allReleases')}</h2>
+          <div data-testid="all-releases" className="space-y-1">
             {listTracks.length === 0 ? (
               renderListEmpty()
             ) : (
@@ -328,11 +355,11 @@ export default function Discover() {
               ))
             )}
           </div>
-        </section>
+        </section>}
 
         {/* Right 1 Col: Recommended artists */}
         <section className="space-y-4">
-          <h2 className="ns-eyebrow">{t('discover.recommendedArtists')}</h2>
+          <h2 className="ns-section-title">{t('discover.recommendedArtists')}</h2>
           {recommendedArtists.length === 0 ? (
             <EmptyState
               iconName="Users"
@@ -340,13 +367,14 @@ export default function Discover() {
               description={t('discover.moreCreatorsAppear')}
             />
           ) : (
-            <div data-testid="recommended-artists" className="grid grid-cols-1 gap-4 min-[480px]:grid-cols-2 xl:grid-cols-1">
+            <div data-testid="recommended-artists" className="divide-y divide-zinc-800/60 border-y border-zinc-800/60">
               {recommendedArtists.slice(0, 3).map((artist) => (
-                <div
+                <button
+                  type="button"
                   key={artist.id}
                   data-artist-id={artist.id}
                   onClick={() => navigate(`/artist/${artist.id}`)}
-                  className="flex min-h-16 cursor-pointer items-center space-x-3.5 rounded-lg border border-zinc-800/60 bg-zinc-950/35 p-3 transition-colors hover:border-zinc-700/70 hover:bg-zinc-900/40"
+                  className="flex min-h-16 w-full cursor-pointer items-center space-x-3.5 px-2 py-3 text-left transition-colors hover:bg-zinc-900/40"
                 >
                   <FallbackAvatar
                     src={artist.avatarUrl}
@@ -360,7 +388,7 @@ export default function Discover() {
                       {formatNumber(artist.followers || 0)} followers
                     </p>
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           )}

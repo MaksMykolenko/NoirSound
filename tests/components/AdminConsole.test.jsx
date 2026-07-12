@@ -7,11 +7,13 @@ import i18n from '../../src/i18n';
 import { useUserStore } from '../../src/store/userStore';
 import AdminLayout from '../../src/pages/admin/AdminLayout';
 import AdminOverview from '../../src/pages/admin/AdminOverview';
+import AdminTracks from '../../src/pages/admin/AdminTracks';
 import AdminUsers from '../../src/pages/admin/AdminUsers';
 import AdminUserDetail from '../../src/pages/admin/AdminUserDetail';
 import { ConfirmActionModal } from '../../src/components/admin/AdminUI';
 import {
   getAdminOverview,
+  getAdminTracks,
   getAdminUser,
   getAdminUsers,
   suspendUser,
@@ -21,6 +23,7 @@ import {
 
 vi.mock('../../src/api/admin', () => ({
   getAdminOverview: vi.fn(),
+  getAdminTracks: vi.fn(),
   getAdminUsers: vi.fn(),
   getAdminUser: vi.fn(),
   suspendUser: vi.fn(),
@@ -51,6 +54,7 @@ function renderAdmin(path, element) {
       <Routes>
         <Route path="/admin" element={<AdminLayout />}>
           <Route path="overview" element={element} />
+          <Route path="tracks" element={element} />
           <Route path="users" element={element} />
           <Route path="users/:id" element={element} />
         </Route>
@@ -130,6 +134,62 @@ describe('Admin console', () => {
 
     expect(await screen.findByText('Listener One')).toBeInTheDocument();
     expect(screen.getByText('listener@test.local')).toBeInTheDocument();
+  });
+
+  it('renders long admin track fixtures in a contained, paginated table', async () => {
+    const longTitle = 'Midnight Signals from an Empty City Without Any Convenient Short Display Name';
+    const longArtist = 'The Independent Artists Collective with an Exceptionally Long Public Name';
+    const track = (id, status, overrides = {}) => ({
+      id,
+      title: `Track ${id}`,
+      artist: { user: { displayName: `Artist ${id}` } },
+      genre: 'AMBIENT',
+      status,
+      plays: 120,
+      reportsCount: 0,
+      updatedAt: '2026-07-12T12:00:00.000Z',
+      uploads: [{ status }],
+      ...overrides,
+    });
+    getAdminTracks.mockResolvedValue({
+      data: [
+        track('published', 'PUBLISHED', {
+          title: longTitle,
+          artist: { user: { displayName: longArtist } },
+          reportsCount: 73,
+        }),
+        track('processing', 'PROCESSING'),
+        track('hidden', 'HIDDEN'),
+        track('failed', 'FAILED'),
+      ],
+      pagination: { page: 1, pageSize: 25, total: 126, totalPages: 6 },
+    });
+    const user = userEvent.setup();
+
+    renderAdmin('/admin/tracks', <AdminTracks />);
+
+    const title = await screen.findByText(longTitle);
+    expect(title).toHaveClass('max-w-[18rem]', 'break-words');
+    expect(screen.getByText(longArtist)).toHaveClass('max-w-[14rem]', 'break-words');
+
+    const table = screen.getByRole('table');
+    expect(table).toHaveClass('min-w-[760px]');
+    expect(table.parentElement).toHaveClass('overflow-auto');
+    within(table).getAllByRole('columnheader').forEach((heading) => {
+      expect(heading).toHaveClass('sticky');
+    });
+
+    ['PUBLISHED', 'PROCESSING', 'HIDDEN', 'FAILED'].forEach((status) => {
+      expect(within(table).getByText(i18n.t(`admin.statusValues.${status}`))).toBeInTheDocument();
+    });
+    expect(within(table).getByText('73')).toBeInTheDocument();
+    expect(within(table).getAllByRole('link', { name: i18n.t('admin.view') })).toHaveLength(4);
+    expect(screen.getByText(i18n.t('admin.pageOf', { page: 1, total: 6 }))).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: i18n.t('admin.next') }));
+    await waitFor(() => {
+      expect(getAdminTracks).toHaveBeenLastCalledWith({ search: '', status: '', page: 2 });
+    });
   });
 
   it('requires a reason before confirming a dangerous action', async () => {

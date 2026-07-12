@@ -316,7 +316,7 @@ export default function PlaylistPage() {
         description={`${tracks.length === 1 ? '1 track' : `${tracks.length} tracks`}${playlist.description ? ` · ${playlist.description}` : ` · Listen to ${playlist.name}, a playlist by ${playlist.creator} on NoirSound.`}`}
         canonical={`https://noirsound.co/playlist/${playlist.id}`}
       />
-      <button onClick={() => navigate(-1)} className="min-h-11 px-2 flex items-center gap-2 text-zinc-400 hover:text-white text-sm font-semibold">
+      <button onClick={() => navigate(-1)} className="flex min-h-11 w-fit items-center gap-2 px-1 text-sm font-semibold text-zinc-400 transition-colors hover:text-white">
         <ArrowLeft size={14} />
         <span>Back</span>
       </button>
@@ -327,21 +327,23 @@ export default function PlaylistPage() {
         onContextMenu={contextMenuProps.onContextMenu}
         onKeyDown={contextMenuProps.onKeyDown}
         tabIndex={0}
-        className="relative flex flex-col items-center gap-6 rounded-lg border border-zinc-800/60 bg-zinc-950/35 p-5 focus:outline-none focus:ring-1 focus:ring-brand-red/50 sm:p-6 md:flex-row md:items-end md:gap-8"
+        className="relative grid scroll-mt-20 grid-cols-1 items-end gap-6 px-1 py-2 focus:outline-none focus-visible:rounded-lg focus-visible:ring-2 focus-visible:ring-brand-red/50 sm:py-4 md:grid-cols-[15rem_minmax(0,1fr)] md:gap-8"
       >
-        <button type="button" onClick={openFromButton} className="absolute right-4 top-4 ns-icon-button !min-h-10 !min-w-10 text-zinc-400" aria-label={`More actions for ${playlist.name}`} aria-haspopup="menu">
+        <button type="button" onClick={openFromButton} className="absolute right-1 top-1 ns-icon-button !min-h-10 !min-w-10 bg-zinc-950/80 text-zinc-400 md:right-0 md:top-4" aria-label={`More actions for ${playlist.name}`} aria-haspopup="menu">
           <MoreHorizontal size={18} />
         </button>
-        <div className="h-48 w-48 shrink-0 overflow-hidden rounded-md border border-zinc-800 bg-zinc-900 md:h-56 md:w-56">
+        <div className="mx-auto aspect-square w-48 shrink-0 overflow-hidden rounded-md border border-zinc-800/70 bg-zinc-900 shadow-xl shadow-black/20 sm:w-52 md:mx-0 md:w-60">
           <PlaylistCoverArt playlist={playlist} tracks={tracks} />
         </div>
 
-        <div className="flex-1 space-y-4 text-center md:text-left min-w-0">
-          <p className="ns-eyebrow">{t('playlists.typeLabel')}</p>
-          <span className="inline-flex items-center gap-1.5 rounded border border-brand-red/30 bg-brand-red/5 px-2.5 py-1 font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-rose-300">
-            {playlist.isPublic === false && <Lock size={11} />}
-            {playlist.isPublic === false ? t('playlists.private') : t('playlists.public')}
-          </span>
+        <div className="min-w-0 space-y-4 text-center md:pr-12 md:text-left">
+          <div className="flex flex-wrap items-center justify-center gap-2 md:justify-start">
+            <p className="ns-eyebrow">{t('playlists.typeLabel')}</p>
+            <span className="inline-flex items-center gap-1.5 font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-zinc-500">
+              {playlist.isPublic === false && <Lock size={11} />}
+              {playlist.isPublic === false ? t('playlists.private') : t('playlists.public')}
+            </span>
+          </div>
           <div>
             <h1 className="ns-display-title ns-display-title--entity">{playlist.name}</h1>
             <p className="text-sm text-zinc-400 mt-2">{playlist.description || t('playlists.noDescription')}</p>
@@ -361,29 +363,29 @@ export default function PlaylistPage() {
               })}</span>
             )}
           </div>
-          <div className="flex flex-wrap justify-center md:justify-start gap-2">
-            <button onClick={handlePlay} disabled={playableTracks.length === 0} className="ns-button-primary px-5 inline-flex items-center gap-2 disabled:opacity-40">
+          <div className="flex flex-wrap justify-center gap-2 md:justify-start">
+            <button onClick={handlePlay} disabled={playableTracks.length === 0} className="ns-button-primary inline-flex items-center gap-2 px-6 disabled:opacity-40">
               {isPlaylistPlaying ? <Pause size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" />}
               {isPlaylistPlaying ? t('contextMenu.pause') : t('contextMenu.play')}
             </button>
-            <button onClick={handleShuffle} disabled={playableTracks.length === 0} className="ns-button-secondary px-4 inline-flex items-center gap-2 disabled:opacity-40">
-              <Shuffle size={15} /> {t('playlists.shuffle')}
+            <button onClick={handleShuffle} disabled={playableTracks.length === 0} className="ns-button-secondary hidden min-w-11 items-center justify-center gap-2 px-4 disabled:opacity-40 sm:inline-flex" aria-label={t('playlists.shuffle')}>
+              <Shuffle size={15} /> <span>{t('playlists.shuffle')}</span>
             </button>
-            <button onClick={() => player.addTracksToQueue(playableTracks)} disabled={playableTracks.length === 0} className="ns-button-secondary px-4 inline-flex items-center gap-2 disabled:opacity-40">
-              <ListPlus size={15} /> {t('playlists.addToQueue')}
+            <button onClick={() => player.addTracksToQueue(playableTracks)} disabled={playableTracks.length === 0} className="ns-button-secondary hidden min-w-11 items-center justify-center gap-2 px-4 disabled:opacity-40 sm:inline-flex" aria-label={t('playlists.addToQueue')}>
+              <ListPlus size={15} /> <span>{t('playlists.addToQueue')}</span>
             </button>
             {!owner && (
-              <button onClick={handleToggleSaved} disabled={pending === 'save'} className="ns-button-secondary px-4 inline-flex items-center gap-2">
+              <button onClick={handleToggleSaved} disabled={pending === 'save'} className="ns-button-secondary inline-flex min-w-11 items-center justify-center gap-2 px-3 sm:px-4" aria-label={playlist.isSaved ? t('playlists.saved') : t('playlists.save')}>
                 {pending === 'save' ? <LoaderCircle size={15} className="animate-spin" /> : <Heart size={15} fill={playlist.isSaved ? 'currentColor' : 'none'} />}
-                {playlist.isSaved ? t('playlists.saved') : t('playlists.save')}
+                <span className="hidden sm:inline">{playlist.isSaved ? t('playlists.saved') : t('playlists.save')}</span>
               </button>
             )}
             {owner && (
-              <button onClick={() => setEditOpen(true)} className="ns-button-secondary px-4 inline-flex items-center gap-2">
-                <Edit3 size={15} /> {t('playlists.edit')}
+              <button onClick={() => setEditOpen(true)} className="ns-button-secondary inline-flex min-w-11 items-center justify-center gap-2 px-3 sm:px-4" aria-label={t('playlists.edit')}>
+                <Edit3 size={15} /> <span className="hidden sm:inline">{t('playlists.edit')}</span>
               </button>
             )}
-            <button onClick={handleShare} disabled={playlist.isPublic === false} className="ns-icon-button !min-h-11 !min-w-11 disabled:opacity-30" aria-label={t('playlists.share')}>
+            <button onClick={handleShare} disabled={playlist.isPublic === false} className="ns-icon-button !min-h-11 !min-w-11 hidden disabled:opacity-30 sm:inline-flex" aria-label={t('playlists.share')}>
               <Share2 size={16} />
             </button>
           </div>
@@ -392,13 +394,13 @@ export default function PlaylistPage() {
 
       <section className="space-y-4">
         <div className="flex items-center justify-between px-1">
-          <h2 className="ns-eyebrow">{t('playlists.tracks')}</h2>
-          {owner && tracks.length > 1 && <p className="text-ns-label text-zinc-500">{t('playlists.reorderHelp')}</p>}
+          <h2 className="ns-section-title">{t('playlists.tracks')}</h2>
+          {owner && tracks.length > 1 && <p className="hidden text-ns-label text-zinc-500 sm:block">{t('playlists.reorderHelp')}</p>}
         </div>
         {tracks.length === 0 ? (
           <EmptyState iconName="Music2" title={t('playlists.empty')} description={owner ? t('playlists.emptyOwner') : t('playlists.emptyVisitor')} />
         ) : (
-          <div className="rounded-lg border border-zinc-800/60 bg-zinc-950/35 p-2 sm:p-3">
+          <div className="border-y border-zinc-800/60 py-2">
             <PlaylistTrackTable
               tracks={tracks}
               playlist={playlist}

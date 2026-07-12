@@ -93,9 +93,17 @@ export default function TrackPage() {
 
   if (loading) {
     return (
-      <div className="space-y-4 animate-pulse">
-        <section className="h-72 rounded-lg border border-zinc-800/60 bg-zinc-950/35 p-6 md:p-8"></section>
-        <div className="h-28 rounded-lg border border-zinc-800/60 bg-zinc-950/35"></div>
+      <div className="animate-pulse space-y-8">
+        <section className="grid grid-cols-1 items-end gap-6 px-1 py-4 md:grid-cols-[14rem_minmax(0,1fr)] md:gap-8">
+          <div className="mx-auto aspect-square w-48 rounded-md bg-zinc-900 md:mx-0 md:w-56" />
+          <div className="space-y-4">
+            <div className="h-4 w-24 rounded bg-zinc-900" />
+            <div className="h-14 w-4/5 rounded bg-zinc-900" />
+            <div className="h-4 w-40 rounded bg-zinc-900" />
+            <div className="h-11 w-52 rounded bg-zinc-900" />
+          </div>
+        </section>
+        <div className="h-24 border-y border-zinc-800/60 bg-zinc-950/20" />
       </div>
     );
   }
@@ -179,12 +187,12 @@ export default function TrackPage() {
         canonical={`https://noirsound.co/track/${track.id}`}
       />
 
-      {/* Hero + waveform form one connected unit */}
-      <div className="space-y-4">
+      {/* Hero + waveform form one connected music-detail unit */}
+      <div className="space-y-6">
 
         {/* HERO */}
         <section
-          className="relative isolate overflow-hidden rounded-lg border border-[var(--ns-border)] bg-zinc-950/35 p-5 sm:p-6"
+          className="relative isolate grid scroll-mt-20 grid-cols-1 items-end gap-6 px-1 py-2 focus:outline-none focus-visible:rounded-lg focus-visible:ring-2 focus-visible:ring-brand-red/50 sm:py-4 md:grid-cols-[14rem_minmax(0,1fr)] md:gap-8"
           onContextMenu={contextMenuProps.onContextMenu}
           onKeyDown={contextMenuProps.onKeyDown}
           tabIndex={0}
@@ -193,30 +201,30 @@ export default function TrackPage() {
           <button
             type="button"
             onClick={openFromButton}
-            className="absolute right-4 top-4 z-20 ns-icon-button !min-h-10 !min-w-10 bg-zinc-950/70 text-zinc-300"
+            className="absolute right-1 top-1 z-20 ns-icon-button !min-h-10 !min-w-10 bg-zinc-950/80 text-zinc-300 md:right-0 md:top-4"
             aria-label={`More actions for ${track.title}`}
             aria-haspopup="menu"
           >
             <MoreHorizontal size={17} />
           </button>
-          <div className="flex flex-col md:flex-row gap-6 md:gap-8 items-center md:items-end">
+          <>
             {/* Cover */}
-            <div className="shrink-0">
+            <div className="mx-auto shrink-0 md:mx-0">
               <FallbackCover
                 src={track.coverUrl}
                 title={track.title}
                 artistName={track.artistName}
                 genre={track.genre}
-                className="h-44 w-44 rounded-md border border-zinc-700/70 sm:h-52 sm:w-52 md:h-56 md:w-56"
+                className="h-48 w-48 rounded-md border border-[var(--ns-border)] shadow-xl shadow-black/20 sm:h-52 sm:w-52 md:h-56 md:w-56"
                 imageClassName="object-cover"
               />
             </div>
 
             {/* Track info + actions + metadata */}
-            <div className="flex-1 min-w-0 space-y-4 text-center md:text-left">
+            <div className="min-w-0 space-y-4 text-center md:pr-12 md:text-left">
               <div className="space-y-2.5">
                 {showGenre && (
-                  <span className="inline-block rounded border border-brand-red/30 bg-[var(--ns-accent-soft)] px-2.5 py-1 font-sans tabular-nums text-ns-label font-medium uppercase tracking-ns-label text-rose-300 select-none">
+                  <span className="inline-block bg-[var(--ns-accent-soft)] px-2 py-0.5 font-sans tabular-nums text-ns-label font-medium uppercase tracking-ns-label text-rose-300 select-none">
                     {genreLabel}
                   </span>
                 )}
@@ -233,7 +241,7 @@ export default function TrackPage() {
               </div>
 
               {/* Actions */}
-              <div className="flex flex-wrap items-center justify-center md:justify-start gap-2.5">
+              <div className="flex flex-wrap items-center justify-center gap-2.5 md:justify-start">
                 <button
                   onClick={handlePlayClick}
                   disabled={!canPlay}
@@ -258,7 +266,7 @@ export default function TrackPage() {
                 <button
                   onClick={handleQueueClick}
                   disabled={!canPlay}
-                  className={`${iconActionClass(inQueue)} disabled:opacity-40 disabled:cursor-not-allowed`}
+                  className={`${iconActionClass(inQueue)} hidden disabled:opacity-40 disabled:cursor-not-allowed sm:inline-flex`}
                   title={inQueue ? t('trackPage.removeFromQueue') : t('trackPage.addToQueue')}
                   aria-label={inQueue ? t('trackPage.removeFromQueue') : t('trackPage.addToQueue')}
                   aria-pressed={inQueue}
@@ -268,14 +276,19 @@ export default function TrackPage() {
 
                 <button
                   onClick={handleShare}
-                  className={iconActionClass(false)}
+                  className={`${iconActionClass(false)} hidden sm:inline-flex`}
                   title={t('trackPage.share')}
                   aria-label={t('trackPage.share')}
                 >
                   <Share2 size={16} />
                 </button>
 
-                <ReportButton targetType="TRACK" targetId={track.id} className="ml-1" />
+                <ReportButton
+                  targetType="TRACK"
+                  targetId={track.id}
+                  className="ml-0 min-h-11 min-w-11 justify-center rounded-md border border-zinc-800 bg-zinc-900 px-3 hover:border-brand-red/35 sm:ml-1"
+                  label={<span className="sr-only">Report</span>}
+                />
               </div>
 
               {/* Compact metadata row (secondary, wraps on mobile) */}
@@ -307,11 +320,11 @@ export default function TrackPage() {
               {/* Subtle contextual note */}
               <p className="text-sm text-zinc-500/90">{trackNote}</p>
             </div>
-          </div>
+          </>
         </section>
 
         {/* WAVEFORM — visually attached to the hero */}
-        <section className="space-y-3 rounded-lg border border-zinc-800/60 bg-zinc-950/35 p-5">
+        <section className="space-y-3 border-y border-zinc-800/60 bg-zinc-950/15 px-1 py-5 sm:px-3">
           <div className="flex items-center justify-between gap-4">
             <h2 className="ns-eyebrow">{t('trackPage.waveform')}</h2>
             <span className="text-ns-label font-sans tabular-nums text-zinc-500 select-none">
@@ -346,8 +359,8 @@ export default function TrackPage() {
 
         {/* Description & Comments */}
         <div className="min-w-0 space-y-6 xl:space-y-8">
-          <div className="space-y-3 rounded-lg border border-zinc-800/60 bg-zinc-950/35 p-5">
-            <h2 className="ns-eyebrow">{t('trackPage.description')}</h2>
+          <section className="space-y-3 border-t border-zinc-800/60 pt-6">
+            <h2 className="ns-section-title">{t('trackPage.description')}</h2>
             {track.description ? (
               <p className="text-sm text-zinc-300 leading-relaxed whitespace-pre-line">{track.description}</p>
             ) : (
@@ -365,29 +378,29 @@ export default function TrackPage() {
                 ))}
               </div>
             )}
-          </div>
+          </section>
 
-          <div className="rounded-lg border border-zinc-800/60 bg-zinc-950/35 p-4 sm:p-5">
+          <section className="border-t border-zinc-800/60 pt-6">
             <CommentSection trackId={track.id} />
-          </div>
+          </section>
         </div>
 
         {/* Related tracks */}
         <div className="space-y-4">
-          <h2 className="ns-eyebrow px-1">{t('trackPage.relatedTracks')}</h2>
+          <h2 className="ns-section-title px-1">{t('trackPage.relatedTracks')}</h2>
           {relatedTracks.length === 0 ? (
-            <div className="space-y-1.5 rounded-lg border border-zinc-800/60 bg-zinc-950/35 p-5 text-center">
+            <div className="space-y-1.5 border-y border-zinc-800/60 px-2 py-6 text-center">
               <p className="text-sm font-semibold text-zinc-300">{t('trackPage.noSimilarTitle')}</p>
               <p className="text-sm text-zinc-500 leading-relaxed">{t('trackPage.noSimilarDesc')}</p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="border-y border-zinc-800/60">
               {relatedTracks.map((relTrack) => (
                 <button
                   type="button"
                   key={relTrack.id}
                   onClick={() => navigate(`/track/${relTrack.id}`)}
-                  className="group flex w-full cursor-pointer items-center gap-3 rounded-md border border-zinc-800/60 bg-zinc-950/35 p-3 text-left transition-colors hover:border-zinc-700/70 hover:bg-zinc-900/40"
+                  className="group flex w-full cursor-pointer items-center gap-3 border-b border-zinc-900/70 p-3 text-left transition-colors last:border-b-0 hover:bg-zinc-900/40 focus:outline-none focus-visible:bg-zinc-900/50 focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-brand-red/40"
                 >
                   <FallbackCover
                     src={relTrack.coverUrl}

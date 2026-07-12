@@ -18,13 +18,38 @@ import {
 import { formatTime } from '../../utils/formatTime';
 import FallbackCover from '../ui/FallbackCover';
 import { useTrackContextMenu } from '../../hooks/useEntityContextMenu';
+import { isMockMode } from '../../api/mode';
+import { resolvePlaybackErrorMessage } from '../../utils/playbackErrorMessage';
+
+export function PlaybackErrorStatus({ error, className = '' }) {
+  const { t } = useTranslation();
+  if (!error) return null;
+
+  const message = resolvePlaybackErrorMessage(error, {
+    mockMode: isMockMode(),
+    demoMessage: t('player.demoAudioUnavailable'),
+    unavailableMessage: t('player.audioUnavailable'),
+  });
+
+  return (
+    <p
+      className={`min-w-0 truncate text-ns-label font-medium text-rose-300 ${className}`}
+      role="alert"
+      aria-live="polite"
+      aria-atomic="true"
+      title={message === error ? undefined : String(error)}
+    >
+      {message}
+    </p>
+  );
+}
 
 export function PlayerTrackInfo({
   track,
   isLiked,
   onToggleLike,
   playbackError,
-  className = 'w-1/4 min-w-[180px]',
+  className = 'w-[clamp(14rem,24vw,21rem)] min-w-0',
 }) {
   const { contextMenuProps, openFromButton } = useTrackContextMenu(track);
   return (
@@ -50,9 +75,7 @@ export function PlayerTrackInfo({
         <p className="text-ns-label text-zinc-350 truncate hover:text-zinc-100 cursor-pointer font-medium">
           {track.artistName}
         </p>
-        {playbackError && (
-          <p className="text-ns-label text-rose-300 truncate" role="alert">{playbackError}</p>
-        )}
+        <PlaybackErrorStatus error={playbackError} />
       </div>
       <button
         type="button"
@@ -118,7 +141,7 @@ export function PlayerTransportControls({
       <button
         type="button"
         onClick={onTogglePlay}
-        className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-[var(--ns-player-control-bg)] text-[var(--ns-player-control-text)] shadow-md transition-transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-brand-red"
+        className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-[var(--ns-player-control-bg)] text-[var(--ns-player-control-text)] shadow-md transition-colors hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-brand-red"
         title={isPlaying ? 'Pause' : 'Play'}
         aria-label={isPlaying ? 'Pause' : 'Play'}
         data-testid="standard-player-play-button"
@@ -246,7 +269,7 @@ export function DesktopPlayerBarContent({
         playbackError={playbackError}
       />
 
-      <div className="flex flex-col items-center flex-1 max-w-2xl px-4 min-w-0">
+      <div className="flex min-w-0 max-w-2xl flex-1 flex-col items-center px-3 xl:px-5">
         <PlayerTransportControls
           isPlaying={isPlaying}
           shuffle={shuffle}
@@ -261,7 +284,7 @@ export function DesktopPlayerBarContent({
       </div>
 
       <div
-        className="flex items-center justify-end space-x-3 w-1/4 min-w-[150px]"
+        className="flex w-[clamp(14rem,24vw,21rem)] min-w-0 items-center justify-end gap-2"
         data-testid="standard-player-actions"
       >
         <button
@@ -375,7 +398,7 @@ export function MobilePlayerTransportControls({
       <button
         type="button"
         onClick={onTogglePlay}
-        className="flex h-16 w-16 cursor-pointer items-center justify-center rounded-full bg-[var(--ns-player-control-bg)] text-[var(--ns-player-control-text)] shadow-md transition-transform active:scale-95 focus:outline-none focus:ring-2 focus:ring-brand-red"
+        className="flex h-16 w-16 cursor-pointer items-center justify-center rounded-full bg-[var(--ns-player-control-bg)] text-[var(--ns-player-control-text)] shadow-md transition-colors active:opacity-85 focus:outline-none focus:ring-2 focus:ring-brand-red"
         aria-label={isPlaying ? 'Pause' : 'Play'}
         data-testid="standard-mobile-player-play-button"
       >

@@ -38,27 +38,27 @@ export default function AdminOverview() {
   return (
     <>
       <AdminPageHeader title={t('admin.overview')} description={t('admin.overviewDescription')} />
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      <AdminPanel className="grid overflow-hidden sm:grid-cols-2 xl:grid-cols-3">
         {stats.map(([label, value, Icon, to]) => (
-          <Link key={label} to={to} className="group">
-            <AdminPanel className="h-full p-4 transition-colors group-hover:border-[var(--ns-accent)]">
+          <Link key={label} to={to} className="group border-b border-r border-[var(--ns-border-subtle)] transition-colors hover:bg-[var(--ns-hover-bg)]">
+            <div className="h-full p-4">
               <div className="flex items-center justify-between">
                 <Icon className="h-4 w-4 text-[var(--ns-text-muted)]" />
                 <span className="font-sans text-2xl font-bold">{valueOrUnavailable(value, t('admin.unavailable'))}</span>
               </div>
               <p className="mt-3 font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-[var(--ns-text-muted)]">{label}</p>
-            </AdminPanel>
+            </div>
           </Link>
         ))}
-      </div>
+      </AdminPanel>
       <AdminPanel className="p-4">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-sm font-bold">{t('admin.systemStatus')}</h2>
           <StatusBadge status={data?.system?.status} />
         </div>
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="divide-y divide-[var(--ns-border-subtle)] border-y border-[var(--ns-border-subtle)] sm:grid sm:grid-cols-2 sm:divide-x sm:divide-y-0 xl:grid-cols-3">
           {['api', 'database', 'redis', 'storage', 'worker', 'ffmpeg'].map((name) => (
-            <div key={name} className="flex items-center justify-between rounded border border-[var(--ns-border-subtle)] bg-black/10 p-3">
+            <div key={name} className="flex items-center justify-between gap-3 px-3 py-2.5">
               <span className="text-sm font-semibold">{t(`admin.systemChecks.${name}`)}</span>
               <StatusBadge status={data?.system?.checks?.[name] || 'unavailable'} />
             </div>

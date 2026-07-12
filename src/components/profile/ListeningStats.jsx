@@ -69,10 +69,10 @@ export default function ListeningStats() {
 
   return (
     <div className="space-y-6">
-      <section className="grid grid-cols-1 min-[430px]:grid-cols-2 xl:grid-cols-4 gap-4">
+      <section className="grid grid-cols-1 gap-3 border-y border-zinc-800/60 py-3 min-[430px]:grid-cols-2 xl:grid-cols-4">
         {metrics.map(({ label, value, icon: Icon }) => (
-          <div key={label} className="flex min-h-20 items-center gap-3 rounded-lg border border-zinc-800/60 bg-zinc-950/35 p-4">
-            <div className="rounded border border-zinc-800 bg-zinc-950 p-2 text-brand-red">
+          <div key={label} className="flex min-h-20 items-center gap-3 border-l-2 border-zinc-800/70 px-3 py-2">
+            <div className="p-2 text-brand-red">
               <Icon size={16} />
             </div>
             <div>
@@ -84,7 +84,7 @@ export default function ListeningStats() {
       </section>
 
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="p-5 sm:p-6 ns-card space-y-3">
+        <div className="space-y-3 border-t border-zinc-800/60 pt-4">
           <h3 className="ns-eyebrow">{t('stats.topTracksHeading')}</h3>
           {stats.topTracks.length === 0 ? (
             <p className="text-sm text-zinc-500">{t('stats.notEnoughData')}</p>
@@ -118,7 +118,7 @@ export default function ListeningStats() {
           )}
         </div>
 
-        <div className="p-5 sm:p-6 ns-card space-y-3">
+        <div className="space-y-3 border-t border-zinc-800/60 pt-4">
           <h3 className="ns-eyebrow">{t('stats.topArtistsHeading')}</h3>
           {stats.topArtists.length === 0 ? (
             <p className="text-sm text-zinc-500">{t('stats.notEnoughData')}</p>
@@ -149,7 +149,7 @@ export default function ListeningStats() {
         </div>
       </section>
 
-      <section className="p-5 sm:p-6 ns-card space-y-5">
+      <section className="space-y-5 border-t border-zinc-800/60 pt-5">
         <div>
           <h3 className="ns-eyebrow">{t('stats.genreBreakdown')}</h3>
           <p className="text-sm text-zinc-400 mt-1">{t('stats.calculatedFromEvents')}</p>

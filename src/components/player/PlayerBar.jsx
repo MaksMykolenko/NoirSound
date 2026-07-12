@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePlayerStore } from '../../store/playerStore';
 import {
@@ -19,8 +19,10 @@ import {
   DesktopPlayerBarContent,
   MobilePlayerProgress,
   MobilePlayerTransportControls,
+  PlaybackErrorStatus,
 } from './PlayerBarShared';
 import { useTrackContextMenu } from '../../hooks/useEntityContextMenu';
+import useDialogFocusTrap from '../../hooks/useDialogFocusTrap';
 
 export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
   const { t } = useTranslation();
@@ -55,6 +57,24 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
     useTrackContextMenu(currentTrack);
   const desktopPlayerHeight = 'h-[var(--ns-player-height)]';
   const desktopHiddenPosition = 'bottom-[calc(var(--ns-player-height)*-1)]';
+  const [isMobileViewport, setIsMobileViewport] = useState(() => (
+    typeof window !== 'undefined'
+    && typeof window.matchMedia === 'function'
+    && window.matchMedia('(max-width: 1023px)').matches
+  ));
+  const mobileSheetOpen = Boolean(
+    isMobileViewport && currentTrack && !isPlayerCollapsed && !lyricsFullscreenOpen && !isQueueOpen
+  );
+  const mobileSheetRef = useDialogFocusTrap(mobileSheetOpen, collapsePlayer);
+
+  useEffect(() => {
+    if (typeof window.matchMedia !== 'function') return undefined;
+    const query = window.matchMedia('(max-width: 1023px)');
+    const updateViewport = (event) => setIsMobileViewport(event.matches);
+    setIsMobileViewport(query.matches);
+    query.addEventListener?.('change', updateViewport);
+    return () => query.removeEventListener?.('change', updateViewport);
+  }, []);
 
   const handleVolumeChange = (e) => {
     setVolume(parseFloat(e.target.value));
@@ -157,7 +177,7 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
         data-testid="desktop-player"
         aria-hidden={isPlayerCollapsed || undefined}
         inert={isPlayerCollapsed || undefined}
-        className={`fixed inset-x-0 z-[var(--ns-z-player)] hidden select-none items-center justify-between border-t border-[var(--ns-border-subtle)] bg-[color-mix(in_srgb,var(--ns-player-bg)_96%,transparent)] px-4 backdrop-blur-md transition-all duration-200 ease-in-out md:px-8 lg:flex ${desktopPlayerHeight} ${
+        className={`ns-desktop-player fixed inset-x-0 z-[var(--ns-z-player)] hidden select-none items-center justify-between border-t border-[var(--ns-border-subtle)] bg-[var(--ns-player-bg)] px-4 transition-all duration-200 ease-in-out md:px-8 lg:flex ${desktopPlayerHeight} ${
           isPlayerCollapsed
             ? `${desktopHiddenPosition} opacity-0 pointer-events-none`
             : 'bottom-0 opacity-100'
@@ -223,12 +243,19 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
           {currentTrack ? (
             <div
               onClick={() => expandPlayer()}
-              onKeyDown={trackContextMenuProps.onKeyDown}
+              onKeyDown={(event) => {
+                trackContextMenuProps.onKeyDown(event);
+                if (event.defaultPrevented) return;
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  expandPlayer();
+                }
+              }}
               onContextMenu={trackContextMenuProps.onContextMenu}
               role="group"
               tabIndex={0}
               aria-label="Collapsed player"
-              className="fixed inset-x-0 bottom-[var(--ns-mobile-nav-height)] z-[var(--ns-z-player)] flex h-[var(--ns-mobile-player-height)] cursor-pointer items-center justify-between border-t border-[var(--ns-border-subtle)] bg-[color-mix(in_srgb,var(--ns-player-bg)_96%,transparent)] px-4 backdrop-blur-md focus:outline-none focus:ring-1 focus:ring-brand-red"
+              className="fixed inset-x-0 bottom-[var(--ns-mobile-nav-height)] z-[var(--ns-z-player)] flex h-[var(--ns-mobile-player-height)] cursor-pointer items-center justify-between border-t border-[var(--ns-border-subtle)] bg-[var(--ns-player-bg)] px-3 focus:outline-none focus:ring-1 focus:ring-brand-red"
             >
               {/* Progress Line */}
               <div className="absolute top-0 left-0 right-0 h-[2px] bg-zinc-900">
@@ -249,30 +276,21 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
                 />
                 <div className="min-w-0 flex-1">
                   <h5 className="font-bold text-zinc-200 text-ns-body-sm truncate leading-snug">{currentTrack.title}</h5>
-                  <p className="text-ns-label text-zinc-400 truncate mt-0.5 font-medium">{currentTrack.artistName}</p>
+                  {playbackError ? (
+                    <PlaybackErrorStatus error={playbackError} className="mt-0.5" />
+                  ) : (
+                    <p className="text-ns-label text-zinc-400 truncate mt-0.5 font-medium">{currentTrack.artistName}</p>
+                  )}
                 </div>
               </div>
               {/* Controls */}
-              <div className="flex items-center space-x-3 shrink-0">
-                {lyricsAvailable && (
-                  <button
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      openLyricsFullscreen();
-                    }}
-                    className="flex h-9 w-9 items-center justify-center rounded-md border border-[var(--ns-border-subtle)] bg-zinc-900 text-zinc-300"
-                    aria-label={t('player.openLyrics')}
-                    aria-pressed={lyricsFullscreenOpen}
-                  >
-                    <FileText size={15} />
-                  </button>
-                )}
+              <div className="flex shrink-0 items-center gap-1">
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     togglePlay();
                   }}
-                  className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-md border border-brand-red/20 bg-brand-red/10 text-brand-red focus:outline-none"
+                  className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-[var(--ns-player-control-bg)] text-[var(--ns-player-control-text)] focus:outline-none"
                   aria-label={isPlaying ? "Pause" : "Play"}
                 >
                   {isPlaying ? <Pause size={13} fill="currentColor" strokeWidth={0} /> : <Play size={13} fill="currentColor" strokeWidth={0} className="translate-x-[0.5px]" />}
@@ -283,7 +301,7 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
                     event.stopPropagation();
                     expandPlayer();
                   }}
-                  className="flex h-9 w-9 items-center justify-center rounded-md text-zinc-500"
+                  className="flex h-10 w-10 items-center justify-center rounded-md text-zinc-500"
                   aria-label="Expand player"
                 >
                   <ChevronDown size={18} className="rotate-180" />
@@ -306,15 +324,20 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
       {/* Mobile Expanded Player Sheet (Slides up covering screen) */}
       {currentTrack && (
         <div
+          ref={mobileSheetRef}
           onContextMenu={trackContextMenuProps.onContextMenu}
-          aria-hidden={isPlayerCollapsed || undefined}
-          inert={isPlayerCollapsed || undefined}
-          className={`fixed inset-0 z-[var(--ns-z-player-sheet)] flex select-none flex-col justify-between overflow-hidden bg-brand-dark px-5 pb-[calc(1.5rem+env(safe-area-inset-bottom))] pt-[calc(1.25rem+env(safe-area-inset-top))] transition-transform duration-300 ease-out sm:px-6 lg:hidden ${
+          role="dialog"
+          aria-modal="true"
+          aria-label={`${t('player.nowPlaying')}: ${currentTrack.title}`}
+          data-testid="mobile-now-playing-sheet"
+          aria-hidden={!mobileSheetOpen || undefined}
+          inert={!mobileSheetOpen || undefined}
+          className={`ns-mobile-player-sheet fixed inset-0 z-[var(--ns-z-player-sheet)] flex select-none flex-col justify-between overflow-hidden bg-[var(--ns-bg)] px-5 pb-[calc(1.5rem+var(--ns-safe-area-bottom))] pt-[calc(1.25rem+var(--ns-safe-area-top))] transition-transform duration-300 ease-out sm:px-6 lg:hidden ${
             isPlayerCollapsed ? 'translate-y-full' : 'translate-y-0'
           }`}
         >
           {/* Top row */}
-          <div className="flex items-center justify-between shrink-0">
+          <div className="ns-mobile-player-sheet__header flex shrink-0 items-center justify-between">
             <button
               onClick={() => collapsePlayer()}
               className="ns-icon-button !bg-zinc-900/80 text-zinc-400 cursor-pointer"
@@ -360,7 +383,7 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
           </div>
 
           {/* Large cover art */}
-          <div className="flex-1 flex items-center justify-center py-3 sm:py-6 min-h-0 max-h-[38vh] my-auto">
+          <div className="ns-mobile-player-sheet__artwork my-auto flex min-h-0 max-h-[38vh] flex-1 items-center justify-center py-3 sm:py-6">
             <FallbackCover
               src={currentTrack.coverUrl}
               title={currentTrack.title}
@@ -372,12 +395,13 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
           </div>
 
           {/* Controls details block */}
-          <div className="space-y-6 shrink-0">
+          <div className="ns-mobile-player-sheet__controls shrink-0 space-y-5">
             {/* Meta + Like */}
             <div className="flex items-center justify-between">
               <div className="min-w-0 flex-1 pr-4">
-                <h2 className="truncate font-sans text-xl font-bold leading-tight text-zinc-100">{currentTrack.title}</h2>
+                <h2 className="ns-fullscreen-compact-title truncate text-2xl font-bold text-zinc-100">{currentTrack.title}</h2>
                 <p className="mt-1 truncate text-sm font-medium text-zinc-400">{currentTrack.artistName}</p>
+                <PlaybackErrorStatus error={playbackError} className="mt-1" />
               </div>
               <button
                 onClick={() => toggleLikeTrack(currentTrack.id)}
@@ -407,7 +431,7 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
             />
 
             {/* volume bar */}
-            <div className="flex items-center space-x-3 pt-1 pb-3 mb-[env(safe-area-inset-bottom)]">
+            <div className="ns-mobile-player-sheet__volume flex items-center space-x-3 pb-3 pt-1">
               <button onClick={toggleMute} className="min-w-11 min-h-11 flex items-center justify-center text-zinc-500 focus:outline-none" aria-label={volume === 0 ? 'Unmute' : 'Mute'}>
                 {volume === 0 ? <VolumeX size={16} /> : <Volume2 size={16} />}
               </button>
@@ -425,11 +449,6 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
                 }}
               />
             </div>
-            {playbackError && (
-              <div className="rounded-md border border-rose-400/25 bg-rose-500/10 p-3 text-sm text-rose-200" role="alert">
-                {playbackError}
-              </div>
-            )}
           </div>
         </div>
       )}

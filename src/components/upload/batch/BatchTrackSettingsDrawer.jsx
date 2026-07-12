@@ -74,33 +74,33 @@ export default function BatchTrackSettingsDrawer({ item, open, onClose, onSave, 
         role="dialog"
         aria-modal="true"
         aria-labelledby="batch-track-settings-title"
-        className="absolute inset-x-0 bottom-0 max-h-[92vh] overflow-y-auto rounded-t-lg border border-zinc-800 bg-bg-noir p-5 shadow-xl sm:inset-y-0 sm:left-auto sm:w-[min(44rem,92vw)] sm:max-h-none sm:rounded-none sm:border-y-0 sm:border-r-0"
+        className="absolute inset-x-0 bottom-0 flex max-h-[94dvh] flex-col overflow-hidden rounded-t-lg border border-zinc-800 bg-bg-noir shadow-xl sm:inset-y-0 sm:left-auto sm:h-auto sm:max-h-none sm:w-[min(44rem,92vw)] sm:rounded-none sm:border-y-0 sm:border-r-0"
       >
-        <div className="flex items-center justify-between gap-4 sticky top-0 z-10 bg-brand-black pb-4 border-b border-zinc-800">
-          <div>
+        <header className="flex shrink-0 items-start justify-between gap-4 border-b border-zinc-800 px-4 py-4 sm:px-6">
+          <div className="min-w-0">
             <span className="ns-eyebrow text-brand-red">{t('batchUpload.trackSettings')}</span>
-            <h2 id="batch-track-settings-title" className="text-xl font-bold text-zinc-100 mt-1">{form.title || t('batchUpload.untitledTrack')}</h2>
+            <h2 id="batch-track-settings-title" className="mt-1 truncate text-xl font-bold text-zinc-100">{form.title || t('batchUpload.untitledTrack')}</h2>
           </div>
           <button type="button" className="ns-icon-button !rounded" aria-label={t('actions.close')} onClick={onClose}><X size={20} /></button>
-        </div>
+        </header>
 
-        <div className="space-y-5 py-5">
-          <div className="flex items-center gap-3 rounded border border-zinc-800 bg-zinc-950/50 p-3">
+        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-4 py-5 sm:px-6">
+          <div className="flex items-center gap-3 border-y border-zinc-800 py-3">
             <FileAudio className="text-brand-red" size={20} />
             <div className="min-w-0">
               <p className="text-sm font-semibold text-zinc-200 truncate">{item.fileName}</p>
               <p className="font-sans tabular-nums text-ns-meta text-zinc-500">{formatBytes(item.fileSize)} · {item.mimeType} · {item.durationSeconds ? `${item.durationSeconds}s` : t('batchUpload.durationPending')}</p>
             </div>
-            <span className="ml-auto font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-zinc-400">{item.status}</span>
+            <span className="ml-auto shrink-0 font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-zinc-400">{item.status}</span>
           </div>
 
-          <nav className="flex gap-1 overflow-x-auto rounded border border-zinc-800 bg-zinc-950/50 p-1" aria-label={t('batchUpload.trackSettings')}>
+          <nav className="flex gap-1 overflow-x-auto border-b border-zinc-800" aria-label={t('batchUpload.trackSettings')}>
             {TABS.map((tab) => (
               <button
                 key={tab}
                 type="button"
-                className={`min-h-10 flex-1 rounded px-3 font-sans text-ns-meta font-medium ${
-                  activeTab === tab ? 'bg-brand-red text-white' : 'text-zinc-500 hover:text-zinc-200'
+                className={`min-h-11 flex-1 shrink-0 border-b-2 px-3 font-sans text-ns-meta font-medium ${
+                  activeTab === tab ? 'border-brand-red text-zinc-100' : 'border-transparent text-zinc-500 hover:text-zinc-200'
                 }`}
                 onClick={() => setActiveTab(tab)}
               >
@@ -195,11 +195,11 @@ export default function BatchTrackSettingsDrawer({ item, open, onClose, onSave, 
           )}
         </div>
 
-        <div className="sticky bottom-0 bg-brand-black pt-4 border-t border-zinc-800">
+        <footer className="shrink-0 border-t border-zinc-800 bg-brand-black px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-4 sm:px-6 sm:pb-4">
           <button type="button" className="ns-button-primary inline-flex w-full !rounded items-center justify-center gap-2 px-5" disabled={saving} onClick={save}>
             <Save size={16} /> {saving ? t('batchUpload.saving') : t('batchUpload.saveDraft')}
           </button>
-        </div>
+        </footer>
       </section>
     </div>
   );

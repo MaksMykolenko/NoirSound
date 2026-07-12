@@ -24,9 +24,9 @@ export default function AdminSystem() {
           <h2 className="text-sm font-bold">{t('admin.readiness')}</h2>
           <StatusBadge status={data?.readiness?.status} />
         </div>
-        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        <div className="mt-4 divide-y divide-[var(--ns-border-subtle)] border-y border-[var(--ns-border-subtle)] sm:grid sm:grid-cols-2 sm:divide-x sm:divide-y-0 xl:grid-cols-3">
           {Object.entries(data?.readiness?.checks || {}).map(([name, status]) => (
-            <div key={name} className="flex items-center justify-between rounded border border-[var(--ns-border-subtle)] bg-black/10 p-3">
+            <div key={name} className="flex items-center justify-between gap-3 px-3 py-2.5">
               <span className="text-sm font-semibold">{t(`admin.systemChecks.${name}`, { defaultValue: name })}</span>
               <StatusBadge status={status} />
             </div>
@@ -36,17 +36,17 @@ export default function AdminSystem() {
       <div className="grid gap-4 lg:grid-cols-2">
         <AdminPanel className="p-4">
           <h2 className="text-sm font-bold">{t('admin.runtime')}</h2>
-          <dl className="mt-4 space-y-3 text-sm">
-            <div className="flex justify-between"><dt className="text-[var(--ns-text-muted)]">{t('admin.version')}</dt><dd>{data?.version || t('admin.unavailable')}</dd></div>
-            <div className="flex justify-between"><dt className="text-[var(--ns-text-muted)]">{t('admin.commit')}</dt><dd>{data?.commit || t('admin.unavailable')}</dd></div>
-            <div className="flex justify-between"><dt className="text-[var(--ns-text-muted)]">{t('admin.uptime')}</dt><dd>{data?.uptimeSeconds ?? t('admin.unavailable')}</dd></div>
+          <dl className="mt-4 divide-y divide-[var(--ns-border-subtle)] border-y border-[var(--ns-border-subtle)] text-sm">
+            <div className="flex justify-between gap-4 py-2.5"><dt className="text-[var(--ns-text-muted)]">{t('admin.version')}</dt><dd className="min-w-0 truncate text-right">{data?.version || t('admin.unavailable')}</dd></div>
+            <div className="flex justify-between gap-4 py-2.5"><dt className="text-[var(--ns-text-muted)]">{t('admin.commit')}</dt><dd className="min-w-0 truncate text-right">{data?.commit || t('admin.unavailable')}</dd></div>
+            <div className="flex justify-between gap-4 py-2.5"><dt className="text-[var(--ns-text-muted)]">{t('admin.uptime')}</dt><dd>{data?.uptimeSeconds ?? t('admin.unavailable')}</dd></div>
           </dl>
         </AdminPanel>
         <AdminPanel className="p-4">
           <h2 className="text-sm font-bold">{t('admin.safeConfiguration')}</h2>
-          <dl className="mt-4 space-y-3 text-sm">
+          <dl className="mt-4 divide-y divide-[var(--ns-border-subtle)] border-y border-[var(--ns-border-subtle)] text-sm">
             {Object.entries(data?.config || {}).map(([name, status]) => (
-              <div key={name} className="flex justify-between gap-4">
+              <div key={name} className="flex justify-between gap-4 py-2.5">
                 <dt className="text-[var(--ns-text-muted)]">{t(`admin.configKeys.${name}`, { defaultValue: name })}</dt>
                 <dd>{t(`admin.statusValues.${String(status).toUpperCase()}`, { defaultValue: status })}</dd>
               </div>
@@ -57,9 +57,9 @@ export default function AdminSystem() {
       <AdminPanel className="p-4">
         <h2 className="text-sm font-bold">{t('admin.queue')}</h2>
         {data?.queue?.counts ? (
-          <div className="mt-4 grid gap-3 sm:grid-cols-5">
+          <div className="mt-4 grid grid-cols-2 border-y border-[var(--ns-border-subtle)] sm:grid-cols-5">
             {Object.entries(data.queue.counts).map(([name, count]) => (
-              <div key={name} className="rounded border border-[var(--ns-border-subtle)] bg-black/10 p-3 text-center">
+              <div key={name} className="border-b border-r border-[var(--ns-border-subtle)] p-3 text-center sm:border-b-0">
                 <div className="font-sans text-xl font-bold">{count}</div>
                 <div className="mt-1 font-sans tabular-nums text-ns-meta uppercase tracking-ns-label text-[var(--ns-text-muted)]">{t(`admin.queueStates.${name}`, { defaultValue: name })}</div>
               </div>

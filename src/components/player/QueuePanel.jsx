@@ -1,8 +1,9 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { usePlayerStore } from '../../store/playerStore';
 import { ArrowDown, ArrowUp, MoreHorizontal, X, Play, Trash2, Music } from 'lucide-react';
 import FallbackCover from '../ui/FallbackCover';
 import { useTrackContextMenu } from '../../hooks/useEntityContextMenu';
+import useDialogFocusTrap from '../../hooks/useDialogFocusTrap';
 
 function QueueTrackRow({ track, index, currentTrack, playTrack, removeFromQueue, moveQueueItem, queueLength }) {
   const isPlayingThis = currentTrack?.id === track.id;
@@ -16,13 +17,13 @@ function QueueTrackRow({ track, index, currentTrack, playTrack, removeFromQueue,
       onContextMenu={contextMenuProps.onContextMenu}
       onKeyDown={contextMenuProps.onKeyDown}
       tabIndex={0}
-      className={`group flex items-center gap-3 rounded-md border p-2 transition-colors duration-150 ${
+      className={`group flex items-center gap-3 border-b border-[var(--ns-border-subtle)] px-2 py-2.5 transition-colors duration-150 ${
         isPlayingThis
-          ? 'border-brand-red/25 bg-brand-red/10'
-          : 'border-transparent bg-zinc-900/20 hover:border-[var(--ns-border-subtle)] hover:bg-zinc-900/60'
+          ? 'bg-brand-red/10 shadow-[inset_2px_0_0_var(--ns-accent)]'
+          : 'hover:bg-zinc-900/50 focus-within:bg-zinc-900/50'
       }`}
     >
-      <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded">
+      <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded md:h-10 md:w-10">
         <FallbackCover
           src={track.coverUrl}
           title={track.title}
@@ -33,7 +34,7 @@ function QueueTrackRow({ track, index, currentTrack, playTrack, removeFromQueue,
         />
         <button
           onClick={() => playTrack(track)}
-          className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+          className="absolute inset-0 flex cursor-pointer items-center justify-center bg-black/60 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100"
           aria-label={`Play ${track.title}`}
         >
           <Play size={14} className="text-white fill-white" />
@@ -46,10 +47,10 @@ function QueueTrackRow({ track, index, currentTrack, playTrack, removeFromQueue,
         <p className="text-ns-meta text-zinc-500 truncate">by {track.artistName}</p>
       </div>
       <div className="flex items-center shrink-0">
-        <button type="button" onClick={() => moveQueueItem(track.id, -1)} disabled={index === 0} className="ns-icon-button !min-h-9 !min-w-8 text-zinc-500 disabled:opacity-20" aria-label={`Move ${track.title} up`}>
+        <button type="button" onClick={() => moveQueueItem(track.id, -1)} disabled={index === 0} className="ns-icon-button hidden !min-h-9 !min-w-8 text-zinc-500 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 disabled:opacity-20 sm:inline-flex" aria-label={`Move ${track.title} up`}>
           <ArrowUp size={12} />
         </button>
-        <button type="button" onClick={() => moveQueueItem(track.id, 1)} disabled={index === queueLength - 1} className="ns-icon-button !min-h-9 !min-w-8 text-zinc-500 disabled:opacity-20" aria-label={`Move ${track.title} down`}>
+        <button type="button" onClick={() => moveQueueItem(track.id, 1)} disabled={index === queueLength - 1} className="ns-icon-button hidden !min-h-9 !min-w-8 text-zinc-500 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 disabled:opacity-20 sm:inline-flex" aria-label={`Move ${track.title} down`}>
           <ArrowDown size={12} />
         </button>
         <button type="button" onClick={openFromButton} className="ns-icon-button !min-h-9 !min-w-8 text-zinc-500" aria-label={`More actions for ${track.title}`} aria-haspopup="menu">
@@ -57,7 +58,7 @@ function QueueTrackRow({ track, index, currentTrack, playTrack, removeFromQueue,
         </button>
         <button
           onClick={() => removeFromQueue(track.id)}
-          className="ns-icon-button !min-h-9 !min-w-8 text-zinc-500 hover:text-rose-500 rounded-lg cursor-pointer"
+          className="ns-icon-button hidden !min-h-9 !min-w-8 cursor-pointer text-zinc-500 opacity-0 transition-opacity hover:text-rose-500 group-hover:opacity-100 group-focus-within:opacity-100 sm:inline-flex"
           aria-label={`Remove ${track.title} from queue`}
         >
           <X size={12} />
@@ -68,17 +69,8 @@ function QueueTrackRow({ track, index, currentTrack, playTrack, removeFromQueue,
 }
 
 export default function QueuePanel({ isOpen, onClose, surface = 'standard' }) {
-  const { queue, currentTrack, playTrack, removeFromQueue, setQueue, moveQueueItem } = usePlayerStore();
-
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape' && isOpen) onClose();
-    };
-    if (isOpen) {
-      window.addEventListener('keydown', handleKeyDown);
-    }
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  const { queue, currentTrack, playTrack, removeFromQueue, setQueue, moveQueueItem, isPlayerCollapsed } = usePlayerStore();
+  const dialogRef = useDialogFocusTrap(isOpen, onClose);
 
   if (!isOpen) return null;
 
@@ -87,10 +79,20 @@ export default function QueuePanel({ isOpen, onClose, surface = 'standard' }) {
   };
   const positionClass = surface === 'fullscreen'
     ? 'right-0 bottom-[var(--ns-fullscreen-mobile-controls-height)] top-[var(--ns-mobile-header-height)] z-[var(--ns-z-fullscreen-panel)] lg:bottom-[var(--ns-player-height)] lg:top-[var(--ns-header-height)]'
-    : 'right-0 bottom-[var(--ns-mobile-nav-height)] top-0 z-[var(--ns-z-modal)] lg:bottom-[var(--ns-player-height)] lg:top-[var(--ns-header-height)]';
+    : `right-0 ${isPlayerCollapsed ? 'bottom-[var(--ns-mobile-nav-height)]' : 'bottom-0'} top-0 z-[var(--ns-z-modal)] lg:bottom-[var(--ns-player-height)] lg:top-[var(--ns-header-height)]`;
+  const backdropClass = surface === 'fullscreen'
+    ? 'z-[var(--ns-z-fullscreen-panel)]'
+    : 'z-[var(--ns-z-overlay)]';
 
   return (
-    <div className={`fixed ${positionClass} flex w-full animate-slide-in flex-col border-l border-[var(--ns-border)] bg-[var(--ns-card-solid)] shadow-2xl sm:w-80 md:w-96`} role="dialog" aria-modal="true" aria-labelledby="queue-title">
+    <>
+      <button
+        type="button"
+        aria-label="Close play queue"
+        onClick={onClose}
+        className={`fixed inset-0 ${backdropClass} bg-black/35`}
+      />
+      <div ref={dialogRef} className={`fixed ${positionClass} flex w-full animate-slide-in flex-col border-l border-[var(--ns-border-strong)] bg-[var(--ns-player-bg)] shadow-2xl sm:w-[22rem] md:w-96`} role="dialog" aria-modal="true" aria-labelledby="queue-title">
       {/* Queue Header */}
       <div className="flex min-h-[var(--ns-header-height)] items-center justify-between border-b border-[var(--ns-border-subtle)] px-5 py-3">
         <div className="flex items-center space-x-2">
@@ -122,7 +124,7 @@ export default function QueuePanel({ isOpen, onClose, surface = 'standard' }) {
       </div>
 
       {/* Queue List */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-2">
+      <div className="flex-1 overflow-y-auto px-3 py-2">
         {queue.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center p-6 text-zinc-500 space-y-2">
             <Music size={24} className="opacity-40" />
@@ -144,6 +146,7 @@ export default function QueuePanel({ isOpen, onClose, surface = 'standard' }) {
           ))
         )}
       </div>
-    </div>
+      </div>
+    </>
   );
 }

@@ -7,9 +7,11 @@ import LyricsEditor from '../../src/components/lyrics/LyricsEditor';
 import TrackLyricsCard from '../../src/components/lyrics/TrackLyricsCard';
 import PlayerBar from '../../src/components/player/PlayerBar';
 import FullscreenLyricsPlayer from '../../src/components/player/FullscreenLyricsPlayer';
+import { PlaybackErrorStatus } from '../../src/components/player/PlayerBarShared';
 import { clearFullscreenLyricsCache } from '../../src/components/player/fullscreenLyricsCache';
 import { __getAudioElementForTests, usePlayerStore } from '../../src/store/playerStore';
 import { getTrackLyrics } from '../../src/api/lyrics';
+import { resolvePlaybackErrorMessage } from '../../src/utils/playbackErrorMessage';
 
 vi.mock('../../src/api/lyrics', () => ({
   getTrackLyrics: vi.fn(),
@@ -41,6 +43,28 @@ function PlayerLyricsFixture() {
   return (
     <>
       <PlayerBar onToggleQueue={() => setIsQueueOpen((open) => !open)} isQueueOpen={isQueueOpen} />
+      {lyricsFullscreenOpen && (
+        <FullscreenLyricsPlayer
+          isQueueOpen={isQueueOpen}
+          onToggleQueue={() => setIsQueueOpen((open) => !open)}
+          onCloseQueue={() => setIsQueueOpen(false)}
+        />
+      )}
+    </>
+  );
+}
+
+function ExclusivePlayerLyricsFixture() {
+  const lyricsFullscreenOpen = usePlayerStore((state) => state.lyricsFullscreenOpen);
+  const [isQueueOpen, setIsQueueOpen] = React.useState(false);
+  return (
+    <>
+      {!lyricsFullscreenOpen && (
+        <PlayerBar
+          onToggleQueue={() => setIsQueueOpen((open) => !open)}
+          isQueueOpen={isQueueOpen}
+        />
+      )}
       {lyricsFullscreenOpen && (
         <FullscreenLyricsPlayer
           isQueueOpen={isQueueOpen}
@@ -132,7 +156,8 @@ describe('lyrics UI', () => {
     render(<PlayerLyricsFixture />);
     expect(getTrackLyrics).not.toHaveBeenCalled();
     const lyricsButtons = screen.getAllByRole('button', { name: i18n.t('player.openLyrics') });
-    expect(lyricsButtons.length).toBeGreaterThanOrEqual(2);
+    expect(lyricsButtons).toHaveLength(1);
+    expect(screen.getByTestId('mobile-now-playing-sheet')).toHaveAttribute('aria-hidden', 'true');
     await userEvent.click(lyricsButtons[0]);
     const dialog = screen.getByRole('dialog', {
       name: i18n.t('lyrics.fullscreenLabel', { title: track.title }),
@@ -167,6 +192,61 @@ describe('lyrics UI', () => {
     expect(await within(dialog).findByText('Lyrics after retry')).toBeInTheDocument();
     expect(getTrackLyrics).toHaveBeenCalledTimes(2);
     expect(usePlayerStore.getState().isPlaying).toBe(true);
+  });
+
+  it('resolves known demo media failures without masking production or unknown errors', () => {
+    const sourceFailure = 'Failed to load because no supported source was found.';
+    const options = {
+      demoMessage: 'Demo audio source is unavailable',
+      unavailableMessage: 'Audio unavailable',
+    };
+
+    expect(resolvePlaybackErrorMessage(sourceFailure, {
+      ...options,
+      mockMode: true,
+    })).toBe(options.demoMessage);
+    expect(resolvePlaybackErrorMessage(sourceFailure, {
+      ...options,
+      mockMode: false,
+    })).toBe(options.unavailableMessage);
+    expect(resolvePlaybackErrorMessage('Stream rejected by the release owner', {
+      ...options,
+      mockMode: true,
+    })).toBe('Stream rejected by the release owner');
+  });
+
+  it('renders playback failures as a compact accessible inline status', () => {
+    render(<PlaybackErrorStatus error="Stream rejected by the release owner" className="mt-1" />);
+
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent('Stream rejected by the release owner');
+    expect(alert).toHaveAttribute('aria-live', 'polite');
+    expect(alert).toHaveAttribute('aria-atomic', 'true');
+    expect(alert).toHaveClass('min-w-0', 'truncate', 'text-ns-label', 'mt-1');
+    expect(alert).not.toHaveClass('border', 'p-3', 'bg-rose-500/10');
+  });
+
+  it('mounts one playback alert and no regular player inside fullscreen lyrics', () => {
+    getTrackLyrics.mockResolvedValue({
+      trackId: track.id,
+      hasLyrics: true,
+      lyricsType: 'PLAIN',
+      lyricsText: 'One alert only',
+    });
+    usePlayerStore.setState({
+      currentTrack: track,
+      playbackError: 'Stream rejected by the release owner',
+      lyricsFullscreenOpen: true,
+    });
+
+    render(<ExclusivePlayerLyricsFixture />);
+
+    const dialog = screen.getByTestId('fullscreen-lyrics-player');
+    const alerts = within(dialog).getAllByRole('alert');
+    expect(alerts).toHaveLength(1);
+    expect(alerts[0]).toHaveTextContent('Stream rejected by the release owner');
+    expect(screen.queryByTestId('desktop-player')).not.toBeInTheDocument();
+    expect(screen.getAllByRole('alert')).toHaveLength(1);
   });
 
   it('keeps fullscreen lyrics open and reloads when the current track changes', async () => {
@@ -309,7 +389,8 @@ describe('lyrics UI', () => {
     });
     render(<PlayerLyricsFixture />);
     const unavailable = screen.getAllByRole('button', { name: i18n.t('player.lyricsUnavailable') });
-    expect(unavailable.length).toBeGreaterThanOrEqual(2);
+    expect(unavailable).toHaveLength(1);
+    expect(screen.getByTestId('mobile-now-playing-sheet')).toHaveAttribute('aria-hidden', 'true');
     unavailable.forEach((button) => expect(button).toBeDisabled());
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(getTrackLyrics).not.toHaveBeenCalled();

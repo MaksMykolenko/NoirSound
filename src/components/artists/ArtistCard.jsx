@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Check, MoreHorizontal } from 'lucide-react';
 import { followArtist, unfollowArtist } from '../../api/artists';
@@ -10,7 +10,6 @@ import { useArtistContextMenu } from '../../hooks/useEntityContextMenu';
 
 export default function ArtistCard({ artist }) {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const user = useUserStore((state) => state.user);
   const setAuthModalOpen = useUserStore((state) => state.setAuthModalOpen);
   // Hydrated from the artist payload itself (isFollowing is computed
@@ -54,32 +53,26 @@ export default function ArtistCard({ artist }) {
 
   return (
     <div
-      onClick={() => navigate(`/artist/${artist.id}`)}
-      onKeyDown={(event) => {
-        contextMenuProps.onKeyDown(event);
-        if (event.defaultPrevented) return;
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          navigate(`/artist/${artist.id}`);
-        }
-      }}
       onContextMenu={contextMenuProps.onContextMenu}
-      role="link"
-      tabIndex={0}
-      aria-label={`Open artist ${artist.name}`}
-      className="group relative cursor-pointer rounded-lg border border-zinc-800/60 bg-zinc-950/35 p-3 text-center transition-colors duration-150 hover:border-zinc-700/70 hover:bg-zinc-900/45"
+      className="ns-media-card group text-center"
     >
+      <Link
+        to={`/artist/${artist.id}`}
+        onKeyDown={contextMenuProps.onKeyDown}
+        className="absolute inset-0 z-0 rounded-lg"
+        aria-label={`Open artist ${artist.name}`}
+      />
       <button
         type="button"
         onClick={openFromButton}
-        className="absolute right-3 top-3 ns-icon-button !min-h-9 !min-w-9 text-zinc-500 md:opacity-0 md:group-hover:opacity-100 focus:opacity-100"
+        className="pointer-events-auto absolute right-3 top-3 z-20 ns-icon-button !min-h-9 !min-w-9 bg-zinc-950/80 text-zinc-300 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 focus:opacity-100"
         aria-label={`More actions for ${artist.name}`}
         aria-haspopup="menu"
       >
         <MoreHorizontal size={15} />
       </button>
       {/* Avatar Container */}
-      <div className="relative mx-auto mb-3 h-20 w-20 overflow-hidden rounded-full border border-zinc-800 bg-zinc-950">
+      <div className="ns-media-card__artwork pointer-events-none relative z-[1] mx-auto mb-3 aspect-square w-full max-w-[11rem] rounded-full">
         <FallbackAvatar
           src={artist.avatarUrl}
           name={artist.name}
@@ -89,13 +82,13 @@ export default function ArtistCard({ artist }) {
       </div>
 
       {/* Details */}
-      <div className="mb-3 space-y-1">
+      <div className="pointer-events-none relative z-[1] mb-3 space-y-1 px-1">
         <div className="flex items-center justify-center space-x-1.5">
           <h4 className="truncate text-ns-body-sm font-semibold text-zinc-100">
             {artist.name}
           </h4>
           {artist.isVerified && (
-            <span className="w-3.5 h-3.5 bg-blue-500 rounded-full flex items-center justify-center text-[7px] text-white shrink-0" title="Verified Creator">
+            <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-blue-500 text-white" title="Verified Creator">
               <Check size={8} strokeWidth={4} />
             </span>
           )}
@@ -108,7 +101,7 @@ export default function ArtistCard({ artist }) {
       {/* Action Button */}
       <button
         onClick={handleFollowClick}
-        className={`min-h-10 w-full cursor-pointer rounded-md border py-2 text-ns-label font-semibold transition-colors duration-150 ${
+        className={`pointer-events-auto relative z-20 min-h-10 w-full cursor-pointer rounded-md border py-2 text-ns-label font-semibold transition-colors duration-150 ${
           isFollowing
             ? 'border-zinc-700/60 bg-zinc-800 text-zinc-400 hover:text-zinc-100'
             : 'border-zinc-700/70 bg-zinc-900 text-zinc-200 hover:border-brand-red/40 hover:text-white'

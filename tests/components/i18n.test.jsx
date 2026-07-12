@@ -30,6 +30,20 @@ describe('Multilingual i18n Localization Engine', () => {
     expect(i18n.t('nav.discover')).toBe('Обзор');
   });
 
+  it('localizes the neutral demo audio failure in every supported language', async () => {
+    const expectedMessages = {
+      en: 'Demo audio source is unavailable',
+      uk: 'Демоаудіо недоступне',
+      pl: 'Dźwięk demo jest niedostępny',
+      ru: 'Демоаудио недоступно',
+    };
+
+    for (const [language, expected] of Object.entries(expectedMessages)) {
+      await i18n.changeLanguage(language);
+      expect(i18n.t('player.demoAudioUnavailable')).toBe(expected);
+    }
+  });
+
   it('falls back to English for unsupported locale codes', async () => {
     await i18n.changeLanguage('fr');
     expect(i18n.t('nav.home')).toBe('Home');

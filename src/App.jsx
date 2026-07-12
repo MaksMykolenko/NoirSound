@@ -6,6 +6,7 @@ import ToastContainer from './components/ui/ToastContainer';
 import AuthModal from './components/auth/AuthModal';
 import { useUserStore } from './store/userStore';
 import { useToastStore } from './store/toastStore';
+import { usePlayerStore } from './store/playerStore';
 import { useThemeStore } from './store/themeStore';
 import { isMockMode } from './api/mode';
 import { getApiErrorMessage } from './utils/apiErrorMessage';
@@ -113,6 +114,14 @@ export default function App() {
       // users a friendly, localized message (never the raw backend code).
       if (event.detail?.code || event.detail?.status) {
         console.debug('[api-error]', event.detail);
+      }
+      const activePlaybackError = usePlayerStore.getState().playbackError;
+      if (
+        event.detail?.status === 0
+        && activePlaybackError
+        && event.detail?.message === activePlaybackError
+      ) {
+        return;
       }
       addToast(getApiErrorMessage(event.detail), 'error');
     };

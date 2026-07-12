@@ -6,7 +6,6 @@ import { getTracks, getArtistsWithTracks } from '../api';
 import HomeHero from '../components/home/HomeHero';
 import BrowseByGenre from '../components/home/BrowseByGenre';
 import CreatorCallout from '../components/home/CreatorCallout';
-import ProductFeatures from '../components/home/ProductFeatures';
 import PageMeta from '../components/meta/PageMeta';
 import TrackCard from '../components/tracks/TrackCard';
 import ArtistCard from '../components/artists/ArtistCard';
@@ -27,12 +26,15 @@ export default function Home() {
   const [featuredArtists, setFeaturedArtists] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [homeRevision, setHomeRevision] = useState(0);
   const [allTracksContext, setAllTracksContext] = useState([]);
   const { recentlyPlayed, loadRecentlyPlayed } = usePlayerStore();
   const { user, authHydrated } = useUserStore();
 
   useEffect(() => {
     const fetchData = async () => {
+      setLoading(true);
+      setError(null);
       try {
         const [tracksData, artistsData] = await Promise.all([getTracks(), getArtistsWithTracks()]);
         const uniqueTracks = sortTracksNewest(tracksData);
@@ -47,7 +49,7 @@ export default function Home() {
       }
     };
     fetchData();
-  }, []);
+  }, [homeRevision]);
 
   useEffect(() => {
     if (!authHydrated || !user) return;
@@ -65,7 +67,7 @@ export default function Home() {
   };
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-8 lg:gap-10">
       <PageMeta
         title="NoirSound — Creator-first music platform"
         description="Discover independent music, upload your own tracks, and build your audience on NoirSound."
@@ -76,15 +78,30 @@ export default function Home() {
         onUpload={() => navigate('/upload')}
       />
 
-      <BrowseByGenre onSelect={handleGenreSelect} />
+      {recentlyPlayed.length > 0 && (
+        <section data-testid="home-continue-listening" className="space-y-4">
+          <div>
+            <h2 className="ns-section-title">{t('home.continueListening')}</h2>
+            <p className="mt-1 text-sm text-zinc-500">{t('home.continueListeningDesc')}</p>
+          </div>
+          <div className="ns-tabs-scroll -mx-4 flex gap-3 overflow-x-auto px-4 pb-2 min-[480px]:mx-0 min-[480px]:grid min-[480px]:grid-cols-2 min-[480px]:px-0 md:grid-cols-3 xl:grid-cols-4 sm:gap-5">
+            {recentlyPlayed.slice(0, 4).map((track) => (
+              <div key={track.id} className="w-[min(74vw,18rem)] shrink-0 min-[480px]:w-auto">
+                <TrackCard track={track} tracksContext={recentlyPlayed} />
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section data-testid="home-releases" className="space-y-4">
-        <div className="flex items-end justify-between gap-4 border-b border-zinc-800/60 pb-3">
+        <div className="flex items-end justify-between gap-4">
           <div className="min-w-0">
             <h2 className="ns-section-title">{t('home.featuredReleases')}</h2>
             <p className="mt-1 text-sm text-zinc-500">{t('home.latestReleasesDesc')}</p>
           </div>
           <button
+            type="button"
             onClick={() => navigate('/discover')}
             className="flex shrink-0 cursor-pointer items-center space-x-1 whitespace-nowrap font-sans text-ns-meta font-medium text-brand-red hover:underline"
           >
@@ -92,13 +109,18 @@ export default function Home() {
             <ArrowRight size={12} aria-hidden="true" />
           </button>
         </div>
-        <div className="grid grid-cols-1 min-[480px]:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+        <div className="ns-tabs-scroll -mx-4 flex gap-3 overflow-x-auto px-4 pb-2 min-[480px]:mx-0 min-[480px]:grid min-[480px]:grid-cols-2 min-[480px]:px-0 md:grid-cols-3 xl:grid-cols-4 sm:gap-5">
           {error ? (
-            <div className="col-span-full"><ErrorState message={t('home.loadError')} /></div>
+            <div className="w-full min-[480px]:col-span-full">
+              <ErrorState
+                message={t('home.loadError')}
+                onRetry={() => setHomeRevision((current) => current + 1)}
+              />
+            </div>
           ) : loading ? (
-            <div className="col-span-full"><LoadingState count={4} /></div>
+            <div className="w-full min-[480px]:col-span-full"><LoadingState count={4} /></div>
           ) : trendingTracks.length === 0 ? (
-            <div className="col-span-full">
+            <div className="w-full min-[480px]:col-span-full">
               <EmptyState
                 iconName="Music2"
                 title={t('empty.noReleasesYet')}
@@ -112,43 +134,33 @@ export default function Home() {
             </div>
           ) : (
             trendingTracks.map((track) => (
-              <TrackCard key={track.id} track={track} tracksContext={allTracksContext} />
+              <div key={track.id} className="w-[min(74vw,18rem)] shrink-0 min-[480px]:w-auto">
+                <TrackCard track={track} tracksContext={allTracksContext} />
+              </div>
             ))
           )}
         </div>
       </section>
 
-      {recentlyPlayed.length > 0 && (
-        <section data-testid="home-continue-listening" className="space-y-4">
-          <div className="border-b border-zinc-800/60 pb-3">
-            <h2 className="ns-section-title">{t('home.continueListening')}</h2>
-            <p className="mt-1 text-sm text-zinc-500">{t('home.continueListeningDesc')}</p>
-          </div>
-          <div className="grid grid-cols-1 min-[480px]:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-            {recentlyPlayed.slice(0, 4).map((track) => (
-              <TrackCard key={track.id} track={track} tracksContext={recentlyPlayed} />
-            ))}
-          </div>
-        </section>
-      )}
-
-      <CreatorCallout onUpload={() => navigate('/upload')} />
-
-      <ProductFeatures />
-
       {!loading && !error && trendingTracks.length > 0 && featuredArtists.length > 0 && (
         <section className="space-y-4">
-          <div className="border-b border-zinc-800/60 pb-3">
+          <div>
             <h2 className="ns-section-title">{t('home.featuredArtists')}</h2>
             <p className="mt-1 text-sm text-zinc-500">{t('home.featuredArtistsDesc')}</p>
           </div>
-          <div className="grid grid-cols-1 min-[480px]:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+          <div className="ns-tabs-scroll -mx-4 flex gap-3 overflow-x-auto px-4 pb-2 min-[480px]:mx-0 min-[480px]:grid min-[480px]:grid-cols-2 min-[480px]:px-0 md:grid-cols-3 xl:grid-cols-4 sm:gap-5">
             {featuredArtists.map((artist) => (
-              <ArtistCard key={artist.id} artist={artist} />
+              <div key={artist.id} className="w-[min(66vw,15rem)] shrink-0 min-[480px]:w-auto">
+                <ArtistCard artist={artist} />
+              </div>
             ))}
           </div>
         </section>
       )}
+
+      <BrowseByGenre onSelect={handleGenreSelect} />
+
+      <CreatorCallout onUpload={() => navigate('/upload')} />
 
       <div data-testid="home-bottom-safe-area" className="h-px w-full" aria-hidden="true" />
     </div>

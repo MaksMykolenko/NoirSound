@@ -28,6 +28,8 @@ import TrackListItem from '../components/tracks/TrackListItem';
 import EmptyState from '../components/ui/EmptyState';
 import ErrorState from '../components/ui/ErrorState';
 import LoadingState from '../components/ui/LoadingState';
+import PageMeta from '../components/meta/PageMeta';
+import useScrollableTabs from '../hooks/useScrollableTabs';
 
 export default function Profile() {
   const { t } = useTranslation();
@@ -47,6 +49,7 @@ export default function Profile() {
   const activeTab = tabs.some((tab) => tab.id === searchParams.get('tab'))
     ? searchParams.get('tab')
     : 'overview';
+  const tabsRef = useScrollableTabs(activeTab);
   const demoMode = isMockMode();
 
   const {
@@ -67,6 +70,7 @@ export default function Profile() {
   const [playlists, setPlaylists] = useState([]);
   const [followedArtists, setFollowedArtists] = useState([]);
   const [collectionsLoading, setCollectionsLoading] = useState(false);
+  const [collectionsError, setCollectionsError] = useState(null);
   const [playlistRevision, setPlaylistRevision] = useState(0);
 
   useEffect(() => {
@@ -81,35 +85,48 @@ export default function Profile() {
     loadRecentlyPlayed().catch(() => {});
 
     setCollectionsLoading(true);
+    setCollectionsError(null);
     Promise.all([getLikedTracks(), getMyPlaylists(), getFollowedArtists()])
       .then(([liked, myPlaylists, artists]) => {
         setLikedTracks(liked);
         setPlaylists(myPlaylists);
         setFollowedArtists(artists);
       })
-      .catch(() => {})
+      .catch((requestError) => setCollectionsError(requestError))
       .finally(() => setCollectionsLoading(false));
   }, [demoMode, fetchListeningStats, loadRecentlyPlayed, playlistRevision, user]);
 
-  if (!authHydrated) return <LoadingState type="list" count={4} />;
-  if (authError) return <ErrorState title="Session unavailable" message={authError} />;
+  const pageMeta = (
+    <PageMeta
+      title={`${user?.displayName || user?.username || t('nav.profile')} · NoirSound`}
+      description={user?.bio || t('profile.noBio')}
+      canonical="https://noirsound.co/profile"
+    />
+  );
+
+  if (!authHydrated) return <>{pageMeta}<LoadingState type="list" count={4} /></>;
+  if (authError) return <>{pageMeta}<ErrorState title="Session unavailable" message={authError} /></>;
   if (!user) {
     return (
-      <EmptyState
-        iconName="UserRound"
-        title={t('empty.signInTitle')}
-        description={t('empty.signInDesc')}
-        actionText={t('header.signIn')}
-        onAction={() => setAuthModalOpen(true)}
-      />
+      <>
+        {pageMeta}
+        <EmptyState
+          iconName="UserRound"
+          title={t('empty.signInTitle')}
+          description={t('empty.signInDesc')}
+          actionText={t('header.signIn')}
+          onAction={() => setAuthModalOpen(true)}
+        />
+      </>
     );
   }
 
   return (
     <div className="ns-page-stack pb-10">
+      {pageMeta}
       <UserProfileHeader user={user} onEditClick={() => setSearchParams({ tab: 'settings' })} />
 
-      <div className="ns-tabs-scroll flex border-b border-zinc-800/60 gap-1 overflow-x-auto shrink-0" role="tablist">
+      <div ref={tabsRef} className="ns-tabs-scroll ns-tabs-polish flex border-b border-zinc-800/60 gap-1 overflow-x-auto shrink-0" role="tablist">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const active = activeTab === tab.id;
@@ -119,7 +136,8 @@ export default function Profile() {
               onClick={() => setSearchParams({ tab: tab.id })}
               role="tab"
               aria-selected={active}
-              className={`ns-tab flex shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2.5 font-sans text-ns-label font-medium transition-colors sm:gap-2 sm:px-5 sm:py-3 ${
+              aria-current={active ? 'page' : undefined}
+              className={`ns-tab flex shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2.5 font-sans text-ns-label font-medium transition-colors sm:gap-2 sm:px-5 sm:py-3 ${tab.id === 'settings' ? 'ml-2 sm:ml-auto' : ''} ${
                 active ? 'border-brand-red text-rose-300' : 'border-transparent text-zinc-500 hover:text-zinc-300'
               }`}
             >
@@ -136,7 +154,11 @@ export default function Profile() {
           <section className="space-y-4">
             <h2 className="ns-eyebrow px-1">{t('nav.recentlyPlayed')}</h2>
             {recentlyPlayedError ? (
-              <ErrorState title="Listening history unavailable" message={recentlyPlayedError} />
+              <ErrorState
+                title="Listening history unavailable"
+                message={recentlyPlayedError}
+                onRetry={() => loadRecentlyPlayed()}
+              />
             ) : recentlyPlayed.length === 0 ? (
               <EmptyState
                 iconName="History"
@@ -146,7 +168,7 @@ export default function Profile() {
                 onAction={() => navigate('/discover')}
               />
             ) : (
-              <div className="space-y-1 rounded-lg border border-zinc-800/60 bg-zinc-950/35 p-2 sm:p-3">
+              <div className="space-y-1">
                 {recentlyPlayed.slice(0, 5).map((track, index) => (
                   <TrackListItem
                     key={track.id}
@@ -163,7 +185,7 @@ export default function Profile() {
         {activeTab === 'stats' && <ListeningStats />}
         
         {activeTab === 'settings' && (
-          <div className="mx-auto max-w-2xl rounded-lg border border-zinc-800/60 bg-zinc-950/35 p-4 sm:p-5">
+          <div className="mx-auto max-w-3xl">
             <UserSettingsForm />
           </div>
         )}
@@ -185,6 +207,12 @@ export default function Profile() {
         {activeTab === 'liked' && (
           collectionsLoading ? (
             <LoadingState type="list" count={3} />
+          ) : collectionsError ? (
+            <ErrorState
+              title="Collection unavailable"
+              message={collectionsError.message || t('errors.generic')}
+              onRetry={() => setPlaylistRevision((current) => current + 1)}
+            />
           ) : likedTracks.length === 0 ? (
             <EmptyState
               iconName="Heart"
@@ -194,7 +222,7 @@ export default function Profile() {
               onAction={() => navigate('/discover')}
             />
           ) : (
-            <div className="space-y-1 rounded-lg border border-zinc-800/60 bg-zinc-950/35 p-2 sm:p-3">
+            <div className="space-y-1">
               {likedTracks.map((track, index) => (
                 <TrackListItem key={track.id} track={track} index={index} tracksContext={likedTracks} />
               ))}
@@ -204,7 +232,13 @@ export default function Profile() {
 
         {activeTab === 'playlists' && (
           collectionsLoading ? (
-            <LoadingState type="list" count={3} />
+            <LoadingState count={3} />
+          ) : collectionsError ? (
+            <ErrorState
+              title="Collection unavailable"
+              message={collectionsError.message || t('errors.generic')}
+              onRetry={() => setPlaylistRevision((current) => current + 1)}
+            />
           ) : playlists.length === 0 ? (
             <EmptyState
               iconName="ListMusic"
@@ -220,7 +254,13 @@ export default function Profile() {
 
         {activeTab === 'artists' && (
           collectionsLoading ? (
-            <LoadingState type="list" count={3} />
+            <LoadingState count={3} />
+          ) : collectionsError ? (
+            <ErrorState
+              title="Collection unavailable"
+              message={collectionsError.message || t('errors.generic')}
+              onRetry={() => setPlaylistRevision((current) => current + 1)}
+            />
           ) : followedArtists.length === 0 ? (
             <EmptyState
               iconName="UserCheck"

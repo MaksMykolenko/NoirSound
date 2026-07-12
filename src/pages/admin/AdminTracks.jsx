@@ -56,8 +56,12 @@ export default function AdminTracks() {
             </tr></thead>
             <tbody>{data.data.map((track) => (
               <tr key={track.id} className="border-t border-[var(--ns-border-subtle)]">
-                <td className="px-4 py-3 font-semibold">{track.title}</td>
-                <td className="px-4 py-3 text-sm text-[var(--ns-text-secondary)]">{track.artist?.user?.displayName}</td>
+                <td className="px-4 py-3 font-semibold">
+                  <span className="block max-w-[18rem] break-words">{track.title}</span>
+                </td>
+                <td className="px-4 py-3 text-sm text-[var(--ns-text-secondary)]">
+                  <span className="block max-w-[14rem] break-words">{track.artist?.user?.displayName}</span>
+                </td>
                 <td className="px-4 py-3 text-sm text-[var(--ns-text-muted)]">{track.genre ? getGenreLabel(track.genre) : '—'}</td>
                 <td className="px-4 py-3"><StatusBadge status={track.status} /></td>
                 <td className="px-4 py-3">{track.plays}</td>
