@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { setBaseTitle } from '../../utils/pageTitle';
 
 /**
  * Client-side metadata sync for browser-tab correctness during SPA navigation.
@@ -32,7 +33,10 @@ function upsertCanonical(href) {
 
 export default function PageMeta({ title, description, canonical }) {
   useEffect(() => {
-    if (title) document.title = title;
+    if (title) {
+      setBaseTitle(title);
+      document.title = title;
+    }
     if (description) upsertMeta('description', description);
     if (canonical) upsertCanonical(canonical);
   }, [title, description, canonical]);

@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { usePlayerStore } from '../store/playerStore';
+import { getBaseTitle } from '../utils/pageTitle';
 
 const PLAYING_FRAMES = [
   '/favicon-playing-1.svg',
@@ -31,7 +32,9 @@ export function useAnimatedFavicon() {
         }
       }, 350);
     } else {
-      document.title = 'NoirSound — Discover music after dark.';
+      // Restore the page-owned title (SSR <head> or PageMeta) instead of
+      // overwriting it with a hardcoded string.
+      document.title = getBaseTitle();
       if (faviconLink && faviconLink.getAttribute('href') !== '/favicon.svg') {
         faviconLink.setAttribute('href', '/favicon.svg');
       }
