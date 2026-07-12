@@ -8,8 +8,8 @@ import FallbackCover from '../ui/FallbackCover';
 import { formatDuration } from '../../utils/formatTime';
 import { formatDate } from '../../utils/formatLocale';
 
-// Spec-requested desktop columns are "# | Title | Album / Release | Date
-// added | Duration | Actions" -- sorting is exposed as one shared pill row
+// Desktop columns are "# | Title | Artist | Album / Release | Date added |
+// Duration | Actions" -- sorting is exposed as one shared pill row
 // (used identically on mobile, which has no table) rather than making the
 // <th> cells independently clickable, so there is exactly one place that
 // owns sort state instead of two interaction patterns for the same thing.
@@ -185,7 +185,7 @@ function DesktopRow({
               <button
                 type="button"
                 onClick={(event) => { event.stopPropagation(); navigate(`/artist/${track.artistId}`); }}
-                className="block truncate font-mono text-[10px] text-zinc-500 hover:text-zinc-300 hover:underline"
+                className="block truncate font-mono text-[10px] text-zinc-500 hover:text-zinc-300 hover:underline xl:hidden"
               >
                 {track.artistName}
               </button>
@@ -198,7 +198,18 @@ function DesktopRow({
           </div>
         )}
       </td>
-      <td className="hidden max-w-[16ch] py-2 pr-3 lg:table-cell">
+      <td className="hidden max-w-[18ch] py-2 pr-4 xl:table-cell">
+        {isAvailable && (
+          <button
+            type="button"
+            onClick={(event) => { event.stopPropagation(); navigate(`/artist/${track.artistId}`); }}
+            className="block max-w-full truncate text-left text-[13px] text-zinc-400 hover:text-zinc-200 hover:underline"
+          >
+            {track.artistName}
+          </button>
+        )}
+      </td>
+      <td className="hidden max-w-[18ch] py-2 pr-4 xl:table-cell">
         {isAvailable && (
           albumInfo.href ? (
             <button
@@ -439,7 +450,8 @@ export default function PlaylistTrackTable({
           <tr className="border-b border-zinc-800/60 font-mono text-[9px] uppercase tracking-wider text-zinc-500">
             <th scope="col" className="w-10 py-2 text-center font-bold">#</th>
             <th scope="col" className="py-2 text-left font-bold">{t('playlists.columnTitle')}</th>
-            <th scope="col" className="hidden py-2 text-left font-bold lg:table-cell">{t('playlists.columnAlbum')}</th>
+            <th scope="col" className="hidden py-2 pr-4 text-left font-bold xl:table-cell">{t('playlists.columnArtist')}</th>
+            <th scope="col" className="hidden py-2 pr-4 text-left font-bold xl:table-cell">{t('playlists.columnAlbum')}</th>
             <th scope="col" className="hidden py-2 text-left font-bold sm:table-cell">{t('playlists.columnDateAdded')}</th>
             <th scope="col" className="py-2 pr-2 text-right font-bold">{t('playlists.columnDuration')}</th>
             <th scope="col" className="py-2 font-bold">

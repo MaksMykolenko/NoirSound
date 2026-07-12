@@ -135,6 +135,7 @@
     "minuteSecond": "{{minutes}} мин {{seconds}} с",
     "typeLabel": "Плейлист",
     "columnTitle": "Название",
+    "columnArtist": "Исполнитель",
     "columnAlbum": "Альбом",
     "columnDateAdded": "Дата добавления",
     "columnDuration": "Длительность",

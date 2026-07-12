@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { X } from 'lucide-react';
 import LibrarySidebarSection from './LibrarySidebarSection';
+import BrandLogo from './BrandLogo';
 
 export default function LibraryDrawer({ isOpen, onClose }) {
   // Close drawer on Escape key press
@@ -41,8 +42,8 @@ export default function LibraryDrawer({ isOpen, onClose }) {
       <div className="relative z-10 flex h-full w-[320px] max-w-[90vw] animate-slide-in-left flex-col border-r border-[var(--ns-border-subtle)] bg-brand-dark px-3.5 py-4 shadow-2xl" role="dialog" aria-modal="true" aria-label="Your library">
         
         {/* Top Header Bar */}
-        <div className="flex items-center justify-between px-2 pb-3 mb-2 border-b border-zinc-900/80 shrink-0">
-          <span className="font-mono text-[10px] font-medium uppercase tracking-wider text-zinc-400">Library Workspace</span>
+        <div className="mb-2 flex shrink-0 items-center justify-between border-b border-zinc-900/80 pb-3 pl-0.5 pr-2">
+          <BrandLogo size="sm" showSubtitle={false} onClick={onClose} />
           <button
             onClick={onClose}
             className="ns-icon-button !min-h-8 !min-w-8 cursor-pointer text-zinc-400 hover:text-zinc-100"

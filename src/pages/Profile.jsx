@@ -133,7 +133,7 @@ export default function Profile() {
 
       <div className="pt-2">
         {activeTab === 'overview' && (
-          <section className="mx-auto max-w-3xl space-y-4">
+          <section className="space-y-4">
             <h2 className="ns-eyebrow px-1">{t('nav.recentlyPlayed')}</h2>
             {recentlyPlayedError ? (
               <ErrorState title="Listening history unavailable" message={recentlyPlayedError} />
@@ -170,7 +170,7 @@ export default function Profile() {
 
         {activeTab === 'activity' && (
           demoMode && activity.length > 0 ? (
-            <div className="max-w-xl mx-auto space-y-4">
+            <div className="mx-auto max-w-5xl space-y-4">
               {activity.map((item) => <UserActivityItem key={item.id} item={item} />)}
             </div>
           ) : (
@@ -212,7 +212,7 @@ export default function Profile() {
               description={t('profile.createPlaylistsDesc')}
             />
           ) : (
-            <div className="grid grid-cols-1 min-[430px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 gap-4 min-[430px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 min-[1440px]:grid-cols-5 min-[1800px]:grid-cols-6">
               {playlists.map((playlist) => <PlaylistCard key={playlist.id} playlist={playlist} />)}
             </div>
           )
@@ -230,7 +230,7 @@ export default function Profile() {
               onAction={() => navigate('/discover')}
             />
           ) : (
-            <div className="grid grid-cols-1 min-[430px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 gap-4 min-[430px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 min-[1440px]:grid-cols-5 min-[1800px]:grid-cols-6">
               {followedArtists.map((artist) => <ArtistCard key={artist.id} artist={artist} />)}
             </div>
           )

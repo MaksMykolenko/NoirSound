@@ -135,6 +135,7 @@
     "minuteSecond": "{{minutes}} min {{seconds}} s",
     "typeLabel": "Playlista",
     "columnTitle": "Tytuł",
+    "columnArtist": "Artysta",
     "columnAlbum": "Album",
     "columnDateAdded": "Data dodania",
     "columnDuration": "Czas trwania",

@@ -216,9 +216,9 @@ export default function ArtistPage() {
       </section>
 
       {/* Split Columns: Tracks list vs About section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(17rem,22rem)]">
         {/* Left 2 Columns: Top tracks & singles */}
-        <div className="lg:col-span-2 space-y-8">
+        <div className="min-w-0 space-y-8">
           
           {/* Top tracks list */}
           <section className="space-y-4">
@@ -246,7 +246,7 @@ export default function ArtistPage() {
           {/* Singles derived from this artist's published API tracks. */}
           <section className="space-y-4">
             <h2 className="ns-eyebrow px-1">{t('profile.singlesAndEps')}</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 2xl:grid-cols-4">
               {artistTracks.map((track) => (
                 <TrackCard key={track.id} track={track} tracksContext={artistTracks} />
               ))}

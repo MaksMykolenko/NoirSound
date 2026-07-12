@@ -138,6 +138,7 @@
     "minuteSecond": "{{minutes}} хв {{seconds}} с",
     "typeLabel": "Плейлист",
     "columnTitle": "Назва",
+    "columnArtist": "Виконавець",
     "columnAlbum": "Альбом",
     "columnDateAdded": "Дата додавання",
     "columnDuration": "Тривалість",

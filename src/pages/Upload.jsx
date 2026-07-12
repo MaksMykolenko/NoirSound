@@ -7,7 +7,7 @@ import UploadForm from '../components/upload/UploadForm';
 export default function Upload() {
   const { t } = useTranslation();
   return (
-    <div className="mx-auto max-w-5xl animate-fade-in space-y-6 [&_.ns-button-primary]:!rounded [&_.ns-button-secondary]:!rounded [&_.ns-field]:!rounded [&_.ns-icon-button]:!rounded">
+    <div className="animate-fade-in space-y-6 [&_.ns-button-primary]:!rounded [&_.ns-button-secondary]:!rounded [&_.ns-field]:!rounded [&_.ns-icon-button]:!rounded">
       {/* Title */}
       <div className="space-y-2 border-b border-zinc-800/80 pb-5">
         <span className="font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-brand-red">Creator release flow</span>

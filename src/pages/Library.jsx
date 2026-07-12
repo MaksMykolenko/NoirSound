@@ -211,7 +211,7 @@ export default function Library() {
               description="Create custom playlists to organize your favorite late-night soundscapes."
             />
           ) : (
-            <div className="grid grid-cols-1 min-[430px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 gap-4 min-[430px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 min-[1440px]:grid-cols-5 min-[1800px]:grid-cols-6">
               {playlists.map((playlist) => (
                 <PlaylistCard
                   key={playlist.id}
@@ -231,7 +231,7 @@ export default function Library() {
               onAction={() => navigate('/discover')}
             />
           ) : (
-            <div className="grid grid-cols-1 min-[430px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 gap-4 min-[430px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 min-[1440px]:grid-cols-5 min-[1800px]:grid-cols-6">
               {artists.map((artist) => <ArtistCard key={artist.id} artist={artist} />)}
             </div>
           )

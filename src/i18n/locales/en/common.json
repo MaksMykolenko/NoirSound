@@ -138,6 +138,7 @@
     "minuteSecond": "{{minutes}} min {{seconds}} sec",
     "typeLabel": "Playlist",
     "columnTitle": "Title",
+    "columnArtist": "Artist",
     "columnAlbum": "Album",
     "columnDateAdded": "Date added",
     "columnDuration": "Duration",

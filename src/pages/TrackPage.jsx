@@ -342,10 +342,10 @@ export default function TrackPage() {
       />
 
       {/* Description + Comments / Related */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(17rem,22rem)] xl:gap-8">
 
         {/* Description & Comments */}
-        <div className="lg:col-span-2 space-y-6 lg:space-y-8">
+        <div className="min-w-0 space-y-6 xl:space-y-8">
           <div className="space-y-3 rounded-lg border border-zinc-800/60 bg-zinc-950/35 p-5">
             <h2 className="ns-eyebrow">{t('trackPage.description')}</h2>
             {track.description ? (

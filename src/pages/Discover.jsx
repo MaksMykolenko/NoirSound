@@ -309,10 +309,10 @@ export default function Discover() {
       </section>
 
       {/* Grid: Artists + List of Tracks Split */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(17rem,22rem)]">
 
         {/* Left 2 Cols: Tracks list */}
-        <section className="lg:col-span-2 space-y-4">
+        <section className="min-w-0 space-y-4">
           <h2 className="ns-eyebrow">{t('discover.allReleases')}</h2>
           <div data-testid="all-releases" className="space-y-1 rounded-lg border border-zinc-800/60 bg-zinc-950/35 p-2 sm:p-3">
             {listTracks.length === 0 ? (
@@ -340,7 +340,7 @@ export default function Discover() {
               description={t('discover.moreCreatorsAppear')}
             />
           ) : (
-            <div data-testid="recommended-artists" className="grid grid-cols-1 min-[480px]:grid-cols-2 lg:grid-cols-1 gap-4">
+            <div data-testid="recommended-artists" className="grid grid-cols-1 gap-4 min-[480px]:grid-cols-2 xl:grid-cols-1">
               {recommendedArtists.slice(0, 3).map((artist) => (
                 <div
                   key={artist.id}

@@ -53,8 +53,8 @@ export default function AppLayout({ children }) {
         <Header />
         
         {/* Scrollable page contents view */}
-        <main ref={mainRef} className={`flex-1 overflow-y-auto overflow-x-hidden px-4 py-5 transition-[padding] duration-200 sm:px-6 sm:py-6 lg:px-8 ${paddingClass}`}>
-          <div className="mx-auto w-full max-w-[var(--ns-content-max-width)]">
+        <main ref={mainRef} className={`flex-1 overflow-y-auto overflow-x-hidden py-5 transition-[padding] duration-200 sm:py-6 ${paddingClass}`}>
+          <div className="ns-page-container">
             {children}
             <Footer />
           </div>
