@@ -333,7 +333,7 @@ export default function ArtistPage() {
               {artist.username && (
                 <div className="flex items-center space-x-3 text-xs text-zinc-400 py-2 border-b border-transparent">
                   <Globe size={14} className="text-zinc-500" />
-                  <span>noirsound.com/{artist.username}</span>
+                  <span>noirsound.co/{artist.username}</span>
                 </div>
               )}
             </div>
