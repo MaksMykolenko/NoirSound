@@ -4,10 +4,10 @@ import { useTranslation } from 'react-i18next';
 
 export function AdminPageHeader({ title, description, actions }) {
   return (
-    <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+    <header className="flex flex-col gap-3 border-b border-[var(--ns-border-subtle)] pb-4 sm:flex-row sm:items-end sm:justify-between">
       <div>
-        <h1 className="text-2xl font-black tracking-tight text-[var(--ns-text)]">{title}</h1>
-        {description && <p className="mt-1 max-w-3xl text-sm text-[var(--ns-text-muted)]">{description}</p>}
+        <h1 className="font-display text-xl font-bold tracking-tight text-[var(--ns-text)] sm:text-2xl">{title}</h1>
+        {description && <p className="mt-1 max-w-3xl font-mono text-[11px] leading-relaxed text-[var(--ns-text-muted)]">{description}</p>}
       </div>
       {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
     </header>
@@ -16,7 +16,7 @@ export function AdminPageHeader({ title, description, actions }) {
 
 export function AdminPanel({ children, className = '', ...rest }) {
   return (
-    <section {...rest} className={`rounded-2xl border border-[var(--ns-border-subtle)] bg-[var(--ns-card)] shadow-[var(--ns-shadow-card)] ${className}`}>
+    <section {...rest} className={`rounded-md border border-[var(--ns-border-subtle)] bg-[color-mix(in_srgb,var(--ns-surface)_72%,transparent)] ${className}`}>
       {children}
     </section>
   );
@@ -48,7 +48,7 @@ export function StatusBadge({ status }) {
   const { t } = useTranslation();
   const normalized = String(status || 'UNKNOWN').toUpperCase();
   return (
-    <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${STATUS_TONES[normalized] || 'text-zinc-300 bg-zinc-500/10 border-zinc-500/20'}`}>
+    <span className={`inline-flex rounded border px-2 py-0.5 font-mono text-[9px] font-medium uppercase tracking-wider ${STATUS_TONES[normalized] || 'text-zinc-300 bg-zinc-500/10 border-zinc-500/20'}`}>
       {t(`admin.statusValues.${normalized}`, { defaultValue: normalized.replaceAll('_', ' ') })}
     </span>
   );
@@ -72,7 +72,7 @@ export function AdminError({ error, onRetry }) {
         {error?.status === 403 ? t('admin.accessDenied') : t('admin.loadFailed')}
       </p>
       {onRetry && (
-        <button type="button" onClick={onRetry} className="ns-button-secondary rounded-lg px-3 py-2 text-xs">
+        <button type="button" onClick={onRetry} className="ns-button-secondary rounded px-3 py-2 text-xs">
           {t('admin.retry')}
         </button>
       )}
@@ -86,7 +86,7 @@ export function AdminEmpty({ text }) {
 
 export function AdminSearch({ value, onChange, placeholder, children }) {
   return (
-    <div className="flex flex-col gap-3 border-b border-[var(--ns-border-subtle)] p-4 lg:flex-row lg:items-center">
+    <div className="flex flex-col gap-3 border-b border-[var(--ns-border-subtle)] p-3 lg:flex-row lg:items-center">
       <label className="relative min-w-0 flex-1">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--ns-text-muted)]" />
         <input
@@ -95,7 +95,7 @@ export function AdminSearch({ value, onChange, placeholder, children }) {
           onChange={(event) => onChange(event.target.value)}
           placeholder={placeholder}
           aria-label={placeholder}
-          className="ns-field w-full rounded-xl py-2 pl-9 pr-3 text-sm"
+          className="ns-field w-full rounded py-2 pl-9 pr-3 text-sm"
         />
       </label>
       {children && <div className="flex flex-wrap gap-2">{children}</div>}
@@ -107,7 +107,7 @@ export function AdminSelect({ value, onChange, label, options }) {
   return (
     <label>
       <span className="sr-only">{label}</span>
-      <select value={value} onChange={(event) => onChange(event.target.value)} className="ns-field min-h-10 rounded-xl px-3 py-2 text-sm">
+      <select value={value} onChange={(event) => onChange(event.target.value)} className="ns-field min-h-10 rounded px-3 py-2 text-sm">
         {options.map(([optionValue, optionLabel]) => (
           <option key={optionValue} value={optionValue}>{optionLabel}</option>
         ))}
@@ -119,13 +119,13 @@ export function AdminSelect({ value, onChange, label, options }) {
 export function AdminTable({ children }) {
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[760px] text-left text-sm">{children}</table>
+      <table className="w-full min-w-[760px] text-left text-xs [&_tbody_tr]:transition-colors [&_tbody_tr:hover]:bg-white/[0.02]">{children}</table>
     </div>
   );
 }
 
 export function AdminTableHead({ children }) {
-  return <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-[var(--ns-text-muted)]">{children}</th>;
+  return <th className="bg-black/10 px-4 py-3 font-mono text-[9px] font-medium uppercase tracking-[0.12em] text-[var(--ns-text-muted)]">{children}</th>;
 }
 
 export function AdminPagination({ pagination, onPage }) {
@@ -139,7 +139,7 @@ export function AdminPagination({ pagination, onPage }) {
           type="button"
           disabled={pagination.page <= 1}
           onClick={() => onPage(pagination.page - 1)}
-          className="ns-button-secondary rounded-lg px-3 py-2 disabled:opacity-40"
+          className="ns-button-secondary rounded px-3 py-2 disabled:opacity-40"
         >
           {t('admin.previous')}
         </button>
@@ -147,7 +147,7 @@ export function AdminPagination({ pagination, onPage }) {
           type="button"
           disabled={pagination.page >= pagination.totalPages}
           onClick={() => onPage(pagination.page + 1)}
-          className="ns-button-secondary rounded-lg px-3 py-2 disabled:opacity-40"
+          className="ns-button-secondary rounded px-3 py-2 disabled:opacity-40"
         >
           {t('admin.next')}
         </button>
@@ -205,8 +205,8 @@ export function ConfirmActionModal({
   }
 
   return (
-    <div className="fixed inset-0 z-[150] flex items-center justify-center bg-[var(--ns-overlay)] p-4" role="dialog" aria-modal="true" aria-labelledby="admin-confirm-title">
-      <form onSubmit={submit} className="w-full max-w-md rounded-2xl border border-[var(--ns-border)] bg-[var(--ns-card-solid)] p-5 shadow-[var(--ns-shadow-modal)]">
+    <div className="fixed inset-0 z-[var(--ns-z-dialog)] flex items-center justify-center bg-[var(--ns-overlay)] p-4" role="dialog" aria-modal="true" aria-labelledby="admin-confirm-title">
+      <form onSubmit={submit} className="w-full max-w-md rounded-lg border border-[var(--ns-border)] bg-[var(--ns-card-solid)] p-5 shadow-2xl">
         <div className="flex items-start justify-between gap-4">
           <div>
             <h2 id="admin-confirm-title" className="font-bold text-[var(--ns-text)]">{title || t('admin.confirmAction')}</h2>
@@ -226,7 +226,7 @@ export function ConfirmActionModal({
               maxLength={1000}
               value={reason}
               onChange={(event) => setReason(event.target.value)}
-              className="ns-field mt-2 min-h-24 w-full resize-y rounded-xl p-3 text-sm"
+              className="ns-field mt-2 min-h-24 w-full resize-y rounded p-3 text-sm"
               placeholder={t('admin.reasonPlaceholder')}
             />
           </label>
@@ -247,13 +247,13 @@ export function ConfirmActionModal({
           </div>
         )}
         <div className="mt-5 flex justify-end gap-2">
-          <button type="button" onClick={onClose} className="ns-button-secondary rounded-lg px-4 py-2 text-sm">
+          <button type="button" onClick={onClose} className="ns-button-secondary rounded px-4 py-2 text-sm">
             {t('admin.cancel')}
           </button>
           <button
             type="submit"
             disabled={submitting || (requireReason && !reason.trim())}
-            className={`rounded-lg px-4 py-2 text-sm font-bold text-white disabled:opacity-40 ${danger ? 'bg-[var(--ns-danger)]' : 'bg-[var(--ns-accent)] text-[var(--ns-on-accent)]'}`}
+            className={`rounded px-4 py-2 text-sm font-semibold text-white disabled:opacity-40 ${danger ? 'bg-[var(--ns-danger)]' : 'bg-[var(--ns-accent)] text-[var(--ns-on-accent)]'}`}
           >
             {submitting ? t('admin.saving') : actionLabel}
           </button>

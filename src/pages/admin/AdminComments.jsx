@@ -74,7 +74,7 @@ export default function AdminComments() {
                 <td className="px-4 py-3">{comment.reportsCount}</td>
                 <td className="px-4 py-3 text-xs text-[var(--ns-text-muted)]">{formatAdminDate(comment.createdAt, i18n.language)}</td>
                 <td className="px-4 py-3">
-                  <button type="button" onClick={() => setPending({ id: comment.id, hidden: comment.isDeleted })} className="ns-button-secondary rounded-lg px-3 py-2 text-xs">
+                  <button type="button" onClick={() => setPending({ id: comment.id, hidden: comment.isDeleted })} className="ns-button-secondary rounded px-3 py-2 text-xs">
                     {comment.isDeleted ? t('admin.unhide') : t('admin.hide')}
                   </button>
                 </td>

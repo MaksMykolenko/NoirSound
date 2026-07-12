@@ -28,16 +28,16 @@ export default function LanguageSwitcher({ compact = false, className = '' }) {
 
   if (compact) {
     return (
-      <div className={`flex items-center gap-1 bg-zinc-900/80 p-1 rounded-xl border border-zinc-800/80 ${className}`}>
+      <div className={`flex items-center gap-1 rounded-md border border-zinc-800/80 bg-zinc-900/80 p-1 ${className}`}>
         {languages.map((lang) => {
           const active = currentLang.startsWith(lang.code);
           return (
             <button
               key={lang.code}
               onClick={() => handleLanguageChange(lang.code)}
-              className={`px-2 py-1 rounded-lg text-[10.5px] font-extrabold tracking-wider cursor-pointer transition-all ${
+              className={`cursor-pointer rounded px-2 py-1 font-mono text-[9px] font-medium tracking-wider transition-colors ${
                 active
-                  ? 'bg-brand-red text-[var(--ns-on-accent)] shadow-[0_0_10px_var(--ns-accent-glow)]'
+                  ? 'bg-brand-red text-[var(--ns-on-accent)]'
                   : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800'
               }`}
               title={lang.label}
@@ -53,7 +53,7 @@ export default function LanguageSwitcher({ compact = false, className = '' }) {
 
   return (
     <div className={`space-y-2 ${className}`}>
-      <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-2">
+      <label className="flex items-center gap-2 font-mono text-[9px] font-medium uppercase tracking-wider text-zinc-500">
         <Globe size={14} className="text-brand-red" />
         <span>{t('language.label')}</span>
       </label>
@@ -65,14 +65,14 @@ export default function LanguageSwitcher({ compact = false, className = '' }) {
               key={lang.code}
               type="button"
               onClick={() => handleLanguageChange(lang.code)}
-              className={`px-3 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer border flex items-center justify-between ${
+              className={`flex cursor-pointer items-center justify-between rounded-md border px-3 py-2.5 text-xs font-medium transition-colors ${
                 active
-                  ? 'bg-brand-red/15 text-rose-300 border-brand-red/40 shadow-[0_0_12px_var(--ns-accent-glow-soft)]'
+                  ? 'border-brand-red/40 bg-brand-red/10 text-rose-300'
                   : 'bg-zinc-900/60 text-zinc-400 border-zinc-800/80 hover:bg-zinc-800/80 hover:text-zinc-100'
               }`}
             >
               <span>{lang.label}</span>
-              <span className="text-[10px] uppercase font-extrabold px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400">
+              <span className="rounded bg-zinc-800 px-1.5 py-0.5 font-mono text-[10px] font-medium uppercase text-zinc-400">
                 {lang.short}
               </span>
             </button>

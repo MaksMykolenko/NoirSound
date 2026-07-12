@@ -68,16 +68,16 @@ export default function ListeningStats() {
   ];
 
   return (
-    <div className="space-y-8 animate-fade-in">
+    <div className="space-y-6">
       <section className="grid grid-cols-1 min-[430px]:grid-cols-2 xl:grid-cols-4 gap-4">
         {metrics.map(({ label, value, icon: Icon }) => (
-          <div key={label} className="p-4 ns-card flex items-center gap-3 min-h-24">
-            <div className="p-2.5 bg-zinc-950 border border-zinc-900 text-brand-red rounded-xl">
+          <div key={label} className="flex min-h-20 items-center gap-3 rounded-lg border border-zinc-800/60 bg-zinc-950/35 p-4">
+            <div className="rounded border border-zinc-800 bg-zinc-950 p-2 text-brand-red">
               <Icon size={16} />
             </div>
             <div>
-              <span className="block text-xs font-bold text-zinc-400 uppercase tracking-wide">{label}</span>
-              <span className="block text-base font-extrabold text-zinc-100 mt-1">{value}</span>
+              <span className="block font-mono text-[9px] font-medium uppercase tracking-wide text-zinc-500">{label}</span>
+              <span className="mt-1 block text-base font-semibold text-zinc-100">{value}</span>
             </div>
           </div>
         ))}
@@ -94,19 +94,19 @@ export default function ListeningStats() {
                 <button
                   key={track.id}
                   onClick={() => navigate(`/track/${track.id}`)}
-                  className="w-full flex items-center justify-between p-2 hover:bg-zinc-900/40 rounded-xl text-left cursor-pointer"
+                  className="flex w-full cursor-pointer items-center justify-between rounded-md border border-transparent p-2 text-left transition-colors hover:border-zinc-800/60 hover:bg-zinc-900/40"
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <FallbackCover
                       src={track.coverUrl}
                       title={track.title}
                       genre={track.genre}
-                      className="w-9 h-9 rounded-lg shrink-0"
+                      className="h-9 w-9 shrink-0 rounded"
                       imageClassName="object-cover"
                     />
                     <div className="min-w-0">
-                      <h4 className="text-sm font-bold text-zinc-200 truncate">{track.title}</h4>
-                      <p className="text-xs text-zinc-500 truncate">{getLocalizedGenre(track.genre) || 'Uncategorized'}</p>
+                      <h4 className="truncate text-xs font-semibold text-zinc-200">{track.title}</h4>
+                      <p className="truncate font-mono text-[9px] text-zinc-500">{getLocalizedGenre(track.genre) || 'Uncategorized'}</p>
                     </div>
                   </div>
                   <span className="text-xs text-zinc-500 font-semibold shrink-0">
@@ -128,7 +128,7 @@ export default function ListeningStats() {
                 <button
                   key={artist.id}
                   onClick={() => navigate(`/artist/${artist.id}`)}
-                  className="w-full flex items-center justify-between p-2 hover:bg-zinc-900/40 rounded-xl text-left cursor-pointer"
+                  className="flex w-full cursor-pointer items-center justify-between rounded-md border border-transparent p-2 text-left transition-colors hover:border-zinc-800/60 hover:bg-zinc-900/40"
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <FallbackAvatar
@@ -137,7 +137,7 @@ export default function ListeningStats() {
                       className="w-9 h-9 rounded-full shrink-0"
                       imageClassName="object-cover"
                     />
-                    <h4 className="text-sm font-bold text-zinc-200 truncate">{artist.name}</h4>
+                    <h4 className="truncate text-xs font-semibold text-zinc-200">{artist.name}</h4>
                   </div>
                   <span className="text-xs text-zinc-500 font-semibold shrink-0">
                     {formatNumber(artist.playCount)} {t('trackPage.plays')}

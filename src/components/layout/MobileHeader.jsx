@@ -10,7 +10,7 @@ export default function MobileHeader({ onOpenDrawer }) {
   const { user } = useUserStore();
 
   return (
-    <header className="lg:hidden flex items-center justify-between px-4 py-2.5 min-h-16 bg-zinc-950/88 border-b border-zinc-800/60 sticky top-0 z-40 backdrop-blur-xl select-none">
+    <header className="sticky top-0 z-[var(--ns-z-header)] flex h-[var(--ns-mobile-header-height)] shrink-0 select-none items-center justify-between border-b border-[var(--ns-border-subtle)] bg-[color-mix(in_srgb,var(--ns-bg)_92%,transparent)] px-4 backdrop-blur-md lg:hidden">
       {/* Brand logo */}
       <BrandLogo size="sm" showSubtitle={false} />
 
@@ -29,7 +29,7 @@ export default function MobileHeader({ onOpenDrawer }) {
         {/* Profile */}
         <button
           onClick={() => navigate('/profile')}
-          className="w-10 h-10 rounded-full border border-zinc-800/80 bg-zinc-900 overflow-hidden cursor-pointer flex items-center justify-center shrink-0 transition-colors hover:border-brand-red/40"
+          className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-[var(--ns-border-subtle)] bg-zinc-900 transition-colors hover:border-brand-red/40"
           title="Profile"
           aria-label="Profile"
         >

@@ -80,17 +80,17 @@ export default function TrackListItem({
       tabIndex={0}
       data-track-id={track.id}
       aria-label={`Open ${track.title} by ${track.artistName}`}
-      className={`group flex items-center justify-between min-h-14 p-2 rounded-xl transition-all duration-200 border cursor-pointer ${
+      className={`group flex min-h-14 cursor-pointer items-center justify-between rounded-md border p-2 transition-colors duration-150 ${
         isCurrent
-          ? 'bg-brand-red/5 border-brand-red/20 shadow-[0_0_10px_var(--ns-accent-glow-soft)]'
-          : 'bg-transparent border-transparent hover:bg-zinc-900/40 hover:border-zinc-800/40'
+          ? 'border-brand-red/30 bg-brand-red/5'
+          : 'border-transparent bg-transparent hover:border-zinc-800/50 hover:bg-zinc-900/45'
       }`}
     >
       {/* Left section: Number, Cover, Title */}
       <div className="flex items-center space-x-2.5 sm:space-x-4 flex-1 min-w-0">
         {/* Play/Index toggle */}
         <div className="w-6 flex items-center justify-center shrink-0">
-          <span className="text-[14px] font-bold text-zinc-500 group-hover:hidden select-none font-mono">
+          <span className="select-none font-mono text-sm font-medium text-zinc-500 group-hover:hidden">
             {isCurrent && isPlaying ? (
               <span className="flex items-end justify-center space-x-[2px] h-3 w-3 pb-[1px]">
                 <span className="w-[2px] h-full bg-brand-red animate-bounce" style={{ animationDelay: '0.1s' }}></span>
@@ -118,13 +118,13 @@ export default function TrackListItem({
           title={track.title}
           artistName={track.artistName}
           genre={track.genre}
-          className="w-10 h-10 rounded-lg border border-zinc-900 shrink-0"
+          className="h-10 w-10 shrink-0 rounded border border-zinc-800/60"
           imageClassName="object-cover"
         />
 
         {/* Metadata */}
         <div className="min-w-0 flex-1">
-          <h4 className={`text-[15.5px] font-bold truncate ${
+          <h4 className={`truncate text-[13px] font-semibold ${
             isCurrent ? 'text-brand-red' : 'text-zinc-200'
           }`}>
             {track.title}
@@ -134,7 +134,7 @@ export default function TrackListItem({
               e.stopPropagation();
               navigate(`/artist/${track.artistId}`);
             }}
-            className="text-[13px] text-zinc-400 hover:text-zinc-200 transition-colors truncate block mt-0.5"
+            className="mt-0.5 block truncate font-mono text-[10px] text-zinc-500 transition-colors hover:text-zinc-300"
           >
             {track.artistName}
           </span>
@@ -148,13 +148,13 @@ export default function TrackListItem({
 
       {/* Middle section: Genre, Plays count */}
       <div className="hidden min-[430px]:flex items-center space-x-3 sm:space-x-6 px-2 sm:px-4 shrink-0">
-        <span className="hidden md:inline-block max-w-[14ch] truncate align-middle text-[11.5px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-rose-950/20 border border-brand-red/20 text-brand-red select-none">
+        <span className="hidden max-w-[14ch] truncate rounded border border-zinc-800/70 bg-zinc-800/40 px-2 py-0.5 align-middle font-mono text-[9px] font-medium uppercase tracking-wider text-zinc-400 select-none md:inline-block">
           {getLocalizedGenre(track.genre)}
         </span>
-        <span className="hidden sm:inline text-[13px] text-zinc-400 font-mono select-none">
+        <span className="hidden font-mono text-[10px] text-zinc-500 select-none sm:inline">
           {formatNumber(track.plays || 0)} plays
         </span>
-        <span className="text-[13px] text-zinc-450 font-mono w-10 text-right select-none">
+        <span className="w-10 text-right font-mono text-[10px] text-zinc-500 select-none">
           {formatDuration(track.duration)}
         </span>
       </div>
@@ -189,7 +189,7 @@ export default function TrackListItem({
         {canPlay && (
         <button
           onClick={handleQueue}
-          className={`ns-icon-button !min-h-10 !min-w-10 rounded-lg transition-all cursor-pointer hidden sm:inline-flex ${
+          className={`ns-icon-button !min-h-10 !min-w-10 hidden cursor-pointer rounded transition-colors sm:inline-flex ${
             inQueue
               ? 'text-brand-red bg-zinc-900 border border-zinc-800'
               : 'text-zinc-500 hover:text-zinc-200 hover:bg-zinc-900 md:opacity-0 md:group-hover:opacity-100'

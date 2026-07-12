@@ -48,8 +48,8 @@ export default function CreatePlaylistModal({ isOpen, onClose, onCreate }) {
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in select-none">
-      <div ref={dialogRef} className="bg-brand-dark border border-zinc-800 rounded-3xl p-6 w-full max-w-sm shadow-[0_0_50px_rgba(0,0,0,0.8)] relative" role="dialog" aria-modal="true" aria-labelledby="playlist-modal-title">
+    <div className="fixed inset-0 z-[var(--ns-z-dialog)] flex items-center justify-center bg-black/70 p-4 select-none">
+      <div ref={dialogRef} className="relative w-full max-w-sm rounded-lg border border-zinc-700/70 bg-zinc-950 p-5 shadow-xl" role="dialog" aria-modal="true" aria-labelledby="playlist-modal-title">
         <button
           onClick={onClose}
           className="absolute top-4 right-4 ns-icon-button !min-h-10 !min-w-10 cursor-pointer"
@@ -59,11 +59,11 @@ export default function CreatePlaylistModal({ isOpen, onClose, onCreate }) {
         </button>
 
         <div className="flex flex-col items-center mb-6">
-          <div className="w-12 h-12 rounded-full bg-brand-red/10 border border-brand-red/20 flex items-center justify-center mb-3">
+          <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-md border border-brand-red/20 bg-brand-red/5">
             <ListMusic size={20} className="text-brand-red" />
           </div>
-          <h2 id="playlist-modal-title" className="text-xl font-bold text-zinc-100">{t('playlistModal.newPlaylist')}</h2>
-          <p className="text-xs text-zinc-400 mt-1">{t('playlistModal.curateSounds')}</p>
+          <h2 id="playlist-modal-title" className="text-lg font-semibold tracking-tight text-zinc-100">{t('playlistModal.newPlaylist')}</h2>
+          <p className="mt-1 text-[11px] text-zinc-500">{t('playlistModal.curateSounds')}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -100,7 +100,7 @@ export default function CreatePlaylistModal({ isOpen, onClose, onCreate }) {
             />
             <p className="text-right text-[10px] text-zinc-600">{description.length}/1000</p>
           </div>
-          <label className="flex min-h-11 cursor-pointer items-center justify-between gap-4 rounded-xl border border-zinc-800 bg-zinc-900/40 px-3">
+          <label className="flex min-h-11 cursor-pointer items-center justify-between gap-4 rounded-md border border-zinc-800 bg-zinc-900/40 px-3">
             <span>
               <strong className="block text-xs text-zinc-200">{t('playlists.public')}</strong>
               <small className="text-[10px] text-zinc-500">{t('playlists.publicHelp')}</small>
@@ -116,7 +116,7 @@ export default function CreatePlaylistModal({ isOpen, onClose, onCreate }) {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full py-3 ns-button-primary rounded-xl text-xs font-bold uppercase tracking-widest transition-all flex items-center justify-center space-x-2 cursor-pointer"
+            className="ns-button-primary flex w-full cursor-pointer items-center justify-center space-x-2 rounded-md py-3 text-xs font-semibold uppercase tracking-widest"
           >
             <CheckCircle size={14} />
             <span>{isSubmitting ? t('playlistModal.creating') : t('playlistModal.createPlaylist')}</span>

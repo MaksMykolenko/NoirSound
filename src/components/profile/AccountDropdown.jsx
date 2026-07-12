@@ -62,12 +62,12 @@ export default function AccountDropdown({ isOpen, onClose, anchorRef }) {
   return (
     <div
       ref={dropdownRef}
-      className="absolute right-0 mt-2.5 w-64 bg-zinc-950/95 border border-zinc-900 rounded-2xl glass-panel shadow-2xl z-50 py-1.5 animate-fade-in"
+      className="absolute right-0 z-[var(--ns-z-dropdown)] mt-2 w-64 rounded-lg border border-zinc-700/70 bg-zinc-950 py-1.5 shadow-xl"
       role="menu"
     >
       <button
         onClick={() => handleNavigate('/profile')}
-        className="w-full flex items-center space-x-3 px-4 py-2.5 text-xs font-bold text-zinc-300 hover:text-zinc-100 hover:bg-zinc-900/60 transition-colors cursor-pointer text-left"
+        className="flex w-full cursor-pointer items-center space-x-3 px-4 py-2.5 text-left text-xs font-medium text-zinc-300 transition-colors hover:bg-zinc-900 hover:text-zinc-100"
         role="menuitem"
       >
         <User size={14} className="text-zinc-500" />
@@ -76,7 +76,7 @@ export default function AccountDropdown({ isOpen, onClose, anchorRef }) {
 
       <button
         onClick={() => handleNavigate('/profile?tab=settings')}
-        className="w-full flex items-center space-x-3 px-4 py-2.5 text-xs font-bold text-zinc-300 hover:text-zinc-100 hover:bg-zinc-900/60 transition-colors cursor-pointer text-left"
+        className="flex w-full cursor-pointer items-center space-x-3 px-4 py-2.5 text-left text-xs font-medium text-zinc-300 transition-colors hover:bg-zinc-900 hover:text-zinc-100"
         role="menuitem"
       >
         <Settings size={14} className="text-zinc-500" />
@@ -85,7 +85,7 @@ export default function AccountDropdown({ isOpen, onClose, anchorRef }) {
 
       <button
         onClick={() => handleNavigate('/dashboard')}
-        className="w-full flex items-center space-x-3 px-4 py-2.5 text-xs font-bold text-zinc-300 hover:text-zinc-100 hover:bg-zinc-900/60 transition-colors cursor-pointer text-left"
+        className="flex w-full cursor-pointer items-center space-x-3 px-4 py-2.5 text-left text-xs font-medium text-zinc-300 transition-colors hover:bg-zinc-900 hover:text-zinc-100"
         role="menuitem"
       >
         <LayoutDashboard size={14} className="text-zinc-500" />
@@ -108,7 +108,7 @@ export default function AccountDropdown({ isOpen, onClose, anchorRef }) {
 
       <button
         onClick={handleLogout}
-        className="w-full flex items-center space-x-3 px-4 py-2.5 text-xs font-bold text-rose-500 hover:text-rose-400 hover:bg-rose-950/20 transition-colors cursor-pointer text-left"
+        className="flex w-full cursor-pointer items-center space-x-3 px-4 py-2.5 text-left text-xs font-medium text-rose-400 transition-colors hover:bg-rose-950/20 hover:text-rose-300"
         role="menuitem"
       >
         <LogOut size={14} />

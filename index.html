@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#09090b" />
+    <meta name="theme-color" content="#0a0a0c" />
 
     <!-- SSR-injected per-route metadata; see backend/src/lib/metaRenderer.js -->
     <!--noirsound:ssr-meta-->
@@ -62,6 +62,20 @@
           'orange-wave',
           'system'
         ];
+        var themeBackgrounds = {
+          'noir-pink': '#0a0a0c',
+          'midnight-blue': '#030712',
+          'crimson-red': '#070303',
+          'royal-purple': '#07030f',
+          'emerald-dark': '#020806',
+          'light-minimal': '#f7f7fb',
+          'green-stream': '#050706',
+          'orange-wave': '#080604'
+        };
+        function syncThemeColor(themeId) {
+          var themeColor = document.querySelector('meta[name="theme-color"]');
+          if (themeColor) themeColor.setAttribute('content', themeBackgrounds[themeId] || '#0a0a0c');
+        }
         try {
           var selectedTheme = localStorage.getItem('noirsound.theme') || 'noir-pink';
           if (allowedThemes.indexOf(selectedTheme) === -1) selectedTheme = 'noir-pink';
@@ -75,9 +89,11 @@
           document.documentElement.dataset.themePreference = selectedTheme;
           document.documentElement.style.colorScheme =
             resolvedTheme === 'light-minimal' ? 'light' : 'dark';
+          syncThemeColor(resolvedTheme);
         } catch (error) {
           document.documentElement.dataset.theme = 'noir-pink';
           document.documentElement.dataset.themePreference = 'noir-pink';
+          syncThemeColor('noir-pink');
         }
       })();
     </script>
@@ -85,7 +101,7 @@
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script type="module" src="/src/main.jsx"></script>
   </head>
   <body>

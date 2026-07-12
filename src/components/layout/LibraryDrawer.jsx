@@ -28,19 +28,21 @@ export default function LibraryDrawer({ isOpen, onClose }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 lg:hidden flex">
+    <div className="fixed inset-0 z-[var(--ns-z-overlay)] flex lg:hidden">
       {/* Background Overlay */}
-      <div
+      <button
+        type="button"
+        aria-label="Close library drawer"
         onClick={onClose}
-        className="fixed inset-0 bg-black/80 backdrop-blur-sm transition-opacity duration-300 animate-fade-in"
+        className="fixed inset-0 bg-black/60 transition-opacity duration-200 animate-fade-in"
       />
 
       {/* Slide-out Panel */}
-      <div className="relative w-[320px] max-w-[90vw] h-full bg-zinc-950 border-r border-zinc-800/80 flex flex-col py-4 px-3.5 z-10 animate-slide-in-left shadow-[10px_0_40px_rgba(0,0,0,0.9)]" role="dialog" aria-modal="true" aria-label="Your library">
+      <div className="relative z-10 flex h-full w-[320px] max-w-[90vw] animate-slide-in-left flex-col border-r border-[var(--ns-border-subtle)] bg-brand-dark px-3.5 py-4 shadow-2xl" role="dialog" aria-modal="true" aria-label="Your library">
         
         {/* Top Header Bar */}
         <div className="flex items-center justify-between px-2 pb-3 mb-2 border-b border-zinc-900/80 shrink-0">
-          <span className="text-xs font-extrabold uppercase tracking-wider text-zinc-400">Library Workspace</span>
+          <span className="font-mono text-[10px] font-medium uppercase tracking-wider text-zinc-400">Library Workspace</span>
           <button
             onClick={onClose}
             className="ns-icon-button !min-h-8 !min-w-8 cursor-pointer text-zinc-400 hover:text-zinc-100"

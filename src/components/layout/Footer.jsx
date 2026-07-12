@@ -10,7 +10,7 @@ import { LEGAL_NAV } from '../../constants/legalContent';
 export default function Footer() {
   const year = new Date().getFullYear();
   return (
-    <footer className="mt-12 border-t border-zinc-800/80 pt-6 pb-2 text-xs text-zinc-500">
+    <footer className="mt-12 border-t border-[var(--ns-border-subtle)] pb-2 pt-6 font-mono text-[10px] text-zinc-500">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         {LEGAL_NAV.map((item) => (
           <Link key={item.slug} to={item.path} className="hover:text-zinc-300 transition-colors">

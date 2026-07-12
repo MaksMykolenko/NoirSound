@@ -70,20 +70,20 @@ export default function ReportButton({ targetType, targetId, className = '', lab
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-black/70" onClick={() => setOpen(false)}>
+        <div className="fixed inset-0 z-[var(--ns-z-dialog)] flex items-center justify-center bg-black/75 p-4" onClick={() => setOpen(false)}>
           <form
             onClick={(e) => e.stopPropagation()}
             onSubmit={handleSubmit}
-            className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-2xl p-5"
+            className="w-full max-w-md rounded-lg border border-zinc-700/70 bg-zinc-950 p-5 shadow-xl"
           >
-            <h2 className="text-lg font-bold text-white mb-1">Report {targetType.toLowerCase()}</h2>
+            <h2 className="mb-1 text-lg font-semibold tracking-tight text-white">Report {targetType.toLowerCase()}</h2>
             <p className="text-xs text-zinc-500 mb-4">Tell us what’s wrong. False reports may affect your account.</p>
 
             <label className="block text-xs font-semibold text-zinc-400 mb-1">Reason</label>
             <select
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              className="w-full mb-4 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-100"
+              className="ns-field mb-4 w-full rounded-md px-3 py-2 text-sm"
             >
               {REPORT_REASONS.map((r) => (
                 <option key={r} value={r}>{reasonLabels[r] || r}</option>
@@ -96,17 +96,17 @@ export default function ReportButton({ targetType, targetId, className = '', lab
               onChange={(e) => setDetails(e.target.value.slice(0, 500))}
               rows={3}
               maxLength={500}
-              className="w-full mb-4 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-100 resize-none"
+              className="ns-field mb-4 w-full resize-none rounded-md px-3 py-2 text-sm"
               placeholder="Add any context that helps moderators."
             />
 
             <div className="flex justify-end gap-2">
               <button type="button" onClick={() => setOpen(false)}
-                className="px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-sm text-zinc-300">
+                className="ns-button-secondary rounded-md px-4 py-2 text-sm">
                 Cancel
               </button>
               <button type="submit" disabled={submitting}
-                className="px-4 py-2 rounded-lg bg-brand-red hover:bg-brand-red/90 text-sm font-semibold text-white disabled:opacity-60">
+                className="ns-button-primary rounded-md px-4 py-2 text-sm font-semibold disabled:opacity-60">
                 {submitting ? 'Submitting…' : 'Submit report'}
               </button>
             </div>

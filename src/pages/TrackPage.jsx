@@ -94,8 +94,8 @@ export default function TrackPage() {
   if (loading) {
     return (
       <div className="space-y-4 animate-pulse">
-        <section className="bg-brand-graphite/20 border border-zinc-900/60 p-6 md:p-8 ns-card-hero h-72"></section>
-        <div className="h-28 bg-brand-graphite/40 border border-zinc-900/60 ns-card-hero"></div>
+        <section className="h-72 rounded-lg border border-zinc-800/60 bg-zinc-950/35 p-6 md:p-8"></section>
+        <div className="h-28 rounded-lg border border-zinc-800/60 bg-zinc-950/35"></div>
       </div>
     );
   }
@@ -165,14 +165,14 @@ export default function TrackPage() {
   };
 
   const iconActionClass = (active) =>
-    `min-w-11 min-h-11 p-3 rounded-xl border transition-all cursor-pointer ${
+    `min-h-11 min-w-11 cursor-pointer rounded-md border p-3 transition-colors ${
       active
         ? 'bg-brand-red/12 text-brand-red border-brand-red/35'
         : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700'
     }`;
 
   return (
-    <div className="ns-page-stack animate-fade-in">
+    <div className="ns-page-stack">
       <PageMeta
         title={`${track.title} — ${track.artistName} · NoirSound`}
         description={`${showGenre ? `${genreLabel} · ` : ''}${hasDuration ? `${durationStr} · ` : ''}Listen to ${track.title} by ${track.artistName} on NoirSound.`}
@@ -184,7 +184,7 @@ export default function TrackPage() {
 
         {/* HERO */}
         <section
-          className="relative overflow-hidden isolate ns-card ns-card-hero p-5 sm:p-7 md:p-8"
+          className="relative isolate overflow-hidden rounded-lg border border-[var(--ns-border)] bg-zinc-950/35 p-5 sm:p-6"
           onContextMenu={contextMenuProps.onContextMenu}
           onKeyDown={contextMenuProps.onKeyDown}
           tabIndex={0}
@@ -199,30 +199,15 @@ export default function TrackPage() {
           >
             <MoreHorizontal size={17} />
           </button>
-          {/* Blurred cover wash for a music-forward backdrop */}
-          <div
-            className="absolute inset-0 -z-10 bg-cover bg-center opacity-[0.13] blur-3xl scale-110"
-            style={{ backgroundImage: track.coverUrl ? `url('${track.coverUrl}')` : 'none' }}
-            aria-hidden="true"
-          />
-          <div
-            className="absolute inset-0 -z-10 bg-gradient-to-br from-[var(--ns-accent-soft)] via-transparent to-transparent"
-            aria-hidden="true"
-          />
-
           <div className="flex flex-col md:flex-row gap-6 md:gap-8 items-center md:items-end">
             {/* Cover */}
-            <div className="relative shrink-0">
-              <div
-                className="absolute -inset-6 rounded-[2rem] bg-[var(--ns-accent-soft)] blur-3xl pointer-events-none"
-                aria-hidden="true"
-              />
+            <div className="shrink-0">
               <FallbackCover
                 src={track.coverUrl}
                 title={track.title}
                 artistName={track.artistName}
                 genre={track.genre}
-                className="relative w-44 h-44 sm:w-52 sm:h-52 md:w-60 md:h-60 rounded-2xl border border-[var(--ns-border)] shadow-[0_22px_60px_var(--ns-shadow-color)]"
+                className="h-44 w-44 rounded-md border border-zinc-700/70 sm:h-52 sm:w-52 md:h-56 md:w-56"
                 imageClassName="object-cover"
               />
             </div>
@@ -231,11 +216,11 @@ export default function TrackPage() {
             <div className="flex-1 min-w-0 space-y-4 text-center md:text-left">
               <div className="space-y-2.5">
                 {showGenre && (
-                  <span className="inline-block text-[11px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full bg-brand-red/10 border border-brand-red/30 text-rose-300 select-none">
+                  <span className="inline-block rounded border border-brand-red/30 bg-[var(--ns-accent-soft)] px-2.5 py-1 font-mono text-[9px] font-medium uppercase tracking-wider text-rose-300 select-none">
                     {genreLabel}
                   </span>
                 )}
-                <h1 className="text-[1.75rem] sm:text-4xl lg:text-5xl font-black tracking-[-0.04em] text-zinc-100 break-words leading-[1.05]">
+                <h1 className="break-words font-display text-3xl font-semibold leading-[1.08] tracking-[-0.03em] text-zinc-100 sm:text-4xl">
                   {track.title}
                 </h1>
                 <button
@@ -294,7 +279,7 @@ export default function TrackPage() {
               </div>
 
               {/* Compact metadata row (secondary, wraps on mobile) */}
-              <div className="flex flex-wrap items-center justify-center md:justify-start gap-x-2.5 gap-y-1.5 text-[13px] text-zinc-500">
+              <div className="flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1.5 font-mono text-[10px] text-zinc-500 md:justify-start">
                 <span
                   className="inline-flex items-center gap-1.5"
                   aria-label={`${formatNumber(playCount)} ${t('trackPage.plays')}`}
@@ -326,7 +311,7 @@ export default function TrackPage() {
         </section>
 
         {/* WAVEFORM — visually attached to the hero */}
-        <section className="p-5 sm:p-6 ns-card space-y-3">
+        <section className="space-y-3 rounded-lg border border-zinc-800/60 bg-zinc-950/35 p-5">
           <div className="flex items-center justify-between gap-4">
             <h2 className="ns-eyebrow">{t('trackPage.waveform')}</h2>
             <span className="text-[11px] font-mono text-zinc-500 select-none">
@@ -361,7 +346,7 @@ export default function TrackPage() {
 
         {/* Description & Comments */}
         <div className="lg:col-span-2 space-y-6 lg:space-y-8">
-          <div className="p-5 sm:p-6 ns-card space-y-3">
+          <div className="space-y-3 rounded-lg border border-zinc-800/60 bg-zinc-950/35 p-5">
             <h2 className="ns-eyebrow">{t('trackPage.description')}</h2>
             {track.description ? (
               <p className="text-sm text-zinc-300 leading-relaxed whitespace-pre-line">{track.description}</p>
@@ -373,7 +358,7 @@ export default function TrackPage() {
                 {track.tags.map((tag) => (
                   <span
                     key={tag}
-                    className="text-xs font-semibold text-zinc-400 px-2.5 py-1 rounded-full bg-zinc-900 border border-zinc-800"
+                    className="rounded border border-zinc-800 bg-zinc-900 px-2.5 py-1 font-mono text-[9px] text-zinc-400"
                   >
                     #{tag}
                   </span>
@@ -382,7 +367,7 @@ export default function TrackPage() {
             )}
           </div>
 
-          <div className="p-4 sm:p-6 ns-card">
+          <div className="rounded-lg border border-zinc-800/60 bg-zinc-950/35 p-4 sm:p-5">
             <CommentSection trackId={track.id} />
           </div>
         </div>
@@ -391,7 +376,7 @@ export default function TrackPage() {
         <div className="space-y-4">
           <h2 className="ns-eyebrow px-1">{t('trackPage.relatedTracks')}</h2>
           {relatedTracks.length === 0 ? (
-            <div className="ns-card p-5 text-center space-y-1.5">
+            <div className="space-y-1.5 rounded-lg border border-zinc-800/60 bg-zinc-950/35 p-5 text-center">
               <p className="text-sm font-semibold text-zinc-300">{t('trackPage.noSimilarTitle')}</p>
               <p className="text-xs text-zinc-500 leading-relaxed">{t('trackPage.noSimilarDesc')}</p>
             </div>
@@ -402,18 +387,18 @@ export default function TrackPage() {
                   type="button"
                   key={relTrack.id}
                   onClick={() => navigate(`/track/${relTrack.id}`)}
-                  className="w-full flex items-center gap-3 p-3 ns-card ns-card-interactive cursor-pointer group text-left"
+                  className="group flex w-full cursor-pointer items-center gap-3 rounded-md border border-zinc-800/60 bg-zinc-950/35 p-3 text-left transition-colors hover:border-zinc-700/70 hover:bg-zinc-900/40"
                 >
                   <FallbackCover
                     src={relTrack.coverUrl}
                     title={relTrack.title}
                     artistName={relTrack.artistName}
                     genre={relTrack.genre}
-                    className="w-12 h-12 rounded-xl border border-zinc-850 shrink-0"
+                    className="h-12 w-12 shrink-0 rounded border border-zinc-800"
                     imageClassName="object-cover"
                   />
                   <div className="min-w-0 flex-1">
-                    <h4 className="text-[13px] font-bold text-zinc-200 truncate group-hover:text-white">
+                    <h4 className="truncate text-[13px] font-semibold text-zinc-200 group-hover:text-white">
                       {relTrack.title}
                     </h4>
                     <p className="text-xs text-zinc-500 mt-0.5 truncate">{relTrack.artistName}</p>

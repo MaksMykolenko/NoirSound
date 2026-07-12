@@ -44,9 +44,9 @@ export default function AdminOverview() {
             <AdminPanel className="h-full p-4 transition-colors group-hover:border-[var(--ns-accent)]">
               <div className="flex items-center justify-between">
                 <Icon className="h-4 w-4 text-[var(--ns-text-muted)]" />
-                <span className="text-2xl font-black">{valueOrUnavailable(value, t('admin.unavailable'))}</span>
+                <span className="font-display text-2xl font-bold">{valueOrUnavailable(value, t('admin.unavailable'))}</span>
               </div>
-              <p className="mt-3 text-xs font-semibold text-[var(--ns-text-muted)]">{label}</p>
+              <p className="mt-3 font-mono text-[9px] font-medium uppercase tracking-wider text-[var(--ns-text-muted)]">{label}</p>
             </AdminPanel>
           </Link>
         ))}
@@ -58,7 +58,7 @@ export default function AdminOverview() {
         </div>
         <div className="grid gap-3 sm:grid-cols-3">
           {['api', 'database', 'redis', 'storage', 'worker', 'ffmpeg'].map((name) => (
-            <div key={name} className="flex items-center justify-between rounded-xl bg-[var(--ns-card-soft)] p-3">
+            <div key={name} className="flex items-center justify-between rounded border border-[var(--ns-border-subtle)] bg-black/10 p-3">
               <span className="text-xs font-semibold">{t(`admin.systemChecks.${name}`)}</span>
               <StatusBadge status={data?.system?.checks?.[name] || 'unavailable'} />
             </div>
@@ -74,7 +74,7 @@ export default function AdminOverview() {
             ['/admin/users', t('admin.viewRecentUsers'), UsersRound],
             ['/admin/audit-logs', t('admin.viewAuditLogs'), ScrollText],
           ].map(([to, label, Icon]) => (
-            <Link key={to} to={to} className="ns-button-secondary flex items-center gap-2 rounded-xl px-3 py-2 text-xs">
+            <Link key={to} to={to} className="ns-button-secondary flex items-center gap-2 rounded px-3 py-2 text-xs">
               <Icon className="h-4 w-4" /> {label}
             </Link>
           ))}

@@ -105,19 +105,19 @@ export default function LyricsEditModal({ open, track, onClose, onSaved }) {
   };
 
   return (
-    <div className="fixed inset-0 z-[140] flex items-end justify-center bg-black/75 sm:items-center sm:p-5">
+    <div className="fixed inset-0 z-[var(--ns-z-dialog)] flex items-end justify-center bg-black/75 sm:items-center sm:p-5">
       <button type="button" className="absolute inset-0" aria-label={t('lyrics.close')} onClick={onClose} />
       <section
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="lyrics-edit-title"
-        className="relative max-h-[94vh] w-full overflow-y-auto rounded-t-[var(--ns-radius-hero)] border border-zinc-800 bg-brand-black p-5 shadow-2xl sm:max-w-3xl sm:rounded-[var(--ns-radius-hero)] sm:p-6"
+        className="relative max-h-[94vh] w-full overflow-y-auto rounded-t-lg border border-zinc-700/70 bg-zinc-950 p-5 shadow-xl sm:max-w-3xl sm:rounded-lg"
       >
-        <header className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-zinc-800 bg-brand-black pb-4">
+        <header className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-zinc-800 bg-zinc-950 pb-4">
           <div>
             <span className="ns-eyebrow text-brand-red">{t('lyrics.editLyrics')}</span>
-            <h2 id="lyrics-edit-title" className="mt-1 text-xl font-black text-zinc-100">{track.title}</h2>
+            <h2 id="lyrics-edit-title" className="mt-1 font-display text-lg font-semibold tracking-tight text-zinc-100">{track.title}</h2>
           </div>
           <button ref={closeRef} type="button" className="ns-icon-button" onClick={onClose} aria-label={t('lyrics.close')}>
             <X size={20} />
@@ -127,16 +127,16 @@ export default function LyricsEditModal({ open, track, onClose, onSaved }) {
         <div className="py-5">
           {loading ? (
             <div className="space-y-3 animate-pulse" aria-label={t('lyrics.loading')}>
-              <div className="h-10 rounded-xl bg-zinc-900" />
-              <div className="h-64 rounded-xl bg-zinc-900" />
+              <div className="h-10 rounded-md bg-zinc-900" />
+              <div className="h-64 rounded-md bg-zinc-900" />
             </div>
           ) : (
             <LyricsEditor value={form} onChange={setForm} idPrefix={`edit-${track.id}`} />
           )}
-          {error && <p className="mt-4 rounded-xl border border-rose-400/25 bg-rose-500/10 p-3 text-sm text-rose-200" role="alert">{error}</p>}
+          {error && <p className="mt-4 rounded-md border border-rose-400/25 bg-rose-500/10 p-3 text-sm text-rose-200" role="alert">{error}</p>}
         </div>
 
-        <footer className="sticky bottom-0 border-t border-zinc-800 bg-brand-black pt-4">
+        <footer className="sticky bottom-0 border-t border-zinc-800 bg-zinc-950 pt-4">
           <button
             type="button"
             className="ns-button-primary inline-flex w-full items-center justify-center gap-2 px-5"

@@ -26,7 +26,7 @@ const STATUS_TONES = {
 
 function TrackStatusBadge({ status }) {
   return (
-    <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${STATUS_TONES[status] || 'text-zinc-400 bg-zinc-500/10 border-zinc-500/25'}`}>
+    <span className={`inline-flex rounded border px-2 py-0.5 font-mono text-[9px] font-medium uppercase tracking-wide ${STATUS_TONES[status] || 'text-zinc-400 bg-zinc-500/10 border-zinc-500/25'}`}>
       {status}
     </span>
   );
@@ -34,21 +34,21 @@ function TrackStatusBadge({ status }) {
 
 function TrackRow({ track, onOpen, onEditLyrics, trailing }) {
   return (
-    <div className="w-full flex items-center justify-between gap-2 p-2 hover:bg-zinc-900/40 rounded-xl">
+    <div className="flex w-full items-center justify-between gap-2 rounded-md border border-transparent p-2 transition-colors hover:border-zinc-800/50 hover:bg-zinc-900/40">
       <button onClick={onOpen} className="flex min-w-0 flex-1 items-center gap-3 text-left cursor-pointer">
           <FallbackCover
             src={track.coverUrl}
             title={track.title}
             genre={track.genre}
-            className="w-10 h-10 rounded-lg"
+            className="h-10 w-10 rounded"
             imageClassName="object-cover"
           />
           <div className="min-w-0">
-            <h3 className="flex items-center gap-1.5 text-sm font-bold text-zinc-200 truncate">
+            <h3 className="flex items-center gap-1.5 truncate text-[13px] font-semibold text-zinc-200">
               {track.title}
               {track.hasLyrics && <FileText size={12} className="shrink-0 text-brand-red" />}
             </h3>
-            <p className="text-xs text-zinc-500">{getLocalizedGenre(track.genre) || 'Uncategorized'}</p>
+            <p className="font-mono text-[9px] text-zinc-500">{getLocalizedGenre(track.genre) || 'Uncategorized'}</p>
           </div>
       </button>
       <div className="flex shrink-0 items-center gap-2">
@@ -143,8 +143,8 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="ns-page-stack animate-fade-in pb-10">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-zinc-900 pb-5">
+    <div className="ns-page-stack pb-10">
+      <div className="flex flex-col justify-between gap-4 border-b border-zinc-800/60 pb-5 md:flex-row md:items-center">
         <div>
           <h1 className="ns-page-title">{t('dashboard.title')}</h1>
           <p className="ns-page-lede">{t('dashboard.subtitle')}</p>
@@ -176,7 +176,7 @@ export default function Dashboard() {
 
           <section className="space-y-4">
             <h2 className="ns-eyebrow px-1">{t('dashboard.topTracks')}</h2>
-            <div className="ns-card p-2 sm:p-4 space-y-2">
+            <div className="space-y-1 rounded-lg border border-zinc-800/60 bg-zinc-950/35 p-2 sm:p-3">
               {topTracks.length === 0 ? (
                 <p className="text-sm text-zinc-500 p-2">{t('dashboard.noTopTracksYet')}</p>
               ) : (
@@ -199,7 +199,7 @@ export default function Dashboard() {
 
           <section className="space-y-4">
             <h2 className="ns-eyebrow px-1">Published Releases ({publishedTracks.length})</h2>
-            <div className="ns-card p-2 sm:p-4 space-y-2">
+            <div className="space-y-1 rounded-lg border border-zinc-800/60 bg-zinc-950/35 p-2 sm:p-3">
               {publishedTracks.length === 0 ? (
                 <p className="text-sm text-zinc-500 p-2">{t('empty.noReleasesYet')}</p>
               ) : (
@@ -218,7 +218,7 @@ export default function Dashboard() {
 
           <section className="space-y-4">
             <h2 className="ns-eyebrow px-1">{t('dashboard.recentUploads')}</h2>
-            <div className="ns-card p-2 sm:p-4 space-y-2">
+            <div className="space-y-1 rounded-lg border border-zinc-800/60 bg-zinc-950/35 p-2 sm:p-3">
               {recentUploads.map((track) => (
                 <TrackRow
                   key={track.id}
@@ -233,7 +233,7 @@ export default function Dashboard() {
 
           <section className="space-y-4">
             <h2 className="ns-eyebrow px-1">{t('dashboard.failedUploads')}</h2>
-            <div className="ns-card p-2 sm:p-4 space-y-2">
+            <div className="space-y-1 rounded-lg border border-zinc-800/60 bg-zinc-950/35 p-2 sm:p-3">
               {failedUploads.length === 0 ? (
                 <p className="text-sm text-zinc-500 p-2">{t('dashboard.noFailedUploads')}</p>
               ) : (

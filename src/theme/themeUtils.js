@@ -54,6 +54,12 @@ export function applyTheme(selectedTheme, mediaQuery, documentElement) {
     root.dataset.theme = resolvedTheme;
     root.dataset.themePreference = themeId;
     root.style.colorScheme = THEMES[resolvedTheme].mode;
+
+    const ownerDocument = root.ownerDocument
+      ?? (typeof document !== 'undefined' ? document : null);
+    ownerDocument
+      ?.querySelector('meta[name="theme-color"]')
+      ?.setAttribute('content', THEMES[resolvedTheme].colors.bg);
   }
 
   return resolvedTheme;

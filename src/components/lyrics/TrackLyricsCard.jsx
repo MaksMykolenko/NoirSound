@@ -47,9 +47,9 @@ export default function TrackLyricsCard({ track, canEdit = false, onLyricsChange
 
   return (
     <>
-      <section className="ns-card p-5 sm:p-6" data-testid="track-lyrics-card">
-        <header className="mb-5 flex items-center justify-between gap-3">
-          <h2 className="flex items-center gap-2 text-lg font-black text-zinc-100">
+      <section className="rounded-lg border border-zinc-800/60 bg-zinc-950/35 p-5" data-testid="track-lyrics-card">
+        <header className="mb-4 flex items-center justify-between gap-3">
+          <h2 className="flex items-center gap-2 font-display text-base font-semibold text-zinc-100">
             <FileText size={18} className="text-brand-red" />
             {t('lyrics.title')}
           </h2>
@@ -69,7 +69,7 @@ export default function TrackLyricsCard({ track, canEdit = false, onLyricsChange
         ) : error ? (
           <p className="text-sm text-zinc-500">{t('lyrics.unavailable')}</p>
         ) : lyrics?.hasLyrics ? (
-          <p className="max-w-2xl whitespace-pre-wrap text-base leading-8 text-zinc-200">{lyrics.lyricsText}</p>
+          <p className="max-w-2xl whitespace-pre-wrap text-sm leading-7 text-zinc-300">{lyrics.lyricsText}</p>
         ) : (
           <p className="text-sm text-zinc-500">{t('lyrics.noLyrics')}</p>
         )}

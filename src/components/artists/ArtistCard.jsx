@@ -67,7 +67,7 @@ export default function ArtistCard({ artist }) {
       role="link"
       tabIndex={0}
       aria-label={`Open artist ${artist.name}`}
-      className="relative p-4 ns-card ns-card-interactive cursor-pointer text-center group"
+      className="group relative cursor-pointer rounded-lg border border-zinc-800/60 bg-zinc-950/35 p-3 text-center transition-colors duration-150 hover:border-zinc-700/70 hover:bg-zinc-900/45"
     >
       <button
         type="button"
@@ -79,19 +79,19 @@ export default function ArtistCard({ artist }) {
         <MoreHorizontal size={15} />
       </button>
       {/* Avatar Container */}
-      <div className="relative w-28 h-28 mx-auto mb-4 rounded-full overflow-hidden border border-zinc-800 shadow-[0_5px_15px_rgba(0,0,0,0.5)] bg-zinc-950">
+      <div className="relative mx-auto mb-3 h-20 w-20 overflow-hidden rounded-full border border-zinc-800 bg-zinc-950">
         <FallbackAvatar
           src={artist.avatarUrl}
           name={artist.name}
-          className="w-full h-full text-[112px]"
+          className="h-full w-full text-[80px]"
           imageClassName="object-cover"
         />
       </div>
 
       {/* Details */}
-      <div className="space-y-1.5 mb-4">
+      <div className="mb-3 space-y-1">
         <div className="flex items-center justify-center space-x-1.5">
-          <h4 className="text-[15px] font-bold text-zinc-100 truncate group-hover:text-zinc-100">
+          <h4 className="truncate text-[13px] font-semibold text-zinc-100">
             {artist.name}
           </h4>
           {artist.isVerified && (
@@ -100,7 +100,7 @@ export default function ArtistCard({ artist }) {
             </span>
           )}
         </div>
-        <p className="text-[13px] text-zinc-400 font-medium">
+        <p className="font-mono text-[10px] text-zinc-500">
           {formatNumber(artist.monthlyListeners || 0)} {t('profile.monthlyListeners')}
         </p>
       </div>
@@ -108,10 +108,10 @@ export default function ArtistCard({ artist }) {
       {/* Action Button */}
       <button
         onClick={handleFollowClick}
-        className={`w-full min-h-11 py-2 rounded-xl text-[13px] font-bold transition-all cursor-pointer ${
+        className={`min-h-10 w-full cursor-pointer rounded-md border py-2 text-[11px] font-semibold transition-colors duration-150 ${
           isFollowing
-            ? 'bg-zinc-800 text-zinc-400 hover:text-zinc-100 border border-zinc-700/60'
-            : 'ns-button-primary'
+            ? 'border-zinc-700/60 bg-zinc-800 text-zinc-400 hover:text-zinc-100'
+            : 'border-zinc-700/70 bg-zinc-900 text-zinc-200 hover:border-brand-red/40 hover:text-white'
         }`}
         aria-pressed={isFollowing}
       >

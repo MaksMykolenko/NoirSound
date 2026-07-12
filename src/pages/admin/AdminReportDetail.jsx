@@ -60,7 +60,7 @@ export default function AdminReportDetail() {
       <AdminPageHeader
         title={t('admin.reportDetail')}
         description={report.id}
-        actions={<Link to="/admin/reports" className="ns-button-secondary rounded-xl px-3 py-2 text-xs">{t('admin.backToReports')}</Link>}
+        actions={<Link to="/admin/reports" className="ns-button-secondary rounded px-3 py-2 text-xs">{t('admin.backToReports')}</Link>}
       />
       <div className="grid gap-4 lg:grid-cols-3">
         <AdminPanel className="p-4 lg:col-span-2">
@@ -75,19 +75,19 @@ export default function AdminReportDetail() {
               [t('admin.reviewed'), formatAdminDate(report.reviewedAt, i18n.language)],
             ].map(([label, value]) => (
               <div key={label}>
-                <dt className="text-[10px] font-bold uppercase tracking-wide text-[var(--ns-text-muted)]">{label}</dt>
+                <dt className="font-mono text-[9px] font-medium uppercase tracking-wider text-[var(--ns-text-muted)]">{label}</dt>
                 <dd className="mt-1 break-words text-sm text-[var(--ns-text-secondary)]">{value}</dd>
               </div>
             ))}
           </dl>
-          {report.details && <p className="mt-5 rounded-xl bg-[var(--ns-card-soft)] p-4 text-sm text-[var(--ns-text-secondary)]">{report.details}</p>}
+          {report.details && <p className="mt-5 rounded border border-[var(--ns-border-subtle)] bg-black/10 p-4 text-sm text-[var(--ns-text-secondary)]">{report.details}</p>}
         </AdminPanel>
         <AdminPanel className="p-4">
           <h2 className="text-sm font-bold">{t('admin.targetPreview')}</h2>
-          <pre className="mt-3 max-h-64 overflow-auto whitespace-pre-wrap break-words rounded-xl bg-[var(--ns-input-bg)] p-3 text-xs text-[var(--ns-text-muted)]">
+          <pre className="mt-3 max-h-64 overflow-auto whitespace-pre-wrap break-words rounded border border-[var(--ns-border-subtle)] bg-[var(--ns-input-bg)] p-3 text-xs text-[var(--ns-text-muted)]">
             {target ? JSON.stringify(target, null, 2) : t('admin.unavailable')}
           </pre>
-          {targetAdminLink && <Link to={targetAdminLink} className="ns-button-secondary mt-3 block rounded-lg px-3 py-2 text-center text-xs">{t('admin.openTarget')}</Link>}
+          {targetAdminLink && <Link to={targetAdminLink} className="ns-button-secondary mt-3 block rounded px-3 py-2 text-center text-xs">{t('admin.openTarget')}</Link>}
         </AdminPanel>
       </div>
       {isOpen && (
@@ -95,11 +95,11 @@ export default function AdminReportDetail() {
           <h2 className="text-sm font-bold">{t('admin.moderationActions')}</h2>
           <p className="mt-1 text-xs text-[var(--ns-text-muted)]">{t('admin.moderationActionsDescription')}</p>
           <div className="mt-4 flex flex-wrap gap-2">
-            <button type="button" onClick={() => setPendingAction('resolve')} className="ns-button-secondary rounded-lg px-3 py-2 text-xs">{t('admin.resolveOnly')}</button>
-            <button type="button" onClick={() => setPendingAction('reject')} className="ns-button-secondary rounded-lg px-3 py-2 text-xs">{t('admin.rejectReport')}</button>
-            {['TRACK', 'COMMENT', 'ARTIST'].includes(report.targetType) && <button type="button" onClick={() => setPendingAction('hide')} className="rounded-lg bg-[var(--ns-danger)] px-3 py-2 text-xs font-bold text-white">{t('admin.hideTargetResolve')}</button>}
-            {['TRACK', 'COMMENT', 'USER', 'ARTIST'].includes(report.targetType) && <button type="button" onClick={() => setPendingAction('suspend')} className="rounded-lg bg-[var(--ns-danger)] px-3 py-2 text-xs font-bold text-white">{t('admin.suspendUserResolve')}</button>}
-            {report.status === 'OPEN' && <button type="button" onClick={() => setPendingAction('escalate')} className="ns-button-secondary rounded-lg px-3 py-2 text-xs">{t('admin.escalate')}</button>}
+            <button type="button" onClick={() => setPendingAction('resolve')} className="ns-button-secondary rounded px-3 py-2 text-xs">{t('admin.resolveOnly')}</button>
+            <button type="button" onClick={() => setPendingAction('reject')} className="ns-button-secondary rounded px-3 py-2 text-xs">{t('admin.rejectReport')}</button>
+            {['TRACK', 'COMMENT', 'ARTIST'].includes(report.targetType) && <button type="button" onClick={() => setPendingAction('hide')} className="rounded bg-[var(--ns-danger)] px-3 py-2 text-xs font-semibold text-white">{t('admin.hideTargetResolve')}</button>}
+            {['TRACK', 'COMMENT', 'USER', 'ARTIST'].includes(report.targetType) && <button type="button" onClick={() => setPendingAction('suspend')} className="rounded bg-[var(--ns-danger)] px-3 py-2 text-xs font-semibold text-white">{t('admin.suspendUserResolve')}</button>}
+            {report.status === 'OPEN' && <button type="button" onClick={() => setPendingAction('escalate')} className="ns-button-secondary rounded px-3 py-2 text-xs">{t('admin.escalate')}</button>}
           </div>
         </AdminPanel>
       )}

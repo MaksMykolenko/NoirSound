@@ -17,7 +17,7 @@ export default function MobileNavbar() {
   ];
 
   return (
-    <nav aria-label="Mobile navigation" className="lg:hidden fixed bottom-0 left-0 right-0 min-h-16 bg-zinc-950/96 border-t border-zinc-800/60 backdrop-blur-xl z-40 flex justify-around items-center px-2 pb-[env(safe-area-inset-bottom)] shadow-[0_-10px_32px_rgba(0,0,0,0.52)] select-none">
+    <nav aria-label="Mobile navigation" className="fixed inset-x-0 bottom-0 z-[var(--ns-z-mobile-nav)] flex min-h-[var(--ns-mobile-nav-height)] select-none items-center justify-around border-t border-[var(--ns-border-subtle)] bg-[color-mix(in_srgb,var(--ns-player-bg)_96%,transparent)] px-2 pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden">
       {navItems.map((item) => {
         const Icon = item.icon;
         return (
@@ -25,8 +25,8 @@ export default function MobileNavbar() {
             key={item.to}
             to={item.to}
             className={({ isActive }) =>
-              `flex flex-col items-center justify-center gap-1 min-w-14 min-h-14 px-2 py-1 rounded-xl text-[11px] font-bold tracking-wide transition-all cursor-pointer ${
-                isActive ? 'text-rose-300 bg-brand-red/8' : 'text-zinc-500 hover:text-zinc-300'
+              `flex min-h-14 min-w-14 cursor-pointer flex-col items-center justify-center gap-1 rounded-md px-2 py-1 font-mono text-[10px] font-medium transition-colors ${
+                isActive ? 'bg-zinc-900/70 text-brand-red' : 'text-zinc-500 hover:text-zinc-300'
               }`
             }
           >

@@ -29,11 +29,11 @@ export default function BatchItemList({ items, onOpen, onTarget, onReorder, onRe
             if (draggedId && draggedId !== item.id) onReorder?.(draggedId, item.id);
             setDraggedId(null);
           }}
-          className="ns-card p-3 sm:p-4"
+          className="rounded-md border border-zinc-800 bg-surface-noir/45 p-3 transition-colors hover:bg-surface-noir/75 sm:p-4"
         >
           <div className="flex items-center gap-3">
             <GripVertical size={16} className={item.target === 'PLAYLIST' ? 'text-zinc-600 cursor-grab' : 'text-zinc-800'} />
-            <div className="w-9 h-9 rounded-lg bg-zinc-900 border border-zinc-800 grid place-items-center text-xs text-zinc-500 shrink-0">{index + 1}</div>
+            <div className="grid h-9 w-9 shrink-0 place-items-center rounded border border-zinc-800 bg-zinc-900 font-mono text-[10px] text-zinc-500">{index + 1}</div>
             <button type="button" onClick={() => onOpen(item)} className="min-w-0 flex-1 text-left">
               <div className="flex items-center gap-2">
                 <p className="text-sm font-bold text-zinc-200 truncate">{item.title}</p>
@@ -41,29 +41,29 @@ export default function BatchItemList({ items, onOpen, onTarget, onReorder, onRe
                 {item.status === 'READY' && <CheckCircle2 size={14} className="text-emerald-400 shrink-0" />}
                 {item.hasLyrics && <FileText size={14} className="text-brand-red shrink-0" aria-label={t('lyrics.title')} />}
               </div>
-              <p className="text-[11px] text-zinc-500 truncate">{item.fileName} · {formatBytes(item.fileSize)} · {item.genre ? getGenreLabel(item.genre, i18n.language) : t('batchUpload.missingGenre')}</p>
-              <p className="text-[10px] text-zinc-600">
+              <p className="truncate font-mono text-[10px] text-zinc-500">{item.fileName} · {formatBytes(item.fileSize)} · {item.genre ? getGenreLabel(item.genre, i18n.language) : t('batchUpload.missingGenre')}</p>
+              <p className="font-mono text-[9px] text-zinc-600">
                 {item.hasLyrics
                   ? `${t('batchUpload.lyricsAdded')} · ${item.lyricsRightsConfirmed ? t('batchUpload.lyricsRightsConfirmed') : t('lyrics.rightsRequired')}`
                   : t('batchUpload.noLyrics')}
               </p>
             </button>
-            <span className={`hidden sm:inline-flex text-[10px] border rounded-full px-2 py-1 font-bold uppercase tracking-wider ${STATUS_STYLE[item.status] || 'text-zinc-400 border-zinc-700'}`}>{item.status}</span>
+            <span className={`hidden rounded border px-2 py-1 font-mono text-[9px] font-medium uppercase tracking-wider sm:inline-flex ${STATUS_STYLE[item.status] || 'text-zinc-400 border-zinc-700'}`}>{item.status}</span>
             <span className="w-28 sm:w-36 shrink-0">
-              <select aria-label={`${item.title} ${t('batchUpload.target')}`} className="ns-field px-2 text-xs" value={item.target} onChange={(event) => onTarget(item, event.target.value)}>
+              <select aria-label={`${item.title} ${t('batchUpload.target')}`} className="ns-field !rounded px-2 text-xs" value={item.target} onChange={(event) => onTarget(item, event.target.value)}>
                 <option value="SINGLE">{t('batchUpload.single')}</option>
                 <option value="PLAYLIST">{t('batchUpload.playlist')}</option>
                 <option value="EXCLUDED">{t('batchUpload.excluded')}</option>
               </select>
             </span>
             {item.status === 'FAILED' ? (
-              <button type="button" className="ns-icon-button" aria-label={t('batchUpload.retry')} onClick={() => onRetry(item)}><RotateCcw size={15} /></button>
+              <button type="button" className="ns-icon-button !rounded" aria-label={t('batchUpload.retry')} onClick={() => onRetry(item)}><RotateCcw size={15} /></button>
             ) : (
-              <button type="button" className="ns-icon-button" aria-label={t('batchUpload.editTrack')} onClick={() => onOpen(item)}><ChevronRight size={16} /></button>
+              <button type="button" className="ns-icon-button !rounded" aria-label={t('batchUpload.editTrack')} onClick={() => onOpen(item)}><ChevronRight size={16} /></button>
             )}
           </div>
           {progress[item.id] != null && progress[item.id] < 100 && (
-            <div className="mt-3 h-1.5 rounded-full overflow-hidden bg-zinc-900" role="progressbar" aria-valuenow={progress[item.id]} aria-valuemin="0" aria-valuemax="100">
+            <div className="mt-3 h-1.5 overflow-hidden rounded-sm bg-zinc-900" role="progressbar" aria-valuenow={progress[item.id]} aria-valuemin="0" aria-valuemax="100">
               <div className="h-full bg-brand-red transition-all" style={{ width: `${progress[item.id]}%` }} />
             </div>
           )}

@@ -56,8 +56,8 @@ const AdminSettings = lazy(() => import('./pages/admin/AdminSettings'));
 
 // Fallback skeleton while loading routes
 const RouteSkeleton = () => (
-  <div className="w-full h-[50vh] flex items-center justify-center">
-    <div className="w-8 h-8 border-4 border-brand-red border-t-transparent rounded-full animate-spin"></div>
+  <div className="flex h-[50vh] w-full items-center justify-center" role="status" aria-label="Loading page">
+    <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-800 border-t-brand-red" />
   </div>
 );
 
@@ -125,7 +125,7 @@ export default function App() {
       <Router>
         <ContextMenuProvider>
         {isMockMode() && (
-          <div className="fixed top-2 left-1/2 -translate-x-1/2 z-[120] px-3 py-1 rounded-full bg-amber-400 text-black text-[10px] font-black uppercase tracking-widest shadow-lg">
+          <div className="fixed left-1/2 top-2 z-[var(--ns-z-banner)] -translate-x-1/2 rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1 font-mono text-[9px] font-medium uppercase tracking-wider text-amber-300">
             Demo mode
           </div>
         )}

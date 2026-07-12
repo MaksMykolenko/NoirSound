@@ -206,7 +206,7 @@ export default function Discover() {
   }
 
   return (
-    <div className="ns-page-stack animate-fade-in">
+    <div className="ns-page-stack">
       {/* Page Title Header */}
       <div>
         <h1 className="ns-page-title">{t('discover.title')}</h1>
@@ -214,7 +214,7 @@ export default function Discover() {
       </div>
 
       {/* Search and filters */}
-      <div className="ns-card p-3 sm:p-4 space-y-4">
+      <div className="space-y-4 rounded-lg border border-zinc-800/60 bg-zinc-950/35 p-3 sm:p-4">
         <div className="flex flex-col md:flex-row md:items-center gap-3">
           <div className="relative flex-1">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" size={17} />
@@ -285,7 +285,7 @@ export default function Discover() {
               data-testid="active-genre-chip"
               onClick={clearAll}
               aria-label={`${t('discover.clearGenre')}: ${getGenreLabel(filter.key)}`}
-              className="group inline-flex items-center gap-1.5 max-w-full pl-3 pr-2 py-1.5 rounded-full bg-brand-red/15 border border-brand-red/30 text-xs font-semibold text-rose-200 hover:bg-brand-red/25 hover:border-brand-red/50 transition-colors cursor-pointer"
+              className="group inline-flex max-w-full cursor-pointer items-center gap-1.5 rounded border border-brand-red/30 bg-brand-red/10 py-1.5 pl-3 pr-2 text-xs font-medium text-rose-200 transition-colors hover:border-brand-red/50 hover:bg-brand-red/15"
             >
               <span className="truncate">{getGenreLabel(filter.key)}</span>
               <X size={13} className="shrink-0 text-rose-300 group-hover:text-zinc-100" aria-hidden="true" />
@@ -314,7 +314,7 @@ export default function Discover() {
         {/* Left 2 Cols: Tracks list */}
         <section className="lg:col-span-2 space-y-4">
           <h2 className="ns-eyebrow">{t('discover.allReleases')}</h2>
-          <div data-testid="all-releases" className="ns-card p-2 sm:p-4 space-y-1">
+          <div data-testid="all-releases" className="space-y-1 rounded-lg border border-zinc-800/60 bg-zinc-950/35 p-2 sm:p-3">
             {listTracks.length === 0 ? (
               renderListEmpty()
             ) : (
@@ -346,7 +346,7 @@ export default function Discover() {
                   key={artist.id}
                   data-artist-id={artist.id}
                   onClick={() => navigate(`/artist/${artist.id}`)}
-                  className="flex items-center space-x-3.5 p-3.5 min-h-16 ns-card ns-card-interactive cursor-pointer"
+                  className="flex min-h-16 cursor-pointer items-center space-x-3.5 rounded-lg border border-zinc-800/60 bg-zinc-950/35 p-3 transition-colors hover:border-zinc-700/70 hover:bg-zinc-900/40"
                 >
                   <FallbackAvatar
                     src={artist.avatarUrl}
@@ -355,8 +355,8 @@ export default function Discover() {
                     imageClassName="object-cover"
                   />
                   <div className="min-w-0 flex-1">
-                    <h4 className="text-xs font-bold text-zinc-200 truncate">{artist.name}</h4>
-                    <p className="text-[10px] text-zinc-500 mt-0.5 truncate">
+                    <h4 className="truncate text-xs font-semibold text-zinc-200">{artist.name}</h4>
+                    <p className="mt-0.5 truncate font-mono text-[9px] text-zinc-500">
                       {formatNumber(artist.followers || 0)} followers
                     </p>
                   </div>

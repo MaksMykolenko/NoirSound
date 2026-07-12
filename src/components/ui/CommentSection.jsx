@@ -43,7 +43,7 @@ export default function CommentSection({ trackId }) {
       <div className="space-y-1 border-b border-zinc-800/70 pb-3">
         <div className="flex items-center gap-2">
           <MessageSquare size={16} className="text-brand-red" aria-hidden="true" />
-          <h2 className="text-sm font-bold uppercase tracking-widest text-zinc-100">
+          <h2 className="font-mono text-[10px] font-medium uppercase tracking-widest text-zinc-300">
             {t('comments.title')}
           </h2>
           {trackComments.length > 0 && (

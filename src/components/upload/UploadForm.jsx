@@ -169,8 +169,8 @@ export default function UploadForm() {
 
   if (!user) {
     return (
-      <div className="max-w-lg mx-auto ns-state-panel text-center space-y-6 glow-red animate-fade-in">
-        <div className="w-16 h-16 bg-brand-red/10 border border-brand-red/30 text-brand-red rounded-2xl flex items-center justify-center mx-auto shadow-[0_0_18px_var(--ns-accent-glow-soft)]">
+      <div className="mx-auto max-w-lg space-y-6 rounded-md border border-zinc-800 bg-surface-noir/50 p-6 text-center animate-fade-in">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-md border border-brand-red/30 bg-brand-red/10 text-brand-red">
           <UploadCloud size={30} />
         </div>
         <div className="space-y-2">
@@ -192,7 +192,7 @@ export default function UploadForm() {
 
   if (!['ARTIST', 'ADMIN'].includes(user.role)) {
     return (
-      <div className="max-w-lg mx-auto ns-state-panel text-center space-y-4">
+      <div className="mx-auto max-w-lg space-y-4 rounded-md border border-zinc-800 bg-surface-noir/50 p-6 text-center">
         <AlertCircle size={30} className="mx-auto text-amber-300" />
         <div>
           <h2 className="text-xl font-bold text-zinc-100">Creator access required</h2>
@@ -210,7 +210,7 @@ export default function UploadForm() {
   if (user.canUploadTracks === false) {
     const canSelfService = user.role === 'ADMIN' && user.uploadAccessReason === 'MISSING_ARTIST_PROFILE';
     return (
-      <div className="max-w-lg mx-auto ns-state-panel text-center space-y-4" data-testid="artist-profile-not-ready">
+      <div className="mx-auto max-w-lg space-y-4 rounded-md border border-zinc-800 bg-surface-noir/50 p-6 text-center" data-testid="artist-profile-not-ready">
         <AlertCircle size={30} className="mx-auto text-amber-300" />
         <div>
           <h2 className="text-xl font-bold text-zinc-100">
@@ -240,8 +240,8 @@ export default function UploadForm() {
 
   if (uploadStatus === 'success') {
     return (
-      <div className="max-w-lg mx-auto ns-state-panel text-center space-y-6 glow-red animate-fade-in" role="status">
-        <div className="w-16 h-16 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-full flex items-center justify-center mx-auto shadow-[0_0_15px_rgba(16,185,129,0.2)]">
+      <div className="mx-auto max-w-lg space-y-6 rounded-md border border-zinc-800 bg-surface-noir/50 p-6 text-center animate-fade-in" role="status">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-md border border-emerald-500/30 bg-emerald-500/10 text-emerald-400">
           <CheckCircle size={32} />
         </div>
         <div className="space-y-2">
@@ -252,8 +252,8 @@ export default function UploadForm() {
         </div>
 
         {/* Uploaded Card Preview */}
-        <div className="flex items-center space-x-4 p-4 bg-zinc-900 border border-zinc-800 rounded-2xl text-left">
-          <div className="w-14 h-14 bg-zinc-800 rounded-xl overflow-hidden shrink-0 border border-zinc-700 flex items-center justify-center">
+        <div className="flex items-center space-x-4 rounded border border-zinc-800 bg-zinc-950/50 p-4 text-left">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded bg-zinc-800 border border-zinc-700">
             {coverFile ? (
               <img
                 src={coverPreviewUrl}
@@ -284,7 +284,7 @@ export default function UploadForm() {
 
   if (uploadStatus !== 'idle' && uploadStatus !== 'error') {
     return (
-      <div className="max-w-lg mx-auto ns-state-panel space-y-8 select-none" aria-live="polite">
+      <div className="mx-auto max-w-lg select-none space-y-7 rounded-md border border-zinc-800 bg-surface-noir/50 p-6" aria-live="polite">
         <div className="text-center space-y-2">
           <h3 className="text-lg font-bold text-zinc-200">
             {uploadStatus === 'uploading' && 'Uploading track audio...'}
@@ -296,7 +296,7 @@ export default function UploadForm() {
         {/* Progress Display */}
         <div className="space-y-4">
           <div
-            className="relative h-2 w-full bg-zinc-900 border border-zinc-800 rounded-full overflow-hidden"
+            className="relative h-1.5 w-full overflow-hidden rounded-sm border border-zinc-800 bg-zinc-900"
             role="progressbar"
             aria-label="Upload progress"
             aria-valuemin="0"
@@ -305,11 +305,11 @@ export default function UploadForm() {
           >
             {uploadStatus === 'uploading' ? (
               <div
-                className="absolute left-0 top-0 h-full bg-brand-red shadow-[0_0_8px_var(--ns-accent-glow)] transition-all duration-300"
+                className="absolute left-0 top-0 h-full bg-brand-red transition-all duration-300"
                 style={{ width: `${uploadProgress}%` }}
               />
             ) : (
-              <div className="absolute left-0 top-0 h-full bg-brand-red shadow-[0_0_8px_var(--ns-accent-glow)] animate-pulse w-full" />
+              <div className="absolute left-0 top-0 h-full w-full animate-pulse bg-brand-red" />
             )}
           </div>
 
@@ -350,17 +350,17 @@ export default function UploadForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-3xl mx-auto p-4 sm:p-6 md:p-7 ns-card space-y-6" noValidate>
+    <form onSubmit={handleSubmit} className="mx-auto max-w-3xl space-y-6 rounded-md border border-zinc-800 bg-surface-noir/50 p-4 sm:p-6" noValidate>
       <div className="border-b border-zinc-800/80 pb-4">
-        <h3 className="text-lg font-bold text-zinc-100 flex items-center space-x-2">
-          <UploadCloud className="text-brand-red" size={22} />
+        <h3 className="flex items-center space-x-2 text-base font-semibold text-zinc-100">
+          <UploadCloud className="text-brand-red" size={19} />
           <span>{t('uploadForm.title')}</span>
         </h3>
         <p className="text-sm text-zinc-400 mt-1">{t('uploadForm.subtitle')}</p>
       </div>
 
       {errorMsg && (
-        <div id="upload-error" className="p-3.5 bg-rose-500/10 border border-rose-500/25 text-rose-300 rounded-xl text-sm flex items-center space-x-2.5" role="alert">
+        <div id="upload-error" className="flex items-center space-x-2.5 rounded border border-rose-500/25 bg-rose-500/10 p-3.5 text-sm text-rose-300" role="alert">
           <AlertCircle size={16} />
           <span className="font-semibold">{errorMsg}</span>
         </div>
@@ -369,7 +369,7 @@ export default function UploadForm() {
       {/* Files Row */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Audio upload box */}
-        <div className={`relative min-h-44 border-2 border-dashed rounded-2xl p-6 text-center transition-colors group cursor-pointer ${
+        <div className={`group relative min-h-44 cursor-pointer rounded-md border border-dashed p-6 text-center transition-colors ${
           audioFile ? 'border-brand-red/35 bg-brand-red/5' : 'border-zinc-800 hover:border-zinc-700 bg-zinc-950/40'
         }`}>
           <input
@@ -382,7 +382,7 @@ export default function UploadForm() {
             aria-describedby={errorMsg ? 'upload-error' : undefined}
           />
           <div className="flex flex-col items-center justify-center space-y-3.5">
-            <div className="p-3 bg-zinc-900 border border-zinc-800 text-zinc-400 rounded-full group-hover:text-brand-red group-hover:border-brand-red/35 transition-colors">
+            <div className="rounded border border-zinc-800 bg-zinc-900 p-3 text-zinc-400 transition-colors group-hover:border-brand-red/35 group-hover:text-brand-red">
               <FileAudio size={24} />
             </div>
             <div>
@@ -400,8 +400,8 @@ export default function UploadForm() {
         </div>
 
         {/* Cover image upload box */}
-        <div className={`relative min-h-44 border-2 border-dashed rounded-2xl p-5 text-center transition-colors group overflow-hidden cursor-pointer ${
-          coverFile ? 'border-brand-purple/35 bg-brand-purple/5' : 'border-zinc-800 hover:border-zinc-700 bg-zinc-950/40'
+        <div className={`group relative min-h-44 cursor-pointer overflow-hidden rounded-md border border-dashed p-5 text-center transition-colors ${
+          coverFile ? 'border-brand-red/35 bg-brand-red/5' : 'border-zinc-800 hover:border-zinc-700 bg-zinc-950/40'
         }`}>
           <input
             id="track-artwork"
@@ -414,9 +414,9 @@ export default function UploadForm() {
           />
           <div className="flex flex-col items-center justify-center space-y-3.5">
             {coverPreviewUrl ? (
-              <img src={coverPreviewUrl} alt="Selected artwork preview" className="w-16 h-16 rounded-xl object-cover border border-zinc-700 shadow-lg" />
+              <img src={coverPreviewUrl} alt="Selected artwork preview" className="h-16 w-16 rounded object-cover border border-zinc-700" />
             ) : (
-              <div className="p-3 bg-zinc-900 border border-zinc-800 text-zinc-400 rounded-full group-hover:text-brand-red group-hover:border-brand-red/35 transition-colors">
+              <div className="rounded border border-zinc-800 bg-zinc-900 p-3 text-zinc-400 transition-colors group-hover:border-brand-red/35 group-hover:text-brand-red">
                 <ImageIcon size={24} />
               </div>
             )}
@@ -433,7 +433,7 @@ export default function UploadForm() {
       {/* Title & Genre */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-1.5">
-          <label htmlFor="track-title" className="text-xs font-bold text-zinc-300 uppercase tracking-wider">{t('uploadForm.trackTitle')}</label>
+          <label htmlFor="track-title" className="font-mono text-[10px] font-medium uppercase tracking-wider text-zinc-400">{t('uploadForm.trackTitle')}</label>
           <input
             id="track-title"
             type="text"
@@ -447,7 +447,7 @@ export default function UploadForm() {
         </div>
 
         <div className="space-y-1.5">
-          <label htmlFor="track-genre" className="text-xs font-bold text-zinc-300 uppercase tracking-wider">{t('uploadForm.primaryGenre')}</label>
+          <label htmlFor="track-genre" className="font-mono text-[10px] font-medium uppercase tracking-wider text-zinc-400">{t('uploadForm.primaryGenre')}</label>
           <GenrePicker
             id="track-genre"
             value={genre}
@@ -461,7 +461,7 @@ export default function UploadForm() {
 
       {/* Description */}
       <div className="space-y-1.5">
-        <label htmlFor="track-description" className="text-xs font-bold text-zinc-300 uppercase tracking-wider">{t('uploadForm.description')}</label>
+        <label htmlFor="track-description" className="font-mono text-[10px] font-medium uppercase tracking-wider text-zinc-400">{t('uploadForm.description')}</label>
         <textarea
           id="track-description"
           rows={3}
@@ -474,7 +474,7 @@ export default function UploadForm() {
 
       {/* Tags */}
       <div className="space-y-1.5">
-        <label htmlFor="track-tags" className="text-xs font-bold text-zinc-300 uppercase tracking-wider">{t('uploadForm.tags')}</label>
+        <label htmlFor="track-tags" className="font-mono text-[10px] font-medium uppercase tracking-wider text-zinc-400">{t('uploadForm.tags')}</label>
         <input
           id="track-tags"
           type="text"
@@ -486,7 +486,7 @@ export default function UploadForm() {
         <p className="text-[11px] text-zinc-500 leading-relaxed pt-0.5">{t('uploadForm.tagsHelper')}</p>
       </div>
 
-      <details className="rounded-2xl border border-zinc-800 bg-zinc-950/30 p-4 sm:p-5">
+      <details className="rounded border border-zinc-800 bg-zinc-950/30 p-4 sm:p-5">
         <summary className="cursor-pointer text-sm font-bold text-zinc-200 marker:text-brand-red">
           {t('upload.lyricsSection')}
         </summary>
@@ -500,7 +500,7 @@ export default function UploadForm() {
       </details>
 
       {/* Confirmation Checkbox */}
-      <label className="flex items-start space-x-3 p-4 min-h-14 bg-zinc-950/40 border border-zinc-800/70 rounded-2xl cursor-pointer select-none">
+      <label className="flex min-h-14 cursor-pointer select-none items-start space-x-3 rounded border border-zinc-800/70 bg-zinc-950/40 p-4">
         <input
           type="checkbox"
           checked={rightsChecked}

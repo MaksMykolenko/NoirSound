@@ -59,17 +59,17 @@ export default function UserSettingsForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {errorMsg && (
-        <div className="p-3.5 bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded-xl text-xs flex items-center space-x-2.5 shadow-[0_0_12px_rgba(244,63,94,0.1)] animate-fade-in">
+        <div className="flex items-center space-x-2.5 rounded-md border border-rose-500/20 bg-rose-500/10 p-3 text-xs text-rose-400">
           <span className="font-semibold">{errorMsg}</span>
         </div>
       )}
 
-      <ThemeSelector className="rounded-2xl border border-zinc-800/80 bg-zinc-950/35 p-4 sm:p-5" />
+      <ThemeSelector className="rounded-lg border border-zinc-800/70 bg-zinc-950/35 p-4" />
 
       {/* Inputs grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         <div className="space-y-1.5">
-          <label htmlFor="settings-display-name" className="text-xs font-bold text-zinc-400 uppercase tracking-wide">{t('profile.displayName')}</label>
+          <label htmlFor="settings-display-name" className="font-mono text-[9px] font-medium uppercase tracking-wide text-zinc-500">{t('profile.displayName')}</label>
           <input
             id="settings-display-name"
             type="text"
@@ -80,7 +80,7 @@ export default function UserSettingsForm() {
         </div>
 
         <div className="space-y-1.5">
-          <label htmlFor="settings-username" className="text-xs font-bold text-zinc-400 uppercase tracking-wide">{t('profile.username')}</label>
+          <label htmlFor="settings-username" className="font-mono text-[9px] font-medium uppercase tracking-wide text-zinc-500">{t('profile.username')}</label>
           <div className="relative">
             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 text-sm">@</span>
             <input
@@ -94,7 +94,7 @@ export default function UserSettingsForm() {
         </div>
 
         <div className="space-y-1.5">
-          <label htmlFor="settings-location" className="text-xs font-bold text-zinc-400 uppercase tracking-wide">{t('profile.location')}</label>
+          <label htmlFor="settings-location" className="font-mono text-[9px] font-medium uppercase tracking-wide text-zinc-500">{t('profile.location')}</label>
           <input
             id="settings-location"
             type="text"
@@ -108,7 +108,7 @@ export default function UserSettingsForm() {
 
       {/* Bio text area */}
       <div className="space-y-1.5">
-        <label htmlFor="settings-bio" className="text-xs font-bold text-zinc-400 uppercase tracking-wide">{t('profile.biography')}</label>
+        <label htmlFor="settings-bio" className="font-mono text-[9px] font-medium uppercase tracking-wide text-zinc-500">{t('profile.biography')}</label>
         <textarea
           id="settings-bio"
           rows={3}
@@ -122,7 +122,7 @@ export default function UserSettingsForm() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-3 border-t border-zinc-900">
         
         {/* Profile Visibility */}
-        <div className="flex items-start space-x-3.5 p-3.5 bg-zinc-950/40 border border-zinc-900 rounded-2xl">
+        <div className="flex items-start space-x-3.5 rounded-md border border-zinc-800/60 bg-zinc-950/40 p-3.5">
           <Shield size={18} className="text-brand-red shrink-0 mt-0.5" />
           <div className="flex-1 space-y-1">
             <span className="block text-xs font-bold text-zinc-200">{t('profile.privateProfile')}</span>
@@ -140,7 +140,7 @@ export default function UserSettingsForm() {
         </div>
 
         {/* Email Alerts */}
-        <div className="flex items-start space-x-3.5 p-3.5 bg-zinc-950/40 border border-zinc-900 rounded-2xl">
+        <div className="flex items-start space-x-3.5 rounded-md border border-zinc-800/60 bg-zinc-950/40 p-3.5">
           <Bell size={18} className="text-brand-red shrink-0 mt-0.5" />
           <div className="flex-1 space-y-1">
             <span className="block text-xs font-bold text-zinc-200">{t('profile.emailNotifications')}</span>
@@ -160,7 +160,7 @@ export default function UserSettingsForm() {
       </div>
 
       {/* Language Preferences */}
-      <div className="p-4 bg-zinc-950/40 border border-zinc-900 rounded-2xl">
+      <div className="rounded-md border border-zinc-800/60 bg-zinc-950/40 p-4">
         <LanguageSwitcher />
       </div>
 
@@ -168,7 +168,7 @@ export default function UserSettingsForm() {
       <button
         type="submit"
         disabled={isSubmitting}
-        className="w-full ns-button-primary py-3.5 disabled:opacity-50 rounded-xl text-xs font-bold uppercase tracking-widest transition-all flex items-center justify-center space-x-2.5 cursor-pointer"
+        className="ns-button-primary flex w-full cursor-pointer items-center justify-center space-x-2.5 rounded-md py-3 text-xs font-semibold uppercase tracking-widest disabled:opacity-50"
       >
         <Save size={14} />
         <span>{isSubmitting ? t('profile.saving') : t('actions.saveChanges')}</span>

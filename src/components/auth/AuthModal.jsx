@@ -36,6 +36,8 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }) {
     if (!isOpen) return undefined;
 
     const previouslyFocused = document.activeElement;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
     setMode(initialMode);
     setErrorMsg('');
 
@@ -74,6 +76,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }) {
     return () => {
       window.clearTimeout(focusTimer);
       document.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = previousOverflow;
       previouslyFocused?.focus?.();
     };
   }, [initialMode, isOpen, onClose]);
@@ -103,7 +106,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm"
+      className="fixed inset-0 z-[var(--ns-z-dialog)] flex items-end justify-center bg-[var(--ns-overlay)] p-0 sm:items-center sm:p-4"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
@@ -113,20 +116,20 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="auth-modal-title"
-        className="w-full max-w-md max-h-[92dvh] overflow-y-auto bg-zinc-950 border border-zinc-800 shadow-2xl shadow-brand-red/10 rounded-t-[var(--ns-radius-hero)] sm:rounded-[var(--ns-radius-hero)] relative animate-in fade-in zoom-in-95 duration-200 mobile-safe-bottom"
+        className="relative max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-t-lg border border-[var(--ns-border)] bg-[var(--ns-card-solid)] shadow-[var(--ns-shadow-modal)] mobile-safe-bottom sm:rounded-lg"
         onClick={e => e.stopPropagation()}
       >
         <button 
           onClick={onClose}
-          className="absolute top-4 right-4 ns-icon-button rounded-full cursor-pointer"
+          className="ns-icon-button absolute right-4 top-4 cursor-pointer"
           aria-label="Close authentication dialog"
         >
           <X size={16} />
         </button>
 
         <div className="p-6 sm:p-8">
-          <div className="text-center mb-8">
-            <h2 id="auth-modal-title" className="text-2xl font-bold text-zinc-100 mb-2">
+          <div className="mb-7 text-center">
+            <h2 id="auth-modal-title" className="mb-2 font-display text-2xl font-bold tracking-tight text-white">
               {mode === 'login' ? t('header.signIn') : 'Join NoirSound'}
             </h2>
             <p className="text-sm text-zinc-400">
@@ -140,7 +143,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }) {
             type="button"
             disabled={isLoading}
             onClick={() => window.location.assign(getGoogleAuthorizationUrl())}
-            className="w-full h-11 border border-zinc-700 bg-zinc-900 hover:bg-zinc-800 text-zinc-100 rounded-lg font-medium flex items-center justify-center gap-3 transition-colors disabled:opacity-50 cursor-pointer"
+            className="flex h-11 w-full cursor-pointer items-center justify-center gap-3 rounded-md border border-[var(--ns-border)] bg-zinc-900 font-medium text-zinc-100 transition-colors hover:bg-zinc-800 disabled:opacity-50"
           >
             <GoogleIcon />
             <span>Continue with Google</span>
@@ -148,7 +151,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }) {
 
           <div className="flex items-center gap-3 my-5" aria-hidden="true">
             <span className="h-px flex-1 bg-zinc-800" />
-            <span className="text-xs text-zinc-500 uppercase">or</span>
+            <span className="font-mono text-[10px] uppercase text-zinc-500">or</span>
             <span className="h-px flex-1 bg-zinc-800" />
           </div>
 
@@ -228,7 +231,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }) {
             </div>
 
             {errorMsg && (
-              <div id="auth-error" className="p-3 bg-red-950/50 border border-red-900/50 rounded-xl text-sm text-red-300 text-center" role="alert">
+              <div id="auth-error" className="rounded-md border border-red-500/25 bg-red-500/10 p-3 text-center text-sm text-red-300" role="alert">
                 {errorMsg}
               </div>
             )}

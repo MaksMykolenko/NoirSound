@@ -249,7 +249,7 @@ describe('lyrics UI', () => {
     expect(within(controls).getByTestId('standard-player-transport')).toBeInTheDocument();
     expect(within(controls).getByRole('button', { name: 'Previous track' })).toBeInTheDocument();
     expect(within(controls).getByRole('button', { name: 'Next track' })).toBeInTheDocument();
-    expect(within(controls).getByRole('button', { name: 'Play' })).toHaveClass('w-8', 'h-8');
+    expect(within(controls).getByRole('button', { name: 'Play' })).toHaveClass('w-9', 'h-9');
     expect(
       within(controls).getByTestId('standard-player-actions')
         .querySelector('button[aria-pressed="true"]')

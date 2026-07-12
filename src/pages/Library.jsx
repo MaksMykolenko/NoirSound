@@ -132,7 +132,7 @@ export default function Library() {
   }
 
   return (
-    <div className="ns-page-stack animate-fade-in">
+    <div className="ns-page-stack">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="ns-page-title">{t('nav.yourLibrary')}</h1>
@@ -143,7 +143,7 @@ export default function Library() {
         </button>
       </div>
 
-      <div className="ns-tabs-scroll flex border-b border-zinc-800/60 gap-1 overflow-x-auto shrink-0" role="tablist">
+      <div className="ns-tabs-scroll flex shrink-0 gap-1 overflow-x-auto border-b border-zinc-800/60" role="tablist">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const active = activeTab === tab.id;
@@ -153,7 +153,7 @@ export default function Library() {
               onClick={() => setSearchParams({ tab: tab.id })}
               role="tab"
               aria-selected={active}
-              className={`ns-tab flex items-center gap-2 px-4 sm:px-5 py-3 border-b-2 text-xs font-bold uppercase tracking-wider whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
+              className={`ns-tab flex shrink-0 cursor-pointer items-center gap-2 whitespace-nowrap border-b-2 px-4 py-3 font-mono text-[10px] font-medium uppercase tracking-wider transition-colors sm:px-5 ${
                 active ? 'border-brand-red text-rose-300' : 'border-transparent text-zinc-500 hover:text-zinc-300'
               }`}
             >
@@ -181,7 +181,7 @@ export default function Library() {
               onAction={() => navigate('/discover')}
             />
           ) : (
-            <div className="ns-card p-2 sm:p-4 space-y-1">
+            <div className="space-y-1 rounded-lg border border-zinc-800/60 bg-zinc-950/35 p-2 sm:p-3">
               {recentlyPlayed.map((track, index) => (
                 <TrackListItem key={track.id} track={track} index={index} tracksContext={recentlyPlayed} />
               ))}
@@ -197,7 +197,7 @@ export default function Library() {
               onAction={() => navigate('/discover')}
             />
           ) : (
-            <div className="ns-card p-2 sm:p-4 space-y-1">
+            <div className="space-y-1 rounded-lg border border-zinc-800/60 bg-zinc-950/35 p-2 sm:p-3">
               {likedSongs.map((track, index) => (
                 <TrackListItem key={track.id} track={track} index={index} tracksContext={likedSongs} />
               ))}

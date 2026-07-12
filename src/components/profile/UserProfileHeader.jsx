@@ -16,21 +16,21 @@ export default function UserProfileHeader({ user, onEditClick }) {
   };
 
   return (
-    <section className="relative ns-card-hero overflow-hidden border border-zinc-800/70 bg-zinc-950 shadow-2xl">
+    <section className="relative overflow-hidden rounded-lg border border-zinc-800/60 bg-zinc-950">
       {/* Banner */}
       <div
-        className="h-44 md:h-52 w-full transition-all duration-500"
+        className="h-36 w-full opacity-70 transition-opacity duration-300 md:h-44"
         style={{ background: user.bannerUrl || 'linear-gradient(135deg, var(--ns-accent-deep) 0%, var(--ns-bg) 100%)' }}
       />
 
       {/* Info wrap */}
-      <div className="p-4 sm:p-6 pt-0 flex flex-col md:flex-row items-center md:items-end gap-4 sm:gap-6 relative -mt-10 md:-mt-12 z-10 text-center md:text-left">
+      <div className="relative z-10 -mt-8 flex flex-col items-center gap-4 p-4 pt-0 text-center sm:p-5 sm:pt-0 md:-mt-10 md:flex-row md:items-end md:text-left">
         {/* Avatar */}
-        <div className="w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 rounded-full overflow-hidden border-[4px] border-zinc-950 bg-zinc-900 shadow-xl shrink-0">
+        <div className="h-20 w-20 shrink-0 overflow-hidden rounded-full border-2 border-zinc-950 bg-zinc-900 sm:h-24 sm:w-24">
           <FallbackAvatar
             src={user.avatarUrl}
             name={user.displayName || user.username}
-            className="w-full h-full text-[124px]"
+            className="h-full w-full text-[96px]"
             imageClassName="object-cover"
           />
         </div>
@@ -38,17 +38,17 @@ export default function UserProfileHeader({ user, onEditClick }) {
         {/* Text */}
         <div className="flex-1 space-y-2.5 min-w-0">
           <div className="space-y-1">
-            <h1 className="text-2xl md:text-3xl font-black text-zinc-100 tracking-tight truncate leading-tight">
+            <h1 className="truncate font-display text-2xl font-semibold leading-tight tracking-tight text-zinc-100 md:text-3xl">
               {user.displayName || user.username || 'NoirSound Listener'}
             </h1>
             <div className="flex items-center justify-center md:justify-start gap-2">
-              <p className="text-sm text-zinc-400 font-semibold">@{user.username || 'listener'}</p>
+              <p className="font-mono text-[11px] text-zinc-400">@{user.username || 'listener'}</p>
               {(user.artistProfileId || user.role === 'ARTIST') ? (
-                <span className="text-[10px] uppercase tracking-wider font-bold text-brand-purple border border-brand-purple/20 bg-brand-purple/10 rounded-full px-2.5 py-0.5">
+                <span className="rounded border border-brand-purple/20 bg-brand-purple/5 px-2 py-0.5 font-mono text-[9px] font-medium uppercase tracking-wider text-purple-300">
                   {t('profile.creator')}
                 </span>
               ) : (
-                <span className="text-[10px] uppercase tracking-wider font-bold text-zinc-400 border border-zinc-700/50 bg-zinc-800/40 rounded-full px-2.5 py-0.5">
+                <span className="rounded border border-zinc-700/60 bg-zinc-900 px-2 py-0.5 font-mono text-[9px] font-medium uppercase tracking-wider text-zinc-400">
                   {t('profile.listener')}
                 </span>
               )}
@@ -59,7 +59,7 @@ export default function UserProfileHeader({ user, onEditClick }) {
             {user.bio || t('profile.noBio')}
           </p>
 
-          <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-[11px] text-zinc-500 font-semibold pt-1">
+          <div className="flex flex-wrap items-center justify-center gap-4 pt-1 font-mono text-[9px] text-zinc-500 md:justify-start">
             <span className="flex items-center space-x-1">
               <MapPin size={12} className="text-zinc-600" />
               <span>{user.location || t('profile.locationPrivate')} • {(user.artistProfileId || user.role === 'ARTIST') ? t('profile.creator') : t('profile.listener')}</span>
@@ -76,7 +76,7 @@ export default function UserProfileHeader({ user, onEditClick }) {
         <div className="flex items-center gap-3.5 shrink-0 pt-2 md:pt-0">
           <button
             onClick={onEditClick}
-            className="px-5 py-2.5 ns-button-primary rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center space-x-2"
+            className="ns-button-primary flex cursor-pointer items-center space-x-2 rounded-md px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider"
           >
             <Edit2 size={12} />
             <span>{t('profile.editProfile')}</span>

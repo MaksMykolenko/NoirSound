@@ -28,18 +28,16 @@ export default function AppLayout({ children }) {
   }, [location.pathname]);
 
   // Keep page content clear of the exact visible player state.
-  const paddingClass = currentTrack
-    ? isPlayerCollapsed
-      ? 'pb-44 sm:pb-36 lg:pb-8' // mobile nav + mini-player clearance
-      : 'pb-32 sm:pb-28 lg:pb-28' // mobile sheet overlay clearance
-    : isPlayerCollapsed
-      ? 'pb-32 sm:pb-28 lg:pb-8' // mobile nav clearance
-      : 'pb-32 sm:pb-28 lg:pb-16'; // compact empty desktop player clearance
+  const paddingClass = isPlayerCollapsed
+    ? currentTrack
+      ? 'pb-[calc(var(--ns-mobile-nav-height)+var(--ns-mobile-player-height)+2rem)] lg:pb-8'
+      : 'pb-[calc(var(--ns-mobile-nav-height)+2rem)] lg:pb-8'
+    : 'pb-[calc(var(--ns-mobile-nav-height)+2rem)] lg:pb-[calc(var(--ns-player-height)+2rem)]';
 
   return (
     <>
       <div
-        className="flex h-[100dvh] overflow-hidden bg-brand-dark text-zinc-100 font-sans ns-app-background"
+        className="ns-app-background flex h-[100dvh] overflow-hidden font-sans text-zinc-100"
         aria-hidden={lyricsFullscreenOpen || undefined}
         inert={lyricsFullscreenOpen || undefined}
       >
@@ -55,8 +53,8 @@ export default function AppLayout({ children }) {
         <Header />
         
         {/* Scrollable page contents view */}
-        <main ref={mainRef} className={`flex-1 overflow-y-auto overflow-x-hidden px-4 sm:px-6 lg:px-8 py-5 sm:py-7 transition-all duration-300 ${paddingClass}`}>
-          <div className="max-w-7xl mx-auto w-full">
+        <main ref={mainRef} className={`flex-1 overflow-y-auto overflow-x-hidden px-4 py-5 transition-[padding] duration-200 sm:px-6 sm:py-6 lg:px-8 ${paddingClass}`}>
+          <div className="mx-auto w-full max-w-[var(--ns-content-max-width)]">
             {children}
             <Footer />
           </div>

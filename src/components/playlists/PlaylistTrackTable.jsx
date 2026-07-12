@@ -169,12 +169,12 @@ function DesktopRow({
               title={track.title}
               artistName={track.artistName}
               genre={track.genre}
-              className="h-10 w-10 shrink-0 rounded-lg border border-zinc-900"
+              className="h-10 w-10 shrink-0 rounded border border-zinc-800/60"
               imageClassName="object-cover"
             />
             <div className="min-w-0">
               <div className="flex min-w-0 items-center gap-1.5">
-                <span className={`truncate text-[14.5px] font-bold ${isCurrent ? 'text-brand-red' : 'text-zinc-100'}`}>
+                <span className={`truncate text-[13px] font-semibold ${isCurrent ? 'text-brand-red' : 'text-zinc-100'}`}>
                   {track.title}
                 </span>
                 {track.explicit && (
@@ -185,7 +185,7 @@ function DesktopRow({
               <button
                 type="button"
                 onClick={(event) => { event.stopPropagation(); navigate(`/artist/${track.artistId}`); }}
-                className="block truncate text-[12.5px] text-zinc-400 hover:text-zinc-200 hover:underline"
+                className="block truncate font-mono text-[10px] text-zinc-500 hover:text-zinc-300 hover:underline"
               >
                 {track.artistName}
               </button>
@@ -317,7 +317,7 @@ function MobileRow({
       role={isAvailable ? 'button' : undefined}
       tabIndex={0}
       aria-current={isCurrent ? 'true' : undefined}
-      className={`flex min-h-14 items-center gap-3 rounded-xl border p-2 transition-colors focus:outline-none focus:ring-1 focus:ring-brand-red/40 ${
+      className={`flex min-h-14 items-center gap-3 rounded-md border p-2 transition-colors duration-150 focus:outline-none focus:ring-1 focus:ring-brand-red/40 ${
         isCurrent ? 'border-brand-red/20 bg-brand-red/5' : 'border-transparent hover:bg-zinc-900/40'
       } ${!isAvailable ? 'opacity-50' : 'cursor-pointer'}`}
     >
@@ -327,7 +327,7 @@ function MobileRow({
           title={track.title}
           artistName={track.artistName}
           genre={track.genre}
-          className="h-11 w-11 rounded-lg border border-zinc-900"
+          className="h-11 w-11 rounded border border-zinc-800/60"
           imageClassName="object-cover"
         />
         {isCurrent && (
@@ -339,12 +339,12 @@ function MobileRow({
       <div className="min-w-0 flex-1">
         {isAvailable ? (
           <>
-            <p className={`truncate text-[14px] font-bold ${isCurrent ? 'text-brand-red' : 'text-zinc-100'}`}>
+            <p className={`truncate text-[13px] font-semibold ${isCurrent ? 'text-brand-red' : 'text-zinc-100'}`}>
               {track.title}
               {track.explicit && <span className="ml-1.5 rounded border border-zinc-700 bg-zinc-800 px-1 align-middle text-[9px] font-bold text-zinc-400">E</span>}
               {isCurrent && <span className="sr-only">{t('playlists.currentlyPlaying')}</span>}
             </p>
-            <p className="truncate text-[12px] text-zinc-400">
+            <p className="truncate font-mono text-[10px] text-zinc-500">
               {track.artistName}
               <span className="text-zinc-600"> • </span>
               {albumInfo.text}
@@ -409,7 +409,7 @@ export default function PlaylistTrackTable({
           <button
             type="button"
             onClick={() => { setSortKey(null); setSortDir('asc'); }}
-            className={`min-h-8 rounded-full border px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider transition-colors ${
+            className={`min-h-8 rounded border px-2.5 py-1 font-mono text-[9px] font-medium uppercase tracking-wider transition-colors ${
               isCustomOrder ? 'border-brand-red/30 bg-brand-red/10 text-rose-300' : 'border-zinc-800 text-zinc-500 hover:text-zinc-300'
             }`}
           >
@@ -420,7 +420,7 @@ export default function PlaylistTrackTable({
               key={key}
               type="button"
               onClick={() => handleSort(key)}
-              className={`inline-flex min-h-8 items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider transition-colors ${
+              className={`inline-flex min-h-8 items-center gap-1 rounded border px-2.5 py-1 font-mono text-[9px] font-medium uppercase tracking-wider transition-colors ${
                 sortKey === key ? 'border-zinc-700 bg-zinc-800 text-zinc-100' : 'border-zinc-800 text-zinc-500 hover:text-zinc-300'
               }`}
             >
@@ -436,7 +436,7 @@ export default function PlaylistTrackTable({
 
       <table className="hidden w-full border-collapse md:table" role="table">
         <thead>
-          <tr className="border-b border-zinc-900 text-[11px] uppercase tracking-wider text-zinc-500">
+          <tr className="border-b border-zinc-800/60 font-mono text-[9px] uppercase tracking-wider text-zinc-500">
             <th scope="col" className="w-10 py-2 text-center font-bold">#</th>
             <th scope="col" className="py-2 text-left font-bold">{t('playlists.columnTitle')}</th>
             <th scope="col" className="hidden py-2 text-left font-bold lg:table-cell">{t('playlists.columnAlbum')}</th>

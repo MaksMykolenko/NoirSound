@@ -65,7 +65,7 @@ export default function Home() {
   };
 
   return (
-    <div className="flex flex-col gap-8 sm:gap-10 animate-fade-in">
+    <div className="flex flex-col gap-8">
       <PageMeta
         title="NoirSound — Creator-first music platform"
         description="Discover independent music, upload your own tracks, and build your audience on NoirSound."
@@ -79,14 +79,14 @@ export default function Home() {
       <BrowseByGenre onSelect={handleGenreSelect} />
 
       <section data-testid="home-releases" className="space-y-4">
-        <div className="flex justify-between items-end gap-4 border-b border-zinc-900 pb-3">
+        <div className="flex items-end justify-between gap-4 border-b border-zinc-800/60 pb-3">
           <div className="min-w-0">
             <h2 className="ns-section-title">{t('home.featuredReleases')}</h2>
-            <p className="text-sm text-zinc-400 mt-1">{t('home.latestReleasesDesc')}</p>
+            <p className="mt-1 text-xs text-zinc-500">{t('home.latestReleasesDesc')}</p>
           </div>
           <button
             onClick={() => navigate('/discover')}
-            className="text-xs text-brand-red font-bold hover:underline flex items-center space-x-1 cursor-pointer shrink-0 whitespace-nowrap"
+            className="flex shrink-0 cursor-pointer items-center space-x-1 whitespace-nowrap font-mono text-[10px] font-medium uppercase tracking-wider text-brand-red hover:underline"
           >
             <span>{t('home.exploreAll')}</span>
             <ArrowRight size={12} aria-hidden="true" />
@@ -120,9 +120,9 @@ export default function Home() {
 
       {recentlyPlayed.length > 0 && (
         <section data-testid="home-continue-listening" className="space-y-4">
-          <div className="border-b border-zinc-900 pb-3">
+          <div className="border-b border-zinc-800/60 pb-3">
             <h2 className="ns-section-title">{t('home.continueListening')}</h2>
-            <p className="text-sm text-zinc-400 mt-1">{t('home.continueListeningDesc')}</p>
+            <p className="mt-1 text-xs text-zinc-500">{t('home.continueListeningDesc')}</p>
           </div>
           <div className="grid grid-cols-1 min-[480px]:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
             {recentlyPlayed.slice(0, 4).map((track) => (
@@ -138,9 +138,9 @@ export default function Home() {
 
       {!loading && !error && trendingTracks.length > 0 && featuredArtists.length > 0 && (
         <section className="space-y-4">
-          <div className="border-b border-zinc-900 pb-3">
+          <div className="border-b border-zinc-800/60 pb-3">
             <h2 className="ns-section-title">{t('home.featuredArtists')}</h2>
-            <p className="text-sm text-zinc-400 mt-1">{t('home.featuredArtistsDesc')}</p>
+            <p className="mt-1 text-xs text-zinc-500">{t('home.featuredArtistsDesc')}</p>
           </div>
           <div className="grid grid-cols-1 min-[480px]:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
             {featuredArtists.map((artist) => (

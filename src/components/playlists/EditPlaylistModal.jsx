@@ -74,19 +74,19 @@ export default function EditPlaylistModal({ playlist, isOpen, onClose, onSaved }
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-[250] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm" onMouseDown={saving ? undefined : onClose}>
+    <div className="fixed inset-0 z-[var(--ns-z-confirmation)] flex items-center justify-center bg-black/75 p-4" onMouseDown={saving ? undefined : onClose}>
       <section
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="edit-playlist-title"
-        className="w-full max-w-lg rounded-3xl border border-zinc-700 bg-zinc-950 p-6 shadow-2xl"
+        className="w-full max-w-lg rounded-lg border border-zinc-700/70 bg-zinc-950 p-5 shadow-xl"
         onMouseDown={(event) => event.stopPropagation()}
       >
         <header className="mb-5 flex items-center justify-between">
           <div>
-            <h2 id="edit-playlist-title" className="text-xl font-bold text-zinc-100">{t('playlists.edit')}</h2>
-            <p className="text-xs text-zinc-500">{t('playlists.editHelp')}</p>
+            <h2 id="edit-playlist-title" className="text-lg font-semibold tracking-tight text-zinc-100">{t('playlists.edit')}</h2>
+            <p className="font-mono text-[10px] text-zinc-500">{t('playlists.editHelp')}</p>
           </div>
           <button type="button" onClick={onClose} disabled={saving} className="ns-icon-button !min-h-10 !min-w-10" aria-label="Close">
             <X size={18} />
@@ -102,14 +102,14 @@ export default function EditPlaylistModal({ playlist, isOpen, onClose, onSaved }
             <textarea maxLength={1000} rows={4} value={description} onChange={(event) => setDescription(event.target.value)} className="ns-field w-full resize-none px-4 py-3 text-sm" />
             <span className="block text-right text-[10px] text-zinc-600">{description.length}/1000</span>
           </label>
-          <label className="flex min-h-12 cursor-pointer items-center justify-between gap-4 rounded-xl border border-zinc-800 bg-zinc-900/40 px-4">
+          <label className="flex min-h-12 cursor-pointer items-center justify-between gap-4 rounded-md border border-zinc-800 bg-zinc-900/40 px-4">
             <span>
               <strong className="block text-xs text-zinc-200">{t('playlists.public')}</strong>
               <small className="text-zinc-500">{t('playlists.privateHelp')}</small>
             </span>
             <input type="checkbox" checked={isPublic} onChange={(event) => setIsPublic(event.target.checked)} className="h-4 w-4 accent-[var(--ns-accent)]" />
           </label>
-          <label className="flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border border-dashed border-zinc-700 px-4 text-sm text-zinc-300 hover:border-zinc-500">
+          <label className="flex min-h-12 cursor-pointer items-center gap-3 rounded-md border border-dashed border-zinc-700 px-4 text-sm text-zinc-300 hover:border-zinc-500">
             <ImagePlus size={17} className="text-brand-red" />
             <span className="min-w-0 flex-1 truncate">{cover?.name || t('playlists.coverHelp')}</span>
             <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleCover} className="sr-only" />

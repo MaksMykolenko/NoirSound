@@ -20,15 +20,15 @@ export default function UserActivityItem({ item }) {
   };
 
   return (
-    <div className="flex gap-4 items-start p-3 bg-brand-graphite/40 border border-zinc-900 rounded-2xl glass-panel-light hover:border-zinc-800 transition-colors">
-      <div className="p-2.5 bg-zinc-950/60 border border-zinc-900 rounded-xl shrink-0 mt-0.5">
+    <div className="flex items-start gap-3 rounded-md border border-zinc-800/60 bg-zinc-950/35 p-3 transition-colors hover:border-zinc-700/70 hover:bg-zinc-900/40">
+      <div className="mt-0.5 shrink-0 rounded border border-zinc-800 bg-zinc-950 p-2">
         {getIcon()}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-xs font-semibold text-zinc-300 leading-relaxed">
+        <p className="text-xs font-medium leading-relaxed text-zinc-300">
           {item.text}
         </p>
-        <span className="block text-[10px] text-zinc-600 mt-1 font-semibold">{item.timestamp}</span>
+        <span className="mt-1 block font-mono text-[9px] text-zinc-600">{item.timestamp}</span>
       </div>
     </div>
   );

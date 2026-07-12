@@ -8,7 +8,7 @@ import BrandLogo from './BrandLogo';
 import { useUserStore } from '../../store/userStore';
 
 const SIDEBAR_MIN_WIDTH = 240;
-const SIDEBAR_DEFAULT_WIDTH = 272;
+const SIDEBAR_DEFAULT_WIDTH = 256;
 const SIDEBAR_MAX_WIDTH = 360;
 
 export default function Sidebar() {
@@ -27,17 +27,11 @@ export default function Sidebar() {
     ] : []),
   ];
 
-  const { isPlayerCollapsed, currentTrack } = usePlayerStore();
-  const sidebarBottomPadding = isPlayerCollapsed
-    ? 'pb-5'
-    : currentTrack
-      ? 'pb-28'
-      : 'pb-16';
+  const { isPlayerCollapsed } = usePlayerStore();
+  const sidebarBottomPadding = isPlayerCollapsed ? 'pb-4' : 'pb-[var(--ns-player-height)]';
   const resizeHandleBottom = isPlayerCollapsed
     ? 'bottom-0'
-    : currentTrack
-      ? 'bottom-[90px]'
-      : 'bottom-[48px]';
+    : 'bottom-[var(--ns-player-height)]';
 
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     const saved = localStorage.getItem("noirsound.sidebarWidth");
@@ -122,14 +116,14 @@ export default function Sidebar() {
   return (
     <aside
       style={{ width: `${styleWidth}px` }}
-      className={`hidden lg:flex flex-col bg-zinc-950/82 border-r border-zinc-800/60 h-[100dvh] sticky top-0 pt-5 px-3.5 justify-between shrink-0 overflow-hidden relative transition-all duration-300 ${sidebarBottomPadding}`}
+      className={`relative hidden h-[100dvh] shrink-0 flex-col justify-between overflow-hidden border-r border-[var(--ns-border-subtle)] bg-brand-dark px-4 pt-4 transition-[width,padding] duration-200 lg:flex ${sidebarBottomPadding}`}
     >
-      <div className="flex flex-col flex-1 min-h-0 space-y-5">
+      <div className="flex min-h-0 flex-1 flex-col gap-5">
         {/* Brand logo */}
         <BrandLogo />
 
         {/* Navigation links */}
-        <nav className="space-y-1 shrink-0">
+        <nav className="shrink-0 space-y-1">
           {navItems.map((item) => {
             const Icon = item.icon;
             return (
@@ -137,10 +131,10 @@ export default function Sidebar() {
                 key={item.to}
                 to={item.to}
                 className={({ isActive }) =>
-                  `flex items-center space-x-3.5 px-3.5 py-2.5 min-h-11 rounded-xl text-sm font-semibold transition-all duration-200 cursor-pointer ${
+                  `relative flex min-h-11 items-center gap-3 px-3 py-2.5 rounded-lg border text-sm font-medium transition-colors duration-150 cursor-pointer ${
                     isActive
-                      ? 'bg-gradient-to-r from-brand-red/14 to-brand-purple/5 text-rose-300 border border-brand-red/25 shadow-[inset_3px_0_0_var(--ns-accent)]'
-                      : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900/65 border border-transparent'
+                      ? 'border-transparent bg-zinc-900/85 text-white shadow-[inset_2.5px_0_0_var(--ns-accent)]'
+                      : 'border-transparent text-zinc-400 hover:bg-zinc-900/40 hover:text-zinc-200'
                   }`
                 }
               >
@@ -152,7 +146,7 @@ export default function Sidebar() {
         </nav>
 
         {/* Divider */}
-        <div className="border-t border-zinc-900/80 my-2 shrink-0"></div>
+        <div className="my-1 shrink-0 border-t border-[var(--ns-border-subtle)]" />
 
         {/* Scrollable Library Section */}
         <div className="flex-1 min-h-0 flex flex-col">
@@ -176,13 +170,13 @@ export default function Sidebar() {
           onPointerDown={startResize}
           onDoubleClick={handleDoubleClick}
           onKeyDown={handleKeyDown}
-          className={`absolute right-0 top-0 w-2 cursor-col-resize z-50 transition-all group/handle select-none focus:outline-none focus-visible:ring-1 focus-visible:ring-brand-red/50 focus-visible:bg-zinc-900/50 ${resizeHandleBottom}`}
+          className={`group/handle absolute right-0 top-0 z-[var(--ns-z-dropdown)] w-2 cursor-col-resize select-none transition-all focus:outline-none focus-visible:bg-zinc-900/50 focus-visible:ring-1 focus-visible:ring-brand-red/50 ${resizeHandleBottom}`}
         >
           {/* Visual line */}
           <div
             className={`w-[2px] h-full mx-auto transition-all duration-150 ${
               isResizing
-                ? 'bg-brand-red shadow-[0_0_10px_var(--ns-accent-glow)] opacity-100'
+                ? 'bg-brand-red opacity-100'
                 : 'bg-zinc-800 opacity-0 group-hover/handle:opacity-100 group-hover/handle:bg-zinc-700 group-focus-visible/handle:opacity-100 group-focus-visible/handle:bg-brand-red'
             }`}
           />

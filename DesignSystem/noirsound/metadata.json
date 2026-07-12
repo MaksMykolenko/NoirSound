@@ -1,0 +1,8 @@
+{
+  "name": "NoirSound",
+  "description": "Незалежна музична платформа для авторів. Темний едіторіал-дизайн, прослуховування, завантаження треків, кабінет митця та адміністрування.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

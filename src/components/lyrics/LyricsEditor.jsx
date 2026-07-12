@@ -20,7 +20,7 @@ export default function LyricsEditor({
     <div className="space-y-4" data-testid="lyrics-editor">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h3 className="flex items-center gap-2 text-sm font-bold text-zinc-100">
+          <h3 className="flex items-center gap-2 text-sm font-semibold text-zinc-100">
             <FileText size={16} className="text-brand-red" />
             {t('lyrics.optional')}
           </h3>
@@ -38,7 +38,7 @@ export default function LyricsEditor({
 
       <div className={`grid gap-3 ${compact ? 'sm:grid-cols-2' : 'md:grid-cols-2'}`}>
         <label className="space-y-1.5">
-          <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">{t('lyrics.language')}</span>
+          <span className="font-mono text-[9px] font-medium uppercase tracking-wider text-zinc-500">{t('lyrics.language')}</span>
           <input
             id={`${idPrefix}-language`}
             className="ns-field px-4"
@@ -49,7 +49,7 @@ export default function LyricsEditor({
           />
         </label>
         <label className="space-y-1.5">
-          <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">{t('lyrics.type')}</span>
+          <span className="font-mono text-[9px] font-medium uppercase tracking-wider text-zinc-500">{t('lyrics.type')}</span>
           <select
             id={`${idPrefix}-type`}
             className="ns-field px-4"
@@ -65,7 +65,7 @@ export default function LyricsEditor({
 
       {preview ? (
         <div
-          className="min-h-48 rounded-2xl border border-zinc-800 bg-zinc-950/60 p-5 text-base leading-8 text-zinc-200 whitespace-pre-wrap"
+          className="min-h-48 whitespace-pre-wrap rounded-md border border-zinc-800 bg-zinc-950/60 p-4 text-sm leading-7 text-zinc-200"
           aria-label={t('lyrics.preview')}
         >
           {text || t('lyrics.noLyrics')}
@@ -98,7 +98,7 @@ export default function LyricsEditor({
         <span>{counts.lines.toLocaleString()} / {MAX_LYRICS_LINES.toLocaleString()} {t('lyrics.lines')}</span>
       </div>
 
-      <div className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4 space-y-3">
+      <div className="space-y-3 rounded-md border border-zinc-800 bg-zinc-950/40 p-4">
         <p className="text-xs leading-relaxed text-zinc-400">{t('lyrics.legalCopy')}</p>
         <label className="flex cursor-pointer items-start gap-3">
           <input

@@ -58,7 +58,7 @@ export default function AdminArtists() {
                 <td className="px-4 py-3">{artist._count?.tracks ?? 0}</td>
                 <td className="px-4 py-3">{artist._count?.followers ?? 0}</td>
                 <td className="px-4 py-3 text-xs text-[var(--ns-text-muted)]">{formatAdminDate(artist.updatedAt, i18n.language)}</td>
-                <td className="px-4 py-3"><Link to={`/admin/artists/${artist.id}`} className="ns-button-secondary rounded-lg px-3 py-2 text-xs">{t('admin.view')}</Link></td>
+                <td className="px-4 py-3"><Link to={`/admin/artists/${artist.id}`} className="ns-button-secondary rounded px-3 py-2 text-xs">{t('admin.view')}</Link></td>
               </tr>
             ))}</tbody>
           </AdminTable>

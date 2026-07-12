@@ -14,11 +14,11 @@ export default function EmptyState({
   const Icon = Icons[iconName] || Icons.Music;
 
   return (
-    <div className={`ns-state-panel !p-6 sm:!p-8 flex flex-col items-center justify-center text-center max-w-lg mx-auto my-5 ${className}`}>
-      <div className="p-3 mb-3 rounded-2xl bg-brand-red/8 border border-brand-red/20 text-brand-red">
+    <div className={`ns-state-panel !p-6 flex max-w-lg flex-col items-center justify-center text-center mx-auto my-5 ${className}`}>
+      <div className="mb-3 rounded-md border border-brand-red/20 bg-brand-red/5 p-2.5 text-brand-red">
         <Icon size={24} />
       </div>
-      <h3 className="text-lg font-bold text-zinc-200 mb-1">{title}</h3>
+      <h3 className="mb-1 text-base font-semibold tracking-tight text-zinc-200">{title}</h3>
       <p className="text-sm leading-relaxed text-zinc-400 mb-5 max-w-sm">{description}</p>
       {(actionText && onAction) || (secondaryActionText && onSecondaryAction) ? (
         <div className="flex flex-col min-[420px]:flex-row items-stretch min-[420px]:items-center justify-center gap-2.5 w-full min-[420px]:w-auto">

@@ -106,7 +106,7 @@ export default function Profile() {
   }
 
   return (
-    <div className="ns-page-stack animate-fade-in pb-10">
+    <div className="ns-page-stack pb-10">
       <UserProfileHeader user={user} onEditClick={() => setSearchParams({ tab: 'settings' })} />
 
       <div className="ns-tabs-scroll flex border-b border-zinc-800/60 gap-1 overflow-x-auto shrink-0" role="tablist">
@@ -119,7 +119,7 @@ export default function Profile() {
               onClick={() => setSearchParams({ tab: tab.id })}
               role="tab"
               aria-selected={active}
-              className={`ns-tab flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2.5 sm:py-3 border-b-2 text-[11px] sm:text-xs font-bold uppercase tracking-wider whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
+              className={`ns-tab flex shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2.5 font-mono text-[9px] font-medium uppercase tracking-wider transition-colors sm:gap-2 sm:px-5 sm:py-3 sm:text-[10px] ${
                 active ? 'border-brand-red text-rose-300' : 'border-transparent text-zinc-500 hover:text-zinc-300'
               }`}
             >
@@ -133,45 +133,37 @@ export default function Profile() {
 
       <div className="pt-2">
         {activeTab === 'overview' && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <section className="lg:col-span-2 space-y-4">
-              <h2 className="ns-eyebrow px-1">{t('nav.recentlyPlayed')}</h2>
-              {recentlyPlayedError ? (
-                <ErrorState title="Listening history unavailable" message={recentlyPlayedError} />
-              ) : recentlyPlayed.length === 0 ? (
-                <EmptyState
-                  iconName="History"
-                  title={t('empty.nothingPlayed')}
-                  description={t('empty.nothingPlayedDesc')}
-                  actionText={t('actions.discoverMusic')}
-                  onAction={() => navigate('/discover')}
-                />
-              ) : (
-                <div className="ns-card p-2 sm:p-4 space-y-1">
-                  {recentlyPlayed.slice(0, 5).map((track, index) => (
-                    <TrackListItem
-                      key={track.id}
-                      track={track}
-                      index={index}
-                      tracksContext={recentlyPlayed}
-                    />
-                  ))}
-                </div>
-              )}
-            </section>
-            <aside className="ns-state-panel !p-6 self-start">
-              <h2 className="ns-eyebrow">{t('profile.accountCollection')}</h2>
-              <p className="text-sm text-zinc-400 mt-3 leading-relaxed">
-                {t('profile.accountCollectionDesc')}
-              </p>
-            </aside>
-          </div>
+          <section className="mx-auto max-w-3xl space-y-4">
+            <h2 className="ns-eyebrow px-1">{t('nav.recentlyPlayed')}</h2>
+            {recentlyPlayedError ? (
+              <ErrorState title="Listening history unavailable" message={recentlyPlayedError} />
+            ) : recentlyPlayed.length === 0 ? (
+              <EmptyState
+                iconName="History"
+                title={t('empty.nothingPlayed')}
+                description={t('empty.nothingPlayedDesc')}
+                actionText={t('actions.discoverMusic')}
+                onAction={() => navigate('/discover')}
+              />
+            ) : (
+              <div className="space-y-1 rounded-lg border border-zinc-800/60 bg-zinc-950/35 p-2 sm:p-3">
+                {recentlyPlayed.slice(0, 5).map((track, index) => (
+                  <TrackListItem
+                    key={track.id}
+                    track={track}
+                    index={index}
+                    tracksContext={recentlyPlayed}
+                  />
+                ))}
+              </div>
+            )}
+          </section>
         )}
 
         {activeTab === 'stats' && <ListeningStats />}
         
         {activeTab === 'settings' && (
-          <div className="max-w-2xl mx-auto p-4 sm:p-6 ns-card">
+          <div className="mx-auto max-w-2xl rounded-lg border border-zinc-800/60 bg-zinc-950/35 p-4 sm:p-5">
             <UserSettingsForm />
           </div>
         )}
@@ -202,7 +194,7 @@ export default function Profile() {
               onAction={() => navigate('/discover')}
             />
           ) : (
-            <div className="ns-card p-2 sm:p-4 space-y-1">
+            <div className="space-y-1 rounded-lg border border-zinc-800/60 bg-zinc-950/35 p-2 sm:p-3">
               {likedTracks.map((track, index) => (
                 <TrackListItem key={track.id} track={track} index={index} tracksContext={likedTracks} />
               ))}

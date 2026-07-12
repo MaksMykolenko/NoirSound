@@ -31,7 +31,7 @@ export default function ReplyInput({ username, onSubmit, onCancel }) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="p-3 bg-zinc-950/80 border border-zinc-800 rounded-xl space-y-2.5 animate-fade-in"
+      className="space-y-2.5 rounded-md border border-zinc-800 bg-zinc-950/80 p-3"
     >
       <div className="flex justify-between items-center text-xs text-zinc-400 font-semibold px-0.5">
         <span className="flex items-center space-x-1">
@@ -41,7 +41,7 @@ export default function ReplyInput({ username, onSubmit, onCancel }) {
         <button
           type="button"
           onClick={onCancel}
-          className="min-h-10 px-2 text-zinc-500 hover:text-zinc-300 flex items-center space-x-1 cursor-pointer rounded-lg"
+          className="flex min-h-10 cursor-pointer items-center space-x-1 rounded px-2 text-zinc-500 hover:text-zinc-300"
         >
           <X size={10} />
           <span>Cancel</span>

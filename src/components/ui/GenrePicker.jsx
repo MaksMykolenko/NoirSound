@@ -136,7 +136,7 @@ export default function GenrePicker({
         <>
           {/* Mobile backdrop (sits below the sheet, above app chrome). */}
           <div
-            className="fixed inset-0 z-[55] bg-black/70 backdrop-blur-sm sm:hidden"
+            className="fixed inset-0 z-[var(--ns-z-overlay)] bg-black/75 sm:hidden"
             aria-hidden="true"
             onClick={() => setOpen(false)}
           />
@@ -145,9 +145,8 @@ export default function GenrePicker({
             ref={panelRef}
             data-testid="genre-picker-panel"
             onKeyDown={onPanelKeyDown}
-            className="fixed inset-x-0 bottom-0 z-[60] flex flex-col max-h-[80vh] rounded-t-2xl border border-zinc-800
-                       sm:absolute sm:inset-x-0 sm:bottom-auto sm:z-40 sm:mt-2 sm:max-h-none sm:rounded-2xl
-                       ns-card p-0 overflow-hidden shadow-2xl"
+            className="fixed inset-x-0 bottom-0 z-[var(--ns-z-player-sheet)] flex max-h-[80vh] flex-col overflow-hidden rounded-t-lg border border-zinc-700/70 bg-zinc-950 p-0 shadow-xl
+                       sm:absolute sm:inset-x-0 sm:bottom-auto sm:z-[var(--ns-z-dropdown)] sm:mt-2 sm:max-h-none sm:rounded-lg"
           >
             {/* Mobile sheet header (title + close) */}
             <div className="sm:hidden flex items-center justify-between px-4 pt-3 pb-2 border-b border-zinc-800/70 shrink-0">
@@ -156,7 +155,7 @@ export default function GenrePicker({
                 type="button"
                 onClick={() => setOpen(false)}
                 aria-label={t('actions.close')}
-                className="ns-icon-button w-9 h-9 rounded-full shrink-0"
+                className="ns-icon-button h-9 w-9 shrink-0 rounded"
               >
                 <X size={16} />
               </button>
@@ -194,7 +193,7 @@ export default function GenrePicker({
                   <div key={group} className="py-1">
                     <div
                       data-genre-group={group}
-                      className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-zinc-500 sticky top-0 bg-brand-graphite/95 backdrop-blur-sm z-10"
+                      className="sticky top-0 z-10 bg-zinc-950 px-3 py-1 font-mono text-[9px] font-medium uppercase tracking-wider text-zinc-500"
                     >
                       {groupLabel}
                     </div>

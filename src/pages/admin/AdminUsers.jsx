@@ -137,7 +137,7 @@ export default function AdminUsers() {
                   <td className="px-4 py-3">{user.counts?.tracks ?? 0}</td>
                   <td className="px-4 py-3">{user.counts?.reports ?? 0}</td>
                   <td className="px-4 py-3">
-                    <Link to={`/admin/users/${user.id}`} className="ns-button-secondary inline-flex items-center gap-1 rounded-lg px-3 py-2 text-xs">
+                    <Link to={`/admin/users/${user.id}`} className="ns-button-secondary inline-flex items-center gap-1 rounded px-3 py-2 text-xs">
                       <Eye className="h-3.5 w-3.5" /> {t('admin.view')}
                     </Link>
                   </td>

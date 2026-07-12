@@ -81,8 +81,8 @@ export default function AdminUploads() {
                 <td className="px-4 py-3 text-xs text-[var(--ns-text-muted)]">{formatAdminDate(upload.updatedAt, i18n.language)}</td>
                 <td className="px-4 py-3">
                   <div className="flex gap-2">
-                    {upload.status === 'FAILED' && <button type="button" onClick={() => setPending({ id: upload.id, action: 'retry' })} className="ns-button-secondary rounded-lg px-3 py-2 text-xs">{t('admin.retry')}</button>}
-                    {['INITIATED', 'UPLOADING', 'FAILED'].includes(upload.status) && <button type="button" onClick={() => setPending({ id: upload.id, action: 'cancel' })} className="ns-button-secondary rounded-lg px-3 py-2 text-xs">{t('admin.cancel')}</button>}
+                    {upload.status === 'FAILED' && <button type="button" onClick={() => setPending({ id: upload.id, action: 'retry' })} className="ns-button-secondary rounded px-3 py-2 text-xs">{t('admin.retry')}</button>}
+                    {['INITIATED', 'UPLOADING', 'FAILED'].includes(upload.status) && <button type="button" onClick={() => setPending({ id: upload.id, action: 'cancel' })} className="ns-button-secondary rounded px-3 py-2 text-xs">{t('admin.cancel')}</button>}
                   </div>
                 </td>
               </tr>

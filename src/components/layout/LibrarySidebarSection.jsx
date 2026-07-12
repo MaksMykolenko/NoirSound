@@ -100,10 +100,10 @@ export default function LibrarySidebarSection({ onItemClick }) {
 
   return (
     <div className="flex flex-col flex-1 min-h-0 select-none">
-      <div className="flex items-center justify-between px-2 mb-3">
+      <div className="mb-3 flex items-center justify-between px-2">
         <button onClick={() => handleNav('/library')} className="flex items-center gap-2 text-zinc-200 cursor-pointer">
-          <ListMusic size={18} className="text-brand-red" />
-          <span className="text-sm font-bold uppercase tracking-wider">{t('nav.yourLibrary')}</span>
+          <ListMusic size={16} className="text-brand-red" />
+          <span className="font-mono text-[10px] font-medium uppercase tracking-wider">{t('nav.yourLibrary')}</span>
         </button>
         <button onClick={openCreatePlaylist} className="ns-icon-button !min-h-9 !min-w-9 cursor-pointer" aria-label="Create playlist">
           <Plus size={15} />
@@ -122,8 +122,8 @@ export default function LibrarySidebarSection({ onItemClick }) {
 
       <div className="flex-1 overflow-y-auto px-1 space-y-4 pb-6">
         <div className="space-y-1.5">
-          <button onClick={() => handleNav('/library?tab=liked')} className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-zinc-900/55 text-left cursor-pointer transition-colors">
-            <span className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-red to-brand-purple text-[var(--ns-on-accent)] flex items-center justify-center shrink-0">
+          <button onClick={() => handleNav('/library?tab=liked')} className="flex w-full cursor-pointer items-center gap-3 rounded-lg p-2.5 text-left transition-colors hover:bg-zinc-900/55">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-brand-red/20 bg-brand-red/10 text-brand-red">
               <Heart size={15} fill="currentColor" />
             </span>
             <span className="min-w-0 flex-1 truncate">
@@ -131,8 +131,8 @@ export default function LibrarySidebarSection({ onItemClick }) {
               <small className="text-zinc-500 truncate">{likedCountText}</small>
             </span>
           </button>
-          <button onClick={() => handleNav('/library?tab=recently')} className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-zinc-900/55 text-left cursor-pointer transition-colors">
-            <span className="w-10 h-10 rounded-xl bg-zinc-900 flex items-center justify-center text-brand-red shrink-0">
+          <button onClick={() => handleNav('/library?tab=recently')} className="flex w-full cursor-pointer items-center gap-3 rounded-lg p-2.5 text-left transition-colors hover:bg-zinc-900/55">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-[var(--ns-border-subtle)] bg-zinc-900 text-brand-red">
               <History size={15} />
             </span>
             <span className="min-w-0 flex-1 truncate">
@@ -144,7 +144,7 @@ export default function LibrarySidebarSection({ onItemClick }) {
 
         {filteredPlaylists.length > 0 && (
           <section className="space-y-1.5">
-            <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-500 px-2">{t('nav.playlists')}</h3>
+            <h3 className="px-2 font-mono text-[9px] font-medium uppercase tracking-wider text-zinc-500">{t('nav.playlists')}</h3>
             {filteredPlaylists.map((playlist) => (
               <SidebarPlaylistItem key={playlist.id} playlist={playlist} />
             ))}
@@ -153,7 +153,7 @@ export default function LibrarySidebarSection({ onItemClick }) {
 
         {filteredArtists.length > 0 && (
           <section className="space-y-1.5">
-            <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-500 px-2 flex items-center gap-2">
+            <h3 className="flex items-center gap-2 px-2 font-mono text-[9px] font-medium uppercase tracking-wider text-zinc-500">
               <Users size={12} />
               {demoMode ? 'Demo Artists' : t('nav.followedArtists')}
             </h3>

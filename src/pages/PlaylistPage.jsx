@@ -69,7 +69,7 @@ function PlaylistCoverArt({ playlist, tracks }) {
         track ? (
           <img key={track.id} src={track.coverUrl} alt="" className="h-full w-full object-cover" />
         ) : (
-          <div key={`empty-${slot}`} className="h-full w-full bg-gradient-to-br from-zinc-900 to-black" />
+          <div key={`empty-${slot}`} className="h-full w-full bg-zinc-900" />
         )
       ))}
     </div>
@@ -79,16 +79,16 @@ function PlaylistCoverArt({ playlist, tracks }) {
 function DeletePlaylistDialog({ playlist, busy, onCancel, onConfirm, t }) {
   if (!playlist) return null;
   return (
-    <div className="fixed inset-0 z-[260] flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm" onMouseDown={busy ? undefined : onCancel}>
-      <section role="alertdialog" aria-modal="true" aria-labelledby="delete-playlist-title" className="w-full max-w-sm rounded-3xl border border-rose-500/30 bg-zinc-950 p-6 shadow-2xl" onMouseDown={(event) => event.stopPropagation()}>
-        <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-full bg-rose-500/10 text-rose-300">
+    <div className="fixed inset-0 z-[var(--ns-z-confirmation)] flex items-center justify-center bg-black/75 p-4" onMouseDown={busy ? undefined : onCancel}>
+      <section role="alertdialog" aria-modal="true" aria-labelledby="delete-playlist-title" className="w-full max-w-sm rounded-lg border border-rose-500/30 bg-zinc-950 p-5 shadow-xl" onMouseDown={(event) => event.stopPropagation()}>
+        <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-md bg-rose-500/10 text-rose-300">
           <Trash2 size={19} />
         </div>
-        <h2 id="delete-playlist-title" className="text-xl font-bold text-zinc-100">{t('playlists.deleteQuestion', { name: playlist.name })}</h2>
+        <h2 id="delete-playlist-title" className="font-display text-lg font-semibold tracking-tight text-zinc-100">{t('playlists.deleteQuestion', { name: playlist.name })}</h2>
         <p className="mt-2 text-sm leading-6 text-zinc-400">{t('playlists.deleteWarning')}</p>
         <div className="mt-6 flex gap-3">
           <button type="button" onClick={onCancel} disabled={busy} className="ns-button-secondary min-h-11 flex-1">{t('playlists.cancel')}</button>
-          <button type="button" onClick={onConfirm} disabled={busy} className="min-h-11 flex-1 rounded-xl bg-rose-600 px-4 text-sm font-bold text-white hover:bg-rose-500 disabled:opacity-50">
+          <button type="button" onClick={onConfirm} disabled={busy} className="min-h-11 flex-1 rounded-md bg-rose-600 px-4 text-sm font-semibold text-white hover:bg-rose-500 disabled:opacity-50">
             {busy ? t('playlists.deleting') : t('playlists.delete')}
           </button>
         </div>
@@ -100,15 +100,15 @@ function DeletePlaylistDialog({ playlist, busy, onCancel, onConfirm, t }) {
 function RemoveTrackDialog({ track, busy, onCancel, onConfirm, t }) {
   if (!track) return null;
   return (
-    <div className="fixed inset-0 z-[260] flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm" onMouseDown={busy ? undefined : onCancel}>
-      <section role="alertdialog" aria-modal="true" aria-labelledby="remove-track-title" className="w-full max-w-sm rounded-3xl border border-rose-500/30 bg-zinc-950 p-6 shadow-2xl" onMouseDown={(event) => event.stopPropagation()}>
-        <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-full bg-rose-500/10 text-rose-300">
+    <div className="fixed inset-0 z-[var(--ns-z-confirmation)] flex items-center justify-center bg-black/75 p-4" onMouseDown={busy ? undefined : onCancel}>
+      <section role="alertdialog" aria-modal="true" aria-labelledby="remove-track-title" className="w-full max-w-sm rounded-lg border border-rose-500/30 bg-zinc-950 p-5 shadow-xl" onMouseDown={(event) => event.stopPropagation()}>
+        <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-md bg-rose-500/10 text-rose-300">
           <Trash2 size={19} />
         </div>
-        <h2 id="remove-track-title" className="text-xl font-bold text-zinc-100">{t('playlists.removeTrackConfirm', { title: track.title })}</h2>
+        <h2 id="remove-track-title" className="font-display text-lg font-semibold tracking-tight text-zinc-100">{t('playlists.removeTrackConfirm', { title: track.title })}</h2>
         <div className="mt-6 flex gap-3">
           <button type="button" onClick={onCancel} disabled={busy} className="ns-button-secondary min-h-11 flex-1">{t('playlists.cancel')}</button>
-          <button type="button" onClick={onConfirm} disabled={busy} className="min-h-11 flex-1 rounded-xl bg-rose-600 px-4 text-sm font-bold text-white hover:bg-rose-500 disabled:opacity-50">
+          <button type="button" onClick={onConfirm} disabled={busy} className="min-h-11 flex-1 rounded-md bg-rose-600 px-4 text-sm font-semibold text-white hover:bg-rose-500 disabled:opacity-50">
             {t('playlists.removeTrack')}
           </button>
         </div>
@@ -310,7 +310,7 @@ export default function PlaylistPage() {
   };
 
   return (
-    <div className="ns-page-stack animate-fade-in pb-16">
+    <div className="ns-page-stack pb-16">
       <PageMeta
         title={`${playlist.name} — Playlist by ${playlist.creator} | NoirSound`}
         description={`${tracks.length === 1 ? '1 track' : `${tracks.length} tracks`}${playlist.description ? ` · ${playlist.description}` : ` · Listen to ${playlist.name}, a playlist by ${playlist.creator} on NoirSound.`}`}
@@ -327,18 +327,18 @@ export default function PlaylistPage() {
         onContextMenu={contextMenuProps.onContextMenu}
         onKeyDown={contextMenuProps.onKeyDown}
         tabIndex={0}
-        className="relative flex flex-col md:flex-row gap-6 md:gap-8 items-center md:items-end p-5 sm:p-6 md:p-8 ns-card ns-card-hero focus:outline-none focus:ring-1 focus:ring-brand-red/50"
+        className="relative flex flex-col items-center gap-6 rounded-lg border border-zinc-800/60 bg-zinc-950/35 p-5 focus:outline-none focus:ring-1 focus:ring-brand-red/50 sm:p-6 md:flex-row md:items-end md:gap-8"
       >
         <button type="button" onClick={openFromButton} className="absolute right-4 top-4 ns-icon-button !min-h-10 !min-w-10 text-zinc-400" aria-label={`More actions for ${playlist.name}`} aria-haspopup="menu">
           <MoreHorizontal size={18} />
         </button>
-        <div className="w-48 h-48 md:w-56 md:h-56 rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-900 shrink-0">
+        <div className="h-48 w-48 shrink-0 overflow-hidden rounded-md border border-zinc-800 bg-zinc-900 md:h-56 md:w-56">
           <PlaylistCoverArt playlist={playlist} tracks={tracks} />
         </div>
 
         <div className="flex-1 space-y-4 text-center md:text-left min-w-0">
           <p className="ns-eyebrow">{t('playlists.typeLabel')}</p>
-          <span className="inline-flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full bg-brand-red/10 border border-brand-red/30 text-rose-300">
+          <span className="inline-flex items-center gap-1.5 rounded border border-brand-red/30 bg-brand-red/5 px-2.5 py-1 font-mono text-[9px] font-medium uppercase tracking-wider text-rose-300">
             {playlist.isPublic === false && <Lock size={11} />}
             {playlist.isPublic === false ? t('playlists.private') : t('playlists.public')}
           </span>
@@ -346,7 +346,7 @@ export default function PlaylistPage() {
             <h1 className="ns-page-title break-words">{playlist.name}</h1>
             <p className="text-sm text-zinc-400 mt-2">{playlist.description || t('playlists.noDescription')}</p>
           </div>
-          <div className="flex flex-wrap justify-center md:justify-start items-center gap-3 text-xs text-zinc-400">
+          <div className="flex flex-wrap items-center justify-center gap-3 font-mono text-[10px] text-zinc-500 md:justify-start">
             {playlist.ownerArtistId ? (
               <button type="button" onClick={() => navigate(`/artist/${playlist.ownerArtistId}`)} className="hover:text-zinc-100 hover:underline">
                 {t('playlists.by', { creator: playlist.creator })}
@@ -398,7 +398,7 @@ export default function PlaylistPage() {
         {tracks.length === 0 ? (
           <EmptyState iconName="Music2" title={t('playlists.empty')} description={owner ? t('playlists.emptyOwner') : t('playlists.emptyVisitor')} />
         ) : (
-          <div className="ns-card p-2 sm:p-4">
+          <div className="rounded-lg border border-zinc-800/60 bg-zinc-950/35 p-2 sm:p-3">
             <PlaylistTrackTable
               tracks={tracks}
               playlist={playlist}

@@ -34,7 +34,7 @@ export default function PlaylistCard({ playlist, onToggleSaved, onEdit, onDelete
 
   return (
     <div
-      className="p-3 ns-card ns-card-interactive cursor-pointer group"
+      className="group cursor-pointer rounded-lg border border-zinc-800/60 bg-zinc-950/35 p-3 transition-colors duration-150 hover:border-zinc-700/70 hover:bg-zinc-900/45"
       onClick={() => navigate(`/playlist/${playlist.id}`)}
       onKeyDown={(event) => {
         contextMenuProps.onKeyDown(event);
@@ -51,7 +51,7 @@ export default function PlaylistCard({ playlist, onToggleSaved, onEdit, onDelete
       aria-label={`Open playlist ${playlist.name}`}
     >
       {/* Cover wrapped */}
-      <div className="relative aspect-square rounded-xl overflow-hidden mb-3 bg-zinc-950 border border-zinc-900/60 shadow-md">
+      <div className="relative mb-3 aspect-square overflow-hidden rounded-md border border-zinc-800/60 bg-zinc-950">
         <FallbackCover
           src={playlist.coverUrl}
           title={playlist.name}
@@ -63,10 +63,10 @@ export default function PlaylistCard({ playlist, onToggleSaved, onEdit, onDelete
         />
 
         {/* Play Overlay */}
-        <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+        <div className="absolute inset-0 flex items-center justify-center bg-black/55 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
           <button
             onClick={handlePlayClick}
-            className="w-12 h-12 bg-brand-red text-[var(--ns-on-accent)] rounded-full flex items-center justify-center shadow-[0_0_15px_var(--ns-accent-glow)] transform scale-90 group-hover:scale-100 transition-all duration-200 cursor-pointer"
+            className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-brand-red text-[var(--ns-on-accent)] transition-colors duration-150 hover:bg-rose-700"
             aria-label={`Play ${playlist.name}`}
           >
             <Play size={20} className="translate-x-[1px]" fill="white" strokeWidth={0} />
@@ -83,18 +83,18 @@ export default function PlaylistCard({ playlist, onToggleSaved, onEdit, onDelete
         </button>
 
         {/* Tracks count tag */}
-        <div className="absolute bottom-2 left-2 text-[11px] font-bold uppercase px-2 py-0.5 rounded bg-zinc-950/75 border border-zinc-900/40 text-zinc-200 backdrop-blur-sm select-none">
+        <div className="absolute bottom-2 left-2 rounded border border-zinc-800/60 bg-zinc-950/85 px-2 py-0.5 font-mono text-[9px] font-medium uppercase tracking-wide text-zinc-300 select-none">
           {playlist.trackCount ?? (playlist.trackIds || playlist.tracks || []).length} tracks
         </div>
       </div>
 
       {/* Playlist info */}
       <div className="px-1 space-y-1">
-        <h4 className="text-[15px] font-bold text-zinc-200 group-hover:text-zinc-100 truncate">
+        <h4 className="truncate text-[13px] font-semibold text-zinc-200">
           {playlist.name}
         </h4>
-        <p className="text-[13px] text-zinc-400 truncate">{playlist.description}</p>
-        <div className="flex justify-between items-center text-[12px] text-zinc-550 font-medium pt-1 border-t border-zinc-900/40">
+        <p className="truncate text-[11px] text-zinc-500">{playlist.description}</p>
+        <div className="flex items-center justify-between border-t border-zinc-800/50 pt-1 font-mono text-[9px] text-zinc-500">
           <span>By {playlist.creator}</span>
           <span className="font-mono">{formatNumber(playlist.likes || 0)} likes</span>
         </div>

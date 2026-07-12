@@ -16,13 +16,13 @@ function QueueTrackRow({ track, index, currentTrack, playTrack, removeFromQueue,
       onContextMenu={contextMenuProps.onContextMenu}
       onKeyDown={contextMenuProps.onKeyDown}
       tabIndex={0}
-      className={`group flex items-center space-x-3 p-2 rounded-xl transition-all duration-200 ${
+      className={`group flex items-center gap-3 rounded-md border p-2 transition-colors duration-150 ${
         isPlayingThis
-          ? 'bg-brand-red/10 border border-brand-red/20 shadow-[0_0_12px_var(--ns-accent-glow-soft)]'
-          : 'bg-zinc-900/30 border border-zinc-900/50 hover:bg-zinc-900/70 hover:border-zinc-800/80'
+          ? 'border-brand-red/25 bg-brand-red/10'
+          : 'border-transparent bg-zinc-900/20 hover:border-[var(--ns-border-subtle)] hover:bg-zinc-900/60'
       }`}
     >
-      <div className="relative w-10 h-10 rounded-lg overflow-hidden shrink-0 group-hover:opacity-80">
+      <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded">
         <FallbackCover
           src={track.coverUrl}
           title={track.title}
@@ -86,17 +86,17 @@ export default function QueuePanel({ isOpen, onClose, surface = 'standard' }) {
     setQueue([]);
   };
   const positionClass = surface === 'fullscreen'
-    ? 'right-0 bottom-[210px] top-[73px] z-[220] lg:bottom-[90px]'
-    : 'right-0 bottom-16 top-0 z-[60] lg:bottom-[90px] lg:top-[73px] lg:z-30';
+    ? 'right-0 bottom-[var(--ns-fullscreen-mobile-controls-height)] top-[var(--ns-mobile-header-height)] z-[var(--ns-z-fullscreen-panel)] lg:bottom-[var(--ns-player-height)] lg:top-[var(--ns-header-height)]'
+    : 'right-0 bottom-[var(--ns-mobile-nav-height)] top-0 z-[var(--ns-z-modal)] lg:bottom-[var(--ns-player-height)] lg:top-[var(--ns-header-height)]';
 
   return (
-    <div className={`fixed ${positionClass} w-full sm:w-80 md:w-96 bg-zinc-950/98 border-l border-zinc-800/80 backdrop-blur-xl shadow-2xl flex flex-col glass-panel animate-slide-in`} role="dialog" aria-modal="true" aria-labelledby="queue-title">
+    <div className={`fixed ${positionClass} flex w-full animate-slide-in flex-col border-l border-[var(--ns-border)] bg-[var(--ns-card-solid)] shadow-2xl sm:w-80 md:w-96`} role="dialog" aria-modal="true" aria-labelledby="queue-title">
       {/* Queue Header */}
-      <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-900">
+      <div className="flex min-h-[var(--ns-header-height)] items-center justify-between border-b border-[var(--ns-border-subtle)] px-5 py-3">
         <div className="flex items-center space-x-2">
           <Music size={16} className="text-brand-red" />
-          <h2 id="queue-title" className="text-sm font-bold text-zinc-200">Play Queue</h2>
-          <span className="text-[10px] bg-zinc-900 border border-zinc-800 text-zinc-400 px-2 py-0.5 rounded-full">
+          <h2 id="queue-title" className="text-sm font-semibold text-zinc-200">Play Queue</h2>
+          <span className="rounded-full border border-[var(--ns-border-subtle)] bg-zinc-900 px-2 py-0.5 font-mono text-[10px] text-zinc-400">
             {queue.length}
           </span>
         </div>

@@ -70,22 +70,11 @@ export function deterministicVisual(input = '') {
     hash = Math.imul(hash, 16777619);
   }
   const unsignedHash = hash >>> 0;
-  const palettes = [
-    ['#3f0a20', '#e11d48', '#16091f'],
-    ['#172554', '#7c3aed', '#09090b'],
-    ['#083344', '#0891b2', '#18181b'],
-    ['#3b0764', '#c026d3', '#18181b'],
-    ['#422006', '#ea580c', '#18181b'],
-    ['#052e16', '#16a34a', '#18181b'],
-  ];
 
   return {
     key: unsignedHash.toString(36),
-    colors: palettes[unsignedHash % palettes.length],
-    angle: 120 + (unsignedHash % 81),
     x: 18 + (unsignedHash % 58),
     y: 16 + ((unsignedHash >>> 8) % 62),
-    rotation: -18 + ((unsignedHash >>> 16) % 37),
   };
 }
 

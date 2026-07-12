@@ -2,15 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import PageMeta from '../components/meta/PageMeta';
 import { useTranslation } from 'react-i18next';
-import { Check, Play, Users, Globe, Music, Edit } from 'lucide-react';
+import { Check, Users, Globe, Music, Edit } from 'lucide-react';
 import { followArtist, unfollowArtist, getArtistById, getTracksByArtist } from '../api';
 import { useUserStore } from '../store/userStore';
 import { useToastStore } from '../store/toastStore';
 import TrackListItem from '../components/tracks/TrackListItem';
+import TrackCard from '../components/tracks/TrackCard';
 import EmptyState from '../components/ui/EmptyState';
 import ErrorState from '../components/ui/ErrorState';
 import FallbackAvatar from '../components/ui/FallbackAvatar';
-import FallbackCover from '../components/ui/FallbackCover';
 import { sortTracksNewest } from '../utils/presentation';
 import { formatNumber } from '../utils/formatLocale';
 import { getLocalizedGenre } from '../i18n/genreLabels';
@@ -133,7 +133,7 @@ export default function ArtistPage() {
   const isOwnProfile = user && (user.artistProfileId === artist.id || user.username === artist.username);
 
   return (
-    <div className="ns-page-stack animate-fade-in pb-10">
+    <div className="ns-page-stack pb-10">
       <PageMeta
         title={`${artist.name} — NoirSound`}
         description={artist.bio || `${artist.name} is an independent artist on NoirSound. Listen to releases and follow new music.`}
@@ -141,25 +141,25 @@ export default function ArtistPage() {
       />
 
       {/* Hero / Header Box */}
-      <section className="relative ns-card-hero overflow-hidden border border-zinc-800/70 bg-zinc-950 shadow-2xl">
+      <section className="relative overflow-hidden rounded-lg border border-zinc-800/60 bg-zinc-950">
         <div 
-          className="h-44 md:h-52 w-full transition-all duration-500"
+          className="h-40 w-full opacity-70 transition-opacity duration-300 md:h-52"
           style={{ background: artist.bannerUrl || 'linear-gradient(135deg, var(--ns-accent-deep) 0%, var(--ns-bg) 100%)' }}
         />
         
-        <div className="p-4 sm:p-6 pt-0 flex flex-col md:flex-row items-center md:items-end gap-4 sm:gap-6 relative -mt-10 md:-mt-12 z-10 text-center md:text-left">
-          <div className="w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 rounded-full overflow-hidden border-[4px] border-zinc-950 bg-zinc-900 shadow-xl shrink-0">
+        <div className="relative z-10 -mt-9 flex flex-col items-center gap-4 p-4 pt-0 text-center sm:p-5 sm:pt-0 md:-mt-12 md:flex-row md:items-end md:text-left">
+          <div className="h-24 w-24 shrink-0 overflow-hidden rounded-full border-2 border-zinc-950 bg-zinc-900 md:h-28 md:w-28">
             <FallbackAvatar
               src={artist.avatarUrl}
               name={artist.name}
-              className="w-full h-full text-[124px]"
+              className="h-full w-full text-[112px]"
               imageClassName="object-cover"
             />
           </div>
 
           <div className="flex-1 space-y-2 min-w-0">
             <div className="flex items-center justify-center md:justify-start space-x-2">
-              <h1 className="text-2xl md:text-3xl font-black text-zinc-100 tracking-tight truncate">
+              <h1 className="truncate font-display text-2xl font-semibold tracking-tight text-zinc-100 md:text-3xl">
                 {artist.name}
               </h1>
               {artist.isVerified && (
@@ -170,13 +170,13 @@ export default function ArtistPage() {
             </div>
             
             <div className="flex items-center justify-center md:justify-start gap-2">
-              {artist.username && <p className="text-sm text-zinc-400 font-medium">@{artist.username}</p>}
-              <span className="text-[10px] uppercase tracking-wider font-bold text-brand-purple border border-brand-purple/20 bg-brand-purple/10 rounded-full px-2 py-1">
+              {artist.username && <p className="font-mono text-[11px] text-zinc-400">@{artist.username}</p>}
+              <span className="rounded border border-brand-purple/20 bg-brand-purple/5 px-2 py-1 font-mono text-[9px] font-medium uppercase tracking-wider text-purple-300">
                 {t('profile.independentArtist')}
               </span>
             </div>
 
-            <div className="flex items-center justify-center md:justify-start space-x-4 text-xs text-zinc-400 font-semibold pt-1">
+            <div className="flex items-center justify-center space-x-4 pt-1 font-mono text-[9px] text-zinc-500 md:justify-start">
               <span className="flex items-center space-x-1">
                 <Users size={14} className="text-zinc-500" />
                 <span className="text-zinc-300 font-bold">{formatNumber(followerDisplayCount)}</span>
@@ -191,7 +191,7 @@ export default function ArtistPage() {
           {isOwnProfile ? (
             <button
               onClick={() => navigate('/profile?tab=settings')}
-              className="px-6 min-h-11 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer shrink-0 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 border border-zinc-700/60 inline-flex items-center justify-center gap-2"
+              className="inline-flex min-h-11 shrink-0 cursor-pointer items-center justify-center gap-2 rounded-md border border-zinc-700/60 bg-zinc-800 px-5 text-[11px] font-semibold uppercase tracking-wider text-zinc-100 transition-colors hover:bg-zinc-700"
             >
               <Edit size={14} />
               <span>{t('profile.editArtistProfile')}</span>
@@ -201,7 +201,7 @@ export default function ArtistPage() {
               onClick={handleFollowClick}
               disabled={followActionPending}
               aria-pressed={isFollowing}
-              className={`px-6 min-h-11 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all cursor-pointer shrink-0 disabled:opacity-60 disabled:cursor-wait ${
+              className={`min-h-11 shrink-0 cursor-pointer rounded-md px-5 text-[11px] font-semibold uppercase tracking-wider transition-colors disabled:cursor-wait disabled:opacity-60 ${
                 isFollowing
                   ? 'bg-zinc-800 text-zinc-400 hover:text-zinc-100 border border-zinc-700/60'
                   : 'ns-button-primary'
@@ -223,7 +223,7 @@ export default function ArtistPage() {
           {/* Top tracks list */}
           <section className="space-y-4">
             <h2 className="ns-eyebrow px-1">{t('profile.topTracks')}</h2>
-            <div className="ns-card p-2 sm:p-4 space-y-2">
+            <div className="space-y-1 rounded-lg border border-zinc-800/60 bg-zinc-950/35 p-2 sm:p-3">
               {artistTracks.length === 0 ? (
                 <EmptyState
                   iconName="Music2"
@@ -248,31 +248,7 @@ export default function ArtistPage() {
             <h2 className="ns-eyebrow px-1">{t('profile.singlesAndEps')}</h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
               {artistTracks.map((track) => (
-                <div
-                  key={track.id}
-                  onClick={() => navigate(`/track/${track.id}`)}
-                  className="p-3 ns-card ns-card-interactive cursor-pointer group text-center"
-                >
-                  <div className="relative aspect-square rounded-xl overflow-hidden mb-3 bg-zinc-900 shadow-md">
-                    <FallbackCover
-                      src={track.coverUrl}
-                      title={track.title}
-                      artistName={track.artistName}
-                      genre={track.genre}
-                      className="w-full h-full"
-                      imageClassName="object-cover"
-                    />
-                    <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      {(track.isStreamable ?? Boolean(track.audioUrl)) ? (
-                        <Play size={16} fill="white" className="text-white translate-x-[1px]" />
-                      ) : (
-                        <span className="text-[9px] uppercase tracking-wider font-bold text-zinc-300">Audio unavailable</span>
-                      )}
-                    </div>
-                  </div>
-                  <h4 className="text-xs font-bold text-zinc-200 truncate group-hover:text-white">{track.title}</h4>
-                  <p className="text-xs text-zinc-400 mt-1 font-mono">{track.releaseDate?.split('-')[0] || 'New'} • Single</p>
-                </div>
+                <TrackCard key={track.id} track={track} tracksContext={artistTracks} />
               ))}
             </div>
           </section>
@@ -281,7 +257,7 @@ export default function ArtistPage() {
         {/* Right Column: About, Bio & Socials */}
         <div className="space-y-6">
           {/* Bio Box */}
-          <section className="p-5 sm:p-6 ns-card space-y-4">
+          <section className="space-y-4 rounded-lg border border-zinc-800/60 bg-zinc-950/35 p-5">
             <h2 className="ns-eyebrow">{t('profile.about')}</h2>
             <p className="text-sm text-zinc-300 leading-relaxed">
               {artist.bio || t('profile.noBio')}
@@ -295,7 +271,7 @@ export default function ArtistPage() {
                 ) : (artist.genres || []).map((g) => (
                   <span
                     key={g}
-                    className="text-[11px] font-extrabold uppercase px-2.5 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-rose-300"
+                    className="rounded border border-zinc-800 bg-zinc-900 px-2.5 py-1 font-mono text-[9px] font-medium uppercase text-rose-300"
                   >
                     {getLocalizedGenre(g)}
                   </span>
@@ -305,7 +281,7 @@ export default function ArtistPage() {
           </section>
 
           {/* Social Links Box */}
-          <section className="p-5 sm:p-6 ns-card space-y-3">
+          <section className="space-y-3 rounded-lg border border-zinc-800/60 bg-zinc-950/35 p-5">
             <h2 className="ns-eyebrow">{t('profile.socialLinks')}</h2>
             
             <div className="space-y-1">

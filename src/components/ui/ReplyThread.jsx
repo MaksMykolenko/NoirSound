@@ -14,7 +14,7 @@ export default function ReplyThread({ replies, onLikeReply, onDeleteReply }) {
         const isOwnReply = reply.userId === user?.id;
 
         return (
-          <div key={reply.id} className="flex gap-2.5 group/reply animate-fade-in">
+          <div key={reply.id} className="group/reply flex gap-2.5">
             {/* Small Avatar */}
             <FallbackAvatar
               src={reply.avatarUrl}
@@ -27,20 +27,20 @@ export default function ReplyThread({ replies, onLikeReply, onDeleteReply }) {
             <div className="flex-1 min-w-0 space-y-1">
               <div className="flex flex-col min-[430px]:flex-row min-[430px]:items-center justify-between gap-1">
                 <div className="flex flex-wrap items-baseline gap-x-1.5">
-                  <span className="text-[13px] font-bold text-zinc-200">{reply.displayName}</span>
-                  <span className="text-[11.5px] text-zinc-400 font-semibold">@{reply.username}</span>
+                  <span className="text-[12px] font-semibold text-zinc-200">{reply.displayName}</span>
+                  <span className="font-mono text-[9px] text-zinc-500">@{reply.username}</span>
                 </div>
-                <time className="text-xs text-zinc-400 font-semibold">{reply.createdAt}</time>
+                <time className="font-mono text-[9px] text-zinc-500">{reply.createdAt}</time>
               </div>
 
-              <p className="text-[13.5px] text-zinc-300 leading-relaxed break-words">{reply.text}</p>
+              <p className="break-words text-[13px] leading-relaxed text-zinc-300">{reply.text}</p>
 
               {/* Actions row */}
               <div className="flex items-center space-x-3.5 pt-1 text-[12px] text-zinc-400 font-bold">
                 {/* Like */}
                 <button
                   onClick={() => onLikeReply(reply.id)}
-                  className={`min-h-10 px-2 flex items-center space-x-1 hover:text-rose-500 transition-colors cursor-pointer rounded-lg ${
+                  className={`flex min-h-10 cursor-pointer items-center space-x-1 rounded px-2 transition-colors hover:text-rose-500 ${
                     isLiked ? 'text-brand-red' : ''
                   }`}
                   aria-label={isLiked ? 'Unlike reply' : 'Like reply'}
@@ -54,7 +54,7 @@ export default function ReplyThread({ replies, onLikeReply, onDeleteReply }) {
                 {isOwnReply && (
                   <button
                     onClick={() => onDeleteReply(reply.id)}
-                    className="min-h-10 px-2 flex items-center space-x-1 hover:text-rose-500 transition-colors md:opacity-0 md:group-hover/reply:opacity-100 transition-opacity cursor-pointer ml-auto rounded-lg"
+                    className="ml-auto flex min-h-10 cursor-pointer items-center space-x-1 rounded px-2 transition-colors hover:text-rose-500 md:opacity-0 md:group-hover/reply:opacity-100"
                     title="Delete reply"
                   >
                     <Trash2 size={10} />

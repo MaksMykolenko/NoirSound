@@ -51,15 +51,15 @@ export default function SidebarPlaylistItem({ playlist, onToggleSaved, onEdit, o
       }}
       role="link"
       tabIndex={0}
-      className={`group flex items-center justify-between p-2.5 rounded-xl transition-all duration-200 cursor-pointer border h-[64px] ${
+      className={`group flex h-14 cursor-pointer items-center justify-between rounded-md border p-2 transition-colors duration-150 ${
         isActive
-          ? 'bg-brand-red/10 border-brand-red/20 text-brand-red shadow-[0_0_12px_var(--ns-accent-glow-soft)]'
-          : 'bg-zinc-900/12 border-zinc-900/45 hover:bg-zinc-900/55 hover:border-zinc-800/65'
+          ? 'border-brand-red/30 bg-brand-red/5 text-brand-red'
+          : 'border-transparent bg-transparent hover:border-zinc-800/60 hover:bg-zinc-900/45'
       }`}
     >
-      <div className="flex items-center space-x-3.5 min-w-0 flex-1">
+      <div className="flex min-w-0 flex-1 items-center space-x-3">
         {/* Cover Art Thumbnail */}
-        <div className="relative w-11 h-11 rounded-lg overflow-hidden shrink-0 bg-zinc-950 border border-zinc-900 shadow-md">
+        <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded border border-zinc-800/60 bg-zinc-950">
           <FallbackCover
             src={playlist.coverUrl}
             title={playlist.name}
@@ -80,12 +80,12 @@ export default function SidebarPlaylistItem({ playlist, onToggleSaved, onEdit, o
 
         {/* Text Metadata */}
         <div className="min-w-0 flex-1">
-          <h5 className={`text-[14.5px] font-bold truncate tracking-tight leading-snug ${
+          <h5 className={`truncate text-[12px] font-semibold leading-snug ${
             isActive ? 'text-brand-red' : 'text-zinc-300 group-hover:text-white'
           }`}>
             {playlist.name}
           </h5>
-          <p className="text-[12.5px] text-zinc-400 truncate mt-0.5 font-medium">
+          <p className="mt-0.5 truncate font-mono text-[9px] text-zinc-500">
             {playlist.createdByCurrentUser ? 'Playlist' : `by ${playlist.creator}`} • {playlist.trackCount ?? (playlist.trackIds || playlist.tracks || []).length} tracks
           </p>
         </div>

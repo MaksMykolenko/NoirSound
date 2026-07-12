@@ -14,9 +14,9 @@ export default function Header() {
   const pillRef = useRef(null);
 
   return (
-    <header className="hidden lg:flex min-h-[72px] items-center justify-between gap-4 px-5 xl:px-6 py-3 bg-zinc-950/58 border-b border-zinc-800/55 backdrop-blur-xl sticky top-0 z-40 shadow-[0_8px_24px_rgba(0,0,0,0.12)]">
+    <header className="sticky top-0 z-[var(--ns-z-header)] hidden h-[var(--ns-header-height)] shrink-0 items-center justify-between gap-4 border-b border-[var(--ns-border-subtle)] bg-[color-mix(in_srgb,var(--ns-bg)_88%,transparent)] px-6 backdrop-blur-md lg:flex lg:px-8">
       {/* Navigation and search */}
-      <div className="flex items-center gap-3 xl:gap-5 flex-1 max-w-xl min-w-0">
+      <div className="flex min-w-0 max-w-xl flex-1 items-center gap-3">
         <div className="hidden sm:flex items-center gap-2 shrink-0">
           <button
             onClick={() => navigate(-1)}
@@ -42,7 +42,7 @@ export default function Header() {
             readOnly
             onFocus={() => navigate('/discover')}
             placeholder={t('header.searchPlaceholder')}
-            className="ns-field w-full pl-10 pr-4 py-2 rounded-full text-sm placeholder-zinc-500"
+            className="ns-field w-full rounded-md py-2 pl-10 pr-4 text-xs placeholder-zinc-600"
             aria-label="Search NoirSound"
           />
         </div>
@@ -54,12 +54,12 @@ export default function Header() {
           <div className="relative" ref={pillRef}>
             <button
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-              className="flex min-h-11 items-center space-x-2.5 p-1.5 pl-3 pr-1.5 bg-zinc-900 border border-zinc-800/80 rounded-full cursor-pointer hover:bg-zinc-800/80 transition-colors select-none"
+              className="flex min-h-10 cursor-pointer select-none items-center gap-2.5 rounded-lg border border-[var(--ns-border-subtle)] bg-surface-noir py-1 pl-3 pr-1 transition-colors hover:bg-surface-hover"
               aria-expanded={isDropdownOpen}
               aria-haspopup="menu"
             >
               <span className="text-xs font-semibold text-zinc-300 hidden xl:block">@{user.username}</span>
-              <div className="w-8 h-8 rounded-full bg-brand-red flex items-center justify-center text-[var(--ns-on-accent)] font-bold shadow-[0_0_10px_var(--ns-accent-glow)] overflow-hidden">
+              <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-brand-red font-bold text-[var(--ns-on-accent)]">
                 <FallbackAvatar
                   src={user.avatarUrl}
                   name={user.displayName || user.username}
@@ -78,7 +78,7 @@ export default function Header() {
         ) : (
           <button 
             onClick={() => setAuthModalOpen(true)}
-            className="px-5 ns-button-primary text-sm rounded-full cursor-pointer"
+            className="ns-button-primary cursor-pointer px-5 text-xs"
           >
             {t('header.signIn')}
           </button>

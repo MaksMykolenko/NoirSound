@@ -29,10 +29,10 @@ export default function SidebarArtistItem({ artist }) {
       }}
       role="link"
       tabIndex={0}
-      className={`group flex items-center space-x-3.5 p-2.5 rounded-xl transition-all duration-200 cursor-pointer border h-[64px] ${
+      className={`group flex h-14 cursor-pointer items-center space-x-3 p-2 rounded-md border transition-colors duration-150 ${
         isActive
-          ? 'bg-brand-red/10 border-brand-red/20 text-brand-red shadow-[0_0_12px_var(--ns-accent-glow-soft)]'
-          : 'bg-zinc-900/12 border-zinc-900/45 hover:bg-zinc-900/55 hover:border-zinc-800/65'
+          ? 'border-brand-red/30 bg-brand-red/5 text-brand-red'
+          : 'border-transparent bg-transparent hover:border-zinc-800/60 hover:bg-zinc-900/45'
       }`}
     >
       {/* Circle Avatar */}

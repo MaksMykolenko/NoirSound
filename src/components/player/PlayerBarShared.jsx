@@ -40,7 +40,7 @@ export function PlayerTrackInfo({
         title={track.title}
         artistName={track.artistName}
         genre={track.genre}
-        className="w-14 h-14 rounded-lg border border-zinc-800 shadow-[0_0_10px_rgba(0,0,0,0.5)] shrink-0 animate-fade-in"
+        className="h-14 w-14 shrink-0 animate-fade-in rounded border border-[var(--ns-border-subtle)]"
         imageClassName="object-cover"
       />
       <div className="min-w-0 flex-1">
@@ -118,7 +118,7 @@ export function PlayerTransportControls({
       <button
         type="button"
         onClick={onTogglePlay}
-        className="w-8 h-8 rounded-full bg-[var(--ns-player-control-bg)] text-[var(--ns-player-control-text)] flex items-center justify-center hover:scale-105 transition-transform cursor-pointer shadow-md focus:outline-none focus:ring-2 focus:ring-brand-red"
+        className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-[var(--ns-player-control-bg)] text-[var(--ns-player-control-text)] shadow-md transition-transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-brand-red"
         title={isPlaying ? 'Pause' : 'Play'}
         aria-label={isPlaying ? 'Pause' : 'Play'}
         data-testid="standard-player-play-button"
@@ -271,7 +271,7 @@ export function DesktopPlayerBarContent({
           className={`p-2 transition-all focus:outline-none ${
             lyricsAvailable
               ? lyricsActive
-                ? 'text-brand-red bg-zinc-900 border border-brand-red/30 rounded-xl'
+                ? 'rounded-md border border-brand-red/30 bg-zinc-900 text-brand-red'
                 : 'text-zinc-500 hover:text-zinc-200 cursor-pointer'
               : 'text-zinc-700 cursor-not-allowed'
           }`}
@@ -290,7 +290,7 @@ export function DesktopPlayerBarContent({
           onClick={onToggleQueue}
           className={`p-2 transition-all cursor-pointer focus:outline-none focus:text-brand-red ${
             isQueueOpen
-              ? 'text-brand-red bg-zinc-900 border border-zinc-800/80 rounded-xl shadow-[0_0_12px_var(--ns-accent-glow-soft)]'
+              ? 'rounded-md border border-[var(--ns-border)] bg-zinc-900 text-brand-red'
               : 'text-zinc-500 hover:text-zinc-200'
           }`}
           title="Open Queue"
@@ -375,7 +375,7 @@ export function MobilePlayerTransportControls({
       <button
         type="button"
         onClick={onTogglePlay}
-        className="w-16 h-16 rounded-full bg-[var(--ns-player-control-bg)] text-[var(--ns-player-control-text)] flex items-center justify-center shadow-lg active:scale-95 transition-transform cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-red"
+        className="flex h-16 w-16 cursor-pointer items-center justify-center rounded-full bg-[var(--ns-player-control-bg)] text-[var(--ns-player-control-text)] shadow-md transition-transform active:scale-95 focus:outline-none focus:ring-2 focus:ring-brand-red"
         aria-label={isPlaying ? 'Pause' : 'Play'}
         data-testid="standard-mobile-player-play-button"
       >

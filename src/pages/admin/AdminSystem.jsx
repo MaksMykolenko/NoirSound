@@ -26,7 +26,7 @@ export default function AdminSystem() {
         </div>
         <div className="mt-4 grid gap-3 sm:grid-cols-3">
           {Object.entries(data?.readiness?.checks || {}).map(([name, status]) => (
-            <div key={name} className="flex items-center justify-between rounded-xl bg-[var(--ns-card-soft)] p-3">
+            <div key={name} className="flex items-center justify-between rounded border border-[var(--ns-border-subtle)] bg-black/10 p-3">
               <span className="text-xs font-semibold">{t(`admin.systemChecks.${name}`, { defaultValue: name })}</span>
               <StatusBadge status={status} />
             </div>
@@ -59,9 +59,9 @@ export default function AdminSystem() {
         {data?.queue?.counts ? (
           <div className="mt-4 grid gap-3 sm:grid-cols-5">
             {Object.entries(data.queue.counts).map(([name, count]) => (
-              <div key={name} className="rounded-xl bg-[var(--ns-card-soft)] p-3 text-center">
-                <div className="text-xl font-black">{count}</div>
-                <div className="mt-1 text-[10px] uppercase text-[var(--ns-text-muted)]">{t(`admin.queueStates.${name}`, { defaultValue: name })}</div>
+              <div key={name} className="rounded border border-[var(--ns-border-subtle)] bg-black/10 p-3 text-center">
+                <div className="font-display text-xl font-bold">{count}</div>
+                <div className="mt-1 font-mono text-[9px] uppercase tracking-wider text-[var(--ns-text-muted)]">{t(`admin.queueStates.${name}`, { defaultValue: name })}</div>
               </div>
             ))}
           </div>

@@ -4,7 +4,6 @@ import { Play, Pause, Heart, MoreHorizontal } from 'lucide-react';
 import { usePlayerStore } from '../../store/playerStore';
 import { formatDuration } from '../../utils/formatTime';
 import FallbackCover from '../ui/FallbackCover';
-import { getLocalizedGenre } from '../../i18n/genreLabels';
 import { useTrackContextMenu } from '../../hooks/useEntityContextMenu';
 
 export default function TrackCard({ track, tracksContext = [] }) {
@@ -54,10 +53,10 @@ export default function TrackCard({ track, tracksContext = [] }) {
       tabIndex={0}
       aria-label={`Open ${track.title} by ${track.artistName}`}
       data-track-id={track.id}
-      className="p-3 ns-card ns-card-interactive cursor-pointer group"
+      className="group cursor-pointer border border-zinc-800/60 bg-zinc-950/35 p-3 transition-colors duration-150 hover:border-zinc-700/70 hover:bg-zinc-900/45 rounded-lg"
     >
       {/* Cover image wrap */}
-      <div className="relative aspect-square rounded-xl overflow-hidden mb-3.5 bg-zinc-950 border border-zinc-900/60 shadow-md">
+      <div className="relative mb-3 aspect-square overflow-hidden rounded-md border border-zinc-800/60 bg-zinc-950">
         <FallbackCover
           src={track.coverUrl}
           title={track.title}
@@ -69,13 +68,13 @@ export default function TrackCard({ track, tracksContext = [] }) {
         />
 
         {/* Hover/Active Play Overlay */}
-        <div className={`absolute inset-0 bg-black/60 flex items-center justify-center transition-opacity duration-300 ${
+        <div className={`absolute inset-0 bg-black/55 flex items-center justify-center transition-opacity duration-150 ${
           isCurrent ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
         }`}>
           {canPlay ? (
           <button
             onClick={handlePlayClick}
-            className="w-12 h-12 bg-brand-red text-[var(--ns-on-accent)] rounded-full flex items-center justify-center shadow-[0_0_18px_var(--ns-accent-glow)] transform scale-90 group-hover:scale-100 transition-all duration-200 cursor-pointer"
+            className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-brand-red text-[var(--ns-on-accent)] transition-colors duration-150 hover:bg-rose-700"
             aria-label={isPlayingThis ? `Pause ${track.title}` : `Play ${track.title}`}
           >
             {isPlayingThis ? (
@@ -85,18 +84,12 @@ export default function TrackCard({ track, tracksContext = [] }) {
             )}
           </button>
           ) : (
-            <span className="px-3 py-1.5 rounded-full border border-zinc-600/70 bg-zinc-950/85 text-[10px] font-bold uppercase tracking-wider text-zinc-300">
+            <span className="rounded border border-zinc-600/70 bg-zinc-950/85 px-3 py-1.5 font-mono text-[9px] font-medium uppercase tracking-wider text-zinc-300">
               Audio unavailable
             </span>
           )}
         </div>
 
-        {/* Top small tags */}
-        <div className="absolute top-2 left-2 right-2 flex items-center space-x-1">
-          <span className="max-w-full truncate text-[11px] font-bold uppercase tracking-wider px-2 py-1 rounded-full bg-zinc-950/90 border border-zinc-800/70 text-rose-300 backdrop-blur-sm select-none">
-            {getLocalizedGenre(track.genre)}
-          </span>
-        </div>
         <button
           type="button"
           onClick={openFromButton}
@@ -106,29 +99,29 @@ export default function TrackCard({ track, tracksContext = [] }) {
         >
           <MoreHorizontal size={15} />
         </button>
-
-        {/* Duration Overlay Bottom Right */}
-        <div className="absolute bottom-2 right-2 text-[11.5px] font-bold font-mono px-1.5 py-0.5 rounded bg-zinc-950/75 border border-zinc-900/40 text-zinc-200 backdrop-blur-sm select-none">
-          {formatDuration(track.duration)}
-        </div>
       </div>
 
       {/* Track info details */}
       <div className="flex justify-between items-start px-1">
         <div className="min-w-0 flex-1">
-          <h4 className={`text-[15px] font-bold truncate ${
+          <h4 className={`truncate text-[13px] font-semibold ${
             isCurrent ? 'text-brand-red' : 'text-zinc-200 group-hover:text-zinc-100'
           }`}>
             {track.title}
           </h4>
-          <span
-            onClick={(e) => {
-              e.stopPropagation();
-              navigate(`/artist/${track.artistId}`);
-            }}
-            className="text-[13px] text-zinc-400 hover:text-zinc-200 transition-colors truncate block mt-0.5"
-          >
-            {track.artistName}
+          <span className="mt-0.5 flex items-baseline justify-between gap-2">
+            <span
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate(`/artist/${track.artistId}`);
+              }}
+              className="min-w-0 truncate font-mono text-[10px] text-zinc-500 transition-colors hover:text-zinc-300"
+            >
+              {track.artistName}
+            </span>
+            <span className="shrink-0 font-mono text-[9px] text-zinc-600 select-none">
+              {formatDuration(track.duration)}
+            </span>
           </span>
         </div>
 

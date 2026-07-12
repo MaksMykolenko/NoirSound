@@ -299,36 +299,36 @@ export default function BatchUploadPage() {
   if (!authHydrated) return <LoadingState type="list" count={4} />;
   if (!user) {
     return (
-      <div className="max-w-lg mx-auto ns-state-panel text-center space-y-4">
+      <div className="mx-auto max-w-lg space-y-4 rounded-md border border-zinc-800 bg-surface-noir/50 p-6 text-center">
         <AlertCircle className="mx-auto text-amber-300" />
-        <h1 className="text-xl font-bold text-zinc-100">{t('batchUpload.signInRequired')}</h1>
-        <button type="button" className="ns-button-primary px-5" onClick={() => setAuthModalOpen(true)}>{t('header.signIn')}</button>
+        <h1 className="font-display text-xl font-bold text-zinc-100">{t('batchUpload.signInRequired')}</h1>
+        <button type="button" className="ns-button-primary !rounded px-5" onClick={() => setAuthModalOpen(true)}>{t('header.signIn')}</button>
       </div>
     );
   }
   if (!['ARTIST', 'ADMIN'].includes(user.role) || user.canUploadTracks === false) {
     return (
-      <div className="max-w-lg mx-auto ns-state-panel text-center space-y-3">
+      <div className="mx-auto max-w-lg space-y-3 rounded-md border border-zinc-800 bg-surface-noir/50 p-6 text-center">
         <AlertCircle className="mx-auto text-amber-300" />
-        <h1 className="text-xl font-bold text-zinc-100">{t('batchUpload.creatorRequired')}</h1>
+        <h1 className="font-display text-xl font-bold text-zinc-100">{t('batchUpload.creatorRequired')}</h1>
         <p className="text-sm text-zinc-400">{t('batchUpload.creatorRequiredHelp')}</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-7 animate-fade-in pb-20">
-      <div className="flex flex-wrap items-end justify-between gap-4">
+    <div className="space-y-6 pb-20 animate-fade-in [&_.ns-button-primary]:!rounded [&_.ns-button-secondary]:!rounded [&_.ns-field]:!rounded [&_.ns-icon-button]:!rounded">
+      <div className="flex flex-wrap items-end justify-between gap-4 border-b border-zinc-800/80 pb-5">
         <div>
-          <Link to="/upload" className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-zinc-500 hover:text-zinc-200">
+          <Link to="/upload" className="inline-flex items-center gap-2 font-mono text-[10px] font-medium uppercase tracking-wider text-zinc-500 hover:text-zinc-200">
             <ArrowLeft size={14} /> {t('batchUpload.singleTrack')}
           </Link>
-          <span className="ns-eyebrow text-brand-red block mt-4">{t('batchUpload.multiUpload')}</span>
-          <h1 className="ns-page-title mt-2">{t('batchUpload.title')}</h1>
-          <p className="ns-page-lede mt-2 max-w-2xl">{t('batchUpload.subtitle')}</p>
+          <span className="mt-4 block font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-brand-red">{t('batchUpload.multiUpload')}</span>
+          <h1 className="mt-2 font-display text-2xl font-bold tracking-tight text-zinc-100">{t('batchUpload.title')}</h1>
+          <p className="mt-2 max-w-2xl text-sm text-zinc-500">{t('batchUpload.subtitle')}</p>
         </div>
         {batch && (
-          <div className="flex gap-2">
+          <div className="flex flex-wrap justify-end gap-2">
             <input
               ref={reselectRef}
               type="file"
@@ -337,11 +337,11 @@ export default function BatchUploadPage() {
               className="sr-only"
               onChange={(event) => attachReselectedFiles(event.target.files)}
             />
-            <button type="button" className="ns-button-secondary px-4 inline-flex items-center gap-2" onClick={() => reselectRef.current?.click()}>
+            <button type="button" className="ns-button-secondary inline-flex !rounded items-center gap-2 px-4" onClick={() => reselectRef.current?.click()}>
               <RotateCcw size={14} /> {t('batchUpload.reselectFiles')}
             </button>
             {!batch.items.some((item) => item.status === 'PUBLISHED') && (
-              <button type="button" className="ns-button-secondary px-4 text-rose-300 inline-flex items-center gap-2" disabled={busy === 'cancel'} onClick={cancel}>
+              <button type="button" className="ns-button-secondary inline-flex !rounded items-center gap-2 px-4 text-rose-300" disabled={busy === 'cancel'} onClick={cancel}>
                 <Trash2 size={14} /> {t('batchUpload.cancelBatch')}
               </button>
             )}
@@ -349,7 +349,7 @@ export default function BatchUploadPage() {
         )}
       </div>
 
-      <nav aria-label={t('batchUpload.steps')} className="ns-card p-2 overflow-x-auto ns-tabs-scroll">
+      <nav aria-label={t('batchUpload.steps')} className="ns-tabs-scroll overflow-x-auto rounded-md border border-zinc-800 bg-surface-noir/45 p-1">
         <ol className="flex min-w-max">
           {STEP_KEYS.map((key, index) => (
             <li key={key}>
@@ -357,7 +357,7 @@ export default function BatchUploadPage() {
                 type="button"
                 disabled={!batch && index > 0}
                 onClick={() => setStep(index)}
-                className={`min-h-11 px-3 sm:px-4 rounded-xl text-xs font-bold flex items-center gap-2 ${
+                className={`flex min-h-11 items-center gap-2 rounded px-3 font-mono text-[10px] font-medium uppercase tracking-wide sm:px-4 ${
                   step === index ? 'bg-brand-red text-white' : index < step ? 'text-emerald-300' : 'text-zinc-500'
                 } disabled:opacity-35`}
               >
@@ -385,9 +385,9 @@ export default function BatchUploadPage() {
               <h2 className="ns-eyebrow">{t('batchUpload.resumeDraft')}</h2>
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {drafts.filter((draft) => draft.status !== 'PUBLISHED').map((draft) => (
-                  <button key={draft.id} type="button" className="ns-card p-4 text-left hover:border-brand-red/40" onClick={() => setSearchParams({ batch: draft.id })}>
-                    <p className="font-bold text-zinc-200 truncate">{draft.playlistTitle || `${draft.itemCount} ${t('batchUpload.trackDrafts')}`}</p>
-                    <p className="text-xs text-zinc-500 mt-1">{draft.status} · {draft.readyCount} {t('batchUpload.ready')} · {draft.failedCount} {t('batchUpload.failed')}</p>
+                  <button key={draft.id} type="button" className="rounded-md border border-zinc-800 bg-surface-noir/45 p-4 text-left hover:border-brand-red/40" onClick={() => setSearchParams({ batch: draft.id })}>
+                    <p className="truncate font-semibold text-zinc-200">{draft.playlistTitle || `${draft.itemCount} ${t('batchUpload.trackDrafts')}`}</p>
+                    <p className="mt-1 font-mono text-[10px] text-zinc-500">{draft.status} · {draft.readyCount} {t('batchUpload.ready')} · {draft.failedCount} {t('batchUpload.failed')}</p>
                   </button>
                 ))}
               </div>
@@ -402,7 +402,7 @@ export default function BatchUploadPage() {
             {(step === 1 || step === 2) && (
               <section className="space-y-4">
                 <div>
-                  <h2 className="text-xl font-bold text-zinc-100">{step === 1 ? t('batchUpload.sortTracks') : t('batchUpload.editMetadata')}</h2>
+                  <h2 className="text-lg font-semibold text-zinc-100">{step === 1 ? t('batchUpload.sortTracks') : t('batchUpload.editMetadata')}</h2>
                   <p className="text-sm text-zinc-500 mt-1">{step === 1 ? t('batchUpload.sortHelp') : t('batchUpload.editHelp')}</p>
                 </div>
                 <BatchItemList
@@ -414,7 +414,7 @@ export default function BatchUploadPage() {
                   progress={uploadProgress}
                 />
                 <div className="flex justify-end">
-                  <button type="button" className="ns-button-primary px-5" onClick={() => setStep(step + 1)}>
+                  <button type="button" className="ns-button-primary !rounded px-5" onClick={() => setStep(step + 1)}>
                     {t('actions.continue')}
                   </button>
                 </div>
@@ -434,7 +434,7 @@ export default function BatchUploadPage() {
             {step === 4 && (
               <section className="space-y-5">
                 <div>
-                  <h2 className="text-xl font-bold text-zinc-100">{t('batchUpload.review')}</h2>
+                  <h2 className="text-lg font-semibold text-zinc-100">{t('batchUpload.review')}</h2>
                   <p className="text-sm text-zinc-500 mt-1">{t('batchUpload.reviewHelp')}</p>
                 </div>
                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -446,11 +446,11 @@ export default function BatchUploadPage() {
                     [counts.lyrics, t('batchUpload.lyricsAdded')],
                     [batch.missingFields.length, t('batchUpload.blockingErrors')],
                   ].map(([value, label]) => (
-                    <div key={label} className="ns-card p-4"><p className="text-2xl font-black text-zinc-100">{value}</p><p className="text-xs text-zinc-500 mt-1">{label}</p></div>
+                    <div key={label} className="rounded border border-zinc-800 bg-surface-noir/45 p-4"><p className="font-display text-2xl font-bold text-zinc-100">{value}</p><p className="mt-1 font-mono text-[9px] uppercase tracking-wide text-zinc-500">{label}</p></div>
                   ))}
                 </div>
                 {batch.missingFields.length > 0 ? (
-                  <div role="alert" className="rounded-2xl border border-amber-400/25 bg-amber-400/10 p-4 text-sm text-amber-200">
+                  <div role="alert" className="rounded border border-amber-400/25 bg-amber-400/10 p-4 text-sm text-amber-200">
                     <p className="font-bold">{t('batchUpload.fixBlockingErrors')}</p>
                     <ul className="mt-2 space-y-1 list-disc pl-5">
                       {batch.missingFields.map((missing, index) => (
@@ -461,12 +461,12 @@ export default function BatchUploadPage() {
                     </ul>
                   </div>
                 ) : (
-                  <div className="rounded-2xl border border-emerald-500/25 bg-emerald-500/10 p-4 text-sm text-emerald-200 flex items-center gap-3">
+                  <div className="flex items-center gap-3 rounded border border-emerald-500/25 bg-emerald-500/10 p-4 text-sm text-emerald-200">
                     <CheckCircle2 size={20} /> {t('batchUpload.readyToUpload')}
                   </div>
                 )}
                 <BatchItemList items={batch.items} onOpen={setSelectedItem} onTarget={changeTarget} onReorder={reorder} onRetry={retry} progress={uploadProgress} />
-                <button type="button" className="w-full ns-button-primary px-5 inline-flex items-center justify-center gap-2" disabled={busy === 'upload' || batch.missingFields.length > 0} onClick={startUpload}>
+                <button type="button" className="ns-button-primary inline-flex w-full !rounded items-center justify-center gap-2 px-5" disabled={busy === 'upload' || batch.missingFields.length > 0} onClick={startUpload}>
                   <Send size={16} /> {busy === 'upload' ? t('batchUpload.uploading') : t('batchUpload.startUpload')}
                 </button>
               </section>
@@ -475,7 +475,7 @@ export default function BatchUploadPage() {
             {step === 5 && (
               <section className="space-y-5">
                 <div>
-                  <h2 className="text-xl font-bold text-zinc-100">{t('batchUpload.uploadPublish')}</h2>
+                  <h2 className="text-lg font-semibold text-zinc-100">{t('batchUpload.uploadPublish')}</h2>
                   <p className="text-sm text-zinc-500 mt-1">{t('batchUpload.processingHelp')}</p>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -485,26 +485,26 @@ export default function BatchUploadPage() {
                     [counts.failed, t('batchUpload.failed'), AlertCircle],
                     [counts.published, t('batchUpload.publishedLabel'), Send],
                   ].map(([value, label, Icon]) => (
-                    <div key={label} className="ns-card p-4">
+                    <div key={label} className="rounded border border-zinc-800 bg-surface-noir/45 p-4">
                       <Icon size={17} className="text-brand-red mb-3" />
-                      <p className="text-2xl font-black text-zinc-100">{value}</p>
-                      <p className="text-xs text-zinc-500">{label}</p>
+                      <p className="font-display text-2xl font-bold text-zinc-100">{value}</p>
+                      <p className="font-mono text-[9px] uppercase tracking-wide text-zinc-500">{label}</p>
                     </div>
                   ))}
                 </div>
                 <BatchItemList items={batch.items} onOpen={setSelectedItem} onTarget={changeTarget} onReorder={reorder} onRetry={retry} progress={uploadProgress} />
                 {batch.status !== 'PUBLISHED' && (
                   <div className="grid sm:grid-cols-2 gap-3">
-                    <button type="button" className="ns-button-primary px-5" disabled={!batch.canPublish || busy.startsWith('publish')} onClick={() => publish(false)}>
+                    <button type="button" className="ns-button-primary !rounded px-5" disabled={!batch.canPublish || busy.startsWith('publish')} onClick={() => publish(false)}>
                       {busy === 'publish' ? t('batchUpload.publishing') : t('batchUpload.publishReady')}
                     </button>
-                    <button type="button" className="ns-button-secondary px-5" disabled={!batch.canPublishPartial || counts.failed === 0 || busy.startsWith('publish')} onClick={() => publish(true)}>
+                    <button type="button" className="ns-button-secondary !rounded px-5" disabled={!batch.canPublishPartial || counts.failed === 0 || busy.startsWith('publish')} onClick={() => publish(true)}>
                       {busy === 'publish-partial' ? t('batchUpload.publishing') : t('batchUpload.partialPublish')}
                     </button>
                   </div>
                 )}
                 {batch.status === 'PUBLISHED' && (
-                  <div className="rounded-2xl border border-emerald-500/25 bg-emerald-500/10 p-5 text-emerald-200">
+                  <div className="rounded border border-emerald-500/25 bg-emerald-500/10 p-5 text-emerald-200">
                     <CheckCircle2 className="mb-3" />
                     <p className="font-bold">{t('batchUpload.publishComplete')}</p>
                     {batch.playlist.id && <Link className="inline-block mt-3 underline" to={`/playlist/${batch.playlist.id}`}>{t('batchUpload.openPlaylist')}</Link>}
@@ -515,10 +515,10 @@ export default function BatchUploadPage() {
           </main>
 
           <aside className="space-y-4 xl:sticky xl:top-24 self-start">
-            <div className="ns-card p-4">
+            <div className="rounded-md border border-zinc-800 bg-surface-noir/45 p-4">
               <div className="flex items-center justify-between gap-2">
-                <h2 className="font-bold text-zinc-100">{t('batchUpload.batchStatus')}</h2>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-brand-red">{batch.status}</span>
+                <h2 className="font-semibold text-zinc-100">{t('batchUpload.batchStatus')}</h2>
+                <span className="font-mono text-[9px] font-medium uppercase tracking-wider text-brand-red">{batch.status}</span>
               </div>
               <div className="mt-4 space-y-2 text-xs text-zinc-400">
                 <p className="flex justify-between"><span>{t('batchUpload.singles')}</span><strong className="text-zinc-200">{counts.singles}</strong></p>
@@ -527,16 +527,16 @@ export default function BatchUploadPage() {
                 <p className="flex justify-between"><span>{t('batchUpload.failed')}</span><strong className="text-rose-300">{counts.failed}</strong></p>
               </div>
             </div>
-            <div className="ns-card p-3 space-y-1 max-h-[28rem] overflow-y-auto">
+            <div className="max-h-[28rem] space-y-1 overflow-y-auto rounded-md border border-zinc-800 bg-surface-noir/45 p-3">
               {batch.items.map((item) => (
-                <button key={item.id} type="button" onClick={() => setSelectedItem(item)} className="w-full rounded-xl p-2.5 flex items-center gap-3 text-left hover:bg-zinc-900">
+                <button key={item.id} type="button" onClick={() => setSelectedItem(item)} className="flex w-full items-center gap-3 rounded p-2.5 text-left hover:bg-zinc-900">
                   {item.status === 'PROCESSING' ? <LoaderCircle size={15} className="text-amber-300 animate-spin" /> : item.status === 'READY' || item.status === 'PUBLISHED' ? <CheckCircle2 size={15} className="text-emerald-400" /> : item.status === 'FAILED' ? <AlertCircle size={15} className="text-rose-400" /> : <FileAudio size={15} className="text-zinc-500" />}
-                  <span className="min-w-0 flex-1"><span className="block text-xs font-bold text-zinc-300 truncate">{item.title}</span><span className="block text-[10px] text-zinc-600">{item.target}</span></span>
+                  <span className="min-w-0 flex-1"><span className="block truncate text-xs font-semibold text-zinc-300">{item.title}</span><span className="block font-mono text-[9px] text-zinc-600">{item.target}</span></span>
                   {item.missingFields?.length > 0 && <span className="w-2 h-2 rounded-full bg-amber-400" />}
                 </button>
               ))}
             </div>
-            <button type="button" className="w-full ns-button-secondary px-4 inline-flex items-center justify-center gap-2" onClick={() => reloadBatch()}>
+            <button type="button" className="ns-button-secondary inline-flex w-full !rounded items-center justify-center gap-2 px-4" onClick={() => reloadBatch()}>
               <Clock3 size={14} /> {t('batchUpload.refreshStatus')}
             </button>
           </aside>

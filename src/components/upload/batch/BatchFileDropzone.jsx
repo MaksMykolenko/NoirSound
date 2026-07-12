@@ -30,8 +30,8 @@ export default function BatchFileDropzone({
   return (
     <section className="space-y-5" data-testid="batch-file-stage">
       <div
-        className={`min-h-64 ns-card-hero border-2 border-dashed p-7 flex flex-col items-center justify-center text-center transition-colors ${
-          dragging ? 'border-brand-red bg-brand-red/10' : 'border-zinc-700 bg-zinc-950/40 hover:border-zinc-600'
+        className={`flex min-h-64 flex-col items-center justify-center rounded-md border border-dashed p-7 text-center transition-colors ${
+          dragging ? 'border-brand-red bg-brand-red/10' : 'border-zinc-700 bg-surface-noir/40 hover:border-zinc-600'
         }`}
         onDragEnter={(event) => { event.preventDefault(); setDragging(true); }}
         onDragOver={(event) => event.preventDefault()}
@@ -51,14 +51,14 @@ export default function BatchFileDropzone({
           aria-label={t('batchUpload.selectFiles')}
           onChange={(event) => accept(event.target.files)}
         />
-        <div className="w-16 h-16 rounded-2xl bg-brand-red/10 border border-brand-red/30 text-brand-red grid place-items-center mb-5">
+        <div className="mb-5 grid h-14 w-14 place-items-center rounded-md border border-brand-red/30 bg-brand-red/10 text-brand-red">
           <UploadCloud size={30} />
         </div>
         <h2 className="text-xl font-bold text-zinc-100">{t('batchUpload.selectFiles')}</h2>
         <p className="text-sm text-zinc-400 mt-2 max-w-md">{t('batchUpload.dropHelp')}</p>
         <button
           type="button"
-          className="ns-button-primary px-5 mt-5 inline-flex items-center gap-2"
+          className="ns-button-primary mt-5 inline-flex !rounded items-center gap-2 px-5"
           onClick={() => inputRef.current?.click()}
         >
           <FolderPlus size={16} />
@@ -68,21 +68,21 @@ export default function BatchFileDropzone({
       </div>
 
       {errors.length > 0 && (
-        <div role="alert" className="rounded-xl border border-rose-500/25 bg-rose-500/10 p-3 text-sm text-rose-300">
+        <div role="alert" className="rounded border border-rose-500/25 bg-rose-500/10 p-3 text-sm text-rose-300">
           {errors.map((error) => <p key={error}>{error}</p>)}
         </div>
       )}
 
       {stagedFiles.length > 0 && (
-        <div className="ns-card p-4 sm:p-5 space-y-4">
+        <div className="space-y-4 rounded-md border border-zinc-800 bg-surface-noir/50 p-4 sm:p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h3 className="font-bold text-zinc-100">{stagedFiles.length} / {BATCH_MAX_FILES} {t('batchUpload.filesSelected')}</h3>
-              <p className="text-xs text-zinc-500">{formatBytes(totalBytes)} / 500 MB</p>
+              <h3 className="font-semibold text-zinc-100">{stagedFiles.length} / {BATCH_MAX_FILES} {t('batchUpload.filesSelected')}</h3>
+              <p className="font-mono text-[10px] text-zinc-500">{formatBytes(totalBytes)} / 500 MB</p>
             </div>
             <label className="text-xs text-zinc-400">
-              <span className="block mb-1 font-bold uppercase tracking-wider">{t('batchUpload.batchMode')}</span>
-              <select className="ns-field px-3 min-w-44" value={mode} onChange={(event) => onModeChange(event.target.value)}>
+              <span className="mb-1 block font-mono text-[9px] font-medium uppercase tracking-wider">{t('batchUpload.batchMode')}</span>
+              <select className="ns-field min-w-44 !rounded px-3" value={mode} onChange={(event) => onModeChange(event.target.value)}>
                 <option value="MIXED">{t('batchUpload.mixed')}</option>
                 <option value="SINGLES_ONLY">{t('batchUpload.singlesOnly')}</option>
                 <option value="PLAYLIST">{t('batchUpload.playlistOnly')}</option>
@@ -91,22 +91,22 @@ export default function BatchFileDropzone({
           </div>
           <div className="space-y-2">
             {stagedFiles.map((entry) => (
-              <div key={entry.clientId} className="flex items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-950/50 p-3">
+              <div key={entry.clientId} className="flex items-center gap-3 rounded border border-zinc-800 bg-zinc-950/50 p-3">
                 <FileAudio size={18} className="text-brand-red shrink-0" />
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold text-zinc-200 truncate">{entry.file.name}</p>
-                  <p className="text-[11px] text-zinc-500">
+                  <p className="font-mono text-[10px] text-zinc-500">
                     {formatBytes(entry.file.size)} · {entry.file.type || 'Unknown MIME'}
                     {duplicateNames.has(entry.file.name) && <span className="text-amber-300"> · {t('batchUpload.duplicateWarning')}</span>}
                   </p>
                 </div>
-                <button type="button" className="ns-icon-button" aria-label={`${t('actions.remove')} ${entry.file.name}`} onClick={() => onRemove(entry.clientId)}>
+                <button type="button" className="ns-icon-button !rounded" aria-label={`${t('actions.remove')} ${entry.file.name}`} onClick={() => onRemove(entry.clientId)}>
                   <Trash2 size={16} />
                 </button>
               </div>
             ))}
           </div>
-          <button type="button" className="w-full ns-button-primary px-5" disabled={creating} onClick={onCreate}>
+          <button type="button" className="ns-button-primary w-full !rounded px-5" disabled={creating} onClick={onCreate}>
             {creating ? t('batchUpload.creatingDraft') : t('batchUpload.createDraft')}
           </button>
         </div>

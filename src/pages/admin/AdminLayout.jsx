@@ -29,9 +29,9 @@ export default function AdminLayout() {
     return (
       <div className="mx-auto max-w-lg py-16 text-center">
         <ShieldAlert className="mx-auto h-10 w-10 text-[var(--ns-accent)]" />
-        <h1 className="mt-4 text-xl font-black">{t('admin.signInRequired')}</h1>
+        <h1 className="mt-4 font-display text-xl font-bold">{t('admin.signInRequired')}</h1>
         <p className="mt-2 text-sm text-[var(--ns-text-muted)]">{t('admin.signInRequiredDescription')}</p>
-        <button type="button" onClick={() => setAuthModalOpen(true)} className="ns-button-primary mt-5 rounded-xl px-5 py-2.5 text-sm">
+        <button type="button" onClick={() => setAuthModalOpen(true)} className="ns-button-primary mt-5 !rounded px-5 py-2.5 text-sm">
           {t('header.signIn')}
         </button>
       </div>
@@ -41,7 +41,7 @@ export default function AdminLayout() {
     return (
       <div className="mx-auto max-w-lg py-16 text-center" data-testid="admin-access-denied">
         <ShieldAlert className="mx-auto h-10 w-10 text-[var(--ns-danger)]" />
-        <h1 className="mt-4 text-xl font-black">{t('admin.accessDenied')}</h1>
+        <h1 className="mt-4 font-display text-xl font-bold">{t('admin.accessDenied')}</h1>
         <p className="mt-2 text-sm text-[var(--ns-text-muted)]">{t('admin.adminOnly')}</p>
       </div>
     );
@@ -62,19 +62,19 @@ export default function AdminLayout() {
   ];
 
   return (
-    <div className="flex min-h-[65vh] flex-col gap-5 xl:flex-row">
+    <div className="flex min-h-[65vh] flex-col gap-4 [&_.ns-button-primary]:!rounded [&_.ns-button-secondary]:!rounded [&_.ns-field]:!rounded [&_.ns-icon-button]:!rounded xl:flex-row">
       <aside className="xl:w-56 xl:shrink-0">
-        <div className="sticky top-0 rounded-2xl border border-[var(--ns-border-subtle)] bg-[var(--ns-card)] p-3">
-          <div className="mb-3 flex items-center gap-2 px-2 py-1">
+        <div className="sticky top-0 rounded-md border border-[var(--ns-border-subtle)] bg-[color-mix(in_srgb,var(--ns-surface)_78%,transparent)] p-2">
+          <div className="mb-2 flex items-center gap-2 border-b border-[var(--ns-border-subtle)] px-2 py-2">
             <ShieldAlert className="h-5 w-5 text-[var(--ns-accent)]" />
-            <span className="text-sm font-black">{t('admin.admin')}</span>
+            <span className="font-mono text-[10px] font-medium uppercase tracking-[0.14em]">{t('admin.admin')}</span>
           </div>
           <nav className="flex gap-1 overflow-x-auto pb-1 xl:flex-col xl:overflow-visible">
             {links.map(([path, key, Icon]) => (
               <NavLink
                 key={path}
                 to={`/admin/${path}`}
-                className={({ isActive }) => `flex min-h-10 shrink-0 items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold transition-colors ${
+                className={({ isActive }) => `flex min-h-10 shrink-0 items-center gap-2 rounded px-3 py-2 text-xs font-medium transition-colors ${
                   isActive
                     ? 'bg-[var(--ns-accent-soft)] text-[var(--ns-accent-text)]'
                     : 'text-[var(--ns-text-muted)] hover:bg-[var(--ns-hover-bg)] hover:text-[var(--ns-text)]'
@@ -86,7 +86,7 @@ export default function AdminLayout() {
           </nav>
         </div>
       </aside>
-      <div className="min-w-0 flex-1 space-y-5">
+      <div className="min-w-0 flex-1 space-y-4">
         <Outlet />
       </div>
     </div>

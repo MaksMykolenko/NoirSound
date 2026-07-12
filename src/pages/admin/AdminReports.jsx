@@ -71,7 +71,7 @@ export default function AdminReports() {
                 <td className="px-4 py-3"><StatusBadge status={report.status} /></td>
                 <td className="px-4 py-3 text-xs text-[var(--ns-text-muted)]">{formatAdminDate(report.createdAt, i18n.language)}</td>
                 <td className="px-4 py-3">
-                  <Link to={`/admin/reports/${report.id}`} className="ns-button-secondary inline-flex items-center gap-1 rounded-lg px-3 py-2 text-xs">
+                  <Link to={`/admin/reports/${report.id}`} className="ns-button-secondary inline-flex items-center gap-1 rounded px-3 py-2 text-xs">
                     <Eye className="h-3.5 w-3.5" /> {t('admin.review')}
                   </Link>
                 </td>

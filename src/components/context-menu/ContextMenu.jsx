@@ -137,7 +137,7 @@ export default function ContextMenu({
         <button
           type="button"
           aria-label={t('contextMenu.closeActions')}
-          className="fixed inset-0 z-[225] bg-black/55 backdrop-blur-[2px]"
+          className="fixed inset-0 z-[var(--ns-z-context-overlay)] bg-black/55"
           onClick={closeAndRestoreFocus}
         />
       )}
@@ -146,10 +146,10 @@ export default function ContextMenu({
         role="menu"
         aria-label={t('contextMenu.actions')}
         onKeyDown={handleKeyDown}
-        className={`fixed z-[230] overflow-hidden border border-zinc-700/80 bg-zinc-950/98 shadow-[0_22px_65px_rgba(0,0,0,.68)] backdrop-blur-xl ${
+        className={`fixed z-[var(--ns-z-context-menu)] overflow-hidden border border-[var(--ns-border)] bg-[var(--ns-card-solid)] shadow-2xl ${
           isMobile
-            ? 'inset-x-2 bottom-2 max-h-[72vh] overflow-y-auto rounded-3xl p-2 pb-[max(.5rem,env(safe-area-inset-bottom))]'
-            : 'w-64 rounded-2xl p-1.5'
+            ? 'inset-x-0 bottom-0 max-h-[72vh] overflow-y-auto rounded-t-lg p-2 pb-[max(.5rem,env(safe-area-inset-bottom))]'
+            : 'w-64 rounded-lg p-1.5'
         }`}
         style={isMobile ? undefined : { left: position.x, top: position.y }}
       >
@@ -171,7 +171,7 @@ export default function ContextMenu({
               aria-disabled={item.disabled || undefined}
               onFocus={() => setActiveIndex(index)}
               onClick={() => runItem(item)}
-              className={`flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-semibold transition-colors focus:outline-none focus:ring-1 focus:ring-brand-red/70 ${
+              className={`flex min-h-11 w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-medium transition-colors focus:outline-none focus:ring-1 focus:ring-brand-red/70 ${
                 item.danger
                   ? 'text-rose-300 hover:bg-rose-500/10 focus:bg-rose-500/10'
                   : 'text-zinc-200 hover:bg-zinc-800/80 focus:bg-zinc-800/80'

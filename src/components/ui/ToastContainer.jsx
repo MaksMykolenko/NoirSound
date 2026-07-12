@@ -6,11 +6,11 @@ export default function ToastContainer() {
   const { toasts, removeToast } = useToastStore();
 
   return (
-    <div className="fixed bottom-36 right-3 left-3 sm:left-auto z-[100] flex flex-col space-y-2 pointer-events-none sm:bottom-6 sm:right-6" aria-live="polite" aria-atomic="true">
+    <div className="pointer-events-none fixed bottom-36 left-3 right-3 z-[var(--ns-z-toast)] flex flex-col space-y-2 sm:bottom-6 sm:left-auto sm:right-6" aria-live="polite" aria-atomic="true">
       {toasts.map((toast) => (
         <div
           key={toast.id}
-          className="pointer-events-auto w-full sm:w-[340px] flex items-start space-x-3 bg-zinc-950 border border-zinc-800 rounded-2xl p-4 shadow-[0_8px_30px_rgba(0,0,0,0.8)] glass-panel animate-fade-in"
+          className="pointer-events-auto flex w-full animate-fade-in items-start gap-3 rounded-lg border border-[var(--ns-border)] bg-[var(--ns-card-solid)] p-4 shadow-2xl sm:w-[340px]"
           role={toast.type === 'error' ? 'alert' : 'status'}
         >
           <div className="shrink-0 mt-0.5">
@@ -19,7 +19,7 @@ export default function ToastContainer() {
             {toast.type === 'info' && <Info size={18} className="text-zinc-400" />}
           </div>
           <div className="flex-1">
-            <p className="text-[13px] font-medium text-zinc-200">{toast.message}</p>
+            <p className="text-xs font-medium text-zinc-200">{toast.message}</p>
           </div>
           <button
             onClick={() => removeToast(toast.id)}

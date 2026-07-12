@@ -23,16 +23,16 @@ export default function ProductFeatures() {
         {FEATURE_DEFINITIONS.map(({ key, Icon }) => (
           <article
             key={key}
-            className="group relative overflow-hidden p-5 ns-card ns-card-interactive min-h-44"
+            className="group relative min-h-36 overflow-hidden rounded-lg border border-zinc-800/60 bg-zinc-950/35 p-4 transition-colors hover:border-zinc-700/70 hover:bg-zinc-900/40"
           >
             <div className="relative">
-              <span className="w-11 h-11 rounded-xl bg-zinc-950 border border-zinc-800 text-brand-red flex items-center justify-center mb-5 group-hover:border-brand-red/30 group-hover:shadow-[0_0_20px_var(--ns-accent-glow-soft)] transition-all">
+              <span className="mb-4 flex h-9 w-9 items-center justify-center rounded border border-zinc-800 bg-zinc-950 text-brand-red transition-colors group-hover:border-brand-red/30">
                 <Icon size={20} aria-hidden="true" />
               </span>
-              <h3 className="text-[15px] font-extrabold text-zinc-100">
+              <h3 className="text-[13px] font-semibold text-zinc-100">
                 {t(`home.${key}Title`)}
               </h3>
-              <p className="mt-2 text-sm text-zinc-400 leading-relaxed">
+              <p className="mt-2 text-xs leading-relaxed text-zinc-500">
                 {t(`home.${key}Desc`)}
               </p>
             </div>

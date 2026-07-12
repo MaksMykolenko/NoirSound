@@ -34,7 +34,7 @@ export default function ThemeSelector({ compact = false, className = '' }) {
   if (compact) {
     return (
       <label
-        className={`flex items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900/65 px-2.5 py-2 ${className}`}
+        className={`flex items-center gap-2 rounded-md border border-[var(--ns-border-subtle)] bg-zinc-900/65 px-2.5 py-2 ${className}`}
       >
         <Palette size={14} className="text-brand-red shrink-0" aria-hidden="true" />
         <span className="sr-only">{t('settings.theme')}</span>
@@ -58,11 +58,11 @@ export default function ThemeSelector({ compact = false, className = '' }) {
   return (
     <section className={className} aria-labelledby="theme-selector-title">
       <div className="flex items-start gap-3">
-        <span className="w-10 h-10 rounded-xl bg-brand-red/10 border border-brand-red/20 text-brand-red flex items-center justify-center shrink-0">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-brand-red/20 bg-brand-red/10 text-brand-red">
           <Palette size={18} aria-hidden="true" />
         </span>
         <div>
-          <h2 id="theme-selector-title" className="text-sm font-extrabold text-zinc-100">
+          <h2 id="theme-selector-title" className="text-sm font-semibold text-zinc-100">
             {t('settings.appearance')}
           </h2>
           <p className="mt-1 text-xs leading-relaxed text-zinc-500">
@@ -91,28 +91,28 @@ export default function ThemeSelector({ compact = false, className = '' }) {
               data-testid={`theme-option-${themeId}`}
               data-theme-id={themeId}
               onClick={() => setTheme(themeId)}
-              className={`relative min-h-28 rounded-2xl border p-4 text-left transition-all cursor-pointer ${
+              className={`relative min-h-28 cursor-pointer rounded-lg border p-4 text-left transition-colors ${
                 selected
-                  ? 'border-brand-red bg-brand-red/8 shadow-[0_0_0_1px_var(--ns-accent),0_12px_30px_var(--ns-accent-glow-soft)]'
+                  ? 'border-brand-red/60 bg-brand-red/8'
                   : 'border-zinc-800 bg-zinc-950/50 hover:border-zinc-700 hover:bg-zinc-900/70'
               }`}
             >
               <div className="flex items-center justify-between gap-3">
                 {isSystem ? (
-                  <span className="w-9 h-9 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-300 flex items-center justify-center">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-md border border-zinc-800 bg-zinc-900 text-zinc-300">
                     <MonitorCog size={17} aria-hidden="true" />
                   </span>
                 ) : (
                   <ThemeSwatches theme={theme} />
                 )}
                 {selected && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-brand-red px-2 py-1 text-[9px] font-black uppercase tracking-wider text-[var(--ns-on-accent)]">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-brand-red px-2 py-1 font-mono text-[9px] font-medium uppercase tracking-wider text-[var(--ns-on-accent)]">
                     <Check size={11} aria-hidden="true" />
                     {t('themes.selected')}
                   </span>
                 )}
               </div>
-              <span className="mt-3 block text-sm font-extrabold text-zinc-100">
+              <span className="mt-3 block text-sm font-semibold text-zinc-100">
                 {t(theme.labelKey)}
               </span>
               <span className="mt-1 block text-[11px] leading-relaxed text-zinc-500">

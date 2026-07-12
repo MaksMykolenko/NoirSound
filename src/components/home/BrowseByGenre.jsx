@@ -28,15 +28,15 @@ export default function BrowseByGenre({ onSelect }) {
   return (
     <section
       data-testid="home-genre-browser"
-      className="ns-card p-4 sm:p-5 flex flex-col xl:flex-row xl:items-center gap-3 sm:gap-4"
+      className="flex flex-col gap-3 rounded-lg border border-zinc-800/60 bg-zinc-950/35 p-4 xl:flex-row xl:items-center"
     >
       <div className="flex items-center gap-3 xl:w-64 xl:shrink-0">
-        <span className="w-10 h-10 rounded-xl bg-brand-red/10 border border-brand-red/20 text-brand-red flex items-center justify-center shrink-0">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded border border-brand-red/20 bg-brand-red/5 text-brand-red">
           <Tags size={18} aria-hidden="true" />
         </span>
         <div className="min-w-0">
-          <h2 className="text-sm font-extrabold text-zinc-100">{t('home.browseByGenre')}</h2>
-          <p className="text-xs text-zinc-500 mt-0.5">{t('home.browseByGenreDesc')}</p>
+          <h2 className="text-sm font-semibold text-zinc-100">{t('home.browseByGenre')}</h2>
+          <p className="mt-0.5 text-[11px] text-zinc-500">{t('home.browseByGenreDesc')}</p>
         </div>
       </div>
 
@@ -48,7 +48,7 @@ export default function BrowseByGenre({ onSelect }) {
             data-genre-kind={item.kind}
             data-genre-value={item.value}
             onClick={() => onSelect(item)}
-            className="min-h-9 sm:min-h-10 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-full border border-zinc-800/80 bg-zinc-950/65 text-[11px] sm:text-xs font-semibold text-zinc-300 hover:text-zinc-100 hover:border-brand-red/35 hover:bg-brand-red/8 transition-all cursor-pointer"
+            className="min-h-9 cursor-pointer rounded border border-zinc-800/80 bg-zinc-950/65 px-2.5 py-1.5 text-[11px] font-medium text-zinc-300 transition-colors hover:border-brand-red/35 hover:bg-brand-red/5 hover:text-zinc-100 sm:min-h-10 sm:px-3"
           >
             {homeGenreLabel(item)}
           </button>
@@ -57,7 +57,7 @@ export default function BrowseByGenre({ onSelect }) {
           type="button"
           data-testid="home-more-genres"
           onClick={() => onSelect({ kind: 'more' })}
-          className="min-h-9 sm:min-h-10 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-full border border-brand-red/25 bg-brand-red/8 text-[11px] sm:text-xs font-bold text-rose-300 hover:bg-brand-red/15 hover:border-brand-red/45 transition-all cursor-pointer inline-flex items-center gap-1 sm:gap-1.5"
+          className="inline-flex min-h-9 cursor-pointer items-center gap-1 rounded border border-brand-red/25 bg-brand-red/5 px-2.5 py-1.5 text-[11px] font-semibold text-rose-300 transition-colors hover:border-brand-red/45 hover:bg-brand-red/10 sm:min-h-10 sm:px-3"
         >
           <span>{t('home.moreGenres')}</span>
           <ChevronRight size={13} aria-hidden="true" />

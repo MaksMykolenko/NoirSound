@@ -50,23 +50,23 @@ export default function BatchPlaylistEditor({ batch, onSave, onOpenTrack, saving
 
   return (
     <section className="space-y-5" data-testid="batch-playlist-editor">
-      <div className="ns-card overflow-hidden">
-        <div className="p-5 sm:p-7 bg-gradient-to-br from-brand-red/15 via-zinc-950 to-zinc-950">
+      <div className="overflow-hidden rounded-md border border-zinc-800 bg-surface-noir/45">
+        <div className="border-b border-zinc-800 bg-zinc-950/35 p-5 sm:p-6">
           <span className="ns-eyebrow text-brand-red">{t('batchUpload.playlistPreview')}</span>
           <div className="mt-4 flex flex-col md:flex-row gap-6 items-center md:items-end">
-            <label className="w-48 h-48 shrink-0 rounded-2xl border-2 border-dashed border-zinc-700 bg-zinc-900/80 overflow-hidden grid place-items-center cursor-pointer">
+            <label className="grid h-48 w-48 shrink-0 cursor-pointer place-items-center overflow-hidden rounded-md border border-dashed border-zinc-700 bg-zinc-900/80">
               <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(event) => setCoverFile(event.target.files?.[0] || null)} />
               {coverPreview ? <img src={coverPreview} alt="" className="w-full h-full object-cover" /> : (
                 <div className="text-center text-zinc-500"><ImagePlus className="mx-auto mb-2" /><span className="text-xs">{batch.playlist.hasCover ? t('batchUpload.coverReady') : t('batchUpload.addCover')}</span></div>
               )}
             </label>
             <div className="flex-1 min-w-0 w-full space-y-3">
-              <span className="inline-flex text-[10px] font-bold uppercase tracking-wider rounded-full border border-zinc-700 px-2.5 py-1 text-zinc-300">
+              <span className="inline-flex rounded border border-zinc-700 px-2.5 py-1 font-mono text-[9px] font-medium uppercase tracking-wider text-zinc-300">
                 {form.visibility === 'PUBLIC' ? t('batchUpload.public') : t('batchUpload.private')} · {t('batchUpload.draft')}
               </span>
               <input
                 aria-label={t('batchUpload.playlistTitle')}
-                className="w-full bg-transparent border-b border-zinc-700 focus:border-brand-red outline-none text-3xl sm:text-4xl font-black text-zinc-100 py-2"
+                className="w-full border-b border-zinc-700 bg-transparent py-2 text-2xl font-semibold text-zinc-100 outline-none focus:border-brand-red sm:text-3xl"
                 placeholder={t('batchUpload.untitledPlaylist')}
                 value={form.title}
                 onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
@@ -81,11 +81,11 @@ export default function BatchPlaylistEditor({ batch, onSave, onOpenTrack, saving
                 onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
               />
               <div className="grid sm:grid-cols-2 gap-3">
-                <select className="ns-field px-4" value={form.visibility} onChange={(event) => setForm((current) => ({ ...current, visibility: event.target.value }))}>
+                <select className="ns-field !rounded px-4" value={form.visibility} onChange={(event) => setForm((current) => ({ ...current, visibility: event.target.value }))}>
                   <option value="PUBLIC">{t('batchUpload.public')}</option>
                   <option value="PRIVATE">{t('batchUpload.private')}</option>
                 </select>
-                <input className="ns-field px-4" placeholder={t('batchUpload.tags')} value={(form.tags || []).join(', ')} onChange={(event) => setForm((current) => ({ ...current, tags: event.target.value.split(',').map((value) => value.trim()).filter(Boolean) }))} />
+                <input className="ns-field !rounded px-4" placeholder={t('batchUpload.tags')} value={(form.tags || []).join(', ')} onChange={(event) => setForm((current) => ({ ...current, tags: event.target.value.split(',').map((value) => value.trim()).filter(Boolean) }))} />
               </div>
             </div>
           </div>
@@ -106,7 +106,7 @@ export default function BatchPlaylistEditor({ batch, onSave, onOpenTrack, saving
                   onDragStart={() => setDraggedId(item.id)}
                   onDragOver={(event) => event.preventDefault()}
                   onDrop={() => dropBefore(item.id)}
-                  className="group flex items-center gap-2 rounded-xl border border-transparent hover:border-zinc-800 hover:bg-zinc-900/60 p-2"
+                  className="group flex items-center gap-2 rounded border border-transparent p-2 hover:border-zinc-800 hover:bg-zinc-900/60"
                 >
                   <GripVertical size={16} className="text-zinc-600 cursor-grab" />
                   <span className="w-6 text-center text-xs text-zinc-500">{index + 1}</span>
@@ -115,14 +115,14 @@ export default function BatchPlaylistEditor({ batch, onSave, onOpenTrack, saving
                     <p className="text-[11px] text-zinc-500 truncate">{item.primaryArtistName} · {item.genre ? getGenreLabel(item.genre, i18n.language) : t('batchUpload.missingGenre')} · {item.status}</p>
                   </button>
                   {item.hasLyrics && (
-                    <span className="inline-flex items-center gap-1 rounded-full border border-brand-red/25 bg-brand-red/10 px-2 py-1 text-[10px] font-bold text-brand-red">
+                    <span className="inline-flex items-center gap-1 rounded border border-brand-red/25 bg-brand-red/10 px-2 py-1 font-mono text-[9px] font-medium text-brand-red">
                       <FileText size={11} /> {t('lyrics.title')}
                     </span>
                   )}
-                  {item.missingFields?.length > 0 && <span className="text-[10px] rounded-full bg-amber-400/10 border border-amber-400/25 text-amber-300 px-2 py-1">{item.missingFields.length} {t('batchUpload.missing')}</span>}
+                  {item.missingFields?.length > 0 && <span className="rounded border border-amber-400/25 bg-amber-400/10 px-2 py-1 font-mono text-[9px] text-amber-300">{item.missingFields.length} {t('batchUpload.missing')}</span>}
                   <div className="flex gap-1">
-                    <button type="button" className="ns-icon-button" aria-label={t('batchUpload.moveUp')} onClick={() => move(item.id, -1)} disabled={index === 0}><ArrowUp size={14} /></button>
-                    <button type="button" className="ns-icon-button" aria-label={t('batchUpload.moveDown')} onClick={() => move(item.id, 1)} disabled={index === orderedItems.length - 1}><ArrowDown size={14} /></button>
+                    <button type="button" className="ns-icon-button !rounded" aria-label={t('batchUpload.moveUp')} onClick={() => move(item.id, -1)} disabled={index === 0}><ArrowUp size={14} /></button>
+                    <button type="button" className="ns-icon-button !rounded" aria-label={t('batchUpload.moveDown')} onClick={() => move(item.id, 1)} disabled={index === orderedItems.length - 1}><ArrowDown size={14} /></button>
                   </div>
                 </div>
               ))}
@@ -134,7 +134,7 @@ export default function BatchPlaylistEditor({ batch, onSave, onOpenTrack, saving
       <p className="text-xs text-zinc-500">{t('batchUpload.clickTrackHelp')}</p>
       <button
         type="button"
-        className="ns-button-primary px-5 inline-flex items-center gap-2"
+        className="ns-button-primary inline-flex !rounded items-center gap-2 px-5"
         disabled={saving || orderedItems.length === 0 || !form.title.trim()}
         onClick={() => onSave({
           title: form.title,

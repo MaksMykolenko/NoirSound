@@ -60,20 +60,20 @@ export default function CommentItem({ comment, trackId }) {
         <div className="flex-1 min-w-0 space-y-1">
           <div className="flex flex-col min-[430px]:flex-row min-[430px]:items-center justify-between gap-1">
             <div className="flex flex-wrap items-baseline gap-x-2">
-              <span className="text-[13.5px] font-bold text-zinc-200">{comment.displayName}</span>
-              <span className="text-[12px] text-zinc-400 font-semibold">@{comment.username}</span>
+              <span className="text-[13px] font-semibold text-zinc-200">{comment.displayName}</span>
+              <span className="font-mono text-[10px] text-zinc-500">@{comment.username}</span>
             </div>
-            <time className="text-xs text-zinc-400 font-semibold">{comment.createdAt}</time>
+            <time className="font-mono text-[9px] text-zinc-500">{comment.createdAt}</time>
           </div>
 
-          <p className="text-[14.5px] text-zinc-200 leading-relaxed break-words">{comment.text}</p>
+          <p className="break-words text-[13px] leading-relaxed text-zinc-300">{comment.text}</p>
 
           {/* Actions Row */}
           <div className="flex items-center gap-2 pt-1.5 text-xs text-zinc-400 font-semibold">
             {/* Like */}
             <button
               onClick={handleLike}
-              className={`min-h-11 px-2 flex items-center space-x-1 hover:text-rose-500 transition-colors cursor-pointer rounded-lg ${
+              className={`flex min-h-11 cursor-pointer items-center space-x-1 rounded px-2 transition-colors hover:text-rose-500 ${
                 isLiked ? 'text-brand-red' : ''
               }`}
               aria-label={isLiked ? 'Unlike comment' : 'Like comment'}
@@ -86,7 +86,7 @@ export default function CommentItem({ comment, trackId }) {
             {/* Reply */}
             <button
               onClick={() => setIsReplying(!isReplying)}
-              className="min-h-11 px-2 flex items-center space-x-1 hover:text-zinc-200 transition-colors cursor-pointer rounded-lg"
+              className="flex min-h-11 cursor-pointer items-center space-x-1 rounded px-2 transition-colors hover:text-zinc-200"
               aria-expanded={isReplying}
             >
               <Reply size={12} />
@@ -97,7 +97,7 @@ export default function CommentItem({ comment, trackId }) {
             {isOwnComment && (
               <button
                 onClick={handleDelete}
-                className="min-h-11 px-2 flex items-center space-x-1 hover:text-rose-500 transition-colors cursor-pointer ml-auto rounded-lg"
+                className="ml-auto flex min-h-11 cursor-pointer items-center space-x-1 rounded px-2 transition-colors hover:text-rose-500"
                 title="Delete comment"
               >
                 <Trash2 size={12} />

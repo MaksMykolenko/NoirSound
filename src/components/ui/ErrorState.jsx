@@ -7,11 +7,11 @@ export default function ErrorState({
   onRetry
 }) {
   return (
-    <div className="ns-state-panel ns-state-error !p-6 sm:!p-8 max-w-xl mx-auto text-center" role="alert">
-      <div className="w-11 h-11 mx-auto mb-3 rounded-2xl bg-rose-500/10 border border-rose-400/20 text-rose-300 flex items-center justify-center">
+    <div className="ns-state-panel ns-state-error mx-auto max-w-xl !p-6 text-center" role="alert">
+      <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-md border border-rose-400/20 bg-rose-500/10 text-rose-300">
         <AlertTriangle size={20} />
       </div>
-      <h2 className="text-lg font-bold text-zinc-100">{title}</h2>
+      <h2 className="text-base font-semibold tracking-tight text-zinc-100">{title}</h2>
       <p className="mt-2 text-sm leading-relaxed text-zinc-400">{message}</p>
       {onRetry && (
         <button

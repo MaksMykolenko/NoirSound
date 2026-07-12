@@ -1,0 +1,43 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+  
+  --color-brand: #f43f5e;
+  --color-brand-hover: #e11d48;
+  --color-bg-noir: #0a0a0c;
+  --color-surface-noir: #111115;
+  --color-surface-hover: #1b1b22;
+  --color-border-noir: rgba(255, 255, 255, 0.06);
+  --color-border-active: rgba(244, 63, 94, 0.4);
+}
+
+body {
+  background-color: var(--color-bg-noir);
+  color: #e4e4e7;
+  font-family: var(--font-sans);
+  overflow-x: hidden;
+  letter-spacing: -0.011em;
+}
+
+/* Hide scrollbar but keep functionality */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Custom premium progress bar glow */
+.progress-glow {
+  box-shadow: 0 0 10px rgba(244, 63, 94, 0.3);
+}
+
+/* Waveform bars */
+.waveform-bar {
+  transition: height 0.15s ease, background-color 0.15s ease;
+}
