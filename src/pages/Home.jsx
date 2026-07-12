@@ -82,11 +82,11 @@ export default function Home() {
         <div className="flex items-end justify-between gap-4 border-b border-zinc-800/60 pb-3">
           <div className="min-w-0">
             <h2 className="ns-section-title">{t('home.featuredReleases')}</h2>
-            <p className="mt-1 text-xs text-zinc-500">{t('home.latestReleasesDesc')}</p>
+            <p className="mt-1 text-sm text-zinc-500">{t('home.latestReleasesDesc')}</p>
           </div>
           <button
             onClick={() => navigate('/discover')}
-            className="flex shrink-0 cursor-pointer items-center space-x-1 whitespace-nowrap font-mono text-[10px] font-medium uppercase tracking-wider text-brand-red hover:underline"
+            className="flex shrink-0 cursor-pointer items-center space-x-1 whitespace-nowrap font-sans text-ns-meta font-medium text-brand-red hover:underline"
           >
             <span>{t('home.exploreAll')}</span>
             <ArrowRight size={12} aria-hidden="true" />
@@ -122,7 +122,7 @@ export default function Home() {
         <section data-testid="home-continue-listening" className="space-y-4">
           <div className="border-b border-zinc-800/60 pb-3">
             <h2 className="ns-section-title">{t('home.continueListening')}</h2>
-            <p className="mt-1 text-xs text-zinc-500">{t('home.continueListeningDesc')}</p>
+            <p className="mt-1 text-sm text-zinc-500">{t('home.continueListeningDesc')}</p>
           </div>
           <div className="grid grid-cols-1 min-[480px]:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
             {recentlyPlayed.slice(0, 4).map((track) => (
@@ -140,7 +140,7 @@ export default function Home() {
         <section className="space-y-4">
           <div className="border-b border-zinc-800/60 pb-3">
             <h2 className="ns-section-title">{t('home.featuredArtists')}</h2>
-            <p className="mt-1 text-xs text-zinc-500">{t('home.featuredArtistsDesc')}</p>
+            <p className="mt-1 text-sm text-zinc-500">{t('home.featuredArtistsDesc')}</p>
           </div>
           <div className="grid grid-cols-1 min-[480px]:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
             {featuredArtists.map((artist) => (

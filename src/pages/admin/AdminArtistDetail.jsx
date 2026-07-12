@@ -43,25 +43,25 @@ export default function AdminArtistDetail() {
       <AdminPageHeader
         title={artist.user?.displayName}
         description={`@${artist.user?.username}`}
-        actions={<Link to="/admin/artists" className="ns-button-secondary rounded px-3 py-2 text-xs">{t('admin.backToArtists')}</Link>}
+        actions={<Link to="/admin/artists" className="ns-button-secondary rounded px-3 py-2 text-sm">{t('admin.backToArtists')}</Link>}
       />
       <div className="grid gap-4 lg:grid-cols-3">
         <AdminPanel className="p-4 lg:col-span-2">
           <h2 className="text-sm font-bold">{t('admin.artistProfile')}</h2>
           <dl className="mt-4 grid gap-4 sm:grid-cols-2">
-            <div><dt className="font-mono text-[9px] font-medium uppercase tracking-wider text-[var(--ns-text-muted)]">{t('admin.status')}</dt><dd className="mt-1"><StatusBadge status={artist.isHidden ? 'HIDDEN' : artist.user?.status} /></dd></div>
-            <div><dt className="font-mono text-[9px] font-medium uppercase tracking-wider text-[var(--ns-text-muted)]">{t('admin.email')}</dt><dd className="mt-1 text-sm">{artist.user?.email}</dd></div>
-            <div><dt className="font-mono text-[9px] font-medium uppercase tracking-wider text-[var(--ns-text-muted)]">{t('admin.followers')}</dt><dd className="mt-1 text-sm">{artist._count?.followers ?? 0}</dd></div>
-            <div><dt className="font-mono text-[9px] font-medium uppercase tracking-wider text-[var(--ns-text-muted)]">{t('admin.genres')}</dt><dd className="mt-1 text-sm">{artist.genres?.length ? artist.genres.map(getGenreLabel).join(', ') : '—'}</dd></div>
+            <div><dt className="font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-[var(--ns-text-muted)]">{t('admin.status')}</dt><dd className="mt-1"><StatusBadge status={artist.isHidden ? 'HIDDEN' : artist.user?.status} /></dd></div>
+            <div><dt className="font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-[var(--ns-text-muted)]">{t('admin.email')}</dt><dd className="mt-1 text-sm">{artist.user?.email}</dd></div>
+            <div><dt className="font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-[var(--ns-text-muted)]">{t('admin.followers')}</dt><dd className="mt-1 text-sm">{artist._count?.followers ?? 0}</dd></div>
+            <div><dt className="font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-[var(--ns-text-muted)]">{t('admin.genres')}</dt><dd className="mt-1 text-sm">{artist.genres?.length ? artist.genres.map(getGenreLabel).join(', ') : '—'}</dd></div>
           </dl>
         </AdminPanel>
         <AdminPanel className="p-4">
           <h2 className="text-sm font-bold">{t('admin.actions')}</h2>
-          <button type="button" onClick={() => setConfirming(true)} className={`mt-4 w-full rounded px-3 py-2 text-xs font-semibold ${artist.isHidden ? 'ns-button-secondary' : 'bg-[var(--ns-danger)] text-white'}`}>
+          <button type="button" onClick={() => setConfirming(true)} className={`mt-4 w-full rounded px-3 py-2 text-sm font-semibold ${artist.isHidden ? 'ns-button-secondary' : 'bg-[var(--ns-danger)] text-white'}`}>
             {artist.isHidden ? t('admin.unhide') : t('admin.hide')}
           </button>
-          {!artist.isHidden && <Link to={`/artist/${artist.id}`} className="ns-button-secondary mt-2 block rounded px-3 py-2 text-center text-xs">{t('admin.openPublicPage')}</Link>}
-          <Link to={`/admin/users/${artist.user?.id}`} className="ns-button-secondary mt-2 block rounded px-3 py-2 text-center text-xs">{t('admin.viewUser')}</Link>
+          {!artist.isHidden && <Link to={`/artist/${artist.id}`} className="ns-button-secondary mt-2 block rounded px-3 py-2 text-center text-sm">{t('admin.openPublicPage')}</Link>}
+          <Link to={`/admin/users/${artist.user?.id}`} className="ns-button-secondary mt-2 block rounded px-3 py-2 text-center text-sm">{t('admin.viewUser')}</Link>
         </AdminPanel>
       </div>
       <AdminPanel className="p-4">

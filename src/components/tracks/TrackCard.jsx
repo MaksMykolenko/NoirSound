@@ -84,7 +84,7 @@ export default function TrackCard({ track, tracksContext = [] }) {
             )}
           </button>
           ) : (
-            <span className="rounded border border-zinc-600/70 bg-zinc-950/85 px-3 py-1.5 font-mono text-[9px] font-medium uppercase tracking-wider text-zinc-300">
+            <span className="rounded border border-zinc-600/70 bg-zinc-950/85 px-3 py-1.5 font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-zinc-300">
               Audio unavailable
             </span>
           )}
@@ -104,7 +104,7 @@ export default function TrackCard({ track, tracksContext = [] }) {
       {/* Track info details */}
       <div className="flex justify-between items-start px-1">
         <div className="min-w-0 flex-1">
-          <h4 className={`truncate text-[13px] font-semibold ${
+          <h4 className={`truncate text-ns-body-sm font-semibold ${
             isCurrent ? 'text-brand-red' : 'text-zinc-200 group-hover:text-zinc-100'
           }`}>
             {track.title}
@@ -115,11 +115,11 @@ export default function TrackCard({ track, tracksContext = [] }) {
                 e.stopPropagation();
                 navigate(`/artist/${track.artistId}`);
               }}
-              className="min-w-0 truncate font-mono text-[10px] text-zinc-500 transition-colors hover:text-zinc-300"
+              className="min-w-0 truncate font-sans tabular-nums text-ns-meta text-zinc-500 transition-colors hover:text-zinc-300"
             >
               {track.artistName}
             </span>
-            <span className="shrink-0 font-mono text-[9px] text-zinc-600 select-none">
+            <span className="shrink-0 font-sans tabular-nums text-ns-meta text-zinc-600 select-none">
               {formatDuration(track.duration)}
             </span>
           </span>

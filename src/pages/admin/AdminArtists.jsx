@@ -52,13 +52,13 @@ export default function AdminArtists() {
             </tr></thead>
             <tbody>{data.data.map((artist) => (
               <tr key={artist.id} className="border-t border-[var(--ns-border-subtle)]">
-                <td className="px-4 py-3"><div className="font-semibold">{artist.user?.displayName}</div><div className="text-xs text-[var(--ns-text-muted)]">@{artist.user?.username}</div></td>
-                <td className="px-4 py-3 text-xs">{artist.user?.email}</td>
+                <td className="px-4 py-3"><div className="font-semibold">{artist.user?.displayName}</div><div className="text-sm text-[var(--ns-text-muted)]">@{artist.user?.username}</div></td>
+                <td className="px-4 py-3 text-sm">{artist.user?.email}</td>
                 <td className="px-4 py-3"><StatusBadge status={artist.isHidden ? 'HIDDEN' : artist.user?.status} /></td>
                 <td className="px-4 py-3">{artist._count?.tracks ?? 0}</td>
                 <td className="px-4 py-3">{artist._count?.followers ?? 0}</td>
-                <td className="px-4 py-3 text-xs text-[var(--ns-text-muted)]">{formatAdminDate(artist.updatedAt, i18n.language)}</td>
-                <td className="px-4 py-3"><Link to={`/admin/artists/${artist.id}`} className="ns-button-secondary rounded px-3 py-2 text-xs">{t('admin.view')}</Link></td>
+                <td className="px-4 py-3 text-sm text-[var(--ns-text-muted)]">{formatAdminDate(artist.updatedAt, i18n.language)}</td>
+                <td className="px-4 py-3"><Link to={`/admin/artists/${artist.id}`} className="ns-button-secondary rounded px-3 py-2 text-sm">{t('admin.view')}</Link></td>
               </tr>
             ))}</tbody>
           </AdminTable>

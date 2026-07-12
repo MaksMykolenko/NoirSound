@@ -100,8 +100,8 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
                 imageClassName="object-cover"
               />
               <div className="min-w-0 flex-1">
-                <h5 className="font-bold text-zinc-200 truncate leading-snug text-[13.5px]">{currentTrack.title}</h5>
-                <p className="text-[12px] text-zinc-400 truncate mt-0.5 font-medium">{currentTrack.artistName}</p>
+                <h5 className="font-bold text-zinc-200 truncate leading-snug text-ns-body-sm">{currentTrack.title}</h5>
+                <p className="text-ns-label text-zinc-400 truncate mt-0.5 font-medium">{currentTrack.artistName}</p>
               </div>
               <div className="flex items-center space-x-2 shrink-0">
                 {lyricsAvailable && (
@@ -132,7 +132,7 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
                     e.stopPropagation();
                     expandPlayer();
                   }}
-                  className="px-2.5 py-1.5 bg-zinc-900 hover:bg-zinc-850 hover:text-zinc-100 border border-zinc-800 text-[10px] font-bold text-zinc-400 rounded-lg transition-colors cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-red"
+                  className="px-2.5 py-1.5 bg-zinc-900 hover:bg-zinc-850 hover:text-zinc-100 border border-zinc-800 text-ns-meta font-bold text-zinc-400 rounded-lg transition-colors cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-red"
                   aria-label="Expand player"
                 >
                   {t('player.expand')}
@@ -142,7 +142,7 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
           ) : (
             <button
               onClick={() => expandPlayer()}
-              className="fixed bottom-6 right-8 z-[var(--ns-z-dropdown)] flex animate-fade-in cursor-pointer items-center gap-2 rounded-lg border border-[var(--ns-border)] bg-[var(--ns-card-solid)] px-4 py-3 font-mono text-[10px] font-medium uppercase tracking-wider text-zinc-400 shadow-2xl transition-colors hover:border-brand-red/40 hover:bg-surface-hover hover:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-brand-red"
+              className="fixed bottom-6 right-8 z-[var(--ns-z-dropdown)] flex animate-fade-in cursor-pointer items-center gap-2 rounded-lg border border-[var(--ns-border)] bg-[var(--ns-card-solid)] px-4 py-3 font-sans text-ns-meta font-medium text-zinc-400 shadow-2xl transition-colors hover:border-brand-red/40 hover:bg-surface-hover hover:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-brand-red"
               aria-label="Expand player"
             >
               <Music size={14} className="text-brand-red animate-pulse" />
@@ -169,7 +169,7 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
               <div data-testid="player-accent-indicator" className="flex h-7 w-7 items-center justify-center rounded-md border border-brand-red/25 bg-brand-red/10 text-brand-red">
                 <Music size={13} />
               </div>
-              <div className="flex items-center space-x-2 text-xs">
+              <div className="flex items-center space-x-2 text-sm">
                 <span className="font-bold text-zinc-300">{t('player.playerReady')}</span>
                 <span className="hidden sm:inline text-zinc-500">• {t('player.selectTrackToStart')}</span>
               </div>
@@ -248,8 +248,8 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
                   imageClassName="object-cover"
                 />
                 <div className="min-w-0 flex-1">
-                  <h5 className="font-bold text-zinc-200 text-[13.5px] truncate leading-snug">{currentTrack.title}</h5>
-                  <p className="text-[12px] text-zinc-400 truncate mt-0.5 font-medium">{currentTrack.artistName}</p>
+                  <h5 className="font-bold text-zinc-200 text-ns-body-sm truncate leading-snug">{currentTrack.title}</h5>
+                  <p className="text-ns-label text-zinc-400 truncate mt-0.5 font-medium">{currentTrack.artistName}</p>
                 </div>
               </div>
               {/* Controls */}
@@ -293,7 +293,7 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
           ) : (
             <button
               onClick={() => expandPlayer()}
-              className="fixed bottom-[calc(var(--ns-mobile-nav-height)+1rem)] right-4 z-[var(--ns-z-player)] flex animate-fade-in cursor-pointer items-center gap-2 rounded-lg border border-[var(--ns-border)] bg-[var(--ns-card-solid)] px-4 py-2.5 font-mono text-[10px] font-medium uppercase tracking-wider text-zinc-400 shadow-2xl transition-colors hover:border-brand-red/40 hover:bg-surface-hover hover:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-brand-red"
+              className="fixed bottom-[calc(var(--ns-mobile-nav-height)+1rem)] right-4 z-[var(--ns-z-player)] flex animate-fade-in cursor-pointer items-center gap-2 rounded-lg border border-[var(--ns-border)] bg-[var(--ns-card-solid)] px-4 py-2.5 font-sans text-ns-meta font-medium text-zinc-400 shadow-2xl transition-colors hover:border-brand-red/40 hover:bg-surface-hover hover:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-brand-red"
               aria-label="Expand player"
             >
               <Music size={13} className="text-brand-red animate-pulse" />
@@ -322,7 +322,7 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
             >
               <ChevronDown size={20} />
             </button>
-            <span className="text-[12px] font-bold uppercase tracking-widest text-zinc-400">{t('player.nowPlaying')}</span>
+            <span className="text-ns-meta font-bold uppercase tracking-ns-label text-zinc-400">{t('player.nowPlaying')}</span>
             <div className="flex items-center gap-2">
               <button
                 type="button"
@@ -376,7 +376,7 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
             {/* Meta + Like */}
             <div className="flex items-center justify-between">
               <div className="min-w-0 flex-1 pr-4">
-                <h2 className="truncate font-display text-xl font-bold leading-tight text-zinc-100">{currentTrack.title}</h2>
+                <h2 className="truncate font-sans text-xl font-bold leading-tight text-zinc-100">{currentTrack.title}</h2>
                 <p className="mt-1 truncate text-sm font-medium text-zinc-400">{currentTrack.artistName}</p>
               </div>
               <button

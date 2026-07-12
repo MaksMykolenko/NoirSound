@@ -89,9 +89,9 @@ export default function BatchTrackSettingsDrawer({ item, open, onClose, onSave, 
             <FileAudio className="text-brand-red" size={20} />
             <div className="min-w-0">
               <p className="text-sm font-semibold text-zinc-200 truncate">{item.fileName}</p>
-              <p className="font-mono text-[10px] text-zinc-500">{formatBytes(item.fileSize)} · {item.mimeType} · {item.durationSeconds ? `${item.durationSeconds}s` : t('batchUpload.durationPending')}</p>
+              <p className="font-sans tabular-nums text-ns-meta text-zinc-500">{formatBytes(item.fileSize)} · {item.mimeType} · {item.durationSeconds ? `${item.durationSeconds}s` : t('batchUpload.durationPending')}</p>
             </div>
-            <span className="ml-auto font-mono text-[9px] font-medium uppercase tracking-wider text-zinc-400">{item.status}</span>
+            <span className="ml-auto font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-zinc-400">{item.status}</span>
           </div>
 
           <nav className="flex gap-1 overflow-x-auto rounded border border-zinc-800 bg-zinc-950/50 p-1" aria-label={t('batchUpload.trackSettings')}>
@@ -99,7 +99,7 @@ export default function BatchTrackSettingsDrawer({ item, open, onClose, onSave, 
               <button
                 key={tab}
                 type="button"
-                className={`min-h-10 flex-1 rounded px-3 font-mono text-[10px] font-medium uppercase tracking-wider ${
+                className={`min-h-10 flex-1 rounded px-3 font-sans text-ns-meta font-medium ${
                   activeTab === tab ? 'bg-brand-red text-white' : 'text-zinc-500 hover:text-zinc-200'
                 }`}
                 onClick={() => setActiveTab(tab)}
@@ -113,35 +113,35 @@ export default function BatchTrackSettingsDrawer({ item, open, onClose, onSave, 
             <div className="space-y-5" data-testid="batch-details-tab">
               <div className="grid sm:grid-cols-2 gap-4">
                 <label className="space-y-1.5">
-                  <span className="font-mono text-[10px] font-medium uppercase tracking-wider text-zinc-400">{t('batchUpload.trackTitle')}</span>
+                  <span className="font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-zinc-400">{t('batchUpload.trackTitle')}</span>
                   <input className="ns-field !rounded px-4" value={form.title} onChange={(event) => set('title', event.target.value)} />
                 </label>
                 <label className="space-y-1.5">
-                  <span className="font-mono text-[10px] font-medium uppercase tracking-wider text-zinc-400">{t('batchUpload.primaryArtist')}</span>
+                  <span className="font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-zinc-400">{t('batchUpload.primaryArtist')}</span>
                   <input className="ns-field !rounded px-4" value={form.primaryArtistName} onChange={(event) => set('primaryArtistName', event.target.value)} />
                 </label>
               </div>
               <label className="space-y-1.5 block">
-                <span className="font-mono text-[10px] font-medium uppercase tracking-wider text-zinc-400">{t('batchUpload.featuredArtists')}</span>
+                <span className="font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-zinc-400">{t('batchUpload.featuredArtists')}</span>
                 <input className="ns-field !rounded px-4" value={form.featuredArtists} onChange={(event) => set('featuredArtists', event.target.value)} placeholder={t('batchUpload.commaSeparated')} />
               </label>
               <div className="grid sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <span className="font-mono text-[10px] font-medium uppercase tracking-wider text-zinc-400">{t('batchUpload.genre')}</span>
+                  <span className="font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-zinc-400">{t('batchUpload.genre')}</span>
                   <GenrePicker value={form.genre} onChange={(value) => set('genre', value)} id={`batch-genre-${item.id}`} />
                 </div>
                 <label className="space-y-1.5">
-                  <span className="font-mono text-[10px] font-medium uppercase tracking-wider text-zinc-400">{t('batchUpload.tags')}</span>
+                  <span className="font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-zinc-400">{t('batchUpload.tags')}</span>
                   <input className="ns-field !rounded px-4" value={form.tags} onChange={(event) => set('tags', event.target.value)} placeholder={t('batchUpload.commaSeparated')} />
                 </label>
               </div>
               <label className="space-y-1.5 block">
-                <span className="font-mono text-[10px] font-medium uppercase tracking-wider text-zinc-400">{t('batchUpload.description')}</span>
+                <span className="font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-zinc-400">{t('batchUpload.description')}</span>
                 <textarea rows={4} className="ns-field !rounded px-4 py-3 resize-none" value={form.description} onChange={(event) => set('description', event.target.value)} />
               </label>
               <div className="grid sm:grid-cols-2 gap-4">
                 <label className="space-y-1.5">
-                  <span className="font-mono text-[10px] font-medium uppercase tracking-wider text-zinc-400">{t('batchUpload.target')}</span>
+                  <span className="font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-zinc-400">{t('batchUpload.target')}</span>
                   <select aria-label={t('batchUpload.target')} className="ns-field !rounded px-4" value={form.target} onChange={(event) => set('target', event.target.value)}>
                     <option value="SINGLE">{t('batchUpload.standaloneSingle')}</option>
                     <option value="PLAYLIST">{t('batchUpload.addToPlaylist')}</option>
@@ -149,7 +149,7 @@ export default function BatchTrackSettingsDrawer({ item, open, onClose, onSave, 
                   </select>
                 </label>
                 <label className="space-y-1.5">
-                  <span className="font-mono text-[10px] font-medium uppercase tracking-wider text-zinc-400">{t('batchUpload.visibility')}</span>
+                  <span className="font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-zinc-400">{t('batchUpload.visibility')}</span>
                   <select className="ns-field !rounded px-4" value={form.visibility} onChange={(event) => set('visibility', event.target.value)}>
                     <option value="PUBLIC">{t('batchUpload.public')}</option>
                     <option value="PRIVATE">{t('batchUpload.private')}</option>
@@ -158,7 +158,7 @@ export default function BatchTrackSettingsDrawer({ item, open, onClose, onSave, 
               </div>
               {form.target === 'PLAYLIST' && (
                 <label className="space-y-1.5 block">
-                  <span className="font-mono text-[10px] font-medium uppercase tracking-wider text-zinc-400">{t('batchUpload.playlistOrder')}</span>
+                  <span className="font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-zinc-400">{t('batchUpload.playlistOrder')}</span>
                   <input type="number" min="1" className="ns-field !rounded px-4" value={form.playlistOrder} onChange={(event) => set('playlistOrder', event.target.value)} />
                 </label>
               )}
@@ -171,7 +171,7 @@ export default function BatchTrackSettingsDrawer({ item, open, onClose, onSave, 
               {coverPreview ? <img src={coverPreview} alt="" className="h-24 w-24 rounded object-cover" /> : <div className="grid h-24 w-24 place-items-center rounded bg-zinc-900"><ImagePlus className="text-zinc-500" /></div>}
               <div>
                 <p className="text-sm font-bold text-zinc-200">{t('batchUpload.cover')}</p>
-                <p className="text-xs text-zinc-500">{coverFile?.name || (item.hasCover ? t('batchUpload.coverReady') : t('batchUpload.coverOptional'))}</p>
+                <p className="text-sm text-zinc-500">{coverFile?.name || (item.hasCover ? t('batchUpload.coverReady') : t('batchUpload.coverOptional'))}</p>
               </div>
             </label>
           )}
@@ -190,7 +190,7 @@ export default function BatchTrackSettingsDrawer({ item, open, onClose, onSave, 
                 <input type="checkbox" checked={form.copyrightConfirmed} onChange={(event) => set('copyrightConfirmed', event.target.checked)} className="w-5 h-5 accent-brand-red mt-0.5" />
                 <span className="text-sm text-zinc-300">{t('batchUpload.copyright')}</span>
               </label>
-              <p className="text-xs text-zinc-500">{t('batchUpload.audioLyricsRightsSeparate')}</p>
+              <p className="text-sm text-zinc-500">{t('batchUpload.audioLyricsRightsSeparate')}</p>
             </div>
           )}
         </div>

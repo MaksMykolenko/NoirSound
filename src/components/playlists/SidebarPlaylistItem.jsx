@@ -80,12 +80,12 @@ export default function SidebarPlaylistItem({ playlist, onToggleSaved, onEdit, o
 
         {/* Text Metadata */}
         <div className="min-w-0 flex-1">
-          <h5 className={`truncate text-[12px] font-semibold leading-snug ${
+          <h5 className={`truncate text-ns-body-sm font-semibold leading-snug ${
             isActive ? 'text-brand-red' : 'text-zinc-300 group-hover:text-white'
           }`}>
             {playlist.name}
           </h5>
-          <p className="mt-0.5 truncate font-mono text-[9px] text-zinc-500">
+          <p className="mt-0.5 truncate font-sans tabular-nums text-ns-label text-zinc-500">
             {playlist.createdByCurrentUser ? 'Playlist' : `by ${playlist.creator}`} • {playlist.trackCount ?? (playlist.trackIds || playlist.tracks || []).length} tracks
           </p>
         </div>

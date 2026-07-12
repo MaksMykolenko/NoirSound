@@ -119,7 +119,7 @@ export default function Profile() {
               onClick={() => setSearchParams({ tab: tab.id })}
               role="tab"
               aria-selected={active}
-              className={`ns-tab flex shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2.5 font-mono text-[9px] font-medium uppercase tracking-wider transition-colors sm:gap-2 sm:px-5 sm:py-3 sm:text-[10px] ${
+              className={`ns-tab flex shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2.5 font-sans text-ns-label font-medium transition-colors sm:gap-2 sm:px-5 sm:py-3 ${
                 active ? 'border-brand-red text-rose-300' : 'border-transparent text-zinc-500 hover:text-zinc-300'
               }`}
             >

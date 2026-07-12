@@ -27,16 +27,16 @@ export default function ReplyThread({ replies, onLikeReply, onDeleteReply }) {
             <div className="flex-1 min-w-0 space-y-1">
               <div className="flex flex-col min-[430px]:flex-row min-[430px]:items-center justify-between gap-1">
                 <div className="flex flex-wrap items-baseline gap-x-1.5">
-                  <span className="text-[12px] font-semibold text-zinc-200">{reply.displayName}</span>
-                  <span className="font-mono text-[9px] text-zinc-500">@{reply.username}</span>
+                  <span className="text-ns-label font-semibold text-zinc-200">{reply.displayName}</span>
+                  <span className="font-sans tabular-nums text-ns-meta text-zinc-500">@{reply.username}</span>
                 </div>
-                <time className="font-mono text-[9px] text-zinc-500">{reply.createdAt}</time>
+                <time className="font-sans tabular-nums text-ns-meta text-zinc-500">{reply.createdAt}</time>
               </div>
 
-              <p className="break-words text-[13px] leading-relaxed text-zinc-300">{reply.text}</p>
+              <p className="break-words text-sm leading-relaxed text-zinc-300">{reply.text}</p>
 
               {/* Actions row */}
-              <div className="flex items-center space-x-3.5 pt-1 text-[12px] text-zinc-400 font-bold">
+              <div className="flex items-center space-x-3.5 pt-1 text-ns-label text-zinc-400 font-bold">
                 {/* Like */}
                 <button
                   onClick={() => onLikeReply(reply.id)}

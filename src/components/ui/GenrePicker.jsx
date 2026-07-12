@@ -150,7 +150,7 @@ export default function GenrePicker({
           >
             {/* Mobile sheet header (title + close) */}
             <div className="sm:hidden flex items-center justify-between px-4 pt-3 pb-2 border-b border-zinc-800/70 shrink-0">
-              <span className="text-xs font-bold uppercase tracking-wider text-zinc-400 truncate pr-2">{label}</span>
+              <span className="text-ns-meta font-bold uppercase tracking-ns-label text-zinc-400 truncate pr-2">{label}</span>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
@@ -172,7 +172,7 @@ export default function GenrePicker({
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder={t('uploadForm.searchGenres')}
-                  className="ns-field pl-9 pr-3 text-sm"
+                  className="ns-field pl-9 pr-3 text-base sm:text-sm"
                   aria-label={t('uploadForm.searchGenres')}
                 />
               </div>
@@ -185,7 +185,7 @@ export default function GenrePicker({
               className="flex-1 max-h-[56vh] sm:max-h-72 overflow-y-auto overscroll-contain py-1 ns-tabs-scroll pb-[env(safe-area-inset-bottom)]"
             >
               {totalResults === 0 ? (
-                <p className="px-4 py-6 text-center text-xs text-zinc-500">
+                <p className="px-4 py-6 text-center text-sm text-zinc-500">
                   {t('uploadForm.noGenreMatch')}
                 </p>
               ) : (
@@ -193,7 +193,7 @@ export default function GenrePicker({
                   <div key={group} className="py-1">
                     <div
                       data-genre-group={group}
-                      className="sticky top-0 z-10 bg-zinc-950 px-3 py-1 font-mono text-[9px] font-medium uppercase tracking-wider text-zinc-500"
+                      className="sticky top-0 z-10 bg-zinc-950 px-3 py-1 font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-zinc-500"
                     >
                       {groupLabel}
                     </div>
@@ -228,7 +228,7 @@ export default function GenrePicker({
               <button
                 type="button"
                 onClick={() => handleSelect('')}
-                className="shrink-0 w-full flex items-center justify-center gap-1.5 px-4 py-3 sm:py-2.5 text-xs font-semibold text-zinc-400 hover:text-zinc-100 border-t border-zinc-800/80 bg-zinc-950/40 cursor-pointer"
+                className="shrink-0 w-full flex items-center justify-center gap-1.5 px-4 py-3 sm:py-2.5 text-sm font-semibold text-zinc-400 hover:text-zinc-100 border-t border-zinc-800/80 bg-zinc-950/40 cursor-pointer"
               >
                 <X size={13} /> {t('actions.clear')}
               </button>

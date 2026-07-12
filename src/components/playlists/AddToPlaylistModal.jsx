@@ -91,8 +91,8 @@ export default function AddToPlaylistModal({ track, onClose }) {
       >
         <header className="flex items-center justify-between border-b border-zinc-800 px-5 py-4">
           <div>
-            <h2 id="add-to-playlist-title" className="text-base font-semibold tracking-tight text-zinc-100">{t('playlists.addToPlaylist')}</h2>
-            <p className="max-w-[32ch] truncate font-mono text-[10px] text-zinc-500">{track.title}</p>
+            <h2 id="add-to-playlist-title" className="text-lg font-semibold tracking-tight text-zinc-100">{t('playlists.addToPlaylist')}</h2>
+            <p className="max-w-[32ch] truncate font-sans tabular-nums text-ns-meta text-zinc-500">{track.title}</p>
           </div>
           <button type="button" onClick={onClose} className="ns-icon-button !min-h-10 !min-w-10" aria-label="Close">
             <X size={17} />
@@ -103,21 +103,21 @@ export default function AddToPlaylistModal({ track, onClose }) {
           <label className="relative block">
             <span className="sr-only">{t('playlists.search')}</span>
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
-            <input autoFocus value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t('playlists.search')} className="ns-field w-full pl-9 pr-3 text-sm" />
+            <input autoFocus value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t('playlists.search')} className="ns-field w-full pl-9 pr-3 text-base sm:text-sm" />
           </label>
 
           <form onSubmit={createAndAdd} className="flex gap-2">
             <label className="min-w-0 flex-1">
               <span className="sr-only">{t('playlists.new')}</span>
-              <input value={newName} maxLength={120} onChange={(event) => setNewName(event.target.value)} placeholder={t('playlists.newPrivate')} className="ns-field w-full px-3 text-sm" />
+              <input value={newName} maxLength={120} onChange={(event) => setNewName(event.target.value)} placeholder={t('playlists.newPrivate')} className="ns-field w-full px-3 text-base sm:text-sm" />
             </label>
-            <button type="submit" disabled={!newName.trim() || Boolean(pendingId)} className="ns-button-primary inline-flex min-h-11 items-center gap-2 px-4 text-xs disabled:opacity-50">
+            <button type="submit" disabled={!newName.trim() || Boolean(pendingId)} className="ns-button-primary inline-flex min-h-11 items-center gap-2 px-4 text-sm disabled:opacity-50">
               {pendingId === 'new' ? <LoaderCircle size={14} className="animate-spin" /> : <Plus size={14} />}
               {t('playlists.create')}
             </button>
           </form>
 
-          {error && <p role="alert" className="text-xs font-semibold text-rose-300">{error}</p>}
+          {error && <p role="alert" className="text-sm font-semibold text-rose-300">{error}</p>}
           <div className="max-h-64 space-y-1 overflow-y-auto">
             {loading ? (
               <div className="flex min-h-24 items-center justify-center text-zinc-500">
@@ -132,9 +132,9 @@ export default function AddToPlaylistModal({ track, onClose }) {
                   <ListMusic size={17} className="text-brand-red shrink-0" />
                   <span className="min-w-0 flex-1">
                     <strong className="block truncate text-sm text-zinc-200">{playlist.name}</strong>
-                    <small className="text-zinc-500">{t('playlists.tracksCount', { count: playlist.trackCount || playlist.trackIds?.length || 0 })}</small>
+                    <small className="block text-ns-meta text-zinc-500">{t('playlists.tracksCount', { count: playlist.trackCount || playlist.trackIds?.length || 0 })}</small>
                   </span>
-                  <span className="text-xs text-zinc-500">
+                  <span className="text-ns-meta text-zinc-500">
                     {pendingId === playlist.id
                       ? t('playlists.adding')
                       : alreadyAdded

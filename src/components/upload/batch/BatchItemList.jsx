@@ -33,7 +33,7 @@ export default function BatchItemList({ items, onOpen, onTarget, onReorder, onRe
         >
           <div className="flex items-center gap-3">
             <GripVertical size={16} className={item.target === 'PLAYLIST' ? 'text-zinc-600 cursor-grab' : 'text-zinc-800'} />
-            <div className="grid h-9 w-9 shrink-0 place-items-center rounded border border-zinc-800 bg-zinc-900 font-mono text-[10px] text-zinc-500">{index + 1}</div>
+            <div className="grid h-9 w-9 shrink-0 place-items-center rounded border border-zinc-800 bg-zinc-900 font-sans tabular-nums text-ns-meta text-zinc-500">{index + 1}</div>
             <button type="button" onClick={() => onOpen(item)} className="min-w-0 flex-1 text-left">
               <div className="flex items-center gap-2">
                 <p className="text-sm font-bold text-zinc-200 truncate">{item.title}</p>
@@ -41,16 +41,16 @@ export default function BatchItemList({ items, onOpen, onTarget, onReorder, onRe
                 {item.status === 'READY' && <CheckCircle2 size={14} className="text-emerald-400 shrink-0" />}
                 {item.hasLyrics && <FileText size={14} className="text-brand-red shrink-0" aria-label={t('lyrics.title')} />}
               </div>
-              <p className="truncate font-mono text-[10px] text-zinc-500">{item.fileName} · {formatBytes(item.fileSize)} · {item.genre ? getGenreLabel(item.genre, i18n.language) : t('batchUpload.missingGenre')}</p>
-              <p className="font-mono text-[9px] text-zinc-600">
+              <p className="truncate font-sans tabular-nums text-ns-meta text-zinc-500">{item.fileName} · {formatBytes(item.fileSize)} · {item.genre ? getGenreLabel(item.genre, i18n.language) : t('batchUpload.missingGenre')}</p>
+              <p className="font-sans tabular-nums text-ns-meta text-zinc-600">
                 {item.hasLyrics
                   ? `${t('batchUpload.lyricsAdded')} · ${item.lyricsRightsConfirmed ? t('batchUpload.lyricsRightsConfirmed') : t('lyrics.rightsRequired')}`
                   : t('batchUpload.noLyrics')}
               </p>
             </button>
-            <span className={`hidden rounded border px-2 py-1 font-mono text-[9px] font-medium uppercase tracking-wider sm:inline-flex ${STATUS_STYLE[item.status] || 'text-zinc-400 border-zinc-700'}`}>{item.status}</span>
+            <span className={`hidden rounded border px-2 py-1 font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label sm:inline-flex ${STATUS_STYLE[item.status] || 'text-zinc-400 border-zinc-700'}`}>{item.status}</span>
             <span className="w-28 sm:w-36 shrink-0">
-              <select aria-label={`${item.title} ${t('batchUpload.target')}`} className="ns-field !rounded px-2 text-xs" value={item.target} onChange={(event) => onTarget(item, event.target.value)}>
+              <select aria-label={`${item.title} ${t('batchUpload.target')}`} className="ns-field !rounded px-2 text-base sm:text-sm" value={item.target} onChange={(event) => onTarget(item, event.target.value)}>
                 <option value="SINGLE">{t('batchUpload.single')}</option>
                 <option value="PLAYLIST">{t('batchUpload.playlist')}</option>
                 <option value="EXCLUDED">{t('batchUpload.excluded')}</option>
@@ -67,7 +67,7 @@ export default function BatchItemList({ items, onOpen, onTarget, onReorder, onRe
               <div className="h-full bg-brand-red transition-all" style={{ width: `${progress[item.id]}%` }} />
             </div>
           )}
-          {item.errorMessage && <p role="alert" className="text-xs text-rose-300 mt-2 pl-12">{item.errorMessage}</p>}
+          {item.errorMessage && <p role="alert" className="text-sm text-rose-300 mt-2 pl-12">{item.errorMessage}</p>}
         </div>
       ))}
     </div>

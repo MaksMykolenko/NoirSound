@@ -91,7 +91,7 @@ export default function ArtistCard({ artist }) {
       {/* Details */}
       <div className="mb-3 space-y-1">
         <div className="flex items-center justify-center space-x-1.5">
-          <h4 className="truncate text-[13px] font-semibold text-zinc-100">
+          <h4 className="truncate text-ns-body-sm font-semibold text-zinc-100">
             {artist.name}
           </h4>
           {artist.isVerified && (
@@ -100,7 +100,7 @@ export default function ArtistCard({ artist }) {
             </span>
           )}
         </div>
-        <p className="font-mono text-[10px] text-zinc-500">
+        <p className="font-sans tabular-nums text-ns-meta text-zinc-500">
           {formatNumber(artist.monthlyListeners || 0)} {t('profile.monthlyListeners')}
         </p>
       </div>
@@ -108,7 +108,7 @@ export default function ArtistCard({ artist }) {
       {/* Action Button */}
       <button
         onClick={handleFollowClick}
-        className={`min-h-10 w-full cursor-pointer rounded-md border py-2 text-[11px] font-semibold transition-colors duration-150 ${
+        className={`min-h-10 w-full cursor-pointer rounded-md border py-2 text-ns-label font-semibold transition-colors duration-150 ${
           isFollowing
             ? 'border-zinc-700/60 bg-zinc-800 text-zinc-400 hover:text-zinc-100'
             : 'border-zinc-700/70 bg-zinc-900 text-zinc-200 hover:border-brand-red/40 hover:text-white'

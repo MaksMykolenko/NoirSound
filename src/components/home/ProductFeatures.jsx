@@ -29,10 +29,10 @@ export default function ProductFeatures() {
               <span className="mb-4 flex h-9 w-9 items-center justify-center rounded border border-zinc-800 bg-zinc-950 text-brand-red transition-colors group-hover:border-brand-red/30">
                 <Icon size={20} aria-hidden="true" />
               </span>
-              <h3 className="text-[13px] font-semibold text-zinc-100">
+              <h3 className="text-ns-body-sm font-semibold text-zinc-100">
                 {t(`home.${key}Title`)}
               </h3>
-              <p className="mt-2 text-xs leading-relaxed text-zinc-500">
+              <p className="mt-2 text-sm leading-relaxed text-zinc-500">
                 {t(`home.${key}Desc`)}
               </p>
             </div>

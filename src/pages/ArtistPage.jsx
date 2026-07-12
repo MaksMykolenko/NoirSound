@@ -158,25 +158,25 @@ export default function ArtistPage() {
           </div>
 
           <div className="flex-1 space-y-2 min-w-0">
-            <div className="flex items-center justify-center md:justify-start space-x-2">
-              <h1 className="truncate font-display text-2xl font-semibold tracking-tight text-zinc-100 md:text-3xl">
+            <div className="flex min-w-0 items-start justify-center gap-2 md:justify-start">
+              <h1 className="ns-display-title ns-display-title--entity min-w-0 text-zinc-100">
                 {artist.name}
               </h1>
               {artist.isVerified && (
-                <span className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center text-[8px] text-white shrink-0" title="Verified Artist" aria-label="Verified artist">
+                <span className="mt-2 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center text-[8px] text-white shrink-0" title="Verified Artist" aria-label="Verified artist">
                   <Check size={10} strokeWidth={4} />
                 </span>
               )}
             </div>
             
             <div className="flex items-center justify-center md:justify-start gap-2">
-              {artist.username && <p className="font-mono text-[11px] text-zinc-400">@{artist.username}</p>}
-              <span className="rounded border border-brand-purple/20 bg-brand-purple/5 px-2 py-1 font-mono text-[9px] font-medium uppercase tracking-wider text-purple-300">
+              {artist.username && <p className="font-sans tabular-nums text-ns-label text-zinc-400">@{artist.username}</p>}
+              <span className="rounded border border-brand-purple/20 bg-brand-purple/5 px-2 py-1 font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-purple-300">
                 {t('profile.independentArtist')}
               </span>
             </div>
 
-            <div className="flex items-center justify-center space-x-4 pt-1 font-mono text-[9px] text-zinc-500 md:justify-start">
+            <div className="flex items-center justify-center space-x-4 pt-1 font-sans tabular-nums text-ns-label text-zinc-500 md:justify-start">
               <span className="flex items-center space-x-1">
                 <Users size={14} className="text-zinc-500" />
                 <span className="text-zinc-300 font-bold">{formatNumber(followerDisplayCount)}</span>
@@ -191,7 +191,7 @@ export default function ArtistPage() {
           {isOwnProfile ? (
             <button
               onClick={() => navigate('/profile?tab=settings')}
-              className="inline-flex min-h-11 shrink-0 cursor-pointer items-center justify-center gap-2 rounded-md border border-zinc-700/60 bg-zinc-800 px-5 text-[11px] font-semibold uppercase tracking-wider text-zinc-100 transition-colors hover:bg-zinc-700"
+              className="inline-flex min-h-11 shrink-0 cursor-pointer items-center justify-center gap-2 rounded-md border border-zinc-700/60 bg-zinc-800 px-5 text-ns-label font-semibold text-zinc-100 transition-colors hover:bg-zinc-700"
             >
               <Edit size={14} />
               <span>{t('profile.editArtistProfile')}</span>
@@ -201,7 +201,7 @@ export default function ArtistPage() {
               onClick={handleFollowClick}
               disabled={followActionPending}
               aria-pressed={isFollowing}
-              className={`min-h-11 shrink-0 cursor-pointer rounded-md px-5 text-[11px] font-semibold uppercase tracking-wider transition-colors disabled:cursor-wait disabled:opacity-60 ${
+              className={`min-h-11 shrink-0 cursor-pointer rounded-md px-5 text-ns-label font-semibold transition-colors disabled:cursor-wait disabled:opacity-60 ${
                 isFollowing
                   ? 'bg-zinc-800 text-zinc-400 hover:text-zinc-100 border border-zinc-700/60'
                   : 'ns-button-primary'
@@ -259,19 +259,19 @@ export default function ArtistPage() {
           {/* Bio Box */}
           <section className="space-y-4 rounded-lg border border-zinc-800/60 bg-zinc-950/35 p-5">
             <h2 className="ns-eyebrow">{t('profile.about')}</h2>
-            <p className="text-sm text-zinc-300 leading-relaxed">
+            <p className="text-sm md:text-base text-zinc-300 leading-relaxed">
               {artist.bio || t('profile.noBio')}
             </p>
             
             <div className="space-y-2 pt-2 border-t border-zinc-900">
-              <span className="block text-[10px] text-zinc-500 uppercase tracking-wider font-bold">{t('profile.focusGenres')}</span>
+              <span className="block text-ns-meta text-zinc-500 uppercase tracking-ns-label font-bold">{t('profile.focusGenres')}</span>
               <div className="flex flex-wrap gap-1.5">
                 {(artist.genres || []).length === 0 ? (
-                  <span className="text-xs text-zinc-500">{t('profile.noGenresYet')}</span>
+                  <span className="text-ns-meta text-zinc-500">{t('profile.noGenresYet')}</span>
                 ) : (artist.genres || []).map((g) => (
                   <span
                     key={g}
-                    className="rounded border border-zinc-800 bg-zinc-900 px-2.5 py-1 font-mono text-[9px] font-medium uppercase text-rose-300"
+                    className="rounded border border-zinc-800 bg-zinc-900 px-2.5 py-1 font-sans tabular-nums text-ns-label font-medium uppercase text-rose-300"
                   >
                     {getLocalizedGenre(g)}
                   </span>
@@ -289,14 +289,14 @@ export default function ArtistPage() {
                 && !artist.socialLinks?.twitter
                 && !artist.socialLinks?.soundcloud
                 && !artist.username && (
-                  <p className="text-xs text-zinc-500 py-2">{t('profile.noSocials')}</p>
+                  <p className="text-sm text-zinc-500 py-2">{t('profile.noSocials')}</p>
                 )}
               {artist.socialLinks?.instagram && (
                 <a
                   href={`https://instagram.com/${artist.socialLinks.instagram}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex items-center space-x-3 text-xs text-zinc-400 hover:text-zinc-200 py-2 transition-colors border-b border-zinc-900/40"
+                  className="flex items-center space-x-3 text-sm text-zinc-400 hover:text-zinc-200 py-2 transition-colors border-b border-zinc-900/40"
                 >
                   <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-500 shrink-0">
                     <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
@@ -311,7 +311,7 @@ export default function ArtistPage() {
                   href={`https://twitter.com/${artist.socialLinks.twitter}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex items-center space-x-3 text-xs text-zinc-400 hover:text-zinc-200 py-2 transition-colors border-b border-zinc-900/40"
+                  className="flex items-center space-x-3 text-sm text-zinc-400 hover:text-zinc-200 py-2 transition-colors border-b border-zinc-900/40"
                 >
                   <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-500 shrink-0">
                     <path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"></path>
@@ -324,14 +324,14 @@ export default function ArtistPage() {
                   href={`https://soundcloud.com/${artist.socialLinks.soundcloud}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex items-center space-x-3 text-xs text-zinc-400 hover:text-zinc-200 py-2 transition-colors border-b border-zinc-900/40"
+                  className="flex items-center space-x-3 text-sm text-zinc-400 hover:text-zinc-200 py-2 transition-colors border-b border-zinc-900/40"
                 >
                   <Music size={14} className="text-zinc-500" />
                   <span>SoundCloud</span>
                 </a>
               )}
               {artist.username && (
-                <div className="flex items-center space-x-3 text-xs text-zinc-400 py-2 border-b border-transparent">
+                <div className="flex items-center space-x-3 text-sm text-zinc-400 py-2 border-b border-transparent">
                   <Globe size={14} className="text-zinc-500" />
                   <span>noirsound.co/{artist.username}</span>
                 </div>

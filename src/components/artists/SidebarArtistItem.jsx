@@ -45,12 +45,12 @@ export default function SidebarArtistItem({ artist }) {
 
       {/* Name Details */}
       <div className="min-w-0 flex-1">
-        <h5 className={`text-[14.5px] font-bold truncate tracking-tight leading-snug ${
+        <h5 className={`text-ns-body-sm font-bold truncate tracking-tight leading-snug ${
           isActive ? 'text-brand-red' : 'text-zinc-300 group-hover:text-white'
         }`}>
           {artist.name}
         </h5>
-        <p className="text-[12.5px] text-zinc-400 truncate mt-0.5 font-medium">Artist</p>
+        <p className="text-ns-label text-zinc-400 truncate mt-0.5 font-medium">Artist</p>
       </div>
       <button
         type="button"

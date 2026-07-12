@@ -67,14 +67,14 @@ export default function AdminComments() {
             </tr></thead>
             <tbody>{data.data.map((comment) => (
               <tr key={comment.id} className="border-t border-[var(--ns-border-subtle)]">
-                <td className="max-w-xs px-4 py-3 text-xs"><span className="line-clamp-2">{comment.text}</span></td>
-                <td className="px-4 py-3 text-xs">@{comment.user?.username}</td>
-                <td className="px-4 py-3 text-xs"><Link to={`/admin/tracks/${comment.trackId}`} className="text-[var(--ns-accent-text)]">{comment.track?.title}</Link></td>
+                <td className="max-w-xs px-4 py-3 text-sm"><span className="line-clamp-2">{comment.text}</span></td>
+                <td className="px-4 py-3 text-sm">@{comment.user?.username}</td>
+                <td className="px-4 py-3 text-sm"><Link to={`/admin/tracks/${comment.trackId}`} className="text-[var(--ns-accent-text)]">{comment.track?.title}</Link></td>
                 <td className="px-4 py-3"><StatusBadge status={comment.isDeleted ? 'HIDDEN' : 'VISIBLE'} /></td>
                 <td className="px-4 py-3">{comment.reportsCount}</td>
-                <td className="px-4 py-3 text-xs text-[var(--ns-text-muted)]">{formatAdminDate(comment.createdAt, i18n.language)}</td>
+                <td className="px-4 py-3 text-sm text-[var(--ns-text-muted)]">{formatAdminDate(comment.createdAt, i18n.language)}</td>
                 <td className="px-4 py-3">
-                  <button type="button" onClick={() => setPending({ id: comment.id, hidden: comment.isDeleted })} className="ns-button-secondary rounded px-3 py-2 text-xs">
+                  <button type="button" onClick={() => setPending({ id: comment.id, hidden: comment.isDeleted })} className="ns-button-secondary rounded px-3 py-2 text-sm">
                     {comment.isDeleted ? t('admin.unhide') : t('admin.hide')}
                   </button>
                 </td>

@@ -33,7 +33,7 @@ export default function ReplyInput({ username, onSubmit, onCancel }) {
       onSubmit={handleSubmit}
       className="space-y-2.5 rounded-md border border-zinc-800 bg-zinc-950/80 p-3"
     >
-      <div className="flex justify-between items-center text-xs text-zinc-400 font-semibold px-0.5">
+      <div className="flex justify-between items-center text-sm text-zinc-400 font-semibold px-0.5">
         <span className="flex items-center space-x-1">
           <CornerDownRight size={10} className="text-brand-red" />
           <span>Replying to <span className="text-brand-red">@{username}</span></span>
@@ -51,7 +51,7 @@ export default function ReplyInput({ username, onSubmit, onCancel }) {
       <div className="flex flex-col sm:flex-row gap-2">
         <div className="flex-1 space-y-1">
           {errorMsg && (
-            <div id="reply-error" className="text-rose-300 text-xs font-semibold px-1" role="alert">
+            <div id="reply-error" className="text-rose-300 text-sm font-semibold px-1" role="alert">
               {errorMsg}
             </div>
           )}
@@ -63,7 +63,7 @@ export default function ReplyInput({ username, onSubmit, onCancel }) {
             placeholder="Write a reply..."
             value={text}
             onChange={(e) => setText(e.target.value)}
-            className="ns-field w-full px-3 py-2.5 text-sm resize-none placeholder-zinc-500"
+            className="ns-field w-full px-3 py-2.5 text-base resize-none placeholder-zinc-500 sm:text-sm"
             aria-invalid={Boolean(errorMsg)}
             aria-describedby={errorMsg ? 'reply-error' : undefined}
             autoFocus
@@ -72,7 +72,7 @@ export default function ReplyInput({ username, onSubmit, onCancel }) {
         <button
           type="submit"
           disabled={!text.trim() || isSubmitting}
-          className="ns-button-primary px-4 disabled:bg-zinc-800 disabled:text-zinc-600 text-xs cursor-pointer shrink-0"
+          className="ns-button-primary px-4 disabled:bg-zinc-800 disabled:text-zinc-600 text-sm cursor-pointer shrink-0"
         >
           {isSubmitting ? 'Posting…' : 'Post'}
         </button>

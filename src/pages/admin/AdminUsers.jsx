@@ -23,18 +23,18 @@ function ArtistProfileCell({ t, user }) {
     const label = user.role === 'LISTENER'
       ? t('admin.artistAccess.noArtistAccess')
       : t('admin.artistAccess.profileMissingShort');
-    return <span className="text-xs font-semibold text-[var(--ns-text-muted)]">{label}</span>;
+    return <span className="text-sm font-semibold text-[var(--ns-text-muted)]">{label}</span>;
   }
   if (user.artistProfileHidden) {
-    return <span className="text-xs font-semibold text-amber-400">{t('admin.artistAccess.profileHiddenShort')}</span>;
+    return <span className="text-sm font-semibold text-amber-400">{t('admin.artistAccess.profileHiddenShort')}</span>;
   }
-  return <span className="text-xs font-semibold text-emerald-400">{t('admin.artistAccess.profileReadyShort')}</span>;
+  return <span className="text-sm font-semibold text-emerald-400">{t('admin.artistAccess.profileReadyShort')}</span>;
 }
 
 function UploadAccessCell({ t, user }) {
   return user.canUploadTracks
-    ? <span className="text-xs font-semibold text-emerald-400">{t('admin.artistAccess.canUploadShort')}</span>
-    : <span className="text-xs font-semibold text-amber-400">{t('admin.artistAccess.uploadBlockedShort')}</span>;
+    ? <span className="text-sm font-semibold text-emerald-400">{t('admin.artistAccess.canUploadShort')}</span>
+    : <span className="text-sm font-semibold text-amber-400">{t('admin.artistAccess.uploadBlockedShort')}</span>;
 }
 
 export default function AdminUsers() {
@@ -126,18 +126,18 @@ export default function AdminUsers() {
                 <tr key={user.id} className="border-t border-[var(--ns-border-subtle)]">
                   <td className="px-4 py-3">
                     <div className="font-semibold">{user.displayName}</div>
-                    <div className="text-xs text-[var(--ns-text-muted)]">@{user.username}</div>
+                    <div className="text-sm text-[var(--ns-text-muted)]">@{user.username}</div>
                   </td>
-                  <td className="px-4 py-3 text-xs text-[var(--ns-text-secondary)]">{user.email}</td>
+                  <td className="px-4 py-3 text-sm text-[var(--ns-text-secondary)]">{user.email}</td>
                   <td className="px-4 py-3"><StatusBadge status={user.role} /></td>
                   <td className="px-4 py-3"><StatusBadge status={user.status} /></td>
                   <td className="px-4 py-3"><ArtistProfileCell t={t} user={user} /></td>
                   <td className="px-4 py-3"><UploadAccessCell t={t} user={user} /></td>
-                  <td className="px-4 py-3 text-xs text-[var(--ns-text-muted)]">{formatAdminDate(user.updatedAt || user.joinedAt, i18n.language)}</td>
+                  <td className="px-4 py-3 text-sm text-[var(--ns-text-muted)]">{formatAdminDate(user.updatedAt || user.joinedAt, i18n.language)}</td>
                   <td className="px-4 py-3">{user.counts?.tracks ?? 0}</td>
                   <td className="px-4 py-3">{user.counts?.reports ?? 0}</td>
                   <td className="px-4 py-3">
-                    <Link to={`/admin/users/${user.id}`} className="ns-button-secondary inline-flex items-center gap-1 rounded px-3 py-2 text-xs">
+                    <Link to={`/admin/users/${user.id}`} className="ns-button-secondary inline-flex items-center gap-1 rounded px-3 py-2 text-sm">
                       <Eye className="h-3.5 w-3.5" /> {t('admin.view')}
                     </Link>
                   </td>

@@ -35,7 +35,7 @@ export default function LanguageSwitcher({ compact = false, className = '' }) {
             <button
               key={lang.code}
               onClick={() => handleLanguageChange(lang.code)}
-              className={`cursor-pointer rounded px-2 py-1 font-mono text-[9px] font-medium tracking-wider transition-colors ${
+              className={`cursor-pointer rounded px-2 py-1 font-sans tabular-nums text-ns-meta font-medium tracking-ns-label transition-colors ${
                 active
                   ? 'bg-brand-red text-[var(--ns-on-accent)]'
                   : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800'
@@ -53,7 +53,7 @@ export default function LanguageSwitcher({ compact = false, className = '' }) {
 
   return (
     <div className={`space-y-2 ${className}`}>
-      <label className="flex items-center gap-2 font-mono text-[9px] font-medium uppercase tracking-wider text-zinc-500">
+      <label className="flex items-center gap-2 font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-zinc-500">
         <Globe size={14} className="text-brand-red" />
         <span>{t('language.label')}</span>
       </label>
@@ -65,14 +65,14 @@ export default function LanguageSwitcher({ compact = false, className = '' }) {
               key={lang.code}
               type="button"
               onClick={() => handleLanguageChange(lang.code)}
-              className={`flex cursor-pointer items-center justify-between rounded-md border px-3 py-2.5 text-xs font-medium transition-colors ${
+              className={`flex cursor-pointer items-center justify-between rounded-md border px-3 py-2.5 text-sm font-medium transition-colors ${
                 active
                   ? 'border-brand-red/40 bg-brand-red/10 text-rose-300'
                   : 'bg-zinc-900/60 text-zinc-400 border-zinc-800/80 hover:bg-zinc-800/80 hover:text-zinc-100'
               }`}
             >
               <span>{lang.label}</span>
-              <span className="rounded bg-zinc-800 px-1.5 py-0.5 font-mono text-[10px] font-medium uppercase text-zinc-400">
+              <span className="rounded bg-zinc-800 px-1.5 py-0.5 font-sans tabular-nums text-ns-meta font-medium uppercase text-zinc-400">
                 {lang.short}
               </span>
             </button>

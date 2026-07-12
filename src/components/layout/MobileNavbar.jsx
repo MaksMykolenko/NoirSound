@@ -25,13 +25,13 @@ export default function MobileNavbar() {
             key={item.to}
             to={item.to}
             className={({ isActive }) =>
-              `flex min-h-14 min-w-14 cursor-pointer flex-col items-center justify-center gap-1 rounded-md px-2 py-1 font-mono text-[10px] font-medium transition-colors ${
+              `flex min-h-14 min-w-14 cursor-pointer flex-col items-center justify-center gap-1 rounded-md px-2 py-1 font-sans tabular-nums text-ns-meta font-medium transition-colors ${
                 isActive ? 'bg-zinc-900/70 text-brand-red' : 'text-zinc-500 hover:text-zinc-300'
               }`
             }
           >
             <Icon size={18} />
-            <span className="text-[10px]">{item.label}</span>
+            <span className="text-ns-meta">{item.label}</span>
           </NavLink>
         );
       })}

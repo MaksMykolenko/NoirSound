@@ -25,10 +25,10 @@ export default function UserActivityItem({ item }) {
         {getIcon()}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-xs font-medium leading-relaxed text-zinc-300">
+        <p className="text-sm font-medium leading-relaxed text-zinc-300">
           {item.text}
         </p>
-        <span className="mt-1 block font-mono text-[9px] text-zinc-600">{item.timestamp}</span>
+        <span className="mt-1 block font-sans tabular-nums text-ns-meta text-zinc-600">{item.timestamp}</span>
       </div>
     </div>
   );

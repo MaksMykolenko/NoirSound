@@ -216,11 +216,11 @@ export default function TrackPage() {
             <div className="flex-1 min-w-0 space-y-4 text-center md:text-left">
               <div className="space-y-2.5">
                 {showGenre && (
-                  <span className="inline-block rounded border border-brand-red/30 bg-[var(--ns-accent-soft)] px-2.5 py-1 font-mono text-[9px] font-medium uppercase tracking-wider text-rose-300 select-none">
+                  <span className="inline-block rounded border border-brand-red/30 bg-[var(--ns-accent-soft)] px-2.5 py-1 font-sans tabular-nums text-ns-label font-medium uppercase tracking-ns-label text-rose-300 select-none">
                     {genreLabel}
                   </span>
                 )}
-                <h1 className="break-words font-display text-3xl font-semibold leading-[1.08] tracking-[-0.03em] text-zinc-100 sm:text-4xl">
+                <h1 className="ns-display-title ns-display-title--entity text-zinc-100">
                   {track.title}
                 </h1>
                 <button
@@ -237,7 +237,7 @@ export default function TrackPage() {
                 <button
                   onClick={handlePlayClick}
                   disabled={!canPlay}
-                  className="ns-button-primary px-6 text-xs uppercase tracking-widest flex items-center gap-2.5 cursor-pointer disabled:opacity-45 disabled:cursor-not-allowed"
+                  className="ns-button-primary px-6 text-sm flex items-center gap-2.5 cursor-pointer disabled:opacity-45 disabled:cursor-not-allowed"
                 >
                   {isPlayingThis
                     ? <Pause size={16} fill="currentColor" strokeWidth={0} />
@@ -279,7 +279,7 @@ export default function TrackPage() {
               </div>
 
               {/* Compact metadata row (secondary, wraps on mobile) */}
-              <div className="flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1.5 font-mono text-[10px] text-zinc-500 md:justify-start">
+              <div className="flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1.5 font-sans tabular-nums text-ns-label text-zinc-500 md:justify-start">
                 <span
                   className="inline-flex items-center gap-1.5"
                   aria-label={`${formatNumber(playCount)} ${t('trackPage.plays')}`}
@@ -305,7 +305,7 @@ export default function TrackPage() {
               </div>
 
               {/* Subtle contextual note */}
-              <p className="text-xs text-zinc-500/90">{trackNote}</p>
+              <p className="text-sm text-zinc-500/90">{trackNote}</p>
             </div>
           </div>
         </section>
@@ -314,7 +314,7 @@ export default function TrackPage() {
         <section className="space-y-3 rounded-lg border border-zinc-800/60 bg-zinc-950/35 p-5">
           <div className="flex items-center justify-between gap-4">
             <h2 className="ns-eyebrow">{t('trackPage.waveform')}</h2>
-            <span className="text-[11px] font-mono text-zinc-500 select-none">
+            <span className="text-ns-label font-sans tabular-nums text-zinc-500 select-none">
               {isCurrent ? `${formatTime(progress)} / ${formatTime(duration)}` : (hasDuration ? durationStr : '')}
             </span>
           </div>
@@ -330,7 +330,7 @@ export default function TrackPage() {
           />
 
           {isCurrent && (
-            <p className="text-[11px] text-zinc-500 select-none">{t('trackPage.seekHint')}</p>
+            <p className="text-ns-label text-zinc-500 select-none">{t('trackPage.seekHint')}</p>
           )}
         </section>
       </div>
@@ -358,7 +358,7 @@ export default function TrackPage() {
                 {track.tags.map((tag) => (
                   <span
                     key={tag}
-                    className="rounded border border-zinc-800 bg-zinc-900 px-2.5 py-1 font-mono text-[9px] text-zinc-400"
+                    className="rounded border border-zinc-800 bg-zinc-900 px-2.5 py-1 font-sans tabular-nums text-ns-label text-zinc-400"
                   >
                     #{tag}
                   </span>
@@ -378,7 +378,7 @@ export default function TrackPage() {
           {relatedTracks.length === 0 ? (
             <div className="space-y-1.5 rounded-lg border border-zinc-800/60 bg-zinc-950/35 p-5 text-center">
               <p className="text-sm font-semibold text-zinc-300">{t('trackPage.noSimilarTitle')}</p>
-              <p className="text-xs text-zinc-500 leading-relaxed">{t('trackPage.noSimilarDesc')}</p>
+              <p className="text-sm text-zinc-500 leading-relaxed">{t('trackPage.noSimilarDesc')}</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -398,10 +398,10 @@ export default function TrackPage() {
                     imageClassName="object-cover"
                   />
                   <div className="min-w-0 flex-1">
-                    <h4 className="truncate text-[13px] font-semibold text-zinc-200 group-hover:text-white">
+                    <h4 className="truncate text-ns-body-sm font-semibold text-zinc-200 group-hover:text-white">
                       {relTrack.title}
                     </h4>
-                    <p className="text-xs text-zinc-500 mt-0.5 truncate">{relTrack.artistName}</p>
+                    <p className="text-ns-meta text-zinc-500 mt-0.5 truncate">{relTrack.artistName}</p>
                   </div>
                 </button>
               ))}

@@ -184,7 +184,7 @@ export default function ContextMenu({
                   : <span className="w-4" />}
               <span className="min-w-0 flex-1 truncate">{pending ? (item.pendingLabel || item.label) : item.label}</span>
               {item.checked && <Check size={15} className="text-brand-red shrink-0" aria-hidden="true" />}
-              {item.hint && <span className="text-[10px] font-medium text-zinc-500">{item.hint}</span>}
+              {item.hint && <span className="text-ns-meta font-medium text-zinc-500">{item.hint}</span>}
             </button>
           );
         })}

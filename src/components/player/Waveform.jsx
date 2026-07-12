@@ -22,7 +22,7 @@ export default function Waveform({
   if (bars.length === 0) {
     return (
       <div
-        className="flex items-center justify-center gap-2 rounded-md border border-dashed border-[var(--ns-border)] bg-zinc-950/30 px-4 font-mono text-[10px] text-zinc-500"
+        className="flex items-center justify-center gap-2 rounded-md border border-dashed border-[var(--ns-border)] bg-zinc-950/30 px-4 font-sans tabular-nums text-ns-meta text-zinc-500"
         style={{ minHeight: height }}
         role="img"
         aria-label={unavailableLabel}

@@ -43,14 +43,14 @@ export default function CommentSection({ trackId }) {
       <div className="space-y-1 border-b border-zinc-800/70 pb-3">
         <div className="flex items-center gap-2">
           <MessageSquare size={16} className="text-brand-red" aria-hidden="true" />
-          <h2 className="font-mono text-[10px] font-medium uppercase tracking-widest text-zinc-300">
+          <h2 className="font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-zinc-300">
             {t('comments.title')}
           </h2>
           {trackComments.length > 0 && (
-            <span className="text-xs font-mono text-zinc-500">({trackComments.length})</span>
+            <span className="text-ns-meta font-sans tabular-nums text-zinc-500">({trackComments.length})</span>
           )}
         </div>
-        <p className="text-xs text-zinc-500">{t('comments.subtitle')}</p>
+        <p className="text-sm text-zinc-500">{t('comments.subtitle')}</p>
       </div>
 
       {errorMsg && (
@@ -66,7 +66,7 @@ export default function CommentSection({ trackId }) {
           <button
             type="button"
             onClick={() => setAuthModalOpen(true)}
-            className="ns-button-secondary px-4 text-xs cursor-pointer shrink-0"
+            className="ns-button-secondary px-4 text-sm cursor-pointer shrink-0"
           >
             {t('comments.signIn')}
           </button>
@@ -90,7 +90,7 @@ export default function CommentSection({ trackId }) {
               placeholder={t('comments.placeholder')}
               value={text}
               onChange={(e) => setText(e.target.value)}
-              className="ns-field flex-1 px-4 py-3 text-sm resize-none placeholder-zinc-500"
+              className="ns-field flex-1 px-4 py-3 text-base resize-none placeholder-zinc-500 sm:text-sm"
               aria-invalid={Boolean(errorMsg)}
               aria-describedby={errorMsg ? 'comment-error' : undefined}
             />

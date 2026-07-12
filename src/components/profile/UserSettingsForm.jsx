@@ -59,7 +59,7 @@ export default function UserSettingsForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {errorMsg && (
-        <div className="flex items-center space-x-2.5 rounded-md border border-rose-500/20 bg-rose-500/10 p-3 text-xs text-rose-400">
+        <div className="flex items-center space-x-2.5 rounded-md border border-rose-500/20 bg-rose-500/10 p-3 text-sm text-rose-400">
           <span className="font-semibold">{errorMsg}</span>
         </div>
       )}
@@ -69,18 +69,18 @@ export default function UserSettingsForm() {
       {/* Inputs grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         <div className="space-y-1.5">
-          <label htmlFor="settings-display-name" className="font-mono text-[9px] font-medium uppercase tracking-wide text-zinc-500">{t('profile.displayName')}</label>
+          <label htmlFor="settings-display-name" className="font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-zinc-500">{t('profile.displayName')}</label>
           <input
             id="settings-display-name"
             type="text"
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
-            className="ns-field px-4 text-sm"
+            className="ns-field px-4 text-base sm:text-sm"
           />
         </div>
 
         <div className="space-y-1.5">
-          <label htmlFor="settings-username" className="font-mono text-[9px] font-medium uppercase tracking-wide text-zinc-500">{t('profile.username')}</label>
+          <label htmlFor="settings-username" className="font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-zinc-500">{t('profile.username')}</label>
           <div className="relative">
             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 text-sm">@</span>
             <input
@@ -88,19 +88,19 @@ export default function UserSettingsForm() {
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="ns-field pl-8 pr-4 text-sm"
+              className="ns-field pl-8 pr-4 text-base sm:text-sm"
             />
           </div>
         </div>
 
         <div className="space-y-1.5">
-          <label htmlFor="settings-location" className="font-mono text-[9px] font-medium uppercase tracking-wide text-zinc-500">{t('profile.location')}</label>
+          <label htmlFor="settings-location" className="font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-zinc-500">{t('profile.location')}</label>
           <input
             id="settings-location"
             type="text"
             value={location}
             onChange={(e) => setLocation(e.target.value)}
-            className="ns-field px-4 text-sm"
+            className="ns-field px-4 text-base sm:text-sm"
           />
         </div>
 
@@ -108,13 +108,13 @@ export default function UserSettingsForm() {
 
       {/* Bio text area */}
       <div className="space-y-1.5">
-        <label htmlFor="settings-bio" className="font-mono text-[9px] font-medium uppercase tracking-wide text-zinc-500">{t('profile.biography')}</label>
+        <label htmlFor="settings-bio" className="font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-zinc-500">{t('profile.biography')}</label>
         <textarea
           id="settings-bio"
           rows={3}
           value={bio}
           onChange={(e) => setBio(e.target.value)}
-          className="ns-field w-full px-4 py-3 text-sm resize-none"
+          className="ns-field w-full px-4 py-3 text-base resize-none sm:text-sm"
         />
       </div>
 
@@ -125,8 +125,8 @@ export default function UserSettingsForm() {
         <div className="flex items-start space-x-3.5 rounded-md border border-zinc-800/60 bg-zinc-950/40 p-3.5">
           <Shield size={18} className="text-brand-red shrink-0 mt-0.5" />
           <div className="flex-1 space-y-1">
-            <span className="block text-xs font-bold text-zinc-200">{t('profile.privateProfile')}</span>
-            <span className="block text-[10px] text-zinc-500 leading-normal">
+            <span className="block text-sm font-bold text-zinc-200">{t('profile.privateProfile')}</span>
+            <span className="block text-ns-meta text-zinc-500 leading-normal">
               {t('profile.privateProfileDesc')}
             </span>
           </div>
@@ -143,8 +143,8 @@ export default function UserSettingsForm() {
         <div className="flex items-start space-x-3.5 rounded-md border border-zinc-800/60 bg-zinc-950/40 p-3.5">
           <Bell size={18} className="text-brand-red shrink-0 mt-0.5" />
           <div className="flex-1 space-y-1">
-            <span className="block text-xs font-bold text-zinc-200">{t('profile.emailNotifications')}</span>
-            <span className="block text-[10px] text-zinc-500 leading-normal">
+            <span className="block text-sm font-bold text-zinc-200">{t('profile.emailNotifications')}</span>
+            <span className="block text-ns-meta text-zinc-500 leading-normal">
               {t('profile.emailNotificationsDesc')}
             </span>
           </div>
@@ -168,7 +168,7 @@ export default function UserSettingsForm() {
       <button
         type="submit"
         disabled={isSubmitting}
-        className="ns-button-primary flex w-full cursor-pointer items-center justify-center space-x-2.5 rounded-md py-3 text-xs font-semibold uppercase tracking-widest disabled:opacity-50"
+        className="ns-button-primary flex w-full cursor-pointer items-center justify-center space-x-2.5 rounded-md py-3 text-sm font-semibold disabled:opacity-50"
       >
         <Save size={14} />
         <span>{isSubmitting ? t('profile.saving') : t('actions.saveChanges')}</span>

@@ -57,14 +57,14 @@ export default function AdminTracks() {
             <tbody>{data.data.map((track) => (
               <tr key={track.id} className="border-t border-[var(--ns-border-subtle)]">
                 <td className="px-4 py-3 font-semibold">{track.title}</td>
-                <td className="px-4 py-3 text-xs text-[var(--ns-text-secondary)]">{track.artist?.user?.displayName}</td>
-                <td className="px-4 py-3 text-xs text-[var(--ns-text-muted)]">{track.genre ? getGenreLabel(track.genre) : '—'}</td>
+                <td className="px-4 py-3 text-sm text-[var(--ns-text-secondary)]">{track.artist?.user?.displayName}</td>
+                <td className="px-4 py-3 text-sm text-[var(--ns-text-muted)]">{track.genre ? getGenreLabel(track.genre) : '—'}</td>
                 <td className="px-4 py-3"><StatusBadge status={track.status} /></td>
                 <td className="px-4 py-3">{track.plays}</td>
                 <td className="px-4 py-3">{track.reportsCount}</td>
-                <td className="px-4 py-3 text-xs text-[var(--ns-text-muted)]">{formatAdminDate(track.updatedAt, i18n.language)}</td>
+                <td className="px-4 py-3 text-sm text-[var(--ns-text-muted)]">{formatAdminDate(track.updatedAt, i18n.language)}</td>
                 <td className="px-4 py-3">
-                  <Link to={`/admin/tracks/${track.id}`} className="ns-button-secondary inline-flex items-center gap-1 rounded px-3 py-2 text-xs">
+                  <Link to={`/admin/tracks/${track.id}`} className="ns-button-secondary inline-flex items-center gap-1 rounded px-3 py-2 text-sm">
                     <Eye className="h-3.5 w-3.5" /> {t('admin.view')}
                   </Link>
                 </td>

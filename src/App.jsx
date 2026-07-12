@@ -125,7 +125,7 @@ export default function App() {
       <Router>
         <ContextMenuProvider>
         {isMockMode() && (
-          <div className="fixed left-1/2 top-2 z-[var(--ns-z-banner)] -translate-x-1/2 rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1 font-mono text-[9px] font-medium uppercase tracking-wider text-amber-300">
+          <div className="fixed left-1/2 top-2 z-[var(--ns-z-banner)] -translate-x-1/2 rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1 font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-amber-300">
             Demo mode
           </div>
         )}

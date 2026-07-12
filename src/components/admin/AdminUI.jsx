@@ -6,8 +6,8 @@ export function AdminPageHeader({ title, description, actions }) {
   return (
     <header className="flex flex-col gap-3 border-b border-[var(--ns-border-subtle)] pb-4 sm:flex-row sm:items-end sm:justify-between">
       <div>
-        <h1 className="font-display text-xl font-bold tracking-tight text-[var(--ns-text)] sm:text-2xl">{title}</h1>
-        {description && <p className="mt-1 max-w-3xl font-mono text-[11px] leading-relaxed text-[var(--ns-text-muted)]">{description}</p>}
+        <h1 className="font-sans text-xl font-bold tracking-tight text-[var(--ns-text)] sm:text-2xl">{title}</h1>
+        {description && <p className="mt-1 max-w-3xl font-sans tabular-nums text-ns-label leading-relaxed text-[var(--ns-text-muted)]">{description}</p>}
       </div>
       {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
     </header>
@@ -48,7 +48,7 @@ export function StatusBadge({ status }) {
   const { t } = useTranslation();
   const normalized = String(status || 'UNKNOWN').toUpperCase();
   return (
-    <span className={`inline-flex rounded border px-2 py-0.5 font-mono text-[9px] font-medium uppercase tracking-wider ${STATUS_TONES[normalized] || 'text-zinc-300 bg-zinc-500/10 border-zinc-500/20'}`}>
+    <span className={`inline-flex rounded border px-2 py-0.5 font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label ${STATUS_TONES[normalized] || 'text-zinc-300 bg-zinc-500/10 border-zinc-500/20'}`}>
       {t(`admin.statusValues.${normalized}`, { defaultValue: normalized.replaceAll('_', ' ') })}
     </span>
   );
@@ -72,7 +72,7 @@ export function AdminError({ error, onRetry }) {
         {error?.status === 403 ? t('admin.accessDenied') : t('admin.loadFailed')}
       </p>
       {onRetry && (
-        <button type="button" onClick={onRetry} className="ns-button-secondary rounded px-3 py-2 text-xs">
+        <button type="button" onClick={onRetry} className="ns-button-secondary rounded px-3 py-2 text-sm">
           {t('admin.retry')}
         </button>
       )}
@@ -95,7 +95,7 @@ export function AdminSearch({ value, onChange, placeholder, children }) {
           onChange={(event) => onChange(event.target.value)}
           placeholder={placeholder}
           aria-label={placeholder}
-          className="ns-field w-full rounded py-2 pl-9 pr-3 text-sm"
+          className="ns-field w-full rounded py-2 pl-9 pr-3 text-base sm:text-sm"
         />
       </label>
       {children && <div className="flex flex-wrap gap-2">{children}</div>}
@@ -107,7 +107,7 @@ export function AdminSelect({ value, onChange, label, options }) {
   return (
     <label>
       <span className="sr-only">{label}</span>
-      <select value={value} onChange={(event) => onChange(event.target.value)} className="ns-field min-h-10 rounded px-3 py-2 text-sm">
+      <select value={value} onChange={(event) => onChange(event.target.value)} className="ns-field min-h-10 rounded px-3 py-2 text-base sm:text-sm">
         {options.map(([optionValue, optionLabel]) => (
           <option key={optionValue} value={optionValue}>{optionLabel}</option>
         ))}
@@ -119,20 +119,20 @@ export function AdminSelect({ value, onChange, label, options }) {
 export function AdminTable({ children }) {
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[760px] text-left text-xs [&_tbody_tr]:transition-colors [&_tbody_tr:hover]:bg-white/[0.02]">{children}</table>
+      <table className="w-full min-w-[760px] text-left text-sm [&_tbody_tr]:transition-colors [&_tbody_tr:hover]:bg-white/[0.02]">{children}</table>
     </div>
   );
 }
 
 export function AdminTableHead({ children }) {
-  return <th className="bg-black/10 px-4 py-3 font-mono text-[9px] font-medium uppercase tracking-[0.12em] text-[var(--ns-text-muted)]">{children}</th>;
+  return <th className="bg-black/10 px-4 py-3 font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-[var(--ns-text-muted)]">{children}</th>;
 }
 
 export function AdminPagination({ pagination, onPage }) {
   const { t } = useTranslation();
   if (!pagination || pagination.totalPages <= 1) return null;
   return (
-    <div className="flex items-center justify-between gap-3 border-t border-[var(--ns-border-subtle)] p-4 text-xs text-[var(--ns-text-muted)]">
+    <div className="flex items-center justify-between gap-3 border-t border-[var(--ns-border-subtle)] p-4 text-sm text-[var(--ns-text-muted)]">
       <span>{t('admin.pageOf', { page: pagination.page, total: pagination.totalPages })}</span>
       <div className="flex gap-2">
         <button
@@ -209,16 +209,16 @@ export function ConfirmActionModal({
       <form onSubmit={submit} className="w-full max-w-md rounded-lg border border-[var(--ns-border)] bg-[var(--ns-card-solid)] p-5 shadow-2xl">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h2 id="admin-confirm-title" className="font-bold text-[var(--ns-text)]">{title || t('admin.confirmAction')}</h2>
-            {description && <p className="mt-1 text-xs text-[var(--ns-text-secondary)]">{description}</p>}
-            <p className="mt-1 text-xs text-[var(--ns-text-muted)]">{t('admin.auditNotice')}</p>
+            <h2 id="admin-confirm-title" className="text-lg font-bold tracking-tight text-[var(--ns-text)]">{title || t('admin.confirmAction')}</h2>
+            {description && <p className="mt-1 text-sm text-[var(--ns-text-secondary)]">{description}</p>}
+            <p className="mt-1 text-ns-label text-[var(--ns-text-muted)]">{t('admin.auditNotice')}</p>
           </div>
           <button type="button" onClick={onClose} aria-label={t('admin.close')} className="ns-icon-button">
             <X className="h-4 w-4" />
           </button>
         </div>
         {requireReason && (
-          <label className="mt-5 block text-xs font-semibold text-[var(--ns-text-secondary)]">
+          <label className="mt-5 block text-sm font-semibold text-[var(--ns-text-secondary)]">
             {t('admin.reason')}
             <textarea
               autoFocus
@@ -226,7 +226,7 @@ export function ConfirmActionModal({
               maxLength={1000}
               value={reason}
               onChange={(event) => setReason(event.target.value)}
-              className="ns-field mt-2 min-h-24 w-full resize-y rounded p-3 text-sm"
+              className="ns-field mt-2 min-h-24 w-full resize-y rounded p-3 text-base sm:text-sm"
               placeholder={t('admin.reasonPlaceholder')}
             />
           </label>
@@ -234,7 +234,7 @@ export function ConfirmActionModal({
         {options.length > 0 && (
           <div className="mt-4 space-y-2.5">
             {options.map((option) => (
-              <label key={option.key} className="flex items-start gap-2.5 text-xs text-[var(--ns-text-secondary)]">
+              <label key={option.key} className="flex items-start gap-2.5 text-sm text-[var(--ns-text-secondary)]">
                 <input
                   type="checkbox"
                   checked={Boolean(optionValues[option.key])}

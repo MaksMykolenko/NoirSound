@@ -44,14 +44,14 @@ export function PlayerTrackInfo({
         imageClassName="object-cover"
       />
       <div className="min-w-0 flex-1">
-        <h4 className="text-[15px] font-bold text-zinc-100 truncate hover:underline cursor-pointer">
+        <h4 className="text-ns-card-title font-bold text-zinc-100 truncate hover:underline cursor-pointer">
           {track.title}
         </h4>
-        <p className="text-[13px] text-zinc-350 truncate hover:text-zinc-100 cursor-pointer font-medium">
+        <p className="text-ns-label text-zinc-350 truncate hover:text-zinc-100 cursor-pointer font-medium">
           {track.artistName}
         </p>
         {playbackError && (
-          <p className="text-[11px] text-rose-300 truncate" role="alert">{playbackError}</p>
+          <p className="text-ns-label text-rose-300 truncate" role="alert">{playbackError}</p>
         )}
       </div>
       <button
@@ -154,7 +154,7 @@ export function PlayerTransportControls({
 export function PlayerProgress({ progress, duration, onSeek }) {
   return (
     <div
-      className="w-full flex items-center space-x-2 text-[12px] text-zinc-450 font-mono select-none font-medium"
+      className="w-full flex items-center space-x-2 text-ns-label text-zinc-450 font-sans tabular-nums select-none font-medium"
       data-testid="standard-player-progress"
     >
       <span className="w-8 text-right shrink-0">{formatTime(progress)}</span>
@@ -330,7 +330,7 @@ export function MobilePlayerProgress({ progress, duration, onSeek }) {
           style={{ '--slider-progress': `${(progress / (duration || 100)) * 100}%` }}
         />
       </div>
-      <div className="flex justify-between items-center text-[12px] text-zinc-400 font-mono font-medium">
+      <div className="flex justify-between items-center text-ns-label text-zinc-400 font-sans tabular-nums font-medium">
         <span>{formatTime(progress)}</span>
         <span>{formatTime(duration)}</span>
       </div>

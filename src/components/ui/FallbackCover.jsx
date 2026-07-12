@@ -49,10 +49,10 @@ export default function FallbackCover({
         style={{ left: `${visual.x}%`, top: `${visual.y}%` }}
       />
       <span className="absolute inset-x-3 bottom-3 flex items-end justify-between gap-2">
-        <span className="font-display text-lg font-bold tracking-tight text-white/95 sm:text-xl">
+        <span className="font-sans text-lg font-bold tracking-tight text-white/95 sm:text-xl">
           {initialsFor(title)}
         </span>
-        <span className="font-mono text-[7px] font-medium uppercase tracking-wider text-white/55 sm:text-[8px]">
+        <span className="font-sans tabular-nums text-[7px] font-medium uppercase tracking-ns-label text-white/55 sm:text-[8px]">
           No artwork
         </span>
       </span>

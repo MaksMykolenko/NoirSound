@@ -84,7 +84,7 @@ function DeletePlaylistDialog({ playlist, busy, onCancel, onConfirm, t }) {
         <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-md bg-rose-500/10 text-rose-300">
           <Trash2 size={19} />
         </div>
-        <h2 id="delete-playlist-title" className="font-display text-lg font-semibold tracking-tight text-zinc-100">{t('playlists.deleteQuestion', { name: playlist.name })}</h2>
+        <h2 id="delete-playlist-title" className="font-sans text-lg font-semibold tracking-tight text-zinc-100">{t('playlists.deleteQuestion', { name: playlist.name })}</h2>
         <p className="mt-2 text-sm leading-6 text-zinc-400">{t('playlists.deleteWarning')}</p>
         <div className="mt-6 flex gap-3">
           <button type="button" onClick={onCancel} disabled={busy} className="ns-button-secondary min-h-11 flex-1">{t('playlists.cancel')}</button>
@@ -105,7 +105,7 @@ function RemoveTrackDialog({ track, busy, onCancel, onConfirm, t }) {
         <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-md bg-rose-500/10 text-rose-300">
           <Trash2 size={19} />
         </div>
-        <h2 id="remove-track-title" className="font-display text-lg font-semibold tracking-tight text-zinc-100">{t('playlists.removeTrackConfirm', { title: track.title })}</h2>
+        <h2 id="remove-track-title" className="font-sans text-lg font-semibold tracking-tight text-zinc-100">{t('playlists.removeTrackConfirm', { title: track.title })}</h2>
         <div className="mt-6 flex gap-3">
           <button type="button" onClick={onCancel} disabled={busy} className="ns-button-secondary min-h-11 flex-1">{t('playlists.cancel')}</button>
           <button type="button" onClick={onConfirm} disabled={busy} className="min-h-11 flex-1 rounded-md bg-rose-600 px-4 text-sm font-semibold text-white hover:bg-rose-500 disabled:opacity-50">
@@ -316,7 +316,7 @@ export default function PlaylistPage() {
         description={`${tracks.length === 1 ? '1 track' : `${tracks.length} tracks`}${playlist.description ? ` · ${playlist.description}` : ` · Listen to ${playlist.name}, a playlist by ${playlist.creator} on NoirSound.`}`}
         canonical={`https://noirsound.co/playlist/${playlist.id}`}
       />
-      <button onClick={() => navigate(-1)} className="min-h-11 px-2 flex items-center gap-2 text-zinc-400 hover:text-white text-xs font-bold uppercase tracking-wider">
+      <button onClick={() => navigate(-1)} className="min-h-11 px-2 flex items-center gap-2 text-zinc-400 hover:text-white text-sm font-semibold">
         <ArrowLeft size={14} />
         <span>Back</span>
       </button>
@@ -338,15 +338,15 @@ export default function PlaylistPage() {
 
         <div className="flex-1 space-y-4 text-center md:text-left min-w-0">
           <p className="ns-eyebrow">{t('playlists.typeLabel')}</p>
-          <span className="inline-flex items-center gap-1.5 rounded border border-brand-red/30 bg-brand-red/5 px-2.5 py-1 font-mono text-[9px] font-medium uppercase tracking-wider text-rose-300">
+          <span className="inline-flex items-center gap-1.5 rounded border border-brand-red/30 bg-brand-red/5 px-2.5 py-1 font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-rose-300">
             {playlist.isPublic === false && <Lock size={11} />}
             {playlist.isPublic === false ? t('playlists.private') : t('playlists.public')}
           </span>
           <div>
-            <h1 className="ns-page-title break-words">{playlist.name}</h1>
+            <h1 className="ns-display-title ns-display-title--entity">{playlist.name}</h1>
             <p className="text-sm text-zinc-400 mt-2">{playlist.description || t('playlists.noDescription')}</p>
           </div>
-          <div className="flex flex-wrap items-center justify-center gap-3 font-mono text-[10px] text-zinc-500 md:justify-start">
+          <div className="flex flex-wrap items-center justify-center gap-3 font-sans tabular-nums text-ns-meta text-zinc-500 md:justify-start">
             {playlist.ownerArtistId ? (
               <button type="button" onClick={() => navigate(`/artist/${playlist.ownerArtistId}`)} className="hover:text-zinc-100 hover:underline">
                 {t('playlists.by', { creator: playlist.creator })}
@@ -393,7 +393,7 @@ export default function PlaylistPage() {
       <section className="space-y-4">
         <div className="flex items-center justify-between px-1">
           <h2 className="ns-eyebrow">{t('playlists.tracks')}</h2>
-          {owner && tracks.length > 1 && <p className="text-[11px] text-zinc-500">{t('playlists.reorderHelp')}</p>}
+          {owner && tracks.length > 1 && <p className="text-ns-label text-zinc-500">{t('playlists.reorderHelp')}</p>}
         </div>
         {tracks.length === 0 ? (
           <EmptyState iconName="Music2" title={t('playlists.empty')} description={owner ? t('playlists.emptyOwner') : t('playlists.emptyVisitor')} />

@@ -129,7 +129,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }) {
 
         <div className="p-6 sm:p-8">
           <div className="mb-7 text-center">
-            <h2 id="auth-modal-title" className="mb-2 font-display text-2xl font-bold tracking-tight text-white">
+            <h2 id="auth-modal-title" className="mb-2 font-sans text-2xl font-bold tracking-tight text-white">
               {mode === 'login' ? t('header.signIn') : 'Join NoirSound'}
             </h2>
             <p className="text-sm text-zinc-400">
@@ -151,7 +151,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }) {
 
           <div className="flex items-center gap-3 my-5" aria-hidden="true">
             <span className="h-px flex-1 bg-zinc-800" />
-            <span className="font-mono text-[10px] uppercase text-zinc-500">or</span>
+            <span className="font-sans tabular-nums text-ns-meta uppercase text-zinc-500">or</span>
             <span className="h-px flex-1 bg-zinc-800" />
           </div>
 

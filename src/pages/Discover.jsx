@@ -223,11 +223,11 @@ export default function Discover() {
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
               placeholder={t('header.searchPlaceholder')}
-              className="ns-field pl-11 pr-4 text-sm"
+              className="ns-field pl-11 pr-4 text-base sm:text-sm"
               aria-label="Search releases"
             />
           </div>
-          <div className="flex items-center gap-2 px-1 text-xs font-bold uppercase tracking-wider text-zinc-500">
+          <div className="flex items-center gap-2 px-1 text-ns-label font-bold uppercase tracking-ns-label text-zinc-500">
             <SlidersHorizontal size={15} />
             <span>{t('discover.resultsCount', { count: filteredTracks.length })}</span>
           </div>
@@ -285,7 +285,7 @@ export default function Discover() {
               data-testid="active-genre-chip"
               onClick={clearAll}
               aria-label={`${t('discover.clearGenre')}: ${getGenreLabel(filter.key)}`}
-              className="group inline-flex max-w-full cursor-pointer items-center gap-1.5 rounded border border-brand-red/30 bg-brand-red/10 py-1.5 pl-3 pr-2 text-xs font-medium text-rose-200 transition-colors hover:border-brand-red/50 hover:bg-brand-red/15"
+              className="group inline-flex max-w-full cursor-pointer items-center gap-1.5 rounded border border-brand-red/30 bg-brand-red/10 py-1.5 pl-3 pr-2 text-sm font-medium text-rose-200 transition-colors hover:border-brand-red/50 hover:bg-brand-red/15"
             >
               <span className="truncate">{getGenreLabel(filter.key)}</span>
               <X size={13} className="shrink-0 text-rose-300 group-hover:text-zinc-100" aria-hidden="true" />
@@ -355,8 +355,8 @@ export default function Discover() {
                     imageClassName="object-cover"
                   />
                   <div className="min-w-0 flex-1">
-                    <h4 className="truncate text-xs font-semibold text-zinc-200">{artist.name}</h4>
-                    <p className="mt-0.5 truncate font-mono text-[9px] text-zinc-500">
+                    <h4 className="truncate text-ns-body-sm font-semibold text-zinc-200">{artist.name}</h4>
+                    <p className="mt-0.5 truncate font-sans tabular-nums text-ns-meta text-zinc-500">
                       {formatNumber(artist.followers || 0)} followers
                     </p>
                   </div>

@@ -122,7 +122,7 @@ function DesktopRow({
       <td className="w-10 py-2 text-center align-middle">
         {isAvailable ? (
           <span className="relative flex h-6 items-center justify-center">
-            <span className={`font-mono text-[13px] text-zinc-500 ${canPlay ? 'group-hover:opacity-0' : ''}`}>
+            <span className={`font-sans tabular-nums text-ns-label text-zinc-500 ${canPlay ? 'group-hover:opacity-0' : ''}`}>
               {isCurrent && player.isPlaying ? (
                 <span aria-hidden="true" className="flex h-3 items-end justify-center gap-[2px]">
                   <span className="h-full w-[2px] animate-bounce bg-brand-red" />
@@ -174,18 +174,18 @@ function DesktopRow({
             />
             <div className="min-w-0">
               <div className="flex min-w-0 items-center gap-1.5">
-                <span className={`truncate text-[13px] font-semibold ${isCurrent ? 'text-brand-red' : 'text-zinc-100'}`}>
+                <span className={`truncate text-ns-body-sm font-semibold ${isCurrent ? 'text-brand-red' : 'text-zinc-100'}`}>
                   {track.title}
                 </span>
                 {track.explicit && (
-                  <span className="shrink-0 rounded border border-zinc-700 bg-zinc-800 px-1 text-[9px] font-bold uppercase tracking-wide text-zinc-400">E</span>
+                  <span className="shrink-0 rounded border border-zinc-700 bg-zinc-800 px-1 text-ns-meta font-bold uppercase tracking-ns-label text-zinc-400">E</span>
                 )}
                 {isCurrent && <span className="sr-only">{t('playlists.currentlyPlaying')}</span>}
               </div>
               <button
                 type="button"
                 onClick={(event) => { event.stopPropagation(); navigate(`/artist/${track.artistId}`); }}
-                className="block truncate font-mono text-[10px] text-zinc-500 hover:text-zinc-300 hover:underline xl:hidden"
+                className="block truncate font-sans tabular-nums text-ns-meta text-zinc-500 hover:text-zinc-300 hover:underline xl:hidden"
               >
                 {track.artistName}
               </button>
@@ -203,7 +203,7 @@ function DesktopRow({
           <button
             type="button"
             onClick={(event) => { event.stopPropagation(); navigate(`/artist/${track.artistId}`); }}
-            className="block max-w-full truncate text-left text-[13px] text-zinc-400 hover:text-zinc-200 hover:underline"
+            className="block max-w-full truncate text-left text-ns-label text-zinc-400 hover:text-zinc-200 hover:underline"
           >
             {track.artistName}
           </button>
@@ -215,23 +215,23 @@ function DesktopRow({
             <button
               type="button"
               onClick={(event) => { event.stopPropagation(); navigate(albumInfo.href); }}
-              className="block max-w-full truncate text-left text-[13px] text-zinc-400 hover:text-zinc-200 hover:underline"
+              className="block max-w-full truncate text-left text-ns-label text-zinc-400 hover:text-zinc-200 hover:underline"
             >
               {albumInfo.text}
             </button>
           ) : (
-            <span className="block max-w-full truncate text-[13px] text-zinc-500">{albumInfo.text}</span>
+            <span className="block max-w-full truncate text-ns-label text-zinc-500">{albumInfo.text}</span>
           )
         )}
       </td>
       <td className="hidden py-2 pr-3 sm:table-cell">
         {isAvailable && (
-          <span className="font-mono text-[12.5px] text-zinc-500">{dateLabel}</span>
+          <span className="font-sans tabular-nums text-ns-label text-zinc-500">{dateLabel}</span>
         )}
       </td>
       <td className="py-2 pr-2 text-right">
         {isAvailable && (
-          <span className="font-mono text-[12.5px] text-zinc-500">
+          <span className="font-sans tabular-nums text-ns-label text-zinc-500">
             {formatDuration(track.durationSeconds ?? track.duration)}
           </span>
         )}
@@ -350,12 +350,12 @@ function MobileRow({
       <div className="min-w-0 flex-1">
         {isAvailable ? (
           <>
-            <p className={`truncate text-[13px] font-semibold ${isCurrent ? 'text-brand-red' : 'text-zinc-100'}`}>
+            <p className={`truncate text-ns-body-sm font-semibold ${isCurrent ? 'text-brand-red' : 'text-zinc-100'}`}>
               {track.title}
-              {track.explicit && <span className="ml-1.5 rounded border border-zinc-700 bg-zinc-800 px-1 align-middle text-[9px] font-bold text-zinc-400">E</span>}
+              {track.explicit && <span className="ml-1.5 rounded border border-zinc-700 bg-zinc-800 px-1 align-middle text-ns-meta font-bold text-zinc-400">E</span>}
               {isCurrent && <span className="sr-only">{t('playlists.currentlyPlaying')}</span>}
             </p>
-            <p className="truncate font-mono text-[10px] text-zinc-500">
+            <p className="truncate font-sans tabular-nums text-ns-label text-zinc-500">
               {track.artistName}
               <span className="text-zinc-600"> • </span>
               {albumInfo.text}
@@ -420,7 +420,7 @@ export default function PlaylistTrackTable({
           <button
             type="button"
             onClick={() => { setSortKey(null); setSortDir('asc'); }}
-            className={`min-h-8 rounded border px-2.5 py-1 font-mono text-[9px] font-medium uppercase tracking-wider transition-colors ${
+            className={`min-h-8 rounded border px-2.5 py-1 font-sans text-ns-label font-medium transition-colors ${
               isCustomOrder ? 'border-brand-red/30 bg-brand-red/10 text-rose-300' : 'border-zinc-800 text-zinc-500 hover:text-zinc-300'
             }`}
           >
@@ -431,7 +431,7 @@ export default function PlaylistTrackTable({
               key={key}
               type="button"
               onClick={() => handleSort(key)}
-              className={`inline-flex min-h-8 items-center gap-1 rounded border px-2.5 py-1 font-mono text-[9px] font-medium uppercase tracking-wider transition-colors ${
+              className={`inline-flex min-h-8 items-center gap-1 rounded border px-2.5 py-1 font-sans text-ns-label font-medium transition-colors ${
                 sortKey === key ? 'border-zinc-700 bg-zinc-800 text-zinc-100' : 'border-zinc-800 text-zinc-500 hover:text-zinc-300'
               }`}
             >
@@ -441,13 +441,13 @@ export default function PlaylistTrackTable({
           ))}
         </div>
         {!isCustomOrder && owner && (
-          <p className="text-[11px] text-zinc-500">{t('playlists.reorderDisabledWhileSorted')}</p>
+          <p className="text-ns-label text-zinc-500">{t('playlists.reorderDisabledWhileSorted')}</p>
         )}
       </div>
 
       <table className="hidden w-full border-collapse md:table" role="table">
         <thead>
-          <tr className="border-b border-zinc-800/60 font-mono text-[9px] uppercase tracking-wider text-zinc-500">
+          <tr className="border-b border-zinc-800/60 font-sans tabular-nums text-ns-label uppercase tracking-ns-label text-zinc-500">
             <th scope="col" className="w-10 py-2 text-center font-bold">#</th>
             <th scope="col" className="py-2 text-left font-bold">{t('playlists.columnTitle')}</th>
             <th scope="col" className="hidden py-2 pr-4 text-left font-bold xl:table-cell">{t('playlists.columnArtist')}</th>

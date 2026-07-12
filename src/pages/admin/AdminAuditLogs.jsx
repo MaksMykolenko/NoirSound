@@ -39,11 +39,11 @@ export default function AdminAuditLogs() {
             <tbody>{data.data.map((entry) => (
               <tr key={entry.id} className="border-t border-[var(--ns-border-subtle)]">
                 <td className="px-4 py-3"><StatusBadge status={entry.action} /></td>
-                <td className="px-4 py-3 text-xs">@{entry.actor?.username}</td>
+                <td className="px-4 py-3 text-sm">@{entry.actor?.username}</td>
                 <td className="px-4 py-3"><StatusBadge status={entry.targetType} /></td>
-                <td className="max-w-40 truncate px-4 py-3 font-mono text-[10px]" title={entry.targetId}>{entry.targetId}</td>
-                <td className="max-w-xs px-4 py-3 text-xs text-[var(--ns-text-muted)]">{entry.reason || '—'}</td>
-                <td className="px-4 py-3 text-xs text-[var(--ns-text-muted)]">{formatAdminDate(entry.createdAt, i18n.language)}</td>
+                <td className="max-w-40 truncate px-4 py-3 font-mono text-ns-meta" title={entry.targetId}>{entry.targetId}</td>
+                <td className="max-w-xs px-4 py-3 text-sm text-[var(--ns-text-muted)]">{entry.reason || '—'}</td>
+                <td className="px-4 py-3 text-sm text-[var(--ns-text-muted)]">{formatAdminDate(entry.createdAt, i18n.language)}</td>
               </tr>
             ))}</tbody>
           </AdminTable>

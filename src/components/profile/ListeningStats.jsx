@@ -76,7 +76,7 @@ export default function ListeningStats() {
               <Icon size={16} />
             </div>
             <div>
-              <span className="block font-mono text-[9px] font-medium uppercase tracking-wide text-zinc-500">{label}</span>
+              <span className="block font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-zinc-500">{label}</span>
               <span className="mt-1 block text-base font-semibold text-zinc-100">{value}</span>
             </div>
           </div>
@@ -105,11 +105,11 @@ export default function ListeningStats() {
                       imageClassName="object-cover"
                     />
                     <div className="min-w-0">
-                      <h4 className="truncate text-xs font-semibold text-zinc-200">{track.title}</h4>
-                      <p className="truncate font-mono text-[9px] text-zinc-500">{getLocalizedGenre(track.genre) || 'Uncategorized'}</p>
+                      <h4 className="truncate text-ns-body-sm font-semibold text-zinc-200">{track.title}</h4>
+                      <p className="truncate font-sans tabular-nums text-ns-meta text-zinc-500">{getLocalizedGenre(track.genre) || 'Uncategorized'}</p>
                     </div>
                   </div>
-                  <span className="text-xs text-zinc-500 font-semibold shrink-0">
+                  <span className="text-ns-meta text-zinc-500 font-semibold shrink-0">
                     {formatNumber(playCount)} {t('trackPage.plays')}
                   </span>
                 </button>
@@ -137,9 +137,9 @@ export default function ListeningStats() {
                       className="w-9 h-9 rounded-full shrink-0"
                       imageClassName="object-cover"
                     />
-                    <h4 className="truncate text-xs font-semibold text-zinc-200">{artist.name}</h4>
+                    <h4 className="truncate text-ns-body-sm font-semibold text-zinc-200">{artist.name}</h4>
                   </div>
-                  <span className="text-xs text-zinc-500 font-semibold shrink-0">
+                  <span className="text-ns-meta text-zinc-500 font-semibold shrink-0">
                     {formatNumber(artist.playCount)} {t('trackPage.plays')}
                   </span>
                 </button>
@@ -161,7 +161,7 @@ export default function ListeningStats() {
             <p className="text-sm text-zinc-300">
               Early signal: {stats.topGenres.map((item) => getLocalizedGenre(item.genre)).join(', ')}
             </p>
-            <p className="text-xs text-zinc-500 mt-1">
+            <p className="text-ns-label text-zinc-500 mt-1">
               Based on {stats.tracksPlayed} playback {stats.tracksPlayed === 1 ? 'start' : 'starts'}; percentages are hidden until more history exists.
             </p>
           </div>
@@ -169,7 +169,7 @@ export default function ListeningStats() {
           <div className="space-y-4">
             {stats.topGenres.map((item) => (
               <div key={item.genre}>
-                <div className="flex justify-between items-center gap-2 text-xs font-bold text-zinc-300 mb-1.5">
+                <div className="flex justify-between items-center gap-2 text-sm font-bold text-zinc-300 mb-1.5">
                   <span className="truncate min-w-0">{getLocalizedGenre(item.genre)}</span>
                   <span className="text-brand-red shrink-0">{item.percent}%</span>
                 </div>

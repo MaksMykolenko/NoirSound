@@ -266,14 +266,14 @@ export default function UploadForm() {
           </div>
           <div className="min-w-0 flex-1">
             <h4 className="text-sm font-bold text-zinc-200 truncate">{title}</h4>
-            <p className="text-xs text-zinc-500">{getLocalizedGenre(genre)} • {tags || 'No tags'}</p>
+            <p className="text-sm text-zinc-500">{getLocalizedGenre(genre)} • {tags || 'No tags'}</p>
           </div>
         </div>
 
         <div className="flex space-x-3">
           <button
             onClick={handleReset}
-            className="flex-1 ns-button-secondary px-4 text-xs uppercase tracking-wider cursor-pointer"
+            className="flex-1 ns-button-secondary px-4 text-sm cursor-pointer"
           >
             Upload Another
           </button>
@@ -290,7 +290,7 @@ export default function UploadForm() {
             {uploadStatus === 'uploading' && 'Uploading track audio...'}
             {uploadStatus === 'processing' && 'Processing track on server...'}
           </h3>
-          <p className="text-xs text-zinc-500">Do not close this page or navigate away.</p>
+          <p className="text-sm text-zinc-500">Do not close this page or navigate away.</p>
         </div>
 
         {/* Progress Display */}
@@ -313,7 +313,7 @@ export default function UploadForm() {
             )}
           </div>
 
-          <div className="flex justify-between items-center text-xs text-zinc-400 font-semibold px-1">
+          <div className="flex justify-between items-center text-sm text-zinc-400 font-semibold px-1">
             <span>
               {uploadStatus === 'uploading' && `Progress: ${uploadProgress}%`}
               {uploadStatus === 'processing' && 'Awaiting worker...'}
@@ -324,7 +324,7 @@ export default function UploadForm() {
 
         {/* Flow list status */}
         <div className="space-y-3 pt-4 border-t border-zinc-900/60">
-          <div className={`flex items-center space-x-3 text-xs ${
+          <div className={`flex items-center space-x-3 text-sm ${
             uploadStatus === 'uploading' ? 'text-zinc-200 font-bold' : 'text-zinc-500'
           }`}>
             <span className={`w-2 h-2 rounded-full ${
@@ -332,7 +332,7 @@ export default function UploadForm() {
             }`} />
             <span>1. Sending files to storage</span>
           </div>
-          <div className={`flex items-center space-x-3 text-xs ${
+          <div className={`flex items-center space-x-3 text-sm ${
             uploadStatus === 'processing' ? 'text-zinc-200 font-bold' : 'text-zinc-500'
           }`}>
             <span className={`w-2 h-2 rounded-full ${
@@ -340,7 +340,7 @@ export default function UploadForm() {
             }`} />
             <span>2. Audio parsing & validation</span>
           </div>
-          <div className="flex items-center space-x-3 text-xs text-zinc-500">
+          <div className="flex items-center space-x-3 text-sm text-zinc-500">
             <span className="w-2 h-2 rounded-full bg-zinc-800" />
             <span>3. Publish processed release</span>
           </div>
@@ -386,12 +386,12 @@ export default function UploadForm() {
               <FileAudio size={24} />
             </div>
             <div>
-              <span className="block text-xs font-bold text-zinc-200">
+              <span className="block text-sm font-bold text-zinc-200">
                 {audioFile ? audioFile.name : t('uploadForm.selectAudio')}
               </span>
-              <span className="block text-xs text-zinc-400 mt-1">{t('uploadForm.audioFormats')}</span>
+              <span className="block text-ns-label text-zinc-400 mt-1">{t('uploadForm.audioFormats')}</span>
               {audioFile && (
-                <span className="block text-[11px] text-emerald-400 mt-2">
+                <span className="block text-ns-label text-emerald-400 mt-2">
                   {(audioFile.size / (1024 * 1024)).toFixed(1)} MB selected
                 </span>
               )}
@@ -421,10 +421,10 @@ export default function UploadForm() {
               </div>
             )}
             <div>
-              <span className="block text-xs font-bold text-zinc-200">
+              <span className="block text-sm font-bold text-zinc-200">
                 {coverFile ? coverFile.name : t('uploadForm.selectArtwork')}
               </span>
-              <span className="block text-xs text-zinc-400 mt-1">{t('uploadForm.artworkFormats')}</span>
+              <span className="block text-ns-label text-zinc-400 mt-1">{t('uploadForm.artworkFormats')}</span>
             </div>
           </div>
         </div>
@@ -433,21 +433,21 @@ export default function UploadForm() {
       {/* Title & Genre */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-1.5">
-          <label htmlFor="track-title" className="font-mono text-[10px] font-medium uppercase tracking-wider text-zinc-400">{t('uploadForm.trackTitle')}</label>
+          <label htmlFor="track-title" className="font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-zinc-400">{t('uploadForm.trackTitle')}</label>
           <input
             id="track-title"
             type="text"
             placeholder="e.g. Midnight Protocol"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="ns-field px-4 text-sm"
+            className="ns-field px-4 text-base sm:text-sm"
             aria-invalid={Boolean(errorMsg && !title.trim())}
             aria-describedby={errorMsg ? 'upload-error' : undefined}
           />
         </div>
 
         <div className="space-y-1.5">
-          <label htmlFor="track-genre" className="font-mono text-[10px] font-medium uppercase tracking-wider text-zinc-400">{t('uploadForm.primaryGenre')}</label>
+          <label htmlFor="track-genre" className="font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-zinc-400">{t('uploadForm.primaryGenre')}</label>
           <GenrePicker
             id="track-genre"
             value={genre}
@@ -455,35 +455,35 @@ export default function UploadForm() {
             ariaLabel={t('uploadForm.primaryGenre')}
             placeholder={t('uploadForm.selectGenre')}
           />
-          <p className="text-[11px] text-zinc-500 leading-relaxed pt-0.5">{t('uploadForm.genreHelper')}</p>
+          <p className="text-ns-label text-zinc-500 leading-relaxed pt-0.5">{t('uploadForm.genreHelper')}</p>
         </div>
       </div>
 
       {/* Description */}
       <div className="space-y-1.5">
-        <label htmlFor="track-description" className="font-mono text-[10px] font-medium uppercase tracking-wider text-zinc-400">{t('uploadForm.description')}</label>
+        <label htmlFor="track-description" className="font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-zinc-400">{t('uploadForm.description')}</label>
         <textarea
           id="track-description"
           rows={3}
           placeholder={t('uploadForm.descriptionPlaceholder')}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          className="ns-field px-4 py-3 text-sm resize-none"
+          className="ns-field px-4 py-3 text-base resize-none sm:text-sm"
         />
       </div>
 
       {/* Tags */}
       <div className="space-y-1.5">
-        <label htmlFor="track-tags" className="font-mono text-[10px] font-medium uppercase tracking-wider text-zinc-400">{t('uploadForm.tags')}</label>
+        <label htmlFor="track-tags" className="font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-zinc-400">{t('uploadForm.tags')}</label>
         <input
           id="track-tags"
           type="text"
           placeholder={t('uploadForm.tagsPlaceholder')}
           value={tags}
           onChange={(e) => setTags(e.target.value)}
-          className="ns-field px-4 text-sm"
+          className="ns-field px-4 text-base sm:text-sm"
         />
-        <p className="text-[11px] text-zinc-500 leading-relaxed pt-0.5">{t('uploadForm.tagsHelper')}</p>
+        <p className="text-ns-label text-zinc-500 leading-relaxed pt-0.5">{t('uploadForm.tagsHelper')}</p>
       </div>
 
       <details className="rounded border border-zinc-800 bg-zinc-950/30 p-4 sm:p-5">
@@ -509,7 +509,7 @@ export default function UploadForm() {
           aria-invalid={Boolean(errorMsg && !rightsChecked)}
           aria-describedby={errorMsg ? 'upload-error' : undefined}
         />
-        <span className="text-[12.5px] text-zinc-300 leading-relaxed font-medium">
+        <span className="text-sm text-zinc-300 leading-relaxed font-medium">
           {t('uploadForm.rightsConfirmation')}
         </span>
       </label>
@@ -518,7 +518,7 @@ export default function UploadForm() {
       <button
         type="submit"
         disabled={uploadMutation.isPending}
-        className="w-full ns-button-primary px-5 text-xs uppercase tracking-widest cursor-pointer disabled:opacity-50"
+        className="w-full ns-button-primary px-5 text-sm cursor-pointer disabled:opacity-50"
       >
         {t('uploadForm.submit')}
       </button>

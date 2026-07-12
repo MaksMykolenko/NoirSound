@@ -31,13 +31,13 @@ export default function BrandLogo({ size = 'md', showSubtitle = true, onClick })
 
       <div className="min-w-0">
         <div className="flex items-center gap-1.5">
-          <span className={`${isCompact ? 'text-lg' : 'text-xl'} truncate font-display font-bold tracking-tight text-white`}>
+          <span className={`${isCompact ? 'text-lg' : 'text-xl'} truncate font-sans font-bold tracking-tight text-white`}>
             NoirSound
           </span>
           {isPlaying && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand-red" aria-hidden="true" />}
         </div>
         {showSubtitle && (
-          <span className="block truncate font-mono text-[9px] font-medium uppercase tracking-[0.14em] text-zinc-500">
+          <span className="block truncate font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-zinc-500">
             Creator First
           </span>
         )}

@@ -42,7 +42,7 @@ export default function Header() {
             readOnly
             onFocus={() => navigate('/discover')}
             placeholder={t('header.searchPlaceholder')}
-            className="ns-field w-full rounded-md py-2 pl-10 pr-4 text-xs placeholder-zinc-600"
+            className="ns-field w-full rounded-md py-2 pl-10 pr-4 text-sm placeholder-zinc-600"
             aria-label="Search NoirSound"
           />
         </div>
@@ -58,7 +58,7 @@ export default function Header() {
               aria-expanded={isDropdownOpen}
               aria-haspopup="menu"
             >
-              <span className="text-xs font-semibold text-zinc-300 hidden xl:block">@{user.username}</span>
+              <span className="text-sm font-semibold text-zinc-300 hidden xl:block">@{user.username}</span>
               <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-brand-red font-bold text-[var(--ns-on-accent)]">
                 <FallbackAvatar
                   src={user.avatarUrl}
@@ -78,7 +78,7 @@ export default function Header() {
         ) : (
           <button 
             onClick={() => setAuthModalOpen(true)}
-            className="ns-button-primary cursor-pointer px-5 text-xs"
+            className="ns-button-primary cursor-pointer px-5 text-sm"
           >
             {t('header.signIn')}
           </button>

@@ -86,7 +86,7 @@ export default function EditPlaylistModal({ playlist, isOpen, onClose, onSaved }
         <header className="mb-5 flex items-center justify-between">
           <div>
             <h2 id="edit-playlist-title" className="text-lg font-semibold tracking-tight text-zinc-100">{t('playlists.edit')}</h2>
-            <p className="font-mono text-[10px] text-zinc-500">{t('playlists.editHelp')}</p>
+            <p className="font-sans tabular-nums text-ns-meta text-zinc-500">{t('playlists.editHelp')}</p>
           </div>
           <button type="button" onClick={onClose} disabled={saving} className="ns-icon-button !min-h-10 !min-w-10" aria-label="Close">
             <X size={18} />
@@ -94,18 +94,18 @@ export default function EditPlaylistModal({ playlist, isOpen, onClose, onSaved }
         </header>
         <form onSubmit={handleSubmit} className="space-y-4">
           <label className="block space-y-1">
-            <span className="text-xs font-bold text-zinc-300">{t('playlists.name')}</span>
-            <input autoFocus required maxLength={120} value={name} onChange={(event) => setName(event.target.value)} className="ns-field w-full px-4 text-sm" />
+            <span className="text-sm font-bold text-zinc-300">{t('playlists.name')}</span>
+            <input autoFocus required maxLength={120} value={name} onChange={(event) => setName(event.target.value)} className="ns-field w-full px-4 text-base sm:text-sm" />
           </label>
           <label className="block space-y-1">
-            <span className="text-xs font-bold text-zinc-300">{t('playlists.description')}</span>
-            <textarea maxLength={1000} rows={4} value={description} onChange={(event) => setDescription(event.target.value)} className="ns-field w-full resize-none px-4 py-3 text-sm" />
-            <span className="block text-right text-[10px] text-zinc-600">{description.length}/1000</span>
+            <span className="text-sm font-bold text-zinc-300">{t('playlists.description')}</span>
+            <textarea maxLength={1000} rows={4} value={description} onChange={(event) => setDescription(event.target.value)} className="ns-field w-full resize-none px-4 py-3 text-base sm:text-sm" />
+            <span className="block text-right text-ns-meta text-zinc-600">{description.length}/1000</span>
           </label>
           <label className="flex min-h-12 cursor-pointer items-center justify-between gap-4 rounded-md border border-zinc-800 bg-zinc-900/40 px-4">
             <span>
-              <strong className="block text-xs text-zinc-200">{t('playlists.public')}</strong>
-              <small className="text-zinc-500">{t('playlists.privateHelp')}</small>
+              <strong className="block text-sm text-zinc-200">{t('playlists.public')}</strong>
+              <small className="text-ns-meta text-zinc-500">{t('playlists.privateHelp')}</small>
             </span>
             <input type="checkbox" checked={isPublic} onChange={(event) => setIsPublic(event.target.checked)} className="h-4 w-4 accent-[var(--ns-accent)]" />
           </label>
@@ -114,7 +114,7 @@ export default function EditPlaylistModal({ playlist, isOpen, onClose, onSaved }
             <span className="min-w-0 flex-1 truncate">{cover?.name || t('playlists.coverHelp')}</span>
             <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleCover} className="sr-only" />
           </label>
-          {error && <p role="alert" className="text-xs font-semibold text-rose-300">{error}</p>}
+          {error && <p role="alert" className="text-sm font-semibold text-rose-300">{error}</p>}
           <button type="submit" disabled={saving} className="ns-button-primary flex min-h-12 w-full items-center justify-center gap-2 disabled:opacity-50">
             {saving ? <LoaderCircle size={16} className="animate-spin" /> : <Save size={16} />}
             {saving ? t('playlists.saving') : t('playlists.saveChanges')}

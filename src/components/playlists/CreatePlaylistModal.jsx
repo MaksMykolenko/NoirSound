@@ -63,13 +63,13 @@ export default function CreatePlaylistModal({ isOpen, onClose, onCreate }) {
             <ListMusic size={20} className="text-brand-red" />
           </div>
           <h2 id="playlist-modal-title" className="text-lg font-semibold tracking-tight text-zinc-100">{t('playlistModal.newPlaylist')}</h2>
-          <p className="mt-1 text-[11px] text-zinc-500">{t('playlistModal.curateSounds')}</p>
+          <p className="mt-1 text-ns-label text-zinc-500">{t('playlistModal.curateSounds')}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1">
             {errorMsg && (
-              <p id="playlist-name-error" className="text-rose-300 text-xs font-semibold px-1" role="alert">{errorMsg}</p>
+              <p id="playlist-name-error" className="text-rose-300 text-sm font-semibold px-1" role="alert">{errorMsg}</p>
             )}
             <label htmlFor="playlist-name" className="sr-only">Playlist name</label>
             <input
@@ -79,14 +79,14 @@ export default function CreatePlaylistModal({ isOpen, onClose, onCreate }) {
               value={name}
               onChange={(e) => setName(e.target.value)}
               maxLength={120}
-              className="ns-field w-full px-4 text-sm placeholder-zinc-500"
+              className="ns-field w-full px-4 text-base placeholder-zinc-500 sm:text-sm"
               aria-invalid={Boolean(errorMsg)}
               aria-describedby={errorMsg ? 'playlist-name-error' : undefined}
               autoFocus
             />
           </div>
           <div className="space-y-1">
-            <label htmlFor="playlist-description" className="text-xs font-bold text-zinc-300">
+            <label htmlFor="playlist-description" className="text-sm font-bold text-zinc-300">
               {t('playlists.description')} <span className="font-normal text-zinc-600">({t('playlists.optional')})</span>
             </label>
             <textarea
@@ -96,14 +96,14 @@ export default function CreatePlaylistModal({ isOpen, onClose, onCreate }) {
               maxLength={1000}
               rows={3}
               placeholder={t('playlists.descriptionPlaceholder')}
-              className="ns-field w-full resize-none px-4 py-3 text-sm placeholder-zinc-500"
+              className="ns-field w-full resize-none px-4 py-3 text-base placeholder-zinc-500 sm:text-sm"
             />
-            <p className="text-right text-[10px] text-zinc-600">{description.length}/1000</p>
+            <p className="text-right text-ns-meta text-zinc-600">{description.length}/1000</p>
           </div>
           <label className="flex min-h-11 cursor-pointer items-center justify-between gap-4 rounded-md border border-zinc-800 bg-zinc-900/40 px-3">
             <span>
-              <strong className="block text-xs text-zinc-200">{t('playlists.public')}</strong>
-              <small className="text-[10px] text-zinc-500">{t('playlists.publicHelp')}</small>
+              <strong className="block text-sm text-zinc-200">{t('playlists.public')}</strong>
+              <small className="text-ns-meta text-zinc-500">{t('playlists.publicHelp')}</small>
             </span>
             <input
               type="checkbox"
@@ -116,7 +116,7 @@ export default function CreatePlaylistModal({ isOpen, onClose, onCreate }) {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="ns-button-primary flex w-full cursor-pointer items-center justify-center space-x-2 rounded-md py-3 text-xs font-semibold uppercase tracking-widest"
+            className="ns-button-primary flex w-full cursor-pointer items-center justify-center space-x-2 rounded-md py-3 text-sm font-semibold"
           >
             <CheckCircle size={14} />
             <span>{isSubmitting ? t('playlistModal.creating') : t('playlistModal.createPlaylist')}</span>

@@ -301,7 +301,7 @@ export default function BatchUploadPage() {
     return (
       <div className="mx-auto max-w-lg space-y-4 rounded-md border border-zinc-800 bg-surface-noir/50 p-6 text-center">
         <AlertCircle className="mx-auto text-amber-300" />
-        <h1 className="font-display text-xl font-bold text-zinc-100">{t('batchUpload.signInRequired')}</h1>
+        <h1 className="font-sans text-xl font-bold text-zinc-100">{t('batchUpload.signInRequired')}</h1>
         <button type="button" className="ns-button-primary !rounded px-5" onClick={() => setAuthModalOpen(true)}>{t('header.signIn')}</button>
       </div>
     );
@@ -310,7 +310,7 @@ export default function BatchUploadPage() {
     return (
       <div className="mx-auto max-w-lg space-y-3 rounded-md border border-zinc-800 bg-surface-noir/50 p-6 text-center">
         <AlertCircle className="mx-auto text-amber-300" />
-        <h1 className="font-display text-xl font-bold text-zinc-100">{t('batchUpload.creatorRequired')}</h1>
+        <h1 className="font-sans text-xl font-bold text-zinc-100">{t('batchUpload.creatorRequired')}</h1>
         <p className="text-sm text-zinc-400">{t('batchUpload.creatorRequiredHelp')}</p>
       </div>
     );
@@ -320,11 +320,11 @@ export default function BatchUploadPage() {
     <div className="space-y-6 pb-20 animate-fade-in [&_.ns-button-primary]:!rounded [&_.ns-button-secondary]:!rounded [&_.ns-field]:!rounded [&_.ns-icon-button]:!rounded">
       <div className="flex flex-wrap items-end justify-between gap-4 border-b border-zinc-800/80 pb-5">
         <div>
-          <Link to="/upload" className="inline-flex items-center gap-2 font-mono text-[10px] font-medium uppercase tracking-wider text-zinc-500 hover:text-zinc-200">
+          <Link to="/upload" className="inline-flex items-center gap-2 font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-zinc-500 hover:text-zinc-200">
             <ArrowLeft size={14} /> {t('batchUpload.singleTrack')}
           </Link>
-          <span className="mt-4 block font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-brand-red">{t('batchUpload.multiUpload')}</span>
-          <h1 className="mt-2 font-display text-2xl font-bold tracking-tight text-zinc-100">{t('batchUpload.title')}</h1>
+          <span className="mt-4 block font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-brand-red">{t('batchUpload.multiUpload')}</span>
+          <h1 className="mt-2 font-sans text-2xl font-bold tracking-tight text-zinc-100">{t('batchUpload.title')}</h1>
           <p className="mt-2 max-w-2xl text-sm text-zinc-500">{t('batchUpload.subtitle')}</p>
         </div>
         {batch && (
@@ -357,7 +357,7 @@ export default function BatchUploadPage() {
                 type="button"
                 disabled={!batch && index > 0}
                 onClick={() => setStep(index)}
-                className={`flex min-h-11 items-center gap-2 rounded px-3 font-mono text-[10px] font-medium uppercase tracking-wide sm:px-4 ${
+                className={`flex min-h-11 items-center gap-2 rounded px-3 font-sans text-ns-meta font-medium sm:px-4 ${
                   step === index ? 'bg-brand-red text-white' : index < step ? 'text-emerald-300' : 'text-zinc-500'
                 } disabled:opacity-35`}
               >
@@ -387,7 +387,7 @@ export default function BatchUploadPage() {
                 {drafts.filter((draft) => draft.status !== 'PUBLISHED').map((draft) => (
                   <button key={draft.id} type="button" className="rounded-md border border-zinc-800 bg-surface-noir/45 p-4 text-left hover:border-brand-red/40" onClick={() => setSearchParams({ batch: draft.id })}>
                     <p className="truncate font-semibold text-zinc-200">{draft.playlistTitle || `${draft.itemCount} ${t('batchUpload.trackDrafts')}`}</p>
-                    <p className="mt-1 font-mono text-[10px] text-zinc-500">{draft.status} · {draft.readyCount} {t('batchUpload.ready')} · {draft.failedCount} {t('batchUpload.failed')}</p>
+                    <p className="mt-1 font-sans tabular-nums text-ns-meta text-zinc-500">{draft.status} · {draft.readyCount} {t('batchUpload.ready')} · {draft.failedCount} {t('batchUpload.failed')}</p>
                   </button>
                 ))}
               </div>
@@ -446,7 +446,7 @@ export default function BatchUploadPage() {
                     [counts.lyrics, t('batchUpload.lyricsAdded')],
                     [batch.missingFields.length, t('batchUpload.blockingErrors')],
                   ].map(([value, label]) => (
-                    <div key={label} className="rounded border border-zinc-800 bg-surface-noir/45 p-4"><p className="font-display text-2xl font-bold text-zinc-100">{value}</p><p className="mt-1 font-mono text-[9px] uppercase tracking-wide text-zinc-500">{label}</p></div>
+                    <div key={label} className="rounded border border-zinc-800 bg-surface-noir/45 p-4"><p className="font-sans text-2xl font-bold text-zinc-100">{value}</p><p className="mt-1 font-sans tabular-nums text-ns-meta uppercase tracking-ns-label text-zinc-500">{label}</p></div>
                   ))}
                 </div>
                 {batch.missingFields.length > 0 ? (
@@ -487,8 +487,8 @@ export default function BatchUploadPage() {
                   ].map(([value, label, Icon]) => (
                     <div key={label} className="rounded border border-zinc-800 bg-surface-noir/45 p-4">
                       <Icon size={17} className="text-brand-red mb-3" />
-                      <p className="font-display text-2xl font-bold text-zinc-100">{value}</p>
-                      <p className="font-mono text-[9px] uppercase tracking-wide text-zinc-500">{label}</p>
+                      <p className="font-sans text-2xl font-bold text-zinc-100">{value}</p>
+                      <p className="font-sans tabular-nums text-ns-meta uppercase tracking-ns-label text-zinc-500">{label}</p>
                     </div>
                   ))}
                 </div>
@@ -518,9 +518,9 @@ export default function BatchUploadPage() {
             <div className="rounded-md border border-zinc-800 bg-surface-noir/45 p-4">
               <div className="flex items-center justify-between gap-2">
                 <h2 className="font-semibold text-zinc-100">{t('batchUpload.batchStatus')}</h2>
-                <span className="font-mono text-[9px] font-medium uppercase tracking-wider text-brand-red">{batch.status}</span>
+                <span className="font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-brand-red">{batch.status}</span>
               </div>
-              <div className="mt-4 space-y-2 text-xs text-zinc-400">
+              <div className="mt-4 space-y-2 text-sm text-zinc-400">
                 <p className="flex justify-between"><span>{t('batchUpload.singles')}</span><strong className="text-zinc-200">{counts.singles}</strong></p>
                 <p className="flex justify-between"><span>{t('batchUpload.playlistTracks')}</span><strong className="text-zinc-200">{counts.playlist}</strong></p>
                 <p className="flex justify-between"><span>{t('batchUpload.ready')}</span><strong className="text-emerald-300">{counts.ready}</strong></p>
@@ -531,7 +531,7 @@ export default function BatchUploadPage() {
               {batch.items.map((item) => (
                 <button key={item.id} type="button" onClick={() => setSelectedItem(item)} className="flex w-full items-center gap-3 rounded p-2.5 text-left hover:bg-zinc-900">
                   {item.status === 'PROCESSING' ? <LoaderCircle size={15} className="text-amber-300 animate-spin" /> : item.status === 'READY' || item.status === 'PUBLISHED' ? <CheckCircle2 size={15} className="text-emerald-400" /> : item.status === 'FAILED' ? <AlertCircle size={15} className="text-rose-400" /> : <FileAudio size={15} className="text-zinc-500" />}
-                  <span className="min-w-0 flex-1"><span className="block truncate text-xs font-semibold text-zinc-300">{item.title}</span><span className="block font-mono text-[9px] text-zinc-600">{item.target}</span></span>
+                  <span className="min-w-0 flex-1"><span className="block truncate text-ns-body-sm font-semibold text-zinc-300">{item.title}</span><span className="block font-sans tabular-nums text-ns-meta text-zinc-600">{item.target}</span></span>
                   {item.missingFields?.length > 0 && <span className="w-2 h-2 rounded-full bg-amber-400" />}
                 </button>
               ))}

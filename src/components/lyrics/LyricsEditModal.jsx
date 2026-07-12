@@ -117,7 +117,7 @@ export default function LyricsEditModal({ open, track, onClose, onSaved }) {
         <header className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-zinc-800 bg-zinc-950 pb-4">
           <div>
             <span className="ns-eyebrow text-brand-red">{t('lyrics.editLyrics')}</span>
-            <h2 id="lyrics-edit-title" className="mt-1 font-display text-lg font-semibold tracking-tight text-zinc-100">{track.title}</h2>
+            <h2 id="lyrics-edit-title" className="mt-1 font-sans text-lg font-semibold tracking-tight text-zinc-100">{track.title}</h2>
           </div>
           <button ref={closeRef} type="button" className="ns-icon-button" onClick={onClose} aria-label={t('lyrics.close')}>
             <X size={20} />

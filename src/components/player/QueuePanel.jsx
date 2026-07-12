@@ -40,10 +40,10 @@ function QueueTrackRow({ track, index, currentTrack, playTrack, removeFromQueue,
         </button>
       </div>
       <div className="flex-1 min-w-0">
-        <h5 className={`text-xs font-semibold truncate ${isPlayingThis ? 'text-brand-red' : 'text-zinc-200'}`}>
+        <h5 className={`text-ns-body-sm font-semibold truncate ${isPlayingThis ? 'text-brand-red' : 'text-zinc-200'}`}>
           {track.title}
         </h5>
-        <p className="text-[10px] text-zinc-500 truncate">by {track.artistName}</p>
+        <p className="text-ns-meta text-zinc-500 truncate">by {track.artistName}</p>
       </div>
       <div className="flex items-center shrink-0">
         <button type="button" onClick={() => moveQueueItem(track.id, -1)} disabled={index === 0} className="ns-icon-button !min-h-9 !min-w-8 text-zinc-500 disabled:opacity-20" aria-label={`Move ${track.title} up`}>
@@ -96,7 +96,7 @@ export default function QueuePanel({ isOpen, onClose, surface = 'standard' }) {
         <div className="flex items-center space-x-2">
           <Music size={16} className="text-brand-red" />
           <h2 id="queue-title" className="text-sm font-semibold text-zinc-200">Play Queue</h2>
-          <span className="rounded-full border border-[var(--ns-border-subtle)] bg-zinc-900 px-2 py-0.5 font-mono text-[10px] text-zinc-400">
+          <span className="rounded-full border border-[var(--ns-border-subtle)] bg-zinc-900 px-2 py-0.5 font-sans tabular-nums text-ns-meta text-zinc-400">
             {queue.length}
           </span>
         </div>
@@ -104,7 +104,7 @@ export default function QueuePanel({ isOpen, onClose, surface = 'standard' }) {
           {queue.length > 0 && (
             <button
               onClick={handleClearQueue}
-              className="min-h-11 px-2 text-xs text-zinc-400 hover:text-rose-400 transition-colors flex items-center space-x-1 cursor-pointer rounded-lg"
+              className="min-h-11 px-2 text-sm text-zinc-400 hover:text-rose-400 transition-colors flex items-center space-x-1 cursor-pointer rounded-lg"
               aria-label="Clear play queue"
             >
               <Trash2 size={12} />
@@ -127,7 +127,7 @@ export default function QueuePanel({ isOpen, onClose, surface = 'standard' }) {
           <div className="flex flex-col items-center justify-center h-full text-center p-6 text-zinc-500 space-y-2">
             <Music size={24} className="opacity-40" />
             <p className="text-sm font-medium">Queue is empty</p>
-            <p className="text-xs max-w-[200px]">Add tracks to play next.</p>
+            <p className="text-sm max-w-[200px]">Add tracks to play next.</p>
           </div>
         ) : (
           queue.map((track, index) => (

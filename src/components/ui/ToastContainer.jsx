@@ -19,7 +19,7 @@ export default function ToastContainer() {
             {toast.type === 'info' && <Info size={18} className="text-zinc-400" />}
           </div>
           <div className="flex-1">
-            <p className="text-xs font-medium text-zinc-200">{toast.message}</p>
+            <p className="text-sm font-medium text-zinc-200">{toast.message}</p>
           </div>
           <button
             onClick={() => removeToast(toast.id)}

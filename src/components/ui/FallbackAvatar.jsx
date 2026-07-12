@@ -37,7 +37,7 @@ export default function FallbackAvatar({
         className="absolute aspect-square w-3/4 rounded-full border border-white/8"
         style={{ transform: `translate(${visual.x - 44}%, ${visual.y - 44}%)` }}
       />
-      <span className="relative font-display text-[0.34em] font-bold tracking-tight text-white/95">
+      <span className="relative font-sans text-[0.34em] font-bold tracking-tight text-white/95">
         {initialsFor(name, '?')}
       </span>
     </div>

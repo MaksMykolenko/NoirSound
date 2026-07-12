@@ -42,7 +42,7 @@ export default function ThemeSelector({ compact = false, className = '' }) {
           data-testid="compact-theme-selector"
           value={selectedTheme}
           onChange={(event) => setTheme(event.target.value)}
-          className="min-w-0 flex-1 bg-transparent text-[11px] font-bold text-zinc-300 outline-none cursor-pointer"
+          className="min-w-0 flex-1 cursor-pointer bg-transparent text-base font-bold text-zinc-300 outline-none sm:text-ns-label"
           aria-label={t('settings.theme')}
         >
           {THEME_IDS.map((themeId) => (
@@ -65,7 +65,7 @@ export default function ThemeSelector({ compact = false, className = '' }) {
           <h2 id="theme-selector-title" className="text-sm font-semibold text-zinc-100">
             {t('settings.appearance')}
           </h2>
-          <p className="mt-1 text-xs leading-relaxed text-zinc-500">
+          <p className="mt-1 text-sm leading-relaxed text-zinc-500">
             {t('settings.themeDescription')}
           </p>
         </div>
@@ -106,7 +106,7 @@ export default function ThemeSelector({ compact = false, className = '' }) {
                   <ThemeSwatches theme={theme} />
                 )}
                 {selected && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-brand-red px-2 py-1 font-mono text-[9px] font-medium uppercase tracking-wider text-[var(--ns-on-accent)]">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-brand-red px-2 py-1 font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-[var(--ns-on-accent)]">
                     <Check size={11} aria-hidden="true" />
                     {t('themes.selected')}
                   </span>
@@ -115,11 +115,11 @@ export default function ThemeSelector({ compact = false, className = '' }) {
               <span className="mt-3 block text-sm font-semibold text-zinc-100">
                 {t(theme.labelKey)}
               </span>
-              <span className="mt-1 block text-[11px] leading-relaxed text-zinc-500">
+              <span className="mt-1 block text-ns-label leading-relaxed text-zinc-500">
                 {t(theme.descriptionKey)}
               </span>
               {isSystem && (
-                <span className="mt-2 block text-[10px] font-semibold text-brand-red">
+                <span className="mt-2 block text-ns-meta font-semibold text-brand-red">
                   {t(THEMES[resolvedTheme].labelKey)}
                 </span>
               )}
@@ -128,7 +128,7 @@ export default function ThemeSelector({ compact = false, className = '' }) {
         })}
       </div>
 
-      <p className="mt-3 text-[10px] text-zinc-500">{t('settings.themeLocalOnly')}</p>
+      <p className="mt-3 text-ns-meta text-zinc-500">{t('settings.themeLocalOnly')}</p>
     </section>
   );
 }

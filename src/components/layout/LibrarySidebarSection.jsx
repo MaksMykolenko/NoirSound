@@ -103,7 +103,7 @@ export default function LibrarySidebarSection({ onItemClick }) {
       <div className="mb-3 flex items-center justify-between px-2">
         <button onClick={() => handleNav('/library')} className="flex items-center gap-2 text-zinc-200 cursor-pointer">
           <ListMusic size={16} className="text-brand-red" />
-          <span className="font-mono text-[10px] font-medium uppercase tracking-wider">{t('nav.yourLibrary')}</span>
+          <span className="font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label">{t('nav.yourLibrary')}</span>
         </button>
         <button onClick={openCreatePlaylist} className="ns-icon-button !min-h-9 !min-w-9 cursor-pointer" aria-label="Create playlist">
           <Plus size={15} />
@@ -116,7 +116,7 @@ export default function LibrarySidebarSection({ onItemClick }) {
           value={search}
           onChange={(event) => setSearch(event.target.value)}
           placeholder={t('nav.filterLibrary')}
-          className="ns-field h-9 pl-9 pr-3 text-xs"
+          className="ns-field h-9 pl-9 pr-3 text-base"
         />
       </div>
 
@@ -128,7 +128,7 @@ export default function LibrarySidebarSection({ onItemClick }) {
             </span>
             <span className="min-w-0 flex-1 truncate">
               <strong className="block text-sm text-zinc-200 truncate">{t('nav.likedSongs')}</strong>
-              <small className="text-zinc-500 truncate">{likedCountText}</small>
+              <small className="block text-ns-label text-zinc-500 truncate">{likedCountText}</small>
             </span>
           </button>
           <button onClick={() => handleNav('/library?tab=recently')} className="flex w-full cursor-pointer items-center gap-3 rounded-lg p-2.5 text-left transition-colors hover:bg-zinc-900/55">
@@ -137,14 +137,14 @@ export default function LibrarySidebarSection({ onItemClick }) {
             </span>
             <span className="min-w-0 flex-1 truncate">
               <strong className="block text-sm text-zinc-200 truncate">{t('nav.recentlyPlayed')}</strong>
-              <small className="text-zinc-500 truncate">{recentlyPlayed.length} tracks</small>
+              <small className="block text-ns-label text-zinc-500 truncate">{recentlyPlayed.length} tracks</small>
             </span>
           </button>
         </div>
 
         {filteredPlaylists.length > 0 && (
           <section className="space-y-1.5">
-            <h3 className="px-2 font-mono text-[9px] font-medium uppercase tracking-wider text-zinc-500">{t('nav.playlists')}</h3>
+            <h3 className="px-2 font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-zinc-500">{t('nav.playlists')}</h3>
             {filteredPlaylists.map((playlist) => (
               <SidebarPlaylistItem key={playlist.id} playlist={playlist} />
             ))}
@@ -153,7 +153,7 @@ export default function LibrarySidebarSection({ onItemClick }) {
 
         {filteredArtists.length > 0 && (
           <section className="space-y-1.5">
-            <h3 className="flex items-center gap-2 px-2 font-mono text-[9px] font-medium uppercase tracking-wider text-zinc-500">
+            <h3 className="flex items-center gap-2 px-2 font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-zinc-500">
               <Users size={12} />
               {demoMode ? 'Demo Artists' : t('nav.followedArtists')}
             </h3>

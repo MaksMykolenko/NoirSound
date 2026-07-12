@@ -36,7 +36,7 @@ export default function BrowseByGenre({ onSelect }) {
         </span>
         <div className="min-w-0">
           <h2 className="text-sm font-semibold text-zinc-100">{t('home.browseByGenre')}</h2>
-          <p className="mt-0.5 text-[11px] text-zinc-500">{t('home.browseByGenreDesc')}</p>
+          <p className="mt-0.5 text-ns-label text-zinc-500">{t('home.browseByGenreDesc')}</p>
         </div>
       </div>
 
@@ -48,7 +48,7 @@ export default function BrowseByGenre({ onSelect }) {
             data-genre-kind={item.kind}
             data-genre-value={item.value}
             onClick={() => onSelect(item)}
-            className="min-h-9 cursor-pointer rounded border border-zinc-800/80 bg-zinc-950/65 px-2.5 py-1.5 text-[11px] font-medium text-zinc-300 transition-colors hover:border-brand-red/35 hover:bg-brand-red/5 hover:text-zinc-100 sm:min-h-10 sm:px-3"
+            className="min-h-9 cursor-pointer rounded border border-zinc-800/80 bg-zinc-950/65 px-2.5 py-1.5 text-ns-label font-medium text-zinc-300 transition-colors hover:border-brand-red/35 hover:bg-brand-red/5 hover:text-zinc-100 sm:min-h-10 sm:px-3"
           >
             {homeGenreLabel(item)}
           </button>
@@ -57,7 +57,7 @@ export default function BrowseByGenre({ onSelect }) {
           type="button"
           data-testid="home-more-genres"
           onClick={() => onSelect({ kind: 'more' })}
-          className="inline-flex min-h-9 cursor-pointer items-center gap-1 rounded border border-brand-red/25 bg-brand-red/5 px-2.5 py-1.5 text-[11px] font-semibold text-rose-300 transition-colors hover:border-brand-red/45 hover:bg-brand-red/10 sm:min-h-10 sm:px-3"
+          className="inline-flex min-h-9 cursor-pointer items-center gap-1 rounded border border-brand-red/25 bg-brand-red/5 px-2.5 py-1.5 text-ns-label font-semibold text-rose-300 transition-colors hover:border-brand-red/45 hover:bg-brand-red/10 sm:min-h-10 sm:px-3"
         >
           <span>{t('home.moreGenres')}</span>
           <ChevronRight size={13} aria-hidden="true" />

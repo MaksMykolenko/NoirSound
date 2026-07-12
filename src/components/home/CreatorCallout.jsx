@@ -16,7 +16,7 @@ export default function CreatorCallout({ onUpload }) {
         </span>
         <div>
           <p className="ns-eyebrow text-rose-300">{t('home.creatorCtaEyebrow')}</p>
-          <h2 className="mt-1.5 font-display text-xl font-semibold tracking-tight text-zinc-100 sm:text-2xl">
+          <h2 className="ns-display-title ns-display-title--editorial mt-1.5 text-zinc-100">
             {t('home.creatorCtaTitle')}
           </h2>
           <p className="mt-2 text-sm text-zinc-400 leading-relaxed">
@@ -28,7 +28,7 @@ export default function CreatorCallout({ onUpload }) {
       <button
         type="button"
         onClick={onUpload}
-        className="relative ns-button-primary px-5 text-xs uppercase tracking-widest cursor-pointer inline-flex items-center justify-center gap-2 shrink-0"
+        className="relative ns-button-primary px-5 text-sm cursor-pointer inline-flex items-center justify-center gap-2 shrink-0"
       >
         <span>{t('actions.uploadTrack')}</span>
         <ArrowUpRight size={14} aria-hidden="true" />

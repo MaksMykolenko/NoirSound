@@ -92,13 +92,13 @@ export default function AdminStats() {
         description={t('admin.statsIntegrity.description')}
         actions={
           <>
-            <button type="button" onClick={() => setPendingAction({ type: 'monthlyListeners' })} className="ns-button-secondary rounded px-3 py-2 text-xs">
+            <button type="button" onClick={() => setPendingAction({ type: 'monthlyListeners' })} className="ns-button-secondary rounded px-3 py-2 text-sm">
               {t('admin.statsIntegrity.recalculateMonthlyListeners')}
             </button>
-            <button type="button" onClick={() => setPendingAction({ type: 'trackPlays' })} className="ns-button-secondary rounded px-3 py-2 text-xs">
+            <button type="button" onClick={() => setPendingAction({ type: 'trackPlays' })} className="ns-button-secondary rounded px-3 py-2 text-sm">
               {t('admin.statsIntegrity.recalculateTrackPlays')}
             </button>
-            <button type="button" onClick={() => setPendingAction({ type: 'all' })} className="ns-button-primary rounded px-3 py-2 text-xs">
+            <button type="button" onClick={() => setPendingAction({ type: 'all' })} className="ns-button-primary rounded px-3 py-2 text-sm">
               {t('admin.statsIntegrity.recalculateAll')}
             </button>
           </>
@@ -111,15 +111,15 @@ export default function AdminStats() {
           <StatusBadge status={report?.verdict} />
         </div>
         {report?.generatedAt && (
-          <p className="mt-2 text-xs text-[var(--ns-text-muted)]">
+          <p className="mt-2 text-sm text-[var(--ns-text-muted)]">
             {t('admin.statsIntegrity.checkedAt')}: {formatAdminDate(report.generatedAt, i18n.language)}
           </p>
         )}
         <div className="mt-4 grid gap-3 sm:grid-cols-3 lg:grid-cols-4">
           {CHECK_KEYS.map((key) => (
             <div key={key} className="flex items-center justify-between rounded border border-[var(--ns-border-subtle)] bg-black/10 p-3">
-              <span className="text-xs font-semibold">{t(`admin.statsIntegrity.checks.${key}`)}</span>
-              <span className={`font-mono text-sm font-medium ${counts[key] > 0 ? 'text-[var(--ns-danger)]' : 'text-emerald-400'}`}>{counts[key] ?? 0}</span>
+              <span className="text-sm font-semibold">{t(`admin.statsIntegrity.checks.${key}`)}</span>
+              <span className={`font-sans tabular-nums text-sm font-medium ${counts[key] > 0 ? 'text-[var(--ns-danger)]' : 'text-emerald-400'}`}>{counts[key] ?? 0}</span>
             </div>
           ))}
         </div>
@@ -135,25 +135,25 @@ export default function AdminStats() {
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-bold">{t(`admin.statsIntegrity.checks.${key}`)} ({counts[key]})</h2>
               {key === 'staleMonthlyListeners' && (
-                <button type="button" onClick={() => setPendingAction({ type: 'monthlyListeners' })} className="ns-button-secondary rounded px-3 py-1.5 text-[11px]">
+                <button type="button" onClick={() => setPendingAction({ type: 'monthlyListeners' })} className="ns-button-secondary rounded px-3 py-1.5 text-ns-label">
                   {t('admin.statsIntegrity.recalculateMonthlyListeners')}
                 </button>
               )}
               {key === 'staleTrackPlayCounts' && (
-                <button type="button" onClick={() => setPendingAction({ type: 'trackPlays' })} className="ns-button-secondary rounded px-3 py-1.5 text-[11px]">
+                <button type="button" onClick={() => setPendingAction({ type: 'trackPlays' })} className="ns-button-secondary rounded px-3 py-1.5 text-ns-label">
                   {t('admin.statsIntegrity.recalculateTrackPlays')}
                 </button>
               )}
             </div>
             <div className="mt-3 space-y-1.5">
               {(details[key] || []).slice(0, 25).map((row, index) => (
-                <div key={index} className="flex items-center justify-between gap-3 border-t border-[var(--ns-border-subtle)] py-2 text-xs first:border-0">
+                <div key={index} className="flex items-center justify-between gap-3 border-t border-[var(--ns-border-subtle)] py-2 text-sm first:border-0">
                   <span className="min-w-0 truncate text-[var(--ns-text-secondary)]">{detailLabel(key, row)}</span>
                   {key === 'staleMonthlyListeners' && row.artistId && (
                     <button
                       type="button"
                       onClick={() => setPendingAction({ type: 'artist', artistId: row.artistId })}
-                      className="ns-button-secondary shrink-0 rounded px-2 py-1 text-[10px]"
+                      className="ns-button-secondary shrink-0 rounded px-2 py-1 text-ns-meta"
                     >
                       {t('admin.statsIntegrity.recalculateArtist')}
                     </button>
@@ -161,7 +161,7 @@ export default function AdminStats() {
                 </div>
               ))}
               {(details[key] || []).length > 25 && (
-                <p className="pt-1 text-[11px] text-[var(--ns-text-muted)]">
+                <p className="pt-1 text-ns-label text-[var(--ns-text-muted)]">
                   +{(details[key] || []).length - 25} more
                 </p>
               )}

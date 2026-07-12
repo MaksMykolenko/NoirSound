@@ -158,7 +158,7 @@ export default function AdminUserDetail() {
       <AdminPageHeader
         title={user.displayName}
         description={`@${user.username}`}
-        actions={<Link to="/admin/users" className="ns-button-secondary rounded px-3 py-2 text-xs">{t('admin.backToUsers')}</Link>}
+        actions={<Link to="/admin/users" className="ns-button-secondary rounded px-3 py-2 text-sm">{t('admin.backToUsers')}</Link>}
       />
       <div className="grid gap-4 lg:grid-cols-3">
         <AdminPanel className="p-4 lg:col-span-2">
@@ -173,7 +173,7 @@ export default function AdminUserDetail() {
               [t('admin.sessions'), user.sessions?.active ?? 0],
             ].map(([label, value]) => (
               <div key={label}>
-                <dt className="font-mono text-[9px] font-medium uppercase tracking-wider text-[var(--ns-text-muted)]">{label}</dt>
+                <dt className="font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-[var(--ns-text-muted)]">{label}</dt>
                 <dd className="mt-1 text-sm text-[var(--ns-text-secondary)]">{value}</dd>
               </div>
             ))}
@@ -183,7 +183,7 @@ export default function AdminUserDetail() {
           <h2 className="text-sm font-bold">{t('admin.activitySummary')}</h2>
           <dl className="mt-4 space-y-3">
             {Object.entries(user.counts || {}).map(([key, value]) => (
-              <div key={key} className="flex justify-between text-xs">
+              <div key={key} className="flex justify-between text-sm">
                 <dt className="text-[var(--ns-text-muted)]">{t(`admin.${key}`, { defaultValue: key })}</dt>
                 <dd className="font-bold">{value}</dd>
               </div>
@@ -194,7 +194,7 @@ export default function AdminUserDetail() {
 
       <AdminPanel className="p-4" data-testid="artist-access-panel">
         <h2 className="text-sm font-bold">{t('admin.artistAccess.title')}</h2>
-        <p className="mt-1 text-xs text-[var(--ns-text-muted)]">{t('admin.artistAccess.description')}</p>
+        <p className="mt-1 text-sm text-[var(--ns-text-muted)]">{t('admin.artistAccess.description')}</p>
         <dl className="mt-4 grid gap-4 sm:grid-cols-3">
           {[
             [t('admin.artistAccess.hasProfile'), user.hasArtistProfile ? t('admin.yes') : t('admin.no')],
@@ -207,20 +207,20 @@ export default function AdminUserDetail() {
             )],
           ].map(([label, value]) => (
             <div key={label}>
-              <dt className="font-mono text-[9px] font-medium uppercase tracking-wider text-[var(--ns-text-muted)]">{label}</dt>
+              <dt className="font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-[var(--ns-text-muted)]">{label}</dt>
               <dd className="mt-1 break-all text-sm text-[var(--ns-text-secondary)]">{value}</dd>
             </div>
           ))}
         </dl>
         {!user.canUploadTracks && user.uploadAccessReason && (
-          <p className="mt-4 rounded border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-xs text-amber-300">
+          <p className="mt-4 rounded border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-sm text-amber-300">
             {t(`admin.artistAccess.reasons.${user.uploadAccessReason}`, { defaultValue: user.uploadAccessReason })}
           </p>
         )}
         {user.artistProfileId && (
           <Link
             to={`/admin/artists/${user.artistProfileId}`}
-            className="mt-3 inline-block text-xs font-semibold text-[var(--ns-accent-text)] underline underline-offset-2"
+            className="mt-3 inline-block text-sm font-semibold text-[var(--ns-accent-text)] underline underline-offset-2"
           >
             {t('admin.artistAccess.viewFullProfile')}
           </Link>
@@ -230,31 +230,31 @@ export default function AdminUserDetail() {
             type="button"
             disabled={!canGrant}
             onClick={() => setPendingAction('grantArtist')}
-            className="ns-button-primary rounded px-3 py-2 text-xs disabled:opacity-40"
+            className="ns-button-primary rounded px-3 py-2 text-sm disabled:opacity-40"
           >
             {t('admin.artistAccess.grant')}
           </button>
           {canOfferCreateProfile && (
-            <button type="button" onClick={() => setPendingAction('ensureProfile')} className="ns-button-secondary rounded px-3 py-2 text-xs">
+            <button type="button" onClick={() => setPendingAction('ensureProfile')} className="ns-button-secondary rounded px-3 py-2 text-sm">
               {t('admin.artistAccess.createProfile')}
             </button>
           )}
           {canRevokeArtist && (
-            <button type="button" onClick={() => setPendingAction('revokeArtist')} className="ns-button-secondary rounded px-3 py-2 text-xs">
+            <button type="button" onClick={() => setPendingAction('revokeArtist')} className="ns-button-secondary rounded px-3 py-2 text-sm">
               {t('admin.artistAccess.revoke')}
             </button>
           )}
           {user.hasArtistProfile && !user.artistProfileHidden && (
-            <button type="button" onClick={() => setPendingAction('hideProfile')} className="ns-button-secondary rounded px-3 py-2 text-xs">
+            <button type="button" onClick={() => setPendingAction('hideProfile')} className="ns-button-secondary rounded px-3 py-2 text-sm">
               {t('admin.artistAccess.hideProfile')}
             </button>
           )}
           {user.hasArtistProfile && user.artistProfileHidden && (
-            <button type="button" onClick={() => setPendingAction('unhideProfile')} className="ns-button-secondary rounded px-3 py-2 text-xs">
+            <button type="button" onClick={() => setPendingAction('unhideProfile')} className="ns-button-secondary rounded px-3 py-2 text-sm">
               {t('admin.artistAccess.unhideProfile')}
             </button>
           )}
-          <button type="button" onClick={() => setPendingAction('revoke')} className="ns-button-secondary rounded px-3 py-2 text-xs">
+          <button type="button" onClick={() => setPendingAction('revoke')} className="ns-button-secondary rounded px-3 py-2 text-sm">
             {t('admin.revokeSessions')}
           </button>
         </div>
@@ -274,22 +274,22 @@ export default function AdminUserDetail() {
       </AdminPanel>
       <AdminPanel className="border-[color-mix(in_srgb,var(--ns-danger)_35%,transparent)] p-4">
         <h2 className="text-sm font-bold text-[var(--ns-danger)]">{t('admin.dangerZone')}</h2>
-        <p className="mt-1 text-xs text-[var(--ns-text-muted)]">{t('admin.dangerZoneDescription')}</p>
+        <p className="mt-1 text-sm text-[var(--ns-text-muted)]">{t('admin.dangerZoneDescription')}</p>
         <div className="mt-4 flex flex-wrap gap-2">
           {user.status === 'ACTIVE' && (
             <>
-              <button type="button" onClick={() => setPendingAction('suspend')} className="ns-button-secondary rounded px-3 py-2 text-xs">{t('admin.suspend')}</button>
-              <button type="button" onClick={() => setPendingAction('ban')} className="rounded bg-[var(--ns-danger)] px-3 py-2 text-xs font-semibold text-white">{t('admin.ban')}</button>
+              <button type="button" onClick={() => setPendingAction('suspend')} className="ns-button-secondary rounded px-3 py-2 text-sm">{t('admin.suspend')}</button>
+              <button type="button" onClick={() => setPendingAction('ban')} className="rounded bg-[var(--ns-danger)] px-3 py-2 text-sm font-semibold text-white">{t('admin.ban')}</button>
             </>
           )}
-          {user.status === 'SUSPENDED' && <button type="button" onClick={() => setPendingAction('unsuspend')} className="ns-button-secondary rounded px-3 py-2 text-xs">{t('admin.unsuspend')}</button>}
-          {user.status === 'BANNED' && <button type="button" onClick={() => setPendingAction('unban')} className="ns-button-secondary rounded px-3 py-2 text-xs">{t('admin.unban')}</button>}
-          <button type="button" onClick={() => setPendingAction('revoke')} className="ns-button-secondary rounded px-3 py-2 text-xs">{t('admin.revokeSessions')}</button>
-          <select value={role} onChange={(event) => setRole(event.target.value)} className="ns-field rounded px-3 py-2 text-xs">
+          {user.status === 'SUSPENDED' && <button type="button" onClick={() => setPendingAction('unsuspend')} className="ns-button-secondary rounded px-3 py-2 text-sm">{t('admin.unsuspend')}</button>}
+          {user.status === 'BANNED' && <button type="button" onClick={() => setPendingAction('unban')} className="ns-button-secondary rounded px-3 py-2 text-sm">{t('admin.unban')}</button>}
+          <button type="button" onClick={() => setPendingAction('revoke')} className="ns-button-secondary rounded px-3 py-2 text-sm">{t('admin.revokeSessions')}</button>
+          <select value={role} onChange={(event) => setRole(event.target.value)} className="ns-field rounded px-3 py-2 text-base sm:text-sm">
             <option value="">{t('admin.selectRole')}</option>
             {['LISTENER', 'ARTIST', 'ADMIN'].map((value) => <option key={value} value={value}>{t(`admin.statusValues.${value}`)}</option>)}
           </select>
-          <button type="button" disabled={!role || role === user.role} onClick={() => setPendingAction('role')} className="ns-button-secondary rounded px-3 py-2 text-xs disabled:opacity-40">
+          <button type="button" disabled={!role || role === user.role} onClick={() => setPendingAction('role')} className="ns-button-secondary rounded px-3 py-2 text-sm disabled:opacity-40">
             {t('admin.setRole')}
           </button>
         </div>
@@ -297,7 +297,7 @@ export default function AdminUserDetail() {
       <AdminPanel className="p-4">
         <h2 className="mb-3 text-sm font-bold">{t('admin.auditHistory')}</h2>
         {!data.audit?.length ? <AdminEmpty text={t('admin.noAuditEntries')} /> : data.audit.map((entry) => (
-          <div key={entry.id} className="flex flex-wrap items-center gap-2 border-t border-[var(--ns-border-subtle)] py-3 text-xs first:border-0">
+          <div key={entry.id} className="flex flex-wrap items-center gap-2 border-t border-[var(--ns-border-subtle)] py-3 text-sm first:border-0">
             <StatusBadge status={entry.action} />
             <span className="text-[var(--ns-text-muted)]">{entry.actor?.username}</span>
             <span className="ml-auto text-[var(--ns-text-muted)]">{formatAdminDate(entry.createdAt, i18n.language)}</span>

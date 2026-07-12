@@ -22,7 +22,7 @@ export default function LegalPage({ slug: slugProp }) {
         description={doc.intro || `${doc.title} for NoirSound.`}
         canonical={`https://noirsound.co/${slug}`}
       />
-      <nav className="mb-6 flex flex-wrap gap-2 font-mono text-[10px] uppercase tracking-wider">
+      <nav className="mb-6 flex flex-wrap gap-2 font-sans text-sm">
         {LEGAL_NAV.map((item) => (
           <Link
             key={item.slug}
@@ -39,15 +39,15 @@ export default function LegalPage({ slug: slugProp }) {
       </nav>
 
       <header className="mb-8">
-        <h1 className="font-display text-3xl font-semibold tracking-tight text-white">{doc.title}</h1>
-        <p className="mt-1 font-mono text-[10px] text-zinc-500">Last updated {doc.updated}</p>
+        <h1 className="font-sans text-3xl font-semibold tracking-tight text-white">{doc.title}</h1>
+        <p className="mt-1 font-sans tabular-nums text-ns-meta text-zinc-500">Last updated {doc.updated}</p>
         {doc.intro && <p className="text-zinc-300 mt-4 leading-relaxed">{doc.intro}</p>}
       </header>
 
       <div className="space-y-8">
         {doc.sections.map((section) => (
           <section key={section.heading}>
-            <h2 className="mb-2 font-display text-base font-semibold text-white">{section.heading}</h2>
+            <h2 className="mb-2 font-sans text-base font-semibold text-white">{section.heading}</h2>
             <div className="space-y-2">
               {section.body.map((p, i) => (
                 <p key={i} className="text-zinc-400 leading-relaxed">{p}</p>

@@ -26,7 +26,7 @@ export default function EmptyState({
             <button
               type="button"
               onClick={onAction}
-              className="ns-button-primary px-5 text-[13px] uppercase tracking-wider cursor-pointer"
+              className="ns-button-primary px-5 text-sm cursor-pointer"
             >
               {actionText}
             </button>
@@ -35,7 +35,7 @@ export default function EmptyState({
             <button
               type="button"
               onClick={onSecondaryAction}
-              className="ns-button-secondary px-5 text-[13px] uppercase tracking-wider cursor-pointer"
+              className="ns-button-secondary px-5 text-sm cursor-pointer"
             >
               {secondaryActionText}
             </button>

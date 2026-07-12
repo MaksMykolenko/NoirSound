@@ -209,8 +209,8 @@ export default function FullscreenLyricsPlayer({
           imageClassName="object-cover"
         />
         <div className="min-w-0">
-          <h1 className="truncate font-display text-sm font-bold text-white sm:text-base">{currentTrack.title}</h1>
-          <p className="truncate font-mono text-[10px] text-zinc-500 sm:text-xs">{currentTrack.artistName}</p>
+          <h1 className="ns-fullscreen-compact-title truncate font-sans text-sm font-bold text-white sm:text-base">{currentTrack.title}</h1>
+          <p className="truncate font-sans tabular-nums text-ns-meta text-zinc-500 sm:text-xs">{currentTrack.artistName}</p>
         </div>
       </header>
 
@@ -225,16 +225,21 @@ export default function FullscreenLyricsPlayer({
             imageClassName="object-cover"
           />
           <div className="mt-6">
-            <p className="font-mono text-[10px] font-medium uppercase tracking-wider text-brand-red">{t('player.nowPlaying')}</p>
-            <h2 className="mt-2 font-display text-2xl font-bold tracking-tight text-white">{currentTrack.title}</h2>
-            <p className="mt-1 font-mono text-xs text-zinc-500">{currentTrack.artistName}</p>
+            <p className="font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-brand-red">{t('player.nowPlaying')}</p>
+            <h2 className="ns-display-title ns-display-title--fullscreen mt-2 text-white">{currentTrack.title}</h2>
+            <p className="mt-1 font-sans tabular-nums text-sm text-zinc-500">{currentTrack.artistName}</p>
           </div>
         </aside>
 
         <div
-          className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain px-5 py-8 sm:px-10 sm:py-12 lg:px-[clamp(3rem,7vw,7rem)] lg:py-16"
+          className="ns-fullscreen-lyrics-scroll min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain px-5 py-8 sm:px-10 sm:py-12 lg:px-[clamp(3rem,7vw,7rem)] lg:py-16"
           data-testid="fullscreen-lyrics-scroll"
         >
+          <div className="ns-fullscreen-mobile-display mb-8 lg:hidden">
+            <p className="font-sans text-ns-meta font-medium uppercase tracking-ns-label text-brand-red">{t('player.nowPlaying')}</p>
+            <h2 className="ns-display-title ns-display-title--fullscreen mt-1 text-white">{currentTrack.title}</h2>
+            <p className="mt-1 font-sans text-sm text-zinc-500">{currentTrack.artistName}</p>
+          </div>
           {loading ? (
             <div className="mx-auto max-w-4xl space-y-5 animate-pulse" role="status" aria-label={t('lyrics.loading')}>
               {[82, 64, 91, 56, 74, 87, 62].map((width) => (
@@ -248,7 +253,7 @@ export default function FullscreenLyricsPlayer({
                 <div className="mx-auto grid h-16 w-16 place-items-center rounded-lg border border-[var(--ns-border)] bg-surface-noir text-zinc-400">
                   <FileText size={28} />
                 </div>
-                <h2 className="mt-5 font-display text-xl font-bold text-white">{t('lyrics.unavailable')}</h2>
+                <h2 className="mt-5 font-sans text-xl font-bold text-white">{t('lyrics.unavailable')}</h2>
                 <button type="button" onClick={retry} className="ns-button-primary mt-6 inline-flex items-center gap-2 px-5">
                   <RotateCcw size={16} />
                   {t('lyrics.retry')}
@@ -257,10 +262,10 @@ export default function FullscreenLyricsPlayer({
             </div>
           ) : lyrics?.hasLyrics && lyrics.lyricsText ? (
             <div className="mx-auto max-w-4xl">
-              <p className="whitespace-pre-wrap break-words font-display text-[clamp(1.35rem,3vw,2.5rem)] font-bold leading-[1.55] tracking-[-0.02em] text-zinc-200">
+              <p className="whitespace-pre-wrap break-words font-sans text-[clamp(1.25rem,2.5vw,2.125rem)] font-semibold leading-[1.6] text-zinc-200">
                 {lyrics.lyricsText}
               </p>
-              <p className="mt-14 border-t border-[var(--ns-border-subtle)] pt-5 font-mono text-[10px] font-medium uppercase tracking-wider text-zinc-500">
+              <p className="mt-14 border-t border-[var(--ns-border-subtle)] pt-5 font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-zinc-500">
                 {t('lyrics.providedByArtist')}
               </p>
             </div>
@@ -270,7 +275,7 @@ export default function FullscreenLyricsPlayer({
                 <div className="mx-auto grid h-16 w-16 place-items-center rounded-lg border border-[var(--ns-border)] bg-surface-noir text-zinc-400">
                   <FileText size={28} />
                 </div>
-                <h2 className="mt-5 font-display text-xl font-bold text-white">{t('lyrics.noLyrics')}</h2>
+                <h2 className="mt-5 font-sans text-xl font-bold text-white">{t('lyrics.noLyrics')}</h2>
               </div>
             </div>
           )}

@@ -138,7 +138,7 @@ export default function Library() {
           <h1 className="ns-page-title">{t('nav.yourLibrary')}</h1>
           <p className="ns-page-lede">{t('library.subtitle')}</p>
         </div>
-        <button type="button" onClick={() => setCreateOpen(true)} className="ns-button-primary inline-flex min-h-11 shrink-0 items-center gap-2 px-4 text-xs">
+        <button type="button" onClick={() => setCreateOpen(true)} className="ns-button-primary inline-flex min-h-11 shrink-0 items-center gap-2 px-4 text-sm">
           <Plus size={15} /> New playlist
         </button>
       </div>
@@ -153,7 +153,7 @@ export default function Library() {
               onClick={() => setSearchParams({ tab: tab.id })}
               role="tab"
               aria-selected={active}
-              className={`ns-tab flex shrink-0 cursor-pointer items-center gap-2 whitespace-nowrap border-b-2 px-4 py-3 font-mono text-[10px] font-medium uppercase tracking-wider transition-colors sm:px-5 ${
+              className={`ns-tab flex shrink-0 cursor-pointer items-center gap-2 whitespace-nowrap border-b-2 px-4 py-3 font-sans text-ns-label font-medium transition-colors sm:px-5 ${
                 active ? 'border-brand-red text-rose-300' : 'border-transparent text-zinc-500 hover:text-zinc-300'
               }`}
             >

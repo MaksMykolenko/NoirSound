@@ -90,7 +90,7 @@ export default function TrackListItem({
       <div className="flex items-center space-x-2.5 sm:space-x-4 flex-1 min-w-0">
         {/* Play/Index toggle */}
         <div className="w-6 flex items-center justify-center shrink-0">
-          <span className="select-none font-mono text-sm font-medium text-zinc-500 group-hover:hidden">
+          <span className="select-none font-sans tabular-nums text-sm font-medium text-zinc-500 group-hover:hidden">
             {isCurrent && isPlaying ? (
               <span className="flex items-end justify-center space-x-[2px] h-3 w-3 pb-[1px]">
                 <span className="w-[2px] h-full bg-brand-red animate-bounce" style={{ animationDelay: '0.1s' }}></span>
@@ -124,7 +124,7 @@ export default function TrackListItem({
 
         {/* Metadata */}
         <div className="min-w-0 flex-1">
-          <h4 className={`truncate text-[13px] font-semibold ${
+          <h4 className={`truncate text-ns-body-sm font-semibold ${
             isCurrent ? 'text-brand-red' : 'text-zinc-200'
           }`}>
             {track.title}
@@ -134,12 +134,12 @@ export default function TrackListItem({
               e.stopPropagation();
               navigate(`/artist/${track.artistId}`);
             }}
-            className="mt-0.5 block truncate font-mono text-[10px] text-zinc-500 transition-colors hover:text-zinc-300"
+            className="mt-0.5 block truncate font-sans tabular-nums text-ns-label text-zinc-500 transition-colors hover:text-zinc-300"
           >
             {track.artistName}
           </span>
           {!canPlay && (
-            <span className="inline-block mt-1 text-[9px] font-bold uppercase tracking-wider text-amber-300/80">
+            <span className="inline-block mt-1 text-ns-meta font-bold uppercase tracking-ns-label text-amber-300/80">
               Audio unavailable
             </span>
           )}
@@ -148,13 +148,13 @@ export default function TrackListItem({
 
       {/* Middle section: Genre, Plays count */}
       <div className="hidden min-[430px]:flex items-center space-x-3 sm:space-x-6 px-2 sm:px-4 shrink-0">
-        <span className="hidden max-w-[14ch] truncate rounded border border-zinc-800/70 bg-zinc-800/40 px-2 py-0.5 align-middle font-mono text-[9px] font-medium uppercase tracking-wider text-zinc-400 select-none md:inline-block">
+        <span className="hidden max-w-[14ch] truncate rounded border border-zinc-800/70 bg-zinc-800/40 px-2 py-0.5 align-middle font-sans tabular-nums text-ns-label font-medium uppercase tracking-ns-label text-zinc-400 select-none md:inline-block">
           {getLocalizedGenre(track.genre)}
         </span>
-        <span className="hidden font-mono text-[10px] text-zinc-500 select-none sm:inline">
+        <span className="hidden font-sans tabular-nums text-ns-label text-zinc-500 select-none sm:inline">
           {formatNumber(track.plays || 0)} plays
         </span>
-        <span className="w-10 text-right font-mono text-[10px] text-zinc-500 select-none">
+        <span className="w-10 text-right font-sans tabular-nums text-ns-label text-zinc-500 select-none">
           {formatDuration(track.duration)}
         </span>
       </div>

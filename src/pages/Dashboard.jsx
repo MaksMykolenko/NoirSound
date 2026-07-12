@@ -26,7 +26,7 @@ const STATUS_TONES = {
 
 function TrackStatusBadge({ status }) {
   return (
-    <span className={`inline-flex rounded border px-2 py-0.5 font-mono text-[9px] font-medium uppercase tracking-wide ${STATUS_TONES[status] || 'text-zinc-400 bg-zinc-500/10 border-zinc-500/25'}`}>
+    <span className={`inline-flex rounded border px-2 py-0.5 font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label ${STATUS_TONES[status] || 'text-zinc-400 bg-zinc-500/10 border-zinc-500/25'}`}>
       {status}
     </span>
   );
@@ -44,11 +44,11 @@ function TrackRow({ track, onOpen, onEditLyrics, trailing }) {
             imageClassName="object-cover"
           />
           <div className="min-w-0">
-            <h3 className="flex items-center gap-1.5 truncate text-[13px] font-semibold text-zinc-200">
+            <h3 className="flex items-center gap-1.5 truncate text-ns-body-sm font-semibold text-zinc-200">
               {track.title}
               {track.hasLyrics && <FileText size={12} className="shrink-0 text-brand-red" />}
             </h3>
-            <p className="font-mono text-[9px] text-zinc-500">{getLocalizedGenre(track.genre) || 'Uncategorized'}</p>
+            <p className="font-sans tabular-nums text-ns-meta text-zinc-500">{getLocalizedGenre(track.genre) || 'Uncategorized'}</p>
           </div>
       </button>
       <div className="flex shrink-0 items-center gap-2">
@@ -187,7 +187,7 @@ export default function Dashboard() {
                     onOpen={() => navigate(`/track/${track.id}`)}
                     onEditLyrics={setLyricsTrack}
                     trailing={
-                      <span className="text-xs text-zinc-500 font-semibold shrink-0">
+                      <span className="text-ns-meta text-zinc-500 font-semibold shrink-0">
                         {formatNumber(track.plays)} {t('trackPage.plays')}
                       </span>
                     }

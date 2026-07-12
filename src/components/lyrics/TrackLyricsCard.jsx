@@ -49,12 +49,12 @@ export default function TrackLyricsCard({ track, canEdit = false, onLyricsChange
     <>
       <section className="rounded-lg border border-zinc-800/60 bg-zinc-950/35 p-5" data-testid="track-lyrics-card">
         <header className="mb-4 flex items-center justify-between gap-3">
-          <h2 className="flex items-center gap-2 font-display text-base font-semibold text-zinc-100">
+          <h2 className="flex items-center gap-2 font-sans text-base font-semibold text-zinc-100">
             <FileText size={18} className="text-brand-red" />
             {t('lyrics.title')}
           </h2>
           {canEdit && (
-            <button type="button" className="ns-button-secondary inline-flex items-center gap-2 px-3 py-2 text-xs" onClick={() => setEditing(true)}>
+            <button type="button" className="ns-button-secondary inline-flex items-center gap-2 px-3 py-2 text-sm" onClick={() => setEditing(true)}>
               <Pencil size={14} /> {lyrics?.hasLyrics ? t('lyrics.editLyrics') : t('lyrics.addLyrics')}
             </button>
           )}

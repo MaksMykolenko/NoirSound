@@ -83,20 +83,20 @@ export default function PlaylistCard({ playlist, onToggleSaved, onEdit, onDelete
         </button>
 
         {/* Tracks count tag */}
-        <div className="absolute bottom-2 left-2 rounded border border-zinc-800/60 bg-zinc-950/85 px-2 py-0.5 font-mono text-[9px] font-medium uppercase tracking-wide text-zinc-300 select-none">
+        <div className="absolute bottom-2 left-2 rounded border border-zinc-800/60 bg-zinc-950/85 px-2 py-0.5 font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-zinc-300 select-none">
           {playlist.trackCount ?? (playlist.trackIds || playlist.tracks || []).length} tracks
         </div>
       </div>
 
       {/* Playlist info */}
       <div className="px-1 space-y-1">
-        <h4 className="truncate text-[13px] font-semibold text-zinc-200">
+        <h4 className="truncate text-ns-body-sm font-semibold text-zinc-200">
           {playlist.name}
         </h4>
-        <p className="truncate text-[11px] text-zinc-500">{playlist.description}</p>
-        <div className="flex items-center justify-between border-t border-zinc-800/50 pt-1 font-mono text-[9px] text-zinc-500">
+        <p className="truncate text-ns-label text-zinc-500">{playlist.description}</p>
+        <div className="flex items-center justify-between border-t border-zinc-800/50 pt-1 font-sans tabular-nums text-ns-meta text-zinc-500">
           <span>By {playlist.creator}</span>
-          <span className="font-mono">{formatNumber(playlist.likes || 0)} likes</span>
+          <span className="font-sans tabular-nums">{formatNumber(playlist.likes || 0)} likes</span>
         </div>
       </div>
     </div>

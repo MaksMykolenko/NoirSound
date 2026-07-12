@@ -64,7 +64,7 @@ export default function BatchFileDropzone({
           <FolderPlus size={16} />
           {t('batchUpload.chooseAudio')}
         </button>
-        <p className="text-[11px] text-zinc-500 mt-4">{t('batchUpload.limits')}</p>
+        <p className="text-ns-label text-zinc-500 mt-4">{t('batchUpload.limits')}</p>
       </div>
 
       {errors.length > 0 && (
@@ -78,10 +78,10 @@ export default function BatchFileDropzone({
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h3 className="font-semibold text-zinc-100">{stagedFiles.length} / {BATCH_MAX_FILES} {t('batchUpload.filesSelected')}</h3>
-              <p className="font-mono text-[10px] text-zinc-500">{formatBytes(totalBytes)} / 500 MB</p>
+              <p className="font-sans tabular-nums text-ns-meta text-zinc-500">{formatBytes(totalBytes)} / 500 MB</p>
             </div>
-            <label className="text-xs text-zinc-400">
-              <span className="mb-1 block font-mono text-[9px] font-medium uppercase tracking-wider">{t('batchUpload.batchMode')}</span>
+            <label className="text-sm text-zinc-400">
+              <span className="mb-1 block font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label">{t('batchUpload.batchMode')}</span>
               <select className="ns-field min-w-44 !rounded px-3" value={mode} onChange={(event) => onModeChange(event.target.value)}>
                 <option value="MIXED">{t('batchUpload.mixed')}</option>
                 <option value="SINGLES_ONLY">{t('batchUpload.singlesOnly')}</option>
@@ -95,7 +95,7 @@ export default function BatchFileDropzone({
                 <FileAudio size={18} className="text-brand-red shrink-0" />
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold text-zinc-200 truncate">{entry.file.name}</p>
-                  <p className="font-mono text-[10px] text-zinc-500">
+                  <p className="font-sans tabular-nums text-ns-meta text-zinc-500">
                     {formatBytes(entry.file.size)} · {entry.file.type || 'Unknown MIME'}
                     {duplicateNames.has(entry.file.name) && <span className="text-amber-300"> · {t('batchUpload.duplicateWarning')}</span>}
                   </p>

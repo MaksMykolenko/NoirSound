@@ -60,16 +60,16 @@ export default function CommentItem({ comment, trackId }) {
         <div className="flex-1 min-w-0 space-y-1">
           <div className="flex flex-col min-[430px]:flex-row min-[430px]:items-center justify-between gap-1">
             <div className="flex flex-wrap items-baseline gap-x-2">
-              <span className="text-[13px] font-semibold text-zinc-200">{comment.displayName}</span>
-              <span className="font-mono text-[10px] text-zinc-500">@{comment.username}</span>
+              <span className="text-ns-body-sm font-semibold text-zinc-200">{comment.displayName}</span>
+              <span className="font-sans tabular-nums text-ns-meta text-zinc-500">@{comment.username}</span>
             </div>
-            <time className="font-mono text-[9px] text-zinc-500">{comment.createdAt}</time>
+            <time className="font-sans tabular-nums text-ns-meta text-zinc-500">{comment.createdAt}</time>
           </div>
 
-          <p className="break-words text-[13px] leading-relaxed text-zinc-300">{comment.text}</p>
+          <p className="break-words text-sm leading-relaxed text-zinc-300">{comment.text}</p>
 
           {/* Actions Row */}
-          <div className="flex items-center gap-2 pt-1.5 text-xs text-zinc-400 font-semibold">
+          <div className="flex items-center gap-2 pt-1.5 text-sm text-zinc-400 font-semibold">
             {/* Like */}
             <button
               onClick={handleLike}
@@ -125,7 +125,7 @@ export default function CommentItem({ comment, trackId }) {
           {/* Toggle button if there are replies */}
           <button
             onClick={() => setShowReplies(!showReplies)}
-          className="min-h-11 px-2 flex items-center space-x-1.5 text-xs font-bold text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer select-none rounded-lg"
+          className="min-h-11 px-2 flex items-center space-x-1.5 text-sm font-bold text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer select-none rounded-lg"
           aria-expanded={showReplies}
           >
             {showReplies ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
