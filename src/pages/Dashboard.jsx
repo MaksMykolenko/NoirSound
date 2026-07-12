@@ -111,8 +111,6 @@ export default function Dashboard() {
       />
     );
   }
-  if (error) return <ErrorState title="Creator dashboard unavailable" message={error} />;
-
   // Every figure below is sourced from GET /me/artist-dashboard, which reads
   // this artist's own tracks directly by artistId (uncapped). It never
   // depends on the public, 20-item-capped, globally-ordered GET /tracks
@@ -149,13 +147,15 @@ export default function Dashboard() {
           <h1 className="ns-page-title">{t('dashboard.title')}</h1>
           <p className="ns-page-lede">{t('dashboard.subtitle')}</p>
         </div>
-        <button onClick={() => navigate('/upload')} className="ns-button-primary px-5 inline-flex items-center gap-2 w-fit">
+        <button type="button" onClick={() => navigate('/upload')} className="ns-button-primary px-5 inline-flex items-center gap-2 w-fit">
           <PlusCircle size={16} />
           <span>{t('dashboard.uploadNew')}</span>
         </button>
       </div>
 
-      {loading ? (
+      {error ? (
+        <ErrorState title="Creator dashboard unavailable" message={error} />
+      ) : loading ? (
         <LoadingState type="list" count={4} />
       ) : tracks.length === 0 ? (
         <section className="mx-auto flex max-w-2xl flex-col items-center py-8 text-center sm:py-12" aria-labelledby="dashboard-empty-title">
@@ -261,12 +261,6 @@ export default function Dashboard() {
             </div>
           </section>
 
-          <div className="flex justify-end">
-            <button onClick={() => navigate('/upload')} className="ns-button-secondary px-5 inline-flex items-center gap-2 cursor-pointer">
-              <UploadCloud size={15} />
-              <span>{t('dashboard.uploadNew')}</span>
-            </button>
-          </div>
           <LyricsEditModal
             open={Boolean(lyricsTrack)}
             track={lyricsTrack}
