@@ -1,20 +1,89 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import PageMeta from '../components/meta/PageMeta';
 import { useTranslation } from 'react-i18next';
-import { Check, Users, Globe, Music, Edit, Pause, Play } from 'lucide-react';
+import {
+  AtSign,
+  Check,
+  Edit,
+  Globe2,
+  MoreHorizontal,
+  Music2,
+  Pause,
+  Play,
+  Send,
+  Radio,
+} from 'lucide-react';
+import PageMeta from '../components/meta/PageMeta';
 import { followArtist, unfollowArtist, getArtistById, getTracksByArtist } from '../api';
 import { useUserStore } from '../store/userStore';
 import { useToastStore } from '../store/toastStore';
+import { usePlayerStore } from '../store/playerStore';
+import { useArtistContextMenu } from '../hooks/useEntityContextMenu';
 import TrackListItem from '../components/tracks/TrackListItem';
-import TrackCard from '../components/tracks/TrackCard';
+import ArtistReleaseCard from '../components/artists/ArtistReleaseCard';
 import EmptyState from '../components/ui/EmptyState';
 import ErrorState from '../components/ui/ErrorState';
 import FallbackAvatar from '../components/ui/FallbackAvatar';
 import { sortTracksNewest } from '../utils/presentation';
 import { formatNumber } from '../utils/formatLocale';
 import { getLocalizedGenre } from '../i18n/genreLabels';
-import { usePlayerStore } from '../store/playerStore';
+
+const POPULAR_TRACK_LIMIT = 5;
+
+const SOCIAL_PLATFORMS = [
+  { key: 'website', label: 'Website', Icon: Globe2 },
+  { key: 'instagram', label: 'Instagram', Icon: AtSign, base: 'https://instagram.com/' },
+  { key: 'youtube', label: 'YouTube', Icon: Play, base: 'https://youtube.com/@' },
+  { key: 'tiktok', label: 'TikTok', Icon: Music2, base: 'https://tiktok.com/@' },
+  { key: 'telegram', label: 'Telegram', Icon: Send, base: 'https://t.me/' },
+  { key: 'soundcloud', label: 'SoundCloud', Icon: Radio, base: 'https://soundcloud.com/' },
+  { key: 'twitter', label: 'X / Twitter', Icon: AtSign, base: 'https://x.com/' },
+  { key: 'bandcamp', label: 'Bandcamp', Icon: Music2, subdomain: true },
+  { key: 'github', label: 'GitHub', Icon: Globe2, base: 'https://github.com/' },
+];
+
+function socialUrl(platform, value) {
+  const normalized = String(value || '').trim();
+  if (!normalized) return null;
+  if (/^https?:\/\//i.test(normalized)) return normalized;
+  if (platform.key === 'website') return null;
+  const handle = normalized.replace(/^@/, '').replace(/^\/+|\/+$/g, '');
+  if (!handle) return null;
+  if (platform.subdomain) return `https://${handle}.bandcamp.com`;
+  return `${platform.base}${handle}`;
+}
+
+function ArtistPageSkeleton() {
+  const { t } = useTranslation();
+  return (
+    <div className="ns-page-stack pb-10" aria-busy="true" aria-label={t('profile.loadingArtist')}>
+      <section className="ns-artist-hero ns-artist-skeleton">
+        <div className="ns-artist-skeleton__artwork" />
+        <div className="min-w-0 space-y-4">
+          <div className="h-3 w-36 rounded bg-zinc-900" />
+          <div className="h-14 w-3/4 max-w-2xl rounded bg-zinc-900" />
+          <div className="h-4 w-64 max-w-full rounded bg-zinc-900" />
+          <div className="flex gap-2">
+            <div className="h-11 w-32 rounded bg-zinc-900" />
+            <div className="h-11 w-32 rounded bg-zinc-900" />
+          </div>
+        </div>
+      </section>
+      <section className="space-y-4">
+        <div className="h-6 w-36 rounded bg-zinc-900" />
+        <div className="space-y-1 border-y border-zinc-800/60 py-1">
+          {[0, 1, 2, 3, 4].map((item) => <div key={item} className="h-14 rounded bg-zinc-900/60" />)}
+        </div>
+      </section>
+      <section className="space-y-4">
+        <div className="h-6 w-40 rounded bg-zinc-900" />
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+          {[0, 1, 2, 3, 4].map((item) => <div key={item} className="aspect-square rounded bg-zinc-900/70" />)}
+        </div>
+      </section>
+    </div>
+  );
+}
 
 export default function ArtistPage() {
   const { id } = useParams();
@@ -31,80 +100,46 @@ export default function ArtistPage() {
   const [error, setError] = useState(null);
   const [isFollowing, setIsFollowing] = useState(false);
   const [followerCount, setFollowerCount] = useState(null);
-  // Must be declared before any early return below -- React requires the
-  // exact same hooks in the exact same order on every render. Declaring
-  // this after the loading/error/not-found guards meant the very first
-  // render (while loading) never called it, but the next render (once data
-  // loads) did, which crashes with "Rendered more hooks than during the
-  // previous render" every time an artist page finishes loading.
   const [followActionPending, setFollowActionPending] = useState(false);
+  const [showAllPopular, setShowAllPopular] = useState(false);
+  const [bioExpanded, setBioExpanded] = useState(false);
+  const [requestVersion, setRequestVersion] = useState(0);
 
   useEffect(() => {
+    let active = true;
     const fetchData = async () => {
+      setLoading(true);
+      setError(null);
       try {
-        const [a, t] = await Promise.all([
+        const [artistResponse, tracksResponse] = await Promise.all([
           getArtistById(id),
-          getTracksByArtist(id)
+          getTracksByArtist(id),
         ]);
-        setArtist(a);
-        // Hydrate from the server's per-viewer flag instead of assuming
-        // "not following" -- a signed-in user revisiting/refreshing an
-        // artist they already follow must see "Following", not "Follow".
-        setIsFollowing(Boolean(a.isFollowing));
+        if (!active) return;
+        setArtist(artistResponse);
+        setIsFollowing(Boolean(artistResponse.isFollowing));
         setFollowerCount(null);
-        setArtistTracks(sortTracksNewest(t));
+        setArtistTracks(sortTracksNewest(tracksResponse));
+        setShowAllPopular(false);
+        setBioExpanded(false);
       } catch (err) {
+        if (!active) return;
         console.error('Failed to load artist data:', err);
         setError(err.status === 404 ? 'not-found' : (err.message || 'Failed to load artist profile.'));
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
     };
     fetchData();
-  }, [id]);
+    return () => { active = false; };
+  }, [id, requestVersion]);
 
-  if (loading) {
-    return (
-      <div className="py-20 text-center space-y-4 animate-pulse">
-        <div className="w-32 h-32 mx-auto bg-zinc-900 rounded-full"></div>
-        <div className="h-8 w-48 bg-zinc-900 rounded-md mx-auto"></div>
-        <div className="h-4 w-64 bg-zinc-900 rounded-md mx-auto"></div>
-      </div>
-    );
-  }
-
-  if (error === 'not-found') {
-    return (
-      <EmptyState
-        iconName="Mic2"
-        title={t('profile.artistNotFound')}
-        description={t('profile.artistNotFoundDesc')}
-        actionText={t('profile.returnToDiscover')}
-        onAction={() => navigate('/discover')}
-      />
-    );
-  }
-
-  if (error) {
-    return <div className="py-16"><ErrorState title={t('profile.artistUnavailable')} message={error} /></div>;
-  }
-
-  if (!artist) {
-    return (
-      <EmptyState
-        iconName="Mic2"
-        title={t('profile.artistNotFound')}
-        description={t('profile.artistGoneDesc')}
-        actionText={t('profile.returnToDiscover')}
-        onAction={() => navigate('/discover')}
-      />
-    );
-  }
-
-  // Dynamic follower calculation based on active follow button state
-  const followerDisplayCount = followerCount ?? artist.followers;
+  const isOwnProfile = Boolean(
+    artist && user && (user.artistProfileId === artist.id || user.username === artist.username)
+  );
 
   const handleFollowClick = async () => {
+    if (!artist) return;
     if (!user) {
       setAuthModalOpen(true);
       return;
@@ -115,8 +150,6 @@ export default function ArtistPage() {
       if (isFollowing) {
         const result = await unfollowArtist(id);
         setIsFollowing(false);
-        // Trust the backend's post-mutation count over a hand-computed
-        // local delta -- it reflects the real row count, not an assumption.
         if (typeof result?.followerCount === 'number') setFollowerCount(result.followerCount);
         addToast(`Unfollowed ${artist.name}.`, 'success');
       } else {
@@ -132,8 +165,55 @@ export default function ArtistPage() {
     }
   };
 
-  const isOwnProfile = user && (user.artistProfileId === artist.id || user.username === artist.username);
-  const playableTracks = artistTracks.filter((track) => track.isStreamable ?? Boolean(track.audioUrl));
+  const { contextMenuProps: artistContextMenuProps, openFromButton: openArtistActions } = useArtistContextMenu(
+    artist,
+    {
+      isFollowing,
+      onToggleFollow: artist && !isOwnProfile ? handleFollowClick : undefined,
+    }
+  );
+
+  if (loading) return <ArtistPageSkeleton />;
+
+  if (error === 'not-found') {
+    return (
+      <EmptyState
+        iconName="Mic2"
+        title={t('profile.artistNotFound')}
+        description={t('profile.artistNotFoundDesc')}
+        actionText={t('profile.returnToDiscover')}
+        onAction={() => navigate('/discover')}
+      />
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="py-16">
+        <ErrorState
+          title={t('profile.artistUnavailable')}
+          message={error}
+          onRetry={() => setRequestVersion((value) => value + 1)}
+        />
+      </div>
+    );
+  }
+
+  if (!artist) {
+    return (
+      <EmptyState
+        iconName="Mic2"
+        title={t('profile.artistNotFound')}
+        description={t('profile.artistGoneDesc')}
+        actionText={t('profile.returnToDiscover')}
+        onAction={() => navigate('/discover')}
+      />
+    );
+  }
+
+  const followerDisplayCount = followerCount ?? artist.followers;
+  const popularTracks = [...artistTracks].sort((left, right) => Number(right.plays || 0) - Number(left.plays || 0));
+  const playableTracks = popularTracks.filter((track) => track.isStreamable ?? Boolean(track.audioUrl));
   const artistQueueSource = { type: 'artist', id: artist.id, name: artist.name };
   const isArtistQueueCurrent = Boolean(
     player.currentTrack
@@ -142,6 +222,13 @@ export default function ArtistPage() {
     && player.queueSource?.id === artist.id
   );
   const isArtistPlaying = isArtistQueueCurrent && player.isPlaying;
+  const visiblePopularTracks = showAllPopular ? popularTracks : popularTracks.slice(0, POPULAR_TRACK_LIMIT);
+  const hasImageBanner = /^https?:\/\//i.test(artist.bannerUrl || '');
+  const socialItems = SOCIAL_PLATFORMS.flatMap((platform) => {
+    const href = socialUrl(platform, artist.socialLinks?.[platform.key]);
+    return href ? [{ ...platform, href }] : [];
+  });
+  const hasLongBio = (artist.bio || '').length > 360;
 
   const handlePlayArtist = () => {
     if (playableTracks.length === 0) return;
@@ -160,209 +247,243 @@ export default function ArtistPage() {
         canonical={`https://noirsound.co/artist/${artist.id}`}
       />
 
-      {/* Music-first artist hero */}
-      <section className="grid grid-cols-1 items-end gap-6 px-1 py-2 sm:py-4 md:grid-cols-[15rem_minmax(0,1fr)] md:gap-8">
-          <div className="mx-auto aspect-square w-48 shrink-0 overflow-hidden rounded-md border border-zinc-800/70 bg-zinc-900 shadow-xl shadow-black/20 sm:w-52 md:mx-0 md:w-60">
-            <FallbackAvatar
-              src={artist.avatarUrl}
-              name={artist.name}
-              className="h-full w-full text-[240px]"
-              imageClassName="object-cover"
-            />
+      <section
+        className="ns-artist-hero"
+        data-testid="artist-hero"
+        aria-label={artist.name}
+        onContextMenu={artistContextMenuProps.onContextMenu}
+      >
+        {hasImageBanner && (
+          <div className="ns-artist-hero__backdrop" aria-hidden="true">
+            <div style={{ backgroundImage: `url(${artist.bannerUrl})` }} />
+            <span />
           </div>
+        )}
 
-          <div className="min-w-0 space-y-4 text-center md:text-left">
-            <p className="ns-eyebrow">{t('profile.independentArtist')}</p>
-            <div className="flex min-w-0 items-start justify-center gap-2 md:justify-start">
-              <h1 className="ns-display-title ns-display-title--entity min-w-0 text-zinc-100">
-                {artist.name}
-              </h1>
-              {artist.isVerified && (
-                <span className="mt-2 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center text-[8px] text-white shrink-0" title="Verified Artist" aria-label="Verified artist">
-                  <Check size={10} strokeWidth={4} />
-                </span>
-              )}
-            </div>
-            
-            <div className="flex items-center justify-center gap-2 md:justify-start">
-              {artist.username && <p className="font-sans tabular-nums text-ns-label text-zinc-400">@{artist.username}</p>}
-            </div>
-
-            <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 font-sans tabular-nums text-ns-label text-zinc-500 md:justify-start">
-              <span className="flex items-center space-x-1">
-                <Users size={14} className="text-zinc-500" />
-                <span className="text-zinc-300 font-bold">{formatNumber(followerDisplayCount)}</span>
-                <span className="text-zinc-500 font-medium">{t('profile.followers')}</span>
-              </span>
-              <span className="text-zinc-600 font-bold">•</span>
-              <span className="text-zinc-300 font-bold">{formatNumber(artist.monthlyListeners || 0)}</span>
-              <span className="text-zinc-500 font-medium">{t('profile.monthlyListeners')}</span>
-            </div>
-
-            <div className="flex flex-wrap items-center justify-center gap-2 pt-1 md:justify-start">
-              <button
-                type="button"
-                onClick={handlePlayArtist}
-                disabled={playableTracks.length === 0}
-                className="ns-button-primary inline-flex items-center gap-2 px-6 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                {isArtistPlaying ? <Pause size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" />}
-                <span>{isArtistPlaying ? t('contextMenu.pause') : t('contextMenu.play')}</span>
-              </button>
-              {isOwnProfile ? (
-                <button
-                  onClick={() => navigate('/profile?tab=settings')}
-                  className="ns-button-secondary inline-flex min-h-11 shrink-0 cursor-pointer items-center justify-center gap-2 px-5 text-ns-label"
-                >
-                  <Edit size={14} />
-                  <span>{t('profile.editArtistProfile')}</span>
-                </button>
-              ) : (
-                <button
-                  onClick={handleFollowClick}
-                  disabled={followActionPending}
-                  aria-pressed={isFollowing}
-                  className={`min-h-11 shrink-0 cursor-pointer rounded-md border px-5 text-ns-label font-semibold transition-colors disabled:cursor-wait disabled:opacity-60 ${
-                    isFollowing
-                      ? 'border-zinc-700/60 bg-zinc-800 text-zinc-400 hover:text-zinc-100'
-                      : 'border-zinc-700/70 bg-zinc-900 text-zinc-100 hover:border-brand-red/40'
-                  }`}
-                >
-                  {followActionPending
-                    ? t('actions.saving', { defaultValue: 'Saving…' })
-                    : isFollowing ? t('actions.following') : t('actions.follow')}
-                </button>
-              )}
-            </div>
-          </div>
-      </section>
-
-      {/* Split Columns: Tracks list vs About section */}
-      <div className="grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(17rem,22rem)]">
-        {/* Left 2 Columns: Top tracks & singles */}
-        <div className="min-w-0 space-y-8">
-          
-          {/* Top tracks list */}
-          <section className="space-y-4">
-            <h2 className="ns-section-title px-1">{t('profile.topTracks')}</h2>
-            <div className="border-y border-zinc-800/60 py-1">
-              {artistTracks.length === 0 ? (
-                <EmptyState
-                  iconName="Music2"
-                  title={t('empty.noReleasesYet')}
-                  description={t('profile.artistNoTracksDesc')}
-                />
-              ) : (
-                artistTracks.map((track, idx) => (
-                  <TrackListItem
-                    key={track.id}
-                    track={track}
-                    index={idx}
-                    tracksContext={artistTracks}
-                    queueSource={artistQueueSource}
-                  />
-                ))
-              )}
-            </div>
-          </section>
-
-          {/* Singles derived from this artist's published API tracks. */}
-          <section className="space-y-4">
-            <h2 className="ns-section-title px-1">{t('profile.singlesAndEps')}</h2>
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 2xl:grid-cols-4">
-              {artistTracks.map((track) => (
-                <TrackCard key={track.id} track={track} tracksContext={artistTracks} />
-              ))}
-            </div>
-          </section>
+        <div className="ns-artist-hero__artwork">
+          <FallbackAvatar
+            src={artist.avatarUrl}
+            name={artist.name}
+            className="h-full w-full text-[190px] sm:text-[220px]"
+            imageClassName="object-cover"
+          />
         </div>
 
-        {/* Right Column: About, Bio & Socials */}
-        <div className="space-y-8 border-t border-zinc-800/60 pt-6 xl:border-l xl:border-t-0 xl:pl-6 xl:pt-0">
-          {/* Bio Box */}
-          <section className="space-y-4">
-            <h2 className="ns-section-title">{t('profile.about')}</h2>
-            <p className="text-sm md:text-base text-zinc-300 leading-relaxed">
-              {artist.bio || t('profile.noBio')}
+        <div className="ns-artist-hero__content" data-long-title={artist.name.length > 28}>
+          <div className="mb-3 flex items-center justify-center gap-2 md:justify-start">
+            {artist.isVerified && (
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-red text-[var(--ns-on-accent)]" aria-hidden="true">
+                <Check size={11} strokeWidth={4} />
+              </span>
+            )}
+            <p className="ns-eyebrow">
+              {artist.isVerified ? t('profile.verifiedArtist') : t('profile.independentArtist')}
             </p>
-            
-            <div className="space-y-2 pt-2 border-t border-zinc-900">
-              <span className="block text-ns-meta text-zinc-500 uppercase tracking-ns-label font-bold">{t('profile.focusGenres')}</span>
-              <div className="flex flex-wrap gap-1.5">
-                {(artist.genres || []).length === 0 ? (
-                  <span className="text-ns-meta text-zinc-500">{t('profile.noGenresYet')}</span>
-                ) : (artist.genres || []).map((g) => (
-                  <span
-                    key={g}
-                    className="rounded border border-zinc-800 bg-zinc-900 px-2.5 py-1 font-sans tabular-nums text-ns-label font-medium uppercase text-rose-300"
-                  >
-                    {getLocalizedGenre(g)}
+          </div>
+
+          <h1 className="ns-display-title ns-display-title--entity ns-artist-display-title">
+            {artist.name}
+          </h1>
+
+          {artist.username && (
+            <p className="mt-2 break-all font-sans tabular-nums text-ns-label text-zinc-400">
+              @{artist.username}
+            </p>
+          )}
+
+          <dl className="ns-artist-metrics" aria-label={t('profile.artistMetrics')}>
+            <div>
+              <dt className="sr-only">{t('profile.followers')}</dt>
+              <dd><strong>{formatNumber(followerDisplayCount)}</strong> {t('profile.followers')}</dd>
+            </div>
+            <span aria-hidden="true">•</span>
+            <div>
+              <dt className="sr-only">{t('profile.monthlyListeners')}</dt>
+              <dd><strong>{formatNumber(artist.monthlyListeners || 0)}</strong> {t('profile.monthlyListeners')}</dd>
+            </div>
+          </dl>
+
+          <div className="ns-action-row mt-5 justify-center md:justify-start">
+            <button
+              type="button"
+              onClick={handlePlayArtist}
+              disabled={playableTracks.length === 0}
+              className="ns-button-primary ns-artist-primary-action inline-flex items-center justify-center gap-2 px-4 text-ns-label disabled:cursor-not-allowed disabled:opacity-40"
+              aria-label={isArtistPlaying ? t('contextMenu.pause') : t('contextMenu.play')}
+            >
+              {isArtistPlaying ? <Pause size={17} fill="currentColor" /> : <Play size={17} fill="currentColor" />}
+              <span>{isArtistPlaying ? t('contextMenu.pause') : t('contextMenu.play')}</span>
+            </button>
+
+            {isOwnProfile ? (
+              <button
+                type="button"
+                onClick={() => navigate('/profile?tab=settings')}
+                className="ns-button-secondary inline-flex min-h-11 items-center justify-center gap-2 px-4 text-ns-label"
+              >
+                <Edit size={15} />
+                <span>{t('profile.editArtistProfile')}</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleFollowClick}
+                disabled={followActionPending}
+                aria-pressed={isFollowing}
+                className="ns-button-secondary ns-artist-follow-action px-3 text-ns-label disabled:cursor-wait disabled:opacity-60"
+              >
+                {followActionPending
+                  ? t('actions.saving')
+                  : isFollowing ? t('actions.following') : t('actions.follow')}
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={openArtistActions}
+              onKeyDown={artistContextMenuProps.onKeyDown}
+              className="ns-icon-button"
+              aria-label={t('profile.moreArtistActions', { name: artist.name })}
+              aria-haspopup="menu"
+            >
+              <MoreHorizontal size={18} />
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section className="ns-page-section" data-testid="artist-popular" aria-labelledby="artist-popular-title">
+        <div className="ns-section-header-row">
+          <h2 id="artist-popular-title" className="ns-section-title">{t('profile.popular')}</h2>
+          {popularTracks.length > POPULAR_TRACK_LIMIT && (
+            <button
+              type="button"
+              onClick={() => setShowAllPopular((value) => !value)}
+              className="min-h-10 text-ns-label font-medium text-brand-red hover:underline"
+              aria-expanded={showAllPopular}
+            >
+              {showAllPopular ? t('profile.showPopularOnly') : t('profile.viewAll')}
+            </button>
+          )}
+        </div>
+
+        {popularTracks.length === 0 ? (
+          <div className="ns-artist-empty-section">
+            <Music2 size={20} aria-hidden="true" />
+            <div>
+              <h3>{t('empty.noReleasesYet')}</h3>
+              <p>{t('profile.artistNoTracksDesc')}</p>
+            </div>
+          </div>
+        ) : (
+          <div className="ns-track-list">
+            {visiblePopularTracks.map((track, index) => (
+              <TrackListItem
+                key={track.id}
+                track={track}
+                index={index}
+                tracksContext={playableTracks}
+                queueSource={artistQueueSource}
+              />
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="ns-page-section" data-testid="artist-discography" aria-labelledby="artist-discography-title">
+        <div className="ns-section-header-row">
+          <h2 id="artist-discography-title" className="ns-section-title">{t('profile.discography')}</h2>
+        </div>
+
+        {artistTracks.length === 0 ? (
+          <p className="text-ns-body-sm text-zinc-500">{t('profile.artistNoReleasesDesc')}</p>
+        ) : (
+          <div className="ns-artist-discography-grid">
+            {artistTracks.map((track) => (
+              <ArtistReleaseCard
+                key={track.id}
+                track={track}
+                tracksContext={playableTracks}
+                queueSource={artistQueueSource}
+              />
+            ))}
+          </div>
+        )}
+      </section>
+
+      <div className={`ns-artist-detail-grid ${socialItems.length === 0 ? 'ns-artist-detail-grid--single' : ''}`}>
+        <section className="ns-artist-detail-panel" data-testid="artist-about" aria-labelledby="artist-about-title">
+          <h2 id="artist-about-title" className="ns-section-title">{t('profile.about')}</h2>
+          <div className={`mt-4 grid gap-5 ${artist.avatarUrl ? 'sm:grid-cols-[minmax(10rem,15rem)_minmax(0,1fr)]' : ''}`}>
+            {artist.avatarUrl && (
+              <div className="aspect-[4/3] overflow-hidden rounded-md bg-zinc-900">
+                <FallbackAvatar
+                  src={artist.avatarUrl}
+                  name={artist.name}
+                  className="h-full w-full text-[140px]"
+                  imageClassName="object-cover"
+                />
+              </div>
+            )}
+            <div className="min-w-0">
+              <p className={`text-ns-body leading-[var(--ns-line-body)] text-zinc-300 ${hasLongBio && !bioExpanded ? 'ns-artist-bio--collapsed' : ''}`}>
+                {artist.bio || t('profile.noBio')}
+              </p>
+              {hasLongBio && (
+                <button
+                  type="button"
+                  onClick={() => setBioExpanded((value) => !value)}
+                  className="mt-3 min-h-10 text-ns-label font-semibold text-zinc-200 hover:text-brand-red"
+                  aria-expanded={bioExpanded}
+                >
+                  {bioExpanded ? t('profile.readLess') : t('profile.readMore')}
+                </button>
+              )}
+              {!artist.bio && isOwnProfile && (
+                <button
+                  type="button"
+                  onClick={() => navigate('/profile?tab=settings')}
+                  className="ns-button-secondary mt-4 px-4 text-ns-label"
+                >
+                  {t('profile.editBiography')}
+                </button>
+              )}
+            </div>
+          </div>
+
+          {(artist.genres || []).length > 0 && (
+            <div className="mt-5 border-t border-zinc-800/60 pt-4">
+              <p className="ns-eyebrow">{t('profile.focusGenres')}</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {artist.genres.map((genre) => (
+                  <span key={genre} className="rounded border border-zinc-800 bg-zinc-900 px-2.5 py-1 text-ns-label font-medium text-rose-300">
+                    {getLocalizedGenre(genre)}
                   </span>
                 ))}
               </div>
             </div>
-          </section>
+          )}
+        </section>
 
-          {/* Social Links Box */}
-          <section className="space-y-3 border-t border-zinc-800/60 pt-6">
-            <h2 className="ns-section-title">{t('profile.socialLinks')}</h2>
-            
-            <div className="space-y-1">
-              {!artist.socialLinks?.instagram
-                && !artist.socialLinks?.twitter
-                && !artist.socialLinks?.soundcloud
-                && !artist.username && (
-                  <p className="text-sm text-zinc-500 py-2">{t('profile.noSocials')}</p>
-                )}
-              {artist.socialLinks?.instagram && (
+        {socialItems.length > 0 && (
+          <section className="ns-artist-detail-panel" data-testid="artist-socials" aria-labelledby="artist-socials-title">
+            <h2 id="artist-socials-title" className="ns-section-title">{t('profile.socialLinks')}</h2>
+            <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2">
+              {socialItems.map(({ key, label, Icon, href }) => (
                 <a
-                  href={`https://instagram.com/${artist.socialLinks.instagram}`}
+                  key={key}
+                  href={href}
                   target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center space-x-3 text-sm text-zinc-400 hover:text-zinc-200 py-2 transition-colors border-b border-zinc-900/40"
+                  rel="noopener noreferrer nofollow"
+                  className="inline-flex min-h-11 items-center gap-2 text-ns-body-sm font-medium text-zinc-400 transition-colors hover:text-brand-red"
                 >
-                  <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-500 shrink-0">
-                    <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
-                    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
-                    <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
-                  </svg>
-                  <span>Instagram</span>
+                  <Icon size={18} aria-hidden="true" />
+                  <span>{label}</span>
                 </a>
-              )}
-              {artist.socialLinks?.twitter && (
-                <a
-                  href={`https://twitter.com/${artist.socialLinks.twitter}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center space-x-3 text-sm text-zinc-400 hover:text-zinc-200 py-2 transition-colors border-b border-zinc-900/40"
-                >
-                  <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" className="text-zinc-500 shrink-0">
-                    <path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"></path>
-                  </svg>
-                  <span>Twitter</span>
-                </a>
-              )}
-              {artist.socialLinks?.soundcloud && (
-                <a
-                  href={`https://soundcloud.com/${artist.socialLinks.soundcloud}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center space-x-3 text-sm text-zinc-400 hover:text-zinc-200 py-2 transition-colors border-b border-zinc-900/40"
-                >
-                  <Music size={14} className="text-zinc-500" />
-                  <span>SoundCloud</span>
-                </a>
-              )}
-              {artist.username && (
-                <div className="flex items-center space-x-3 text-sm text-zinc-400 py-2 border-b border-transparent">
-                  <Globe size={14} className="text-zinc-500" />
-                  <span>noirsound.co/{artist.username}</span>
-                </div>
-              )}
+              ))}
             </div>
           </section>
-        </div>
-
+        )}
       </div>
     </div>
   );

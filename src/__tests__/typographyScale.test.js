@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
@@ -20,6 +20,16 @@ const html = readFileSync(path.join(projectRoot, 'index.html'), 'utf-8');
 
 function source(relativePath) {
   return readFileSync(path.join(projectRoot, relativePath), 'utf-8');
+}
+
+function productionSource(relativeDirectory = 'src') {
+  const directory = path.join(projectRoot, relativeDirectory);
+  return readdirSync(directory, { withFileTypes: true })
+    .flatMap((entry) => {
+      const relativePath = path.join(relativeDirectory, entry.name);
+      return entry.isDirectory() ? productionSource(relativePath) : [source(relativePath)];
+    })
+    .join('\n');
 }
 
 function rootTokenValuePx(name) {
@@ -104,19 +114,29 @@ describe('centralized typography scale (src/index.css)', () => {
 
 describe('production font contract', () => {
   const previousDisplayFamily = ['Cormorant', 'Garamond'].join(' ');
+  const retiredDisplayFamily = ['Bona', 'Nova'].join(' ');
 
-  it('defines Commissioner for UI and Bona Nova for display titles', () => {
+  it('defines Commissioner for UI and Literata for music display titles', () => {
     expect(css).toContain('--ns-font-ui: "Commissioner", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;');
-    expect(css).toContain('--ns-font-display: "Bona Nova", Georgia, "Times New Roman", serif;');
+    expect(css).toContain('--ns-font-display: "Literata", Georgia, "Times New Roman", serif;');
+    expect(css).toContain('--ns-font-technical: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;');
     expect(css).toMatch(/html, body[\s\S]*font-family:\s*var\(--ns-font-ui\)/);
     expect(css).toMatch(/\.ns-display-title\s*\{[\s\S]*?font-family:\s*var\(--ns-font-display\)/);
   });
 
   it('loads only the required production families and weights', () => {
     expect(html).toContain('family=Commissioner:wght@400;500;600;700');
-    expect(html).toContain('family=Bona+Nova:wght@700');
+    expect(html).toContain('display=swap');
+    expect(html).not.toContain('family=Literata');
+    expect(css).toMatch(/@font-face\s*\{[\s\S]*?font-family:\s*"Literata";[\s\S]*?font-weight:\s*600;[\s\S]*?font-display:\s*swap;[\s\S]*?format\("woff"\)/);
+    expect(css).toMatch(/@font-face\s*\{[\s\S]*?font-family:\s*"Literata";[\s\S]*?font-weight:\s*700;[\s\S]*?font-display:\s*swap;[\s\S]*?format\("woff"\)/);
     expect(`${html}\n${css}`).not.toContain(previousDisplayFamily);
+    expect(`${html}\n${css}`).not.toContain(retiredDisplayFamily);
     expect(`${html}\n${css}`).not.toMatch(/Inter|Space Grotesk|JetBrains Mono/);
+  });
+
+  it('removes the retired display family from all production source', () => {
+    expect(`${html}\n${productionSource()}`).not.toContain(retiredDisplayFamily);
   });
 
   it('keeps utility page titles on Commissioner instead of applying serif globally', () => {
@@ -135,10 +155,19 @@ describe('production font contract', () => {
     }
   });
 
-  it('uses the display class only for large music-focused titles', () => {
+  it('keeps Home and creator CTA headings on Commissioner', () => {
+    const homeHero = source('src/components/home/HomeHero.jsx');
+    const creatorCallout = source('src/components/home/CreatorCallout.jsx');
+    expect(homeHero).toContain('ns-home-hero-title');
+    expect(creatorCallout).toContain('ns-home-creator-title');
+    expect(homeHero).not.toContain('ns-display-title');
+    expect(creatorCallout).not.toContain('ns-display-title');
+    expect(css).toMatch(/\.ns-home-hero-title\s*\{[\s\S]*?font-family:\s*var\(--ns-font-ui\)/);
+    expect(css).toMatch(/\.ns-home-creator-title\s*\{[\s\S]*?font-family:\s*var\(--ns-font-ui\)/);
+  });
+
+  it('uses the display class only for large music entity titles', () => {
     const displaySurfaces = [
-      'src/components/home/HomeHero.jsx',
-      'src/components/home/CreatorCallout.jsx',
       'src/pages/ArtistPage.jsx',
       'src/pages/PlaylistPage.jsx',
       'src/pages/TrackPage.jsx',
@@ -184,6 +213,6 @@ describe('production font contract', () => {
     expect(fullscreenSource).toContain('ns-fullscreen-mobile-display');
     expect(fullscreenSource).toContain('ns-fullscreen-compact-title');
     expect(css).toMatch(/@media \(orientation: landscape\) and \(max-height: 500px\)[\s\S]*?\.ns-fullscreen-mobile-display[\s\S]*?display:\s*none/);
-    expect(css).toMatch(/\.ns-fullscreen-compact-title[\s\S]*?font-family:\s*var\(--ns-font-display\)[\s\S]*?font-size:\s*1\.5rem[\s\S]*?font-weight:\s*700/);
+    expect(css).toMatch(/\.ns-fullscreen-compact-title[\s\S]*?font-family:\s*var\(--ns-font-display\)[\s\S]*?font-size:\s*1\.5rem[\s\S]*?font-weight:\s*600/);
   });
 });

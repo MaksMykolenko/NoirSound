@@ -16,7 +16,7 @@ export default function CreatorCallout({ onUpload }) {
         </span>
         <div>
           <p className="ns-eyebrow text-rose-300">{t('home.creatorCtaEyebrow')}</p>
-          <h2 className="ns-display-title ns-display-title--editorial mt-1.5 text-zinc-100">
+          <h2 className="ns-home-creator-title mt-1.5 text-zinc-100">
             {t('home.creatorCtaTitle')}
           </h2>
           <p className="mt-2 text-sm text-zinc-400 leading-relaxed">

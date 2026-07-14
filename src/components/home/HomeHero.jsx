@@ -18,7 +18,7 @@ export default function HomeHero({ onDiscover, onUpload }) {
       <div className="absolute inset-0 bg-black/65" />
 
       <div className="relative z-10 w-full max-w-3xl px-5 py-7 sm:px-8">
-        <h1 className="ns-display-title max-w-2xl text-white">
+        <h1 className="ns-home-hero-title max-w-2xl text-white">
           {t('home.title')}
         </h1>
         <p className="mt-2.5 sm:mt-3 max-w-xl text-sm sm:text-[15px] text-zinc-300 leading-relaxed">

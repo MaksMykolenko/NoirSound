@@ -1,11 +1,12 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import i18n from '../../src/i18n';
 import { getArtistById, getTracksByArtist, followArtist } from '../../src/api';
 import { useUserStore } from '../../src/store/userStore';
+import { usePlayerStore } from '../../src/store/playerStore';
 
 vi.mock('../../src/api', async (importOriginal) => {
   const actual = await importOriginal();
@@ -32,6 +33,35 @@ const baseArtist = {
   isFollowing: false,
 };
 
+const tracks = [
+  {
+    id: 't1',
+    title: 'Night Signal',
+    artistId: 'a1',
+    artistName: 'Static Bloom',
+    audioUrl: '/audio/night-signal.mp3',
+    coverUrl: null,
+    duration: 182,
+    plays: 420,
+    releaseDate: '2026-03-12',
+    isStreamable: true,
+  },
+  {
+    id: 't2',
+    title: 'Empty City',
+    artistId: 'a1',
+    artistName: 'Static Bloom',
+    audioUrl: '/audio/empty-city.mp3',
+    coverUrl: null,
+    duration: 205,
+    plays: 940,
+    releaseDate: '2026-01-08',
+    isStreamable: true,
+  },
+];
+
+const initialPlayerState = usePlayerStore.getState();
+
 function renderArtist() {
   return render(
     <MemoryRouter initialEntries={['/artist/a1']}>
@@ -43,13 +73,15 @@ function renderArtist() {
 }
 
 describe('ArtistPage', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
+    await i18n.changeLanguage('en');
     getTracksByArtist.mockResolvedValue([]);
     useUserStore.setState({
       user: { id: 'listener-1', role: 'LISTENER' },
       setAuthModalOpen: vi.fn(),
     });
+    usePlayerStore.setState(initialPlayerState, true);
   });
 
   // Regression test: the component used to declare a useState hook
@@ -115,5 +147,86 @@ describe('ArtistPage', () => {
     expect(screen.queryByText('Електроніка')).not.toBeInTheDocument();
 
     await i18n.changeLanguage('en');
+  });
+
+  it('renders one complete h1 and keeps the required section order', async () => {
+    getArtistById.mockResolvedValue(baseArtist);
+    getTracksByArtist.mockResolvedValue(tracks);
+    renderArtist();
+
+    const heading = await screen.findByRole('heading', { level: 1, name: 'Static Bloom' });
+    expect(heading).toHaveTextContent('Static Bloom');
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
+
+    const popular = screen.getByTestId('artist-popular');
+    const discography = screen.getByTestId('artist-discography');
+    const about = screen.getByTestId('artist-about');
+    expect(popular.nextElementSibling).toBe(discography);
+    expect(discography.compareDocumentPosition(about) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('starts the real artist queue in popularity order', async () => {
+    const playTrack = vi.fn();
+    usePlayerStore.setState({
+      currentTrack: null,
+      queueSource: null,
+      isPlaying: false,
+      playTrack,
+    });
+    getArtistById.mockResolvedValue(baseArtist);
+    getTracksByArtist.mockResolvedValue(tracks);
+    const user = userEvent.setup();
+    renderArtist();
+
+    await screen.findByRole('heading', { level: 1, name: 'Static Bloom' });
+    await user.click(screen.getByRole('button', { name: 'Play' }));
+
+    expect(playTrack).toHaveBeenCalledWith(
+      tracks[1],
+      [tracks[1], tracks[0]],
+      { type: 'artist', id: 'a1', name: 'Static Bloom' }
+    );
+  });
+
+  it('renders release cards as real track links and mobile-safe Popular actions', async () => {
+    getArtistById.mockResolvedValue(baseArtist);
+    getTracksByArtist.mockResolvedValue(tracks);
+    renderArtist();
+
+    const popular = await screen.findByTestId('artist-popular');
+    expect(within(popular).getByRole('button', { name: 'Play Empty City' })).toBeInTheDocument();
+    expect(within(popular).getByRole('button', { name: 'More actions for Empty City' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Open release Night Signal' })).toHaveAttribute('href', '/track/t1');
+  });
+
+  it('uses the stable generated fallback without truncating a long artist name', async () => {
+    const longName = 'Нічні сигнали порожнього міста — Static Bloom 🌙';
+    getArtistById.mockResolvedValue({ ...baseArtist, name: longName, avatarUrl: null });
+    renderArtist();
+
+    expect(await screen.findByRole('heading', { level: 1, name: longName })).toHaveTextContent(longName);
+    expect(screen.getByRole('img', { name: `Generated avatar for ${longName}` })).toBeInTheDocument();
+  });
+
+  it('omits unsupported optional sections and empty social panels', async () => {
+    getArtistById.mockResolvedValue({ ...baseArtist, socialLinks: {} });
+    renderArtist();
+
+    await screen.findByRole('heading', { level: 1, name: 'Static Bloom' });
+    expect(screen.queryByTestId('artist-socials')).not.toBeInTheDocument();
+    expect(screen.queryByText(/related artists/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/featured playlists/i)).not.toBeInTheDocument();
+  });
+
+  it('retries a failed artist request without leaving the error state mounted', async () => {
+    getArtistById
+      .mockRejectedValueOnce(new Error('Temporary failure'))
+      .mockResolvedValueOnce(baseArtist);
+    const user = userEvent.setup();
+    renderArtist();
+
+    await user.click(await screen.findByRole('button', { name: 'Try again' }));
+    await waitFor(() => expect(getArtistById).toHaveBeenCalledTimes(2));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Static Bloom' })).toBeInTheDocument();
   });
 });
