@@ -1,5 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import {
   FileText,
   Heart,
@@ -49,6 +50,7 @@ export function PlayerTrackInfo({
   isLiked,
   onToggleLike,
   playbackError,
+  onOpenTrack,
   className = 'w-[clamp(14rem,24vw,21rem)] min-w-0',
 }) {
   const { contextMenuProps, openFromButton } = useTrackContextMenu(track);
@@ -58,7 +60,6 @@ export function PlayerTrackInfo({
       data-testid="standard-player-track-info"
       onContextMenu={contextMenuProps.onContextMenu}
       onKeyDown={contextMenuProps.onKeyDown}
-      tabIndex={0}
     >
       <FallbackCover
         src={track.coverUrl}
@@ -69,8 +70,14 @@ export function PlayerTrackInfo({
         imageClassName="object-cover"
       />
       <div className="min-w-0 flex-1">
-        <h4 className="text-ns-card-title font-bold text-zinc-100 truncate hover:underline cursor-pointer">
-          {track.title}
+        <h4 className="truncate text-ns-card-title font-bold text-zinc-100">
+          <Link
+            to={`/track/${track.id}`}
+            onClick={onOpenTrack}
+            className="block truncate hover:underline focus-visible:underline focus-visible:outline-none"
+          >
+            {track.title}
+          </Link>
         </h4>
         <p className="text-ns-label text-zinc-350 truncate hover:text-zinc-100 cursor-pointer font-medium">
           {track.artistName}
@@ -257,6 +264,7 @@ export function DesktopPlayerBarContent({
   onToggleQueue,
   onClose,
   closeLabel,
+  onOpenTrack,
 }) {
   const { t } = useTranslation();
 
@@ -267,6 +275,7 @@ export function DesktopPlayerBarContent({
         isLiked={isLiked}
         onToggleLike={onToggleLike}
         playbackError={playbackError}
+        onOpenTrack={onOpenTrack}
       />
 
       <div className="flex min-w-0 max-w-2xl flex-1 flex-col items-center px-3 xl:px-5">

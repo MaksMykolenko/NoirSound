@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import { usePlayerStore } from '../../store/playerStore';
 import {
   Play,
@@ -120,7 +121,15 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
                 imageClassName="object-cover"
               />
               <div className="min-w-0 flex-1">
-                <h5 className="font-bold text-zinc-200 truncate leading-snug text-ns-body-sm">{currentTrack.title}</h5>
+                <h5 className="truncate text-ns-body-sm font-bold leading-snug text-zinc-200">
+                  <Link
+                    to={`/track/${currentTrack.id}`}
+                    onClick={(event) => event.stopPropagation()}
+                    className="block truncate hover:underline focus-visible:underline focus-visible:outline-none"
+                  >
+                    {currentTrack.title}
+                  </Link>
+                </h5>
                 <p className="text-ns-label text-zinc-400 truncate mt-0.5 font-medium">{currentTrack.artistName}</p>
               </div>
               <div className="flex items-center space-x-2 shrink-0">
@@ -244,6 +253,7 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
             <div
               onClick={() => expandPlayer()}
               onKeyDown={(event) => {
+                if (event.target !== event.currentTarget) return;
                 trackContextMenuProps.onKeyDown(event);
                 if (event.defaultPrevented) return;
                 if (event.key === 'Enter' || event.key === ' ') {
@@ -255,6 +265,7 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
               role="group"
               tabIndex={0}
               aria-label="Collapsed player"
+              data-testid="mobile-collapsed-player"
               className="fixed inset-x-0 bottom-[var(--ns-mobile-nav-height)] z-[var(--ns-z-player)] flex h-[var(--ns-mobile-player-height)] cursor-pointer items-center justify-between border-t border-[var(--ns-border-subtle)] bg-[var(--ns-player-bg)] px-3 focus:outline-none focus:ring-1 focus:ring-brand-red"
             >
               {/* Progress Line */}
@@ -275,7 +286,16 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
                   imageClassName="object-cover"
                 />
                 <div className="min-w-0 flex-1">
-                  <h5 className="font-bold text-zinc-200 text-ns-body-sm truncate leading-snug">{currentTrack.title}</h5>
+                  <h5 className="truncate text-ns-body-sm font-bold leading-snug text-zinc-200">
+                    <Link
+                      to={`/track/${currentTrack.id}`}
+                      onClick={(event) => event.stopPropagation()}
+                      onKeyDown={trackContextMenuProps.onKeyDown}
+                      className="block truncate focus-visible:underline focus-visible:outline-none"
+                    >
+                      {currentTrack.title}
+                    </Link>
+                  </h5>
                   {playbackError ? (
                     <PlaybackErrorStatus error={playbackError} className="mt-0.5" />
                   ) : (
@@ -322,7 +342,7 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
       )}
 
       {/* Mobile Expanded Player Sheet (Slides up covering screen) */}
-      {currentTrack && (
+      {mobileSheetOpen && (
         <div
           ref={mobileSheetRef}
           onContextMenu={trackContextMenuProps.onContextMenu}
@@ -330,11 +350,7 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
           aria-modal="true"
           aria-label={`${t('player.nowPlaying')}: ${currentTrack.title}`}
           data-testid="mobile-now-playing-sheet"
-          aria-hidden={!mobileSheetOpen || undefined}
-          inert={!mobileSheetOpen || undefined}
-          className={`ns-mobile-player-sheet fixed inset-0 z-[var(--ns-z-player-sheet)] flex select-none flex-col justify-between overflow-hidden bg-[var(--ns-bg)] px-5 pb-[calc(1.5rem+var(--ns-safe-area-bottom))] pt-[calc(1.25rem+var(--ns-safe-area-top))] transition-transform duration-300 ease-out sm:px-6 lg:hidden ${
-            isPlayerCollapsed ? 'translate-y-full' : 'translate-y-0'
-          }`}
+          className="ns-mobile-player-sheet fixed inset-0 z-[var(--ns-z-player-sheet)] flex translate-y-0 select-none flex-col justify-between overflow-hidden bg-[var(--ns-bg)] px-5 pb-[calc(1.5rem+var(--ns-safe-area-bottom))] pt-[calc(1.25rem+var(--ns-safe-area-top))] transition-transform duration-300 ease-out sm:px-6 lg:hidden"
         >
           {/* Top row */}
           <div className="ns-mobile-player-sheet__header flex shrink-0 items-center justify-between">
@@ -399,7 +415,15 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
             {/* Meta + Like */}
             <div className="flex items-center justify-between">
               <div className="min-w-0 flex-1 pr-4">
-                <h2 className="ns-fullscreen-compact-title truncate text-2xl font-bold text-zinc-100">{currentTrack.title}</h2>
+                <h2 className="ns-fullscreen-compact-title truncate text-2xl font-bold text-zinc-100">
+                  <Link
+                    to={`/track/${currentTrack.id}`}
+                    onClick={collapsePlayer}
+                    className="block truncate focus-visible:underline focus-visible:outline-none"
+                  >
+                    {currentTrack.title}
+                  </Link>
+                </h2>
                 <p className="mt-1 truncate text-sm font-medium text-zinc-400">{currentTrack.artistName}</p>
                 <PlaybackErrorStatus error={playbackError} className="mt-1" />
               </div>

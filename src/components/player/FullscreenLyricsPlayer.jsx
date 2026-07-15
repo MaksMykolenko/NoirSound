@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
   FileText,
@@ -32,6 +33,7 @@ export default function FullscreenLyricsPlayer({
   onCloseQueue = noop,
 }) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const dialogRef = useRef(null);
   const closeRef = useRef(null);
   const previousFocusRef = useRef(null);
@@ -50,6 +52,7 @@ export default function FullscreenLyricsPlayer({
     playbackError,
     likedTracks,
     closeLyricsFullscreen,
+    collapsePlayer,
     togglePlay,
     previous,
     next,
@@ -67,6 +70,37 @@ export default function FullscreenLyricsPlayer({
       window.setTimeout(() => window.history.back(), 0);
     }
   }, [closeLyricsFullscreen]);
+
+  const closeForNavigation = useCallback((event) => {
+    const linkTarget = event.currentTarget.getAttribute('target');
+    if (
+      event.defaultPrevented
+      || event.button !== 0
+      || (linkTarget && linkTarget !== '_self')
+      || event.metaKey
+      || event.ctrlKey
+      || event.shiftKey
+      || event.altKey
+    ) {
+      return;
+    }
+
+    const ownsHistoryEntry = Boolean(window.history.state?.[HISTORY_STATE_KEY]);
+    onCloseQueue();
+    if (window.matchMedia?.('(max-width: 1023px)').matches) {
+      collapsePlayer();
+    }
+    closeLyricsFullscreen();
+    if (ownsHistoryEntry) {
+      event.preventDefault();
+      const trackPath = `/track/${currentTrack.id}`;
+      if (`${window.location.pathname}${window.location.search}${window.location.hash}` === trackPath) {
+        navigate(-1);
+      } else {
+        navigate(trackPath, { replace: true });
+      }
+    }
+  }, [closeLyricsFullscreen, collapsePlayer, currentTrack?.id, navigate, onCloseQueue]);
 
   useEffect(() => {
     if (!currentTrack) {
@@ -313,6 +347,7 @@ export default function FullscreenLyricsPlayer({
             onToggleQueue={onToggleQueue}
             onClose={closeWithHistory}
             closeLabel={t('player.closeLyrics')}
+            onOpenTrack={closeForNavigation}
           />
         </div>
 
@@ -325,6 +360,7 @@ export default function FullscreenLyricsPlayer({
               track={currentTrack}
               isLiked={isLiked}
               onToggleLike={() => toggleLikeTrack(currentTrack.id)}
+              onOpenTrack={closeForNavigation}
               className="min-w-0 flex-1"
             />
             <button

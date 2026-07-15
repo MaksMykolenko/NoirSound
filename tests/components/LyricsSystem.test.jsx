@@ -1,10 +1,12 @@
 import React from 'react';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { BrowserRouter, Link, MemoryRouter, useLocation } from 'react-router-dom';
 import i18n from '../../src/i18n';
 import LyricsEditor from '../../src/components/lyrics/LyricsEditor';
 import TrackLyricsCard from '../../src/components/lyrics/TrackLyricsCard';
+import AppLayout from '../../src/components/layout/AppLayout';
 import PlayerBar from '../../src/components/player/PlayerBar';
 import FullscreenLyricsPlayer from '../../src/components/player/FullscreenLyricsPlayer';
 import { PlaybackErrorStatus } from '../../src/components/player/PlayerBarShared';
@@ -37,11 +39,47 @@ const originalPlayerActions = {
   setVolume: usePlayerStore.getState().setVolume,
 };
 
+function LocationProbe() {
+  const location = useLocation();
+  return <output data-testid="lyrics-player-route">{location.pathname}</output>;
+}
+
+function HistoryRouteFixture() {
+  const location = useLocation();
+  return (
+    <>
+      {location.pathname === '/history-seed' && (
+        <Link to="/discover">Open history route A</Link>
+      )}
+      <LocationProbe />
+    </>
+  );
+}
+
+const originalMatchMedia = window.matchMedia;
+
+function useMobileViewport() {
+  Object.defineProperty(window, 'matchMedia', {
+    configurable: true,
+    writable: true,
+    value: vi.fn((query) => ({
+      matches: query === '(max-width: 1023px)',
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  });
+}
+
 function PlayerLyricsFixture() {
   const lyricsFullscreenOpen = usePlayerStore((state) => state.lyricsFullscreenOpen);
   const [isQueueOpen, setIsQueueOpen] = React.useState(false);
   return (
-    <>
+    <MemoryRouter>
       <PlayerBar onToggleQueue={() => setIsQueueOpen((open) => !open)} isQueueOpen={isQueueOpen} />
       {lyricsFullscreenOpen && (
         <FullscreenLyricsPlayer
@@ -50,7 +88,8 @@ function PlayerLyricsFixture() {
           onCloseQueue={() => setIsQueueOpen(false)}
         />
       )}
-    </>
+      <LocationProbe />
+    </MemoryRouter>
   );
 }
 
@@ -58,7 +97,7 @@ function ExclusivePlayerLyricsFixture() {
   const lyricsFullscreenOpen = usePlayerStore((state) => state.lyricsFullscreenOpen);
   const [isQueueOpen, setIsQueueOpen] = React.useState(false);
   return (
-    <>
+    <MemoryRouter>
       {!lyricsFullscreenOpen && (
         <PlayerBar
           onToggleQueue={() => setIsQueueOpen((open) => !open)}
@@ -72,7 +111,7 @@ function ExclusivePlayerLyricsFixture() {
           onCloseQueue={() => setIsQueueOpen(false)}
         />
       )}
-    </>
+    </MemoryRouter>
   );
 }
 
@@ -82,6 +121,8 @@ describe('lyrics UI', () => {
     vi.clearAllMocks();
     clearFullscreenLyricsCache();
     window.history.replaceState({}, '', '/');
+    document.body.style.overflow = '';
+    document.body.style.overscrollBehavior = '';
     usePlayerStore.setState({
       currentTrack: null,
       queue: [],
@@ -99,6 +140,20 @@ describe('lyrics UI', () => {
       lyricsFullscreenOpen: false,
       ...originalPlayerActions,
     });
+  });
+
+  afterEach(() => {
+    if (originalMatchMedia) {
+      Object.defineProperty(window, 'matchMedia', {
+        configurable: true,
+        writable: true,
+        value: originalMatchMedia,
+      });
+    } else {
+      delete window.matchMedia;
+    }
+    document.body.style.overflow = '';
+    document.body.style.overscrollBehavior = '';
   });
 
   it('renders counts, preview, and a rights warning without changing lyrics text', async () => {
@@ -157,7 +212,7 @@ describe('lyrics UI', () => {
     expect(getTrackLyrics).not.toHaveBeenCalled();
     const lyricsButtons = screen.getAllByRole('button', { name: i18n.t('player.openLyrics') });
     expect(lyricsButtons).toHaveLength(1);
-    expect(screen.getByTestId('mobile-now-playing-sheet')).toHaveAttribute('aria-hidden', 'true');
+    expect(screen.queryByTestId('mobile-now-playing-sheet')).not.toBeInTheDocument();
     await userEvent.click(lyricsButtons[0]);
     const dialog = screen.getByRole('dialog', {
       name: i18n.t('lyrics.fullscreenLabel', { title: track.title }),
@@ -170,6 +225,154 @@ describe('lyrics UI', () => {
     await userEvent.click(within(dialog).getByTestId('fullscreen-lyrics-back'));
     await waitFor(() => expect(screen.queryByTestId('fullscreen-lyrics-player')).toBeNull());
     expect(usePlayerStore.getState().isPlaying).toBe(true);
+  });
+
+  it('opens the track page from fullscreen controls and closes the lyrics surface', async () => {
+    getTrackLyrics.mockResolvedValue({
+      trackId: track.id,
+      hasLyrics: true,
+      lyricsType: 'PLAIN',
+      lyricsText: 'Navigate without stopping',
+    });
+    usePlayerStore.setState({
+      currentTrack: track,
+      isPlaying: true,
+      progress: 21,
+      duration: 180,
+    });
+    render(<PlayerLyricsFixture />);
+
+    await userEvent.click(screen.getAllByRole('button', { name: i18n.t('player.openLyrics') })[0]);
+    const controls = screen.getByTestId('fullscreen-standard-desktop-playerbar');
+    await userEvent.click(within(controls).getByRole('link', { name: track.title }));
+
+    expect(screen.getByTestId('lyrics-player-route')).toHaveTextContent(`/track/${track.id}`);
+    await waitFor(() => expect(screen.queryByTestId('fullscreen-lyrics-player')).toBeNull());
+    expect(usePlayerStore.getState()).toMatchObject({
+      currentTrack: { id: track.id },
+      isPlaying: true,
+      progress: 21,
+    });
+  });
+
+  it('closes mobile fullscreen, its queue, and the underlying expanded player before navigation', async () => {
+    useMobileViewport();
+    getTrackLyrics.mockResolvedValue({
+      trackId: track.id,
+      hasLyrics: true,
+      lyricsType: 'PLAIN',
+      lyricsText: 'Shared mobile route',
+    });
+    usePlayerStore.setState({
+      currentTrack: track,
+      isPlaying: true,
+      progress: 21,
+      duration: 180,
+      isPlayerCollapsed: false,
+      lyricsFullscreenOpen: true,
+    });
+    const audioBeforeNavigation = __getAudioElementForTests();
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter initialEntries={['/discover']}>
+        <AppLayout>
+          <LocationProbe />
+        </AppLayout>
+      </MemoryRouter>
+    );
+
+    const appShell = document.querySelector('.ns-app-background');
+    const fullscreen = screen.getByTestId('fullscreen-lyrics-player');
+    const mobileControls = screen.getByTestId('fullscreen-standard-mobile-playerbar');
+    const trackInfo = within(mobileControls).getByTestId('standard-player-track-info');
+    const titleLink = within(trackInfo).getByRole('link', { name: track.title });
+    expect(appShell).toHaveAttribute('inert');
+    expect(document.body.style.overflow).toBe('hidden');
+    expect(trackInfo).not.toHaveAttribute('tabindex');
+
+    await user.click(within(mobileControls).getByRole('button', { name: 'Open play queue' }));
+    expect(screen.getByRole('dialog', { name: 'Play Queue' })).toBeInTheDocument();
+    await user.click(titleLink);
+
+    expect(screen.getByTestId('lyrics-player-route')).toHaveTextContent(`/track/${track.id}`);
+    await waitFor(() => expect(screen.queryByTestId('fullscreen-lyrics-player')).not.toBeInTheDocument());
+    expect(screen.queryByRole('dialog', { name: 'Play Queue' })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('mobile-now-playing-sheet')).not.toBeInTheDocument();
+    expect(document.querySelector('[aria-modal="true"]')).toBeNull();
+    expect(appShell).not.toHaveAttribute('inert');
+    expect(appShell).not.toHaveAttribute('aria-hidden');
+    expect(document.body.style.overflow).toBe('');
+    expect(document.body.style.overscrollBehavior).toBe('');
+    expect(document.body.contains(fullscreen)).toBe(false);
+    expect(usePlayerStore.getState()).toMatchObject({
+      currentTrack: { id: track.id },
+      isPlaying: true,
+      progress: 21,
+      isPlayerCollapsed: true,
+      lyricsFullscreenOpen: false,
+    });
+    expect(__getAudioElementForTests()).toBe(audioBeforeNavigation);
+  });
+
+  it('replaces the fullscreen history sentinel so Back and Forward cross routes without a duplicate', async () => {
+    getTrackLyrics.mockResolvedValue({
+      trackId: track.id,
+      hasLyrics: true,
+      lyricsType: 'PLAIN',
+      lyricsText: 'History-safe words',
+    });
+    usePlayerStore.setState({
+      currentTrack: track,
+      isPlaying: true,
+      progress: 21,
+      duration: 180,
+      isPlayerCollapsed: false,
+    });
+    const audioBeforeNavigation = __getAudioElementForTests();
+    const user = userEvent.setup();
+    window.history.replaceState({}, '', '/history-seed');
+
+    render(
+      <BrowserRouter>
+        <AppLayout>
+          <HistoryRouteFixture />
+        </AppLayout>
+      </BrowserRouter>
+    );
+
+    await user.click(screen.getByRole('link', { name: 'Open history route A' }));
+    expect(screen.getByTestId('lyrics-player-route')).toHaveTextContent('/discover');
+
+    await user.click(screen.getByRole('button', { name: i18n.t('player.openLyrics') }));
+    const historyLengthWithSentinel = window.history.length;
+    const desktopControls = screen.getByTestId('fullscreen-standard-desktop-playerbar');
+    await user.click(within(desktopControls).getByRole('link', { name: track.title }));
+
+    expect(screen.getByTestId('lyrics-player-route')).toHaveTextContent(`/track/${track.id}`);
+    expect(window.history.length).toBe(historyLengthWithSentinel);
+    await waitFor(() => expect(screen.queryByTestId('fullscreen-lyrics-player')).not.toBeInTheDocument());
+    expect(document.querySelector('.ns-app-background')).not.toHaveAttribute('inert');
+
+    act(() => window.history.back());
+    await waitFor(() => expect(screen.getByTestId('lyrics-player-route')).toHaveTextContent('/discover'));
+    expect(screen.queryByTestId('fullscreen-lyrics-player')).not.toBeInTheDocument();
+
+    act(() => window.history.forward());
+    await waitFor(() => expect(screen.getByTestId('lyrics-player-route')).toHaveTextContent(`/track/${track.id}`));
+    expect(screen.queryByTestId('fullscreen-lyrics-player')).not.toBeInTheDocument();
+
+    act(() => window.history.back());
+    await waitFor(() => expect(screen.getByTestId('lyrics-player-route')).toHaveTextContent('/discover'));
+    act(() => window.history.back());
+    await waitFor(() => expect(screen.getByTestId('lyrics-player-route')).toHaveTextContent('/history-seed'));
+    expect(usePlayerStore.getState()).toMatchObject({
+      currentTrack: { id: track.id },
+      isPlaying: true,
+      progress: 21,
+      lyricsFullscreenOpen: false,
+    });
+    expect(__getAudioElementForTests()).toBe(audioBeforeNavigation);
   });
 
   it('shows a friendly error and retries without exposing the raw failure', async () => {
@@ -390,7 +593,7 @@ describe('lyrics UI', () => {
     render(<PlayerLyricsFixture />);
     const unavailable = screen.getAllByRole('button', { name: i18n.t('player.lyricsUnavailable') });
     expect(unavailable).toHaveLength(1);
-    expect(screen.getByTestId('mobile-now-playing-sheet')).toHaveAttribute('aria-hidden', 'true');
+    expect(screen.queryByTestId('mobile-now-playing-sheet')).not.toBeInTheDocument();
     unavailable.forEach((button) => expect(button).toBeDisabled());
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(getTrackLyrics).not.toHaveBeenCalled();
