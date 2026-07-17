@@ -1,11 +1,12 @@
 import React from 'react';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import AppLayout from '../../src/components/layout/AppLayout';
 import PlayerBar from '../../src/components/player/PlayerBar';
 import { __getAudioElementForTests, usePlayerStore } from '../../src/store/playerStore';
+import { isUnmodifiedPrimaryActivation } from '../../src/utils/linkActivation';
 
 const track = {
   id: 'player-track',
@@ -27,7 +28,7 @@ function LocationProbe() {
 
 const originalMatchMedia = window.matchMedia;
 
-function useMobileViewport() {
+function mockMobileViewport() {
   Object.defineProperty(window, 'matchMedia', {
     configurable: true,
     writable: true,
@@ -52,6 +53,26 @@ function renderPlayerApp(initialRoute = '/discover') {
       </AppLayout>
     </MemoryRouter>
   );
+}
+
+function renderExpandedMobilePlayer(initialRoute = '/discover') {
+  mockMobileViewport();
+  renderPlayerApp(initialRoute);
+  const sheet = screen.getByTestId('mobile-now-playing-sheet');
+  const titleLink = within(sheet).getByRole('link', { name: track.title });
+  return { sheet, titleLink };
+}
+
+function clickWithoutFollowingNativeNavigation(element, init = {}) {
+  let defaultPreventedByApp;
+  const stopNativeNavigationAfterReact = (event) => {
+    defaultPreventedByApp = event.defaultPrevented;
+    event.preventDefault();
+  };
+
+  window.addEventListener('click', stopNativeNavigationAfterReact, { once: true });
+  fireEvent.click(element, init);
+  return defaultPreventedByApp;
 }
 
 describe('player track navigation', () => {
@@ -126,7 +147,7 @@ describe('player track navigation', () => {
   });
 
   it('navigates from the collapsed mobile title by mouse without expanding or resetting playback', async () => {
-    useMobileViewport();
+    mockMobileViewport();
     usePlayerStore.setState({ isPlayerCollapsed: true });
     const audioBeforeNavigation = __getAudioElementForTests();
     const user = userEvent.setup();
@@ -147,7 +168,7 @@ describe('player track navigation', () => {
   });
 
   it('lets Enter activate the collapsed mobile title without bubbling into player expansion', async () => {
-    useMobileViewport();
+    mockMobileViewport();
     usePlayerStore.setState({ isPlayerCollapsed: true });
     const user = userEvent.setup();
     renderPlayerApp();
@@ -163,7 +184,7 @@ describe('player track navigation', () => {
   });
 
   it('does not treat Space on the collapsed mobile title as parent player activation', async () => {
-    useMobileViewport();
+    mockMobileViewport();
     usePlayerStore.setState({ isPlayerCollapsed: true });
     const user = userEvent.setup();
     renderPlayerApp();
@@ -179,7 +200,7 @@ describe('player track navigation', () => {
   });
 
   it('still expands from the collapsed mobile free area and the named Expand button', async () => {
-    useMobileViewport();
+    mockMobileViewport();
     usePlayerStore.setState({ isPlayerCollapsed: true });
     const user = userEvent.setup();
     renderPlayerApp();
@@ -202,7 +223,7 @@ describe('player track navigation', () => {
   });
 
   it('closes the expanded mobile sheet before title navigation and clears modal state', async () => {
-    useMobileViewport();
+    mockMobileViewport();
     const audioBeforeNavigation = __getAudioElementForTests();
     const initialBodyOverflow = document.body.style.overflow;
     const user = userEvent.setup();
@@ -230,5 +251,94 @@ describe('player track navigation', () => {
       isPlayerCollapsed: true,
     });
     expect(__getAudioElementForTests()).toBe(audioBeforeNavigation);
+  });
+
+  it('lets Enter activate the expanded mobile title and closes the sheet', async () => {
+    const user = userEvent.setup();
+    const { sheet, titleLink } = renderExpandedMobilePlayer();
+
+    await waitFor(() => expect(within(sheet).getByRole('button', { name: 'Collapse player' })).toHaveFocus());
+    titleLink.focus();
+    await user.keyboard('{Enter}');
+
+    expect(screen.getByTestId('player-route')).toHaveTextContent(`/track/${track.id}`);
+    await waitFor(() => expect(screen.queryByTestId('mobile-now-playing-sheet')).not.toBeInTheDocument());
+    expect(usePlayerStore.getState().isPlayerCollapsed).toBe(true);
+  });
+
+  it.each([
+    ['Ctrl', { ctrlKey: true }],
+    ['Meta', { metaKey: true }],
+    ['Shift', { shiftKey: true }],
+    ['Alt', { altKey: true }],
+  ])('preserves the expanded mobile player for %s-click', (_modifier, init) => {
+    const { titleLink } = renderExpandedMobilePlayer();
+    const audioBeforeActivation = __getAudioElementForTests();
+
+    const defaultPreventedByApp = clickWithoutFollowingNativeNavigation(titleLink, init);
+
+    expect(defaultPreventedByApp).toBe(false);
+    expect(screen.getByTestId('player-route')).toHaveTextContent('/discover');
+    expect(screen.getByTestId('mobile-now-playing-sheet')).toBeInTheDocument();
+    expect(usePlayerStore.getState()).toMatchObject({
+      currentTrack: { id: track.id },
+      isPlaying: true,
+      progress: 27,
+      isPlayerCollapsed: false,
+    });
+    expect(__getAudioElementForTests()).toBe(audioBeforeActivation);
+  });
+
+  it('preserves the expanded mobile player for middle-click', () => {
+    const { titleLink } = renderExpandedMobilePlayer();
+    const audioBeforeActivation = __getAudioElementForTests();
+
+    const defaultPreventedByApp = clickWithoutFollowingNativeNavigation(titleLink, { button: 1 });
+
+    expect(defaultPreventedByApp).toBe(false);
+    expect(screen.getByTestId('player-route')).toHaveTextContent('/discover');
+    expect(screen.getByTestId('mobile-now-playing-sheet')).toBeInTheDocument();
+    expect(usePlayerStore.getState()).toMatchObject({
+      currentTrack: { id: track.id },
+      isPlaying: true,
+      progress: 27,
+      isPlayerCollapsed: false,
+    });
+    expect(__getAudioElementForTests()).toBe(audioBeforeActivation);
+  });
+
+  it.each([
+    ['a new-tab target', { target: '_blank' }],
+    ['a download link', { download: 'track' }],
+  ])('rejects current-tab teardown for %s', (_case, attributes) => {
+    const link = document.createElement('a');
+    Object.entries(attributes).forEach(([name, value]) => link.setAttribute(name, value));
+
+    expect(isUnmodifiedPrimaryActivation({
+      currentTarget: link,
+      defaultPrevented: false,
+      button: 0,
+      metaKey: false,
+      ctrlKey: false,
+      shiftKey: false,
+      altKey: false,
+    })).toBe(false);
+  });
+
+  it('does not collapse the expanded mobile player for an already prevented click', () => {
+    const { titleLink } = renderExpandedMobilePlayer();
+    const event = new MouseEvent('click', {
+      bubbles: true,
+      cancelable: true,
+      button: 0,
+    });
+    event.preventDefault();
+
+    titleLink.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(screen.getByTestId('player-route')).toHaveTextContent('/discover');
+    expect(screen.getByTestId('mobile-now-playing-sheet')).toBeInTheDocument();
+    expect(usePlayerStore.getState().isPlayerCollapsed).toBe(false);
   });
 });

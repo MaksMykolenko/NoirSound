@@ -23,6 +23,7 @@ import {
   deleteCachedFullscreenLyrics,
   getCachedFullscreenLyrics,
 } from './fullscreenLyricsCache';
+import { isUnmodifiedPrimaryActivation } from '../../utils/linkActivation';
 
 const HISTORY_STATE_KEY = '__noirsoundLyricsFullscreen';
 const noop = () => {};
@@ -72,18 +73,7 @@ export default function FullscreenLyricsPlayer({
   }, [closeLyricsFullscreen]);
 
   const closeForNavigation = useCallback((event) => {
-    const linkTarget = event.currentTarget.getAttribute('target');
-    if (
-      event.defaultPrevented
-      || event.button !== 0
-      || (linkTarget && linkTarget !== '_self')
-      || event.metaKey
-      || event.ctrlKey
-      || event.shiftKey
-      || event.altKey
-    ) {
-      return;
-    }
+    if (!isUnmodifiedPrimaryActivation(event)) return;
 
     const ownsHistoryEntry = Boolean(window.history.state?.[HISTORY_STATE_KEY]);
     onCloseQueue();

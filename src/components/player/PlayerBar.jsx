@@ -24,6 +24,7 @@ import {
 } from './PlayerBarShared';
 import { useTrackContextMenu } from '../../hooks/useEntityContextMenu';
 import useDialogFocusTrap from '../../hooks/useDialogFocusTrap';
+import { isUnmodifiedPrimaryActivation } from '../../utils/linkActivation';
 
 export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
   const { t } = useTranslation();
@@ -83,6 +84,11 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
 
   const toggleMute = () => {
     setVolume(volume > 0 ? 0 : 0.5);
+  };
+
+  const handleExpandedTrackLinkClick = (event) => {
+    if (!isUnmodifiedPrimaryActivation(event)) return;
+    collapsePlayer();
   };
 
   // Keyboard shortcut: Escape key collapses player
@@ -418,7 +424,7 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
                 <h2 className="ns-fullscreen-compact-title truncate text-2xl font-bold text-zinc-100">
                   <Link
                     to={`/track/${currentTrack.id}`}
-                    onClick={collapsePlayer}
+                    onClick={handleExpandedTrackLinkClick}
                     className="block truncate focus-visible:underline focus-visible:outline-none"
                   >
                     {currentTrack.title}
