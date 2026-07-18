@@ -296,7 +296,6 @@ export default function ArtistPage() {
               <dt className="sr-only">{t('profile.followers')}</dt>
               <dd><strong>{formatNumber(followerDisplayCount)}</strong> {t('profile.followers')}</dd>
             </div>
-            <span aria-hidden="true">•</span>
             <div>
               <dt className="sr-only">{t('profile.monthlyListeners')}</dt>
               <dd><strong>{formatNumber(artist.monthlyListeners || 0)}</strong> {t('profile.monthlyListeners')}</dd>

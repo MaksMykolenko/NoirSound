@@ -82,7 +82,7 @@ export default function BatchFileDropzone({
             </div>
             <label className="w-full text-sm text-zinc-400 sm:w-auto">
               <span className="mb-1 block font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label">{t('batchUpload.batchMode')}</span>
-              <select className="ns-field w-full !rounded px-3 sm:min-w-44" value={mode} onChange={(event) => onModeChange(event.target.value)}>
+              <select className="ns-field w-full !rounded px-3 text-base sm:min-w-44 sm:text-sm" value={mode} onChange={(event) => onModeChange(event.target.value)}>
                 <option value="MIXED">{t('batchUpload.mixed')}</option>
                 <option value="SINGLES_ONLY">{t('batchUpload.singlesOnly')}</option>
                 <option value="PLAYLIST">{t('batchUpload.playlistOnly')}</option>

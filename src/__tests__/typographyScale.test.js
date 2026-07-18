@@ -22,6 +22,22 @@ function source(relativePath) {
   return readFileSync(path.join(projectRoot, relativePath), 'utf-8');
 }
 
+function blockBody(text, marker) {
+  const markerIndex = text.indexOf(marker);
+  if (markerIndex < 0) return null;
+  const openingBrace = text.indexOf('{', markerIndex + marker.length);
+  if (openingBrace < 0) return null;
+
+  let depth = 0;
+  for (let index = openingBrace; index < text.length; index += 1) {
+    if (text[index] === '{') depth += 1;
+    if (text[index] !== '}') continue;
+    depth -= 1;
+    if (depth === 0) return text.slice(openingBrace + 1, index);
+  }
+  return null;
+}
+
 function productionSource(relativeDirectory = 'src') {
   const directory = path.join(projectRoot, relativeDirectory);
   return readdirSync(directory, { withFileTypes: true })
@@ -210,9 +226,32 @@ describe('production font contract', () => {
 
   it('keeps fullscreen display typography clear of the player in short landscape viewports', () => {
     const fullscreenSource = source('src/components/player/FullscreenLyricsPlayer.jsx');
+    const shortLandscape = blockBody(
+      css,
+      '@media (orientation: landscape) and (max-height: 500px) and (max-width: 1023px)'
+    );
+    const compactTitleRule = blockBody(
+      shortLandscape || '',
+      '.ns-fullscreen-compact-title'
+    );
+    const scopedCompactTitleRule = blockBody(
+      shortLandscape || '',
+      '.ns-lyrics-fullscreen .ns-fullscreen-compact-title'
+    );
+
     expect(fullscreenSource).toContain('ns-fullscreen-mobile-display');
     expect(fullscreenSource).toContain('ns-fullscreen-compact-title');
-    expect(css).toMatch(/@media \(orientation: landscape\) and \(max-height: 500px\)[\s\S]*?\.ns-fullscreen-mobile-display[\s\S]*?display:\s*none/);
-    expect(css).toMatch(/\.ns-fullscreen-compact-title[\s\S]*?font-family:\s*var\(--ns-font-display\)[\s\S]*?font-size:\s*1\.5rem[\s\S]*?font-weight:\s*600/);
+    expect(shortLandscape).toMatch(/\.ns-fullscreen-mobile-display\s*\{[^}]*display:\s*none/);
+    expect(compactTitleRule).toMatch(/font-family:\s*var\(--ns-font-display\)/);
+    expect(compactTitleRule).toMatch(/font-size:\s*1\.5rem/);
+    expect(compactTitleRule).toMatch(/font-weight:\s*600/);
+    expect(compactTitleRule).toMatch(/line-height:\s*1\.1/);
+    expect(scopedCompactTitleRule).toMatch(/white-space:\s*normal/);
+    expect(scopedCompactTitleRule).toMatch(/overflow-wrap:\s*anywhere/);
+    expect(scopedCompactTitleRule).toMatch(/display:\s*-webkit-box/);
+    expect(scopedCompactTitleRule).toMatch(/-webkit-box-orient:\s*vertical/);
+    expect(scopedCompactTitleRule).toMatch(/-webkit-line-clamp:\s*2/);
+    expect(scopedCompactTitleRule).toMatch(/overflow:\s*hidden/);
+    expect(scopedCompactTitleRule).toMatch(/max-height:\s*3\.3rem/);
   });
 });

@@ -1,8 +1,15 @@
 import React from 'react';
-import * as Icons from 'lucide-react';
+import { BarChart3, Heart, Play, Radio, Users } from 'lucide-react';
+
+const STATS_ICONS = {
+  Heart,
+  Play,
+  Radio,
+  Users,
+};
 
 export default function StatsCard({ title, value, change, iconName, trend = 'up' }) {
-  const Icon = Icons[iconName] || Icons.BarChart3;
+  const Icon = STATS_ICONS[iconName] || BarChart3;
 
   return (
     <div className="group relative min-w-0 p-4 transition-colors hover:bg-zinc-900/35 sm:p-5">

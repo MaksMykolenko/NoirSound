@@ -22,7 +22,7 @@ export default function ArtistReleaseCard({ track, tracksContext, queueSource })
   const isCurrent = currentTrack?.id === track.id;
   const isPlayingThis = isCurrent && isPlaying;
   const canPlay = track.isStreamable ?? Boolean(track.audioUrl);
-  const year = releaseYear(track.releaseDate || track.createdAt);
+  const year = releaseYear(track.releaseDate) ?? releaseYear(track.createdAt);
 
   const handlePlay = (event) => {
     event.preventDefault();
@@ -89,9 +89,11 @@ export default function ArtistReleaseCard({ track, tracksContext, queueSource })
           <h3 className={`ns-artist-release-card__title text-ns-body-sm font-semibold ${isCurrent ? 'text-brand-red' : 'text-zinc-200'}`}>
             {track.title}
           </h3>
-          <p className="mt-1 truncate font-sans tabular-nums text-ns-meta text-zinc-500">
-            {t('playlists.single')}{year ? ` · ${year}` : ''}
-          </p>
+          {year !== null && (
+            <p className="mt-1 truncate font-sans tabular-nums text-ns-meta text-zinc-500">
+              {year}
+            </p>
+          )}
         </div>
       </div>
     </article>

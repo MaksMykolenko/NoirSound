@@ -792,6 +792,22 @@ main {
   line-height: var(--ns-line-snug);
 }
 
+.ns-artist-metrics > div {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+}
+
+.ns-artist-metrics > div + div::before {
+  width: 0.2rem;
+  height: 0.2rem;
+  flex: 0 0 auto;
+  margin-inline-end: 0.65rem;
+  border-radius: 9999px;
+  background: currentColor;
+  content: '';
+}
+
 .ns-artist-metrics strong {
   color: var(--ns-text-primary);
   font-weight: 600;
@@ -1246,6 +1262,17 @@ main {
     font-weight: 600;
     line-height: 1.1;
     padding-block: 0.04em 0.08em;
+  }
+
+  .ns-lyrics-fullscreen .ns-fullscreen-compact-title {
+    display: -webkit-box;
+    max-height: 3.3rem;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+    text-overflow: clip;
+    white-space: normal;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
   }
 
   .ns-fullscreen-lyrics-scroll {

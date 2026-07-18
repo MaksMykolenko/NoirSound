@@ -1,5 +1,47 @@
 import React from 'react';
-import * as Icons from 'lucide-react';
+import {
+  Activity,
+  AudioLines,
+  Disc3,
+  Headphones,
+  Heart,
+  History,
+  LayoutDashboard,
+  Library,
+  ListMusic,
+  Lock,
+  Mic2,
+  Music,
+  Music2,
+  SearchX,
+  ShieldX,
+  UploadCloud,
+  UserCheck,
+  UserRound,
+  Users,
+} from 'lucide-react';
+
+const EMPTY_STATE_ICONS = {
+  Activity,
+  AudioLines,
+  Disc3,
+  Headphones,
+  Heart,
+  History,
+  LayoutDashboard,
+  Library,
+  ListMusic,
+  Lock,
+  Mic2,
+  Music,
+  Music2,
+  SearchX,
+  ShieldX,
+  UploadCloud,
+  UserCheck,
+  UserRound,
+  Users,
+};
 
 export default function EmptyState({
   iconName = 'Music',
@@ -11,7 +53,7 @@ export default function EmptyState({
   onSecondaryAction,
   className = '',
 }) {
-  const Icon = Icons[iconName] || Icons.Music;
+  const Icon = EMPTY_STATE_ICONS[iconName] || Music;
 
   return (
     <div className={`ns-state-panel !p-6 flex max-w-lg flex-col items-center justify-center text-center mx-auto my-5 ${className}`}>

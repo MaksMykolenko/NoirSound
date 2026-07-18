@@ -72,6 +72,36 @@ describe('Batch Upload Studio components', () => {
     expect(screen.getByText('second_track.mp3')).toBeInTheDocument();
   });
 
+  it('keeps localized batch modes intact and uses mobile-safe select typography', async () => {
+    await i18n.changeLanguage('uk');
+    const onModeChange = vi.fn();
+    const user = userEvent.setup();
+    const stagedFile = new File(['wav'], 'нічний_трек.wav', { type: 'audio/wav' });
+
+    render(
+      <BatchFileDropzone
+        stagedFiles={[{ clientId: 'localized-track', file: stagedFile }]}
+        onFiles={vi.fn()}
+        onRemove={vi.fn()}
+        onCreate={vi.fn()}
+        creating={false}
+        mode="MIXED"
+        onModeChange={onModeChange}
+      />
+    );
+
+    const modeSelect = screen.getByRole('combobox', { name: i18n.t('batchUpload.batchMode') });
+    expect(modeSelect).toHaveClass('text-base', 'sm:text-sm');
+    expect([...modeSelect.options].map(({ value, textContent }) => [value, textContent])).toEqual([
+      ['MIXED', i18n.t('batchUpload.mixed')],
+      ['SINGLES_ONLY', i18n.t('batchUpload.singlesOnly')],
+      ['PLAYLIST', i18n.t('batchUpload.playlistOnly')],
+    ]);
+
+    await user.selectOptions(modeSelect, 'PLAYLIST');
+    expect(onModeChange).toHaveBeenCalledWith('PLAYLIST');
+  });
+
   it('renders playlist placeholders and opens a clicked playlist track', async () => {
     const onOpenTrack = vi.fn();
     const user = userEvent.setup();

@@ -72,6 +72,12 @@ function renderArtist() {
   );
 }
 
+function releaseCard(trackId) {
+  const card = document.querySelector(`article[data-track-id="${trackId}"]`);
+  expect(card).not.toBeNull();
+  return card;
+}
+
 describe('ArtistPage', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -158,6 +164,19 @@ describe('ArtistPage', () => {
     expect(heading).toHaveTextContent('Static Bloom');
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
 
+    const metrics = screen.getByLabelText('Artist audience metrics');
+    expect(metrics.tagName).toBe('DL');
+    const metricGroups = Array.from(metrics.children);
+    expect(metricGroups).toHaveLength(2);
+    metricGroups.forEach((group) => {
+      expect(group.tagName).toBe('DIV');
+      expect(Array.from(group.children, (child) => child.tagName)).toEqual(['DT', 'DD']);
+    });
+    expect(metricGroups.map((group) => group.querySelector('dt').textContent)).toEqual([
+      i18n.t('profile.followers'),
+      i18n.t('profile.monthlyListeners'),
+    ]);
+
     const popular = screen.getByTestId('artist-popular');
     const discography = screen.getByTestId('artist-discography');
     const about = screen.getByTestId('artist-about');
@@ -197,6 +216,73 @@ describe('ArtistPage', () => {
     expect(within(popular).getByRole('button', { name: 'Play Empty City' })).toBeInTheDocument();
     expect(within(popular).getByRole('button', { name: 'More actions for Empty City' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Open release Night Signal' })).toHaveAttribute('href', '/track/t1');
+  });
+
+  it('renders year-only release metadata without inventing English type labels', async () => {
+    getArtistById.mockResolvedValue(baseArtist);
+    getTracksByArtist.mockResolvedValue([
+      tracks[0],
+      { ...tracks[1], releaseType: 'MIXTAPE' },
+    ]);
+    renderArtist();
+
+    await screen.findByRole('heading', { level: 1, name: 'Static Bloom' });
+
+    const missingTypeCard = releaseCard('t1');
+    const unknownTypeCard = releaseCard('t2');
+    expect(missingTypeCard.querySelector('p')).toHaveTextContent(/^2026$/);
+    expect(unknownTypeCard.querySelector('p')).toHaveTextContent(/^2026$/);
+    expect(missingTypeCard).not.toHaveTextContent('Single');
+    expect(unknownTypeCard).not.toHaveTextContent('Single');
+    expect(unknownTypeCard).not.toHaveTextContent('MIXTAPE');
+  });
+
+  it('does not invent a Ukrainian Single label when release type is absent', async () => {
+    await i18n.changeLanguage('uk');
+    getArtistById.mockResolvedValue(baseArtist);
+    getTracksByArtist.mockResolvedValue([tracks[0]]);
+    renderArtist();
+
+    await screen.findByRole('heading', { level: 1, name: 'Static Bloom' });
+
+    const card = releaseCard('t1');
+    expect(card.querySelector('p')).toHaveTextContent(/^2026$/);
+    expect(card).not.toHaveTextContent('Сингл');
+    expect(card).not.toHaveTextContent('Single');
+  });
+
+  it('uses a valid createdAt year and omits metadata when both dates are invalid or missing', async () => {
+    getArtistById.mockResolvedValue(baseArtist);
+    getTracksByArtist.mockResolvedValue([
+      {
+        ...tracks[0],
+        id: 'created-at-track',
+        title: 'Created At Signal',
+        releaseDate: 'not-a-date',
+        createdAt: '2025-04-18T10:00:00.000Z',
+      },
+      {
+        ...tracks[0],
+        id: 'invalid-date-track',
+        title: 'Invalid Date Signal',
+        releaseDate: 'not-a-date',
+        createdAt: 'also-not-a-date',
+      },
+      {
+        ...tracks[0],
+        id: 'missing-date-track',
+        title: 'Missing Date Signal',
+        releaseDate: null,
+        createdAt: null,
+      },
+    ]);
+    renderArtist();
+
+    await screen.findByRole('heading', { level: 1, name: 'Static Bloom' });
+
+    expect(releaseCard('created-at-track').querySelector('p')).toHaveTextContent(/^2025$/);
+    expect(releaseCard('invalid-date-track').querySelector('p')).toBeNull();
+    expect(releaseCard('missing-date-track').querySelector('p')).toBeNull();
   });
 
   it('uses the stable generated fallback without truncating a long artist name', async () => {

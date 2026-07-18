@@ -93,6 +93,37 @@ function PlayerLyricsFixture() {
   );
 }
 
+function clickWithoutFollowingNativeNavigation(element, init = {}) {
+  let defaultPreventedByApp;
+  const stopNativeNavigationAfterReact = (event) => {
+    defaultPreventedByApp = event.defaultPrevented;
+    event.preventDefault();
+  };
+
+  window.addEventListener('click', stopNativeNavigationAfterReact, { once: true });
+  fireEvent.click(element, init);
+  return defaultPreventedByApp;
+}
+
+async function openFullscreenTrackLink() {
+  getTrackLyrics.mockResolvedValue({
+    trackId: track.id,
+    hasLyrics: true,
+    lyricsType: 'PLAIN',
+    lyricsText: 'Navigation contract',
+  });
+  usePlayerStore.setState({
+    currentTrack: track,
+    isPlaying: true,
+    progress: 21,
+    duration: 180,
+  });
+  render(<PlayerLyricsFixture />);
+  await userEvent.click(screen.getByRole('button', { name: i18n.t('player.openLyrics') }));
+  const controls = screen.getByTestId('fullscreen-standard-desktop-playerbar');
+  return within(controls).getByRole('link', { name: track.title });
+}
+
 function ExclusivePlayerLyricsFixture() {
   const lyricsFullscreenOpen = usePlayerStore((state) => state.lyricsFullscreenOpen);
   const [isQueueOpen, setIsQueueOpen] = React.useState(false);
@@ -227,7 +258,9 @@ describe('lyrics UI', () => {
     expect(usePlayerStore.getState().isPlaying).toBe(true);
   });
 
-  it('opens the track page from fullscreen controls and closes the lyrics surface', async () => {
+  it('keeps a long title intact and opens its track page from fullscreen controls', async () => {
+    const longTitle = 'Надзвичайно довга назва треку без можливості нормального перенесення';
+    const longTitleTrack = { ...track, title: longTitle };
     getTrackLyrics.mockResolvedValue({
       trackId: track.id,
       hasLyrics: true,
@@ -235,7 +268,7 @@ describe('lyrics UI', () => {
       lyricsText: 'Navigate without stopping',
     });
     usePlayerStore.setState({
-      currentTrack: track,
+      currentTrack: longTitleTrack,
       isPlaying: true,
       progress: 21,
       duration: 180,
@@ -243,8 +276,14 @@ describe('lyrics UI', () => {
     render(<PlayerLyricsFixture />);
 
     await userEvent.click(screen.getAllByRole('button', { name: i18n.t('player.openLyrics') })[0]);
+    const dialog = screen.getByRole('dialog', {
+      name: i18n.t('lyrics.fullscreenLabel', { title: longTitle }),
+    });
+    expect(within(dialog).getByRole('heading', { level: 1, name: longTitle })).toHaveTextContent(longTitle);
     const controls = screen.getByTestId('fullscreen-standard-desktop-playerbar');
-    await userEvent.click(within(controls).getByRole('link', { name: track.title }));
+    const titleLink = within(controls).getByRole('link', { name: longTitle });
+    expect(titleLink).toHaveTextContent(longTitle);
+    await userEvent.click(titleLink);
 
     expect(screen.getByTestId('lyrics-player-route')).toHaveTextContent(`/track/${track.id}`);
     await waitFor(() => expect(screen.queryByTestId('fullscreen-lyrics-player')).toBeNull());
@@ -253,6 +292,44 @@ describe('lyrics UI', () => {
       isPlaying: true,
       progress: 21,
     });
+  });
+
+  it('lets Enter activate the fullscreen title link and tear down the surface', async () => {
+    const titleLink = await openFullscreenTrackLink();
+    const user = userEvent.setup();
+
+    titleLink.focus();
+    await user.keyboard('{Enter}');
+
+    expect(screen.getByTestId('lyrics-player-route')).toHaveTextContent(`/track/${track.id}`);
+    await waitFor(() => expect(screen.queryByTestId('fullscreen-lyrics-player')).not.toBeInTheDocument());
+    expect(usePlayerStore.getState()).toMatchObject({
+      currentTrack: { id: track.id },
+      isPlaying: true,
+      progress: 21,
+    });
+  });
+
+  it.each([
+    ['Meta', { metaKey: true }],
+    ['Shift', { shiftKey: true }],
+    ['middle', { button: 1 }],
+  ])('preserves fullscreen and playback for %s-click', async (_activation, init) => {
+    const titleLink = await openFullscreenTrackLink();
+    const audioBeforeActivation = __getAudioElementForTests();
+
+    const defaultPreventedByApp = clickWithoutFollowingNativeNavigation(titleLink, init);
+
+    expect(defaultPreventedByApp).toBe(false);
+    expect(screen.getByTestId('lyrics-player-route')).toHaveTextContent('/');
+    expect(screen.getByTestId('fullscreen-lyrics-player')).toBeInTheDocument();
+    expect(usePlayerStore.getState()).toMatchObject({
+      currentTrack: { id: track.id },
+      isPlaying: true,
+      progress: 21,
+      lyricsFullscreenOpen: true,
+    });
+    expect(__getAudioElementForTests()).toBe(audioBeforeActivation);
   });
 
   it('closes mobile fullscreen, its queue, and the underlying expanded player before navigation', async () => {
