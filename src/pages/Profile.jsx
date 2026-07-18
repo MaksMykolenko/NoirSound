@@ -122,11 +122,16 @@ export default function Profile() {
   }
 
   return (
-    <div className="ns-page-stack pb-10">
+    <div className={activeTab === 'settings' ? 'flex flex-col pb-10' : 'ns-page-stack pb-10'}>
       {pageMeta}
       <UserProfileHeader user={user} onEditClick={() => setSearchParams({ tab: 'settings' })} />
 
-      <div ref={tabsRef} className="ns-tabs-scroll ns-tabs-polish flex border-b border-zinc-800/60 gap-1 overflow-x-auto shrink-0" role="tablist">
+      <div
+        ref={tabsRef}
+        data-testid="profile-tabs"
+        className={`ns-tabs-scroll ns-tabs-polish sticky top-0 z-10 flex shrink-0 scroll-mt-2 gap-1 overflow-x-auto border-b border-zinc-800/60 bg-[var(--ns-bg)] ${activeTab === 'settings' ? 'mt-5' : ''}`}
+        role="tablist"
+      >
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const active = activeTab === tab.id;
@@ -149,7 +154,7 @@ export default function Profile() {
         })}
       </div>
 
-      <div className="pt-2">
+      <div className={activeTab === 'settings' ? 'pt-6' : 'pt-2'}>
         {activeTab === 'overview' && (
           <section className="space-y-4">
             <h2 className="ns-eyebrow px-1">{t('nav.recentlyPlayed')}</h2>
@@ -185,8 +190,13 @@ export default function Profile() {
         {activeTab === 'stats' && <ListeningStats />}
         
         {activeTab === 'settings' && (
-          <div className="mx-auto max-w-3xl">
-            <UserSettingsForm />
+          <div
+            data-testid="profile-settings-layout"
+            className="ns-layout-page ns-layout-page--form grid w-full grid-cols-1 gap-6 xl:grid-cols-12"
+          >
+            <div className="min-w-0 xl:col-span-12 2xl:col-span-9">
+              <UserSettingsForm />
+            </div>
           </div>
         )}
 

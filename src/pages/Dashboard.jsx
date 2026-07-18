@@ -24,18 +24,18 @@ const STATUS_TONES = {
   REJECTED: FAILED_STATUS_TONE,
 };
 
-function TrackStatusBadge({ status }) {
+function TrackStatusBadge({ status, label }) {
   return (
     <span className={`inline-flex rounded border px-2 py-0.5 font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label ${STATUS_TONES[status] || 'text-zinc-400 bg-zinc-500/10 border-zinc-500/25'}`}>
-      {status}
+      {label}
     </span>
   );
 }
 
-function TrackRow({ track, onOpen, onEditLyrics, trailing }) {
+function TrackRow({ track, onOpen, onEditLyrics, editLyricsLabel, genreFallback, trailing }) {
   return (
-    <div className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-2 py-2.5 transition-colors hover:bg-zinc-900/35 sm:px-2">
-      <button onClick={onOpen} className="flex min-w-0 items-center gap-3 text-left cursor-pointer">
+    <div className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-2 py-1.5 transition-colors hover:bg-zinc-900/35 sm:px-2">
+      <button type="button" onClick={onOpen} className="flex min-w-0 items-center gap-3 text-left cursor-pointer">
           <FallbackCover
             src={track.coverUrl}
             title={track.title}
@@ -46,9 +46,9 @@ function TrackRow({ track, onOpen, onEditLyrics, trailing }) {
           <div className="min-w-0 flex-1">
             <h3 className="flex min-w-0 items-center gap-1.5 text-ns-body-sm font-semibold text-zinc-200">
               <span className="truncate">{track.title}</span>
-              {track.hasLyrics && <FileText size={12} className="shrink-0 text-brand-red" />}
+              {track.hasLyrics && <FileText size={12} className="shrink-0 text-brand-red" aria-hidden="true" />}
             </h3>
-            <p className="font-sans tabular-nums text-ns-meta text-zinc-500">{getLocalizedGenre(track.genre) || 'Uncategorized'}</p>
+            <p className="font-sans tabular-nums text-ns-meta text-zinc-500">{getLocalizedGenre(track.genre) || genreFallback}</p>
           </div>
       </button>
       <div className="flex min-w-0 shrink-0 items-center gap-1.5">
@@ -56,9 +56,9 @@ function TrackRow({ track, onOpen, onEditLyrics, trailing }) {
           type="button"
           onClick={() => onEditLyrics(track)}
           className="ns-icon-button"
-          aria-label={`Edit lyrics for ${track.title}`}
+          aria-label={editLyricsLabel}
         >
-          <FileText size={14} />
+          <FileText size={14} aria-hidden="true" />
         </button>
         <div className="max-w-28 truncate sm:max-w-none">{trailing}</div>
       </div>
@@ -104,9 +104,9 @@ export default function Dashboard() {
     return (
       <EmptyState
         iconName="ShieldX"
-        title="Creator access required"
-        description="Your listener account cannot access uploads or creator analytics."
-        actionText="Return Home"
+        title={t('dashboard.creatorAccessRequired')}
+        description={t('dashboard.listenerNoAccess')}
+        actionText={t('dashboard.returnHome')}
         onAction={() => navigate('/')}
       />
     );
@@ -126,6 +126,7 @@ export default function Dashboard() {
   const topTracks = dashboardStats?.topTracks || [];
   const recentUploads = dashboardStats?.recentUploads || [];
   const failedUploads = dashboardStats?.failedUploads || [];
+  const hasUnavailableAnalytics = dashboardStats?.geography == null && dashboardStats?.trends == null;
 
   const handleLyricsSaved = (result) => {
     const updateTrack = (track) => track.id === result.id
@@ -141,7 +142,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="ns-page-stack pb-10">
+    <div className="flex flex-col gap-8 pb-10">
       <div className="flex flex-col justify-between gap-4 border-b border-zinc-800/60 pb-5 md:flex-row md:items-center">
         <div>
           <h1 className="ns-page-title">{t('dashboard.title')}</h1>
@@ -154,7 +155,7 @@ export default function Dashboard() {
       </div>
 
       {error ? (
-        <ErrorState title="Creator dashboard unavailable" message={error} />
+        <ErrorState title={t('dashboard.unavailable')} message={error} />
       ) : loading ? (
         <LoadingState type="list" count={4} />
       ) : tracks.length === 0 ? (
@@ -165,15 +166,15 @@ export default function Dashboard() {
         </section>
       ) : (
         <>
-          <section aria-label={t('dashboard.title')} className="grid grid-cols-1 divide-y divide-zinc-800/70 border-y border-zinc-800/70 min-[430px]:grid-cols-2 min-[430px]:divide-x min-[430px]:divide-y-0 lg:grid-cols-4">
+          <section aria-label={t('dashboard.title')} className="ns-metrics-strip">
             <StatsCard title={t('dashboard.totalStreams')} value={formatNumber(totalStreams)} iconName="Play" />
             <StatsCard title={t('dashboard.hearts')} value={formatNumber(totalLikes)} iconName="Heart" />
             <StatsCard title={t('dashboard.followers')} value={formatNumber(followers)} iconName="Users" />
             <StatsCard title={t('dashboard.monthlyListeners')} value={formatNumber(monthlyListeners)} iconName="Radio" />
           </section>
 
-          <div className="grid gap-8 xl:grid-cols-2">
-          <section className="space-y-3">
+          <div data-testid="dashboard-content-grid" className="grid grid-cols-1 gap-x-8 gap-y-7 xl:grid-cols-12">
+          <section className="space-y-3 xl:col-span-7">
             <h2 className="ns-section-title">{t('dashboard.topTracks')}</h2>
             <div className="divide-y divide-zinc-800/60 border-y border-zinc-800/70">
               {topTracks.length === 0 ? (
@@ -185,6 +186,8 @@ export default function Dashboard() {
                     track={track}
                     onOpen={() => navigate(`/track/${track.id}`)}
                     onEditLyrics={setLyricsTrack}
+                    editLyricsLabel={t('dashboard.editLyricsFor', { title: track.title })}
+                    genreFallback={t('dashboard.uncategorized')}
                     trailing={
                       <span className="text-ns-meta text-zinc-500 font-semibold shrink-0">
                         {formatNumber(track.plays)} {t('trackPage.plays')}
@@ -196,8 +199,8 @@ export default function Dashboard() {
             </div>
           </section>
 
-          <section className="space-y-3">
-            <h2 className="ns-section-title">Published Releases ({publishedTracks.length})</h2>
+          <section className="space-y-3 xl:col-span-5">
+            <h2 className="ns-section-title">{t('dashboard.publishedReleases', { count: publishedTracks.length })}</h2>
             <div className="divide-y divide-zinc-800/60 border-y border-zinc-800/70">
               {publishedTracks.length === 0 ? (
                 <p className="text-sm text-zinc-500 p-2">{t('empty.noReleasesYet')}</p>
@@ -208,29 +211,42 @@ export default function Dashboard() {
                     track={track}
                     onOpen={() => navigate(`/track/${track.id}`)}
                     onEditLyrics={setLyricsTrack}
-                    trailing={<Eye size={15} className="text-zinc-500 shrink-0" />}
+                    editLyricsLabel={t('dashboard.editLyricsFor', { title: track.title })}
+                    genreFallback={t('dashboard.uncategorized')}
+                    trailing={<Eye size={15} className="text-zinc-500 shrink-0" aria-hidden="true" />}
                   />
                 ))
               )}
             </div>
           </section>
 
-          <section className="space-y-3">
+          <section className="space-y-3 xl:col-span-6">
             <h2 className="ns-section-title">{t('dashboard.recentUploads')}</h2>
             <div className="divide-y divide-zinc-800/60 border-y border-zinc-800/70">
-              {recentUploads.map((track) => (
-                <TrackRow
-                  key={track.id}
-                  track={track}
-                  onOpen={() => navigate(`/track/${track.id}`)}
-                  onEditLyrics={setLyricsTrack}
-                  trailing={<TrackStatusBadge status={track.status} />}
-                />
-              ))}
+              {recentUploads.length === 0 ? (
+                <p className="p-2 text-sm text-zinc-500">{t('dashboard.noRecentUploads')}</p>
+              ) : (
+                recentUploads.map((track) => (
+                  <TrackRow
+                    key={track.id}
+                    track={track}
+                    onOpen={() => navigate(`/track/${track.id}`)}
+                    onEditLyrics={setLyricsTrack}
+                    editLyricsLabel={t('dashboard.editLyricsFor', { title: track.title })}
+                    genreFallback={t('dashboard.uncategorized')}
+                    trailing={(
+                      <TrackStatusBadge
+                        status={track.status}
+                        label={t(`admin.statusValues.${track.status}`, { defaultValue: track.status })}
+                      />
+                    )}
+                  />
+                ))
+              )}
             </div>
           </section>
 
-          <section className="space-y-3">
+          <section className="space-y-3 xl:col-span-6">
             <h2 className="ns-section-title">{t('dashboard.failedUploads')}</h2>
             <div className="divide-y divide-zinc-800/60 border-y border-zinc-800/70">
               {failedUploads.length === 0 ? (
@@ -242,7 +258,14 @@ export default function Dashboard() {
                     track={track}
                     onOpen={() => navigate(`/track/${track.id}`)}
                     onEditLyrics={setLyricsTrack}
-                    trailing={<TrackStatusBadge status={track.status} />}
+                    editLyricsLabel={t('dashboard.editLyricsFor', { title: track.title })}
+                    genreFallback={t('dashboard.uncategorized')}
+                    trailing={(
+                      <TrackStatusBadge
+                        status={track.status}
+                        label={t(`admin.statusValues.${track.status}`, { defaultValue: track.status })}
+                      />
+                    )}
                   />
                 ))
               )}
@@ -250,16 +273,16 @@ export default function Dashboard() {
           </section>
           </div>
 
-          <section className="grid grid-cols-1 divide-y divide-zinc-800/70 border-y border-zinc-800/70 md:grid-cols-2 md:divide-x md:divide-y-0">
-            <div className="p-5 sm:p-6">
-              <h2 className="ns-eyebrow">{t('dashboard.geographyTitle')}</h2>
-              <p className="text-sm text-zinc-400 mt-2">{t('dashboard.geographyUnavailable')}</p>
-            </div>
-            <div className="p-5 sm:p-6">
-              <h2 className="ns-eyebrow">{t('dashboard.trendsTitle')}</h2>
-              <p className="text-sm text-zinc-400 mt-2">{t('dashboard.trendsUnavailable')}</p>
-            </div>
-          </section>
+          {hasUnavailableAnalytics && (
+            <section
+              aria-labelledby="dashboard-analytics-title"
+              data-testid="dashboard-analytics-unavailable"
+              className="border-y border-zinc-800/70 py-4"
+            >
+              <h2 id="dashboard-analytics-title" className="ns-eyebrow">{t('dashboard.analytics')}</h2>
+              <p className="mt-1.5 max-w-2xl text-sm text-zinc-400">{t('dashboard.analyticsUnavailable')}</p>
+            </section>
+          )}
 
           <LyricsEditModal
             open={Boolean(lyricsTrack)}

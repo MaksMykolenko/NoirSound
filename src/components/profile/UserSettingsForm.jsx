@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useUserStore } from '../../store/userStore';
 import { useToastStore } from '../../store/toastStore';
-import { Save, Shield, Bell } from 'lucide-react';
+import { Bell, Check, Save, Shield } from 'lucide-react';
 import LanguageSwitcher from '../ui/LanguageSwitcher';
 import ThemeSelector from '../settings/ThemeSelector';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
@@ -21,18 +21,30 @@ export default function UserSettingsForm() {
   const [emailNotify, setEmailNotify] = useState(true);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+
+  const updateField = (setter) => (event) => {
+    setter(event.target.value);
+    setIsSaved(false);
+  };
+
+  const updateToggle = (setter) => (event) => {
+    setter(event.target.checked);
+    setIsSaved(false);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMsg('');
+    setIsSaved(false);
 
     if (!displayName.trim()) {
-      setErrorMsg('Display name is required.');
+      setErrorMsg(t('profile.displayNameRequired'));
       return;
     }
     if (!username.trim()) {
-      setErrorMsg('Username is required.');
+      setErrorMsg(t('profile.usernameRequired'));
       return;
     }
 
@@ -47,6 +59,7 @@ export default function UserSettingsForm() {
 
       addActivity('settings', 'Updated profile configuration settings');
       addToast(t('profile.savedSuccess'), 'success');
+      setIsSaved(true);
     } catch (err) {
       // Show a friendly, localized message (e.g. for CSRF_VALIDATION_FAILED)
       // instead of the raw backend error code.
@@ -57,14 +70,14 @@ export default function UserSettingsForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-5">
       {errorMsg && (
         <div className="flex items-center space-x-2.5 rounded-md border border-rose-500/20 bg-rose-500/10 p-3 text-sm text-rose-400">
           <span className="font-semibold">{errorMsg}</span>
         </div>
       )}
 
-      <ThemeSelector className="border-b border-zinc-800/70 pb-6" />
+      <ThemeSelector className="border-b border-zinc-800/70 pb-5" />
 
       {/* Inputs grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -74,7 +87,7 @@ export default function UserSettingsForm() {
             id="settings-display-name"
             type="text"
             value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
+            onChange={updateField(setDisplayName)}
             className="ns-field px-4 text-base sm:text-sm"
           />
         </div>
@@ -87,7 +100,7 @@ export default function UserSettingsForm() {
               id="settings-username"
               type="text"
               value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              onChange={updateField(setUsername)}
               className="ns-field pl-8 pr-4 text-base sm:text-sm"
             />
           </div>
@@ -99,7 +112,7 @@ export default function UserSettingsForm() {
             id="settings-location"
             type="text"
             value={location}
-            onChange={(e) => setLocation(e.target.value)}
+            onChange={updateField(setLocation)}
             className="ns-field px-4 text-base sm:text-sm"
           />
         </div>
@@ -113,7 +126,7 @@ export default function UserSettingsForm() {
           id="settings-bio"
           rows={3}
           value={bio}
-          onChange={(e) => setBio(e.target.value)}
+          onChange={updateField(setBio)}
           className="ns-field w-full px-4 py-3 text-base resize-none sm:text-sm"
         />
       </div>
@@ -133,9 +146,9 @@ export default function UserSettingsForm() {
           <input
             type="checkbox"
             checked={isPrivate}
-            onChange={(e) => setIsPrivate(e.target.checked)}
+            onChange={updateToggle(setIsPrivate)}
             className="accent-brand-red w-4 h-4 rounded mt-0.5 cursor-pointer"
-            aria-label="Make profile private"
+            aria-label={t('profile.privateProfileAria')}
           />
         </div>
 
@@ -151,9 +164,9 @@ export default function UserSettingsForm() {
           <input
             type="checkbox"
             checked={emailNotify}
-            onChange={(e) => setEmailNotify(e.target.checked)}
+            onChange={updateToggle(setEmailNotify)}
             className="accent-brand-red w-4 h-4 rounded mt-0.5 cursor-pointer"
-            aria-label="Receive email notifications"
+            aria-label={t('profile.emailNotificationsAria')}
           />
         </div>
 
@@ -164,15 +177,24 @@ export default function UserSettingsForm() {
         <LanguageSwitcher />
       </div>
 
-      {/* Action button */}
-      <button
-        type="submit"
-        disabled={isSubmitting}
-        className="ns-button-primary flex w-full cursor-pointer items-center justify-center space-x-2.5 rounded-md py-3 text-sm font-semibold disabled:opacity-50"
-      >
-        <Save size={14} />
-        <span>{isSubmitting ? t('profile.saving') : t('actions.saveChanges')}</span>
-      </button>
+      {/* Compact footer action stays clear of the fixed player and mobile navigation. */}
+      <div className="flex justify-end border-t border-zinc-800/60 pt-4">
+        <button
+          type="submit"
+          disabled={isSubmitting || isSaved}
+          aria-busy={isSubmitting}
+          className="ns-button-primary flex w-full min-w-44 cursor-pointer items-center justify-center space-x-2.5 rounded-md px-5 py-3 text-sm font-semibold disabled:opacity-50 sm:w-auto"
+        >
+          {isSaved ? <Check size={14} aria-hidden="true" /> : <Save size={14} aria-hidden="true" />}
+          <span aria-live="polite">
+            {isSubmitting
+              ? t('profile.saving')
+              : isSaved
+                ? t('profile.saved')
+                : t('actions.saveChanges')}
+          </span>
+        </button>
+      </div>
     </form>
   );
 }

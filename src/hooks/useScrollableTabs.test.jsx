@@ -13,6 +13,17 @@ function Harness({ activeKey }) {
   );
 }
 
+function DeferredHarness({ activeKey, ready }) {
+  const tabsRef = useScrollableTabs(activeKey);
+  if (!ready) return <div data-testid="loading-tabs" />;
+  return (
+    <div ref={tabsRef} data-testid="tabs">
+      <button type="button" aria-selected={activeKey === 'first'}>First</button>
+      <button type="button" aria-selected={activeKey === 'settings'}>Settings</button>
+    </div>
+  );
+}
+
 describe('useScrollableTabs', () => {
   const originalScrollIntoView = Element.prototype.scrollIntoView;
   const originalScrollWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'scrollWidth');
@@ -82,5 +93,19 @@ describe('useScrollableTabs', () => {
       element: screen.getByRole('button', { name: 'Second' }),
       options: { block: 'nearest', inline: 'nearest' },
     });
+  });
+
+  it('scrolls the active direct-route tab into view when the tablist mounts after hydration', () => {
+    const { rerender } = render(<DeferredHarness activeKey="settings" ready={false} />);
+    expect(screen.getByTestId('loading-tabs')).toBeInTheDocument();
+    expect(scrolledElements).toHaveLength(0);
+
+    rerender(<DeferredHarness activeKey="settings" ready />);
+
+    expect(scrolledElements.at(-1)).toMatchObject({
+      element: screen.getByRole('button', { name: 'Settings' }),
+      options: { block: 'nearest', inline: 'nearest' },
+    });
+    expect(screen.getByTestId('tabs')).toHaveAttribute('data-overflowing', 'true');
   });
 });

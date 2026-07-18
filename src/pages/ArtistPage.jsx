@@ -413,41 +413,29 @@ export default function ArtistPage() {
       <div className={`ns-artist-detail-grid ${socialItems.length === 0 ? 'ns-artist-detail-grid--single' : ''}`}>
         <section className="ns-artist-detail-panel" data-testid="artist-about" aria-labelledby="artist-about-title">
           <h2 id="artist-about-title" className="ns-section-title">{t('profile.about')}</h2>
-          <div className={`mt-4 grid gap-5 ${artist.avatarUrl ? 'sm:grid-cols-[minmax(10rem,15rem)_minmax(0,1fr)]' : ''}`}>
-            {artist.avatarUrl && (
-              <div className="aspect-[4/3] overflow-hidden rounded-md bg-zinc-900">
-                <FallbackAvatar
-                  src={artist.avatarUrl}
-                  name={artist.name}
-                  className="h-full w-full text-[140px]"
-                  imageClassName="object-cover"
-                />
-              </div>
+          <div className="mt-4 min-w-0">
+            <p className={`max-w-3xl text-ns-body leading-[var(--ns-line-body)] text-zinc-300 ${hasLongBio && !bioExpanded ? 'ns-artist-bio--collapsed' : ''}`}>
+              {artist.bio || t('profile.noBio')}
+            </p>
+            {hasLongBio && (
+              <button
+                type="button"
+                onClick={() => setBioExpanded((value) => !value)}
+                className="mt-3 min-h-10 text-ns-label font-semibold text-zinc-200 hover:text-brand-red"
+                aria-expanded={bioExpanded}
+              >
+                {bioExpanded ? t('profile.readLess') : t('profile.readMore')}
+              </button>
             )}
-            <div className="min-w-0">
-              <p className={`text-ns-body leading-[var(--ns-line-body)] text-zinc-300 ${hasLongBio && !bioExpanded ? 'ns-artist-bio--collapsed' : ''}`}>
-                {artist.bio || t('profile.noBio')}
-              </p>
-              {hasLongBio && (
-                <button
-                  type="button"
-                  onClick={() => setBioExpanded((value) => !value)}
-                  className="mt-3 min-h-10 text-ns-label font-semibold text-zinc-200 hover:text-brand-red"
-                  aria-expanded={bioExpanded}
-                >
-                  {bioExpanded ? t('profile.readLess') : t('profile.readMore')}
-                </button>
-              )}
-              {!artist.bio && isOwnProfile && (
-                <button
-                  type="button"
-                  onClick={() => navigate('/profile?tab=settings')}
-                  className="ns-button-secondary mt-4 px-4 text-ns-label"
-                >
-                  {t('profile.editBiography')}
-                </button>
-              )}
-            </div>
+            {!artist.bio && isOwnProfile && (
+              <button
+                type="button"
+                onClick={() => navigate('/profile?tab=settings')}
+                className="ns-button-secondary mt-4 px-4 text-ns-label"
+              >
+                {t('profile.editBiography')}
+              </button>
+            )}
           </div>
 
           {(artist.genres || []).length > 0 && (

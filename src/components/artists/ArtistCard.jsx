@@ -84,9 +84,9 @@ export default function ArtistCard({ artist }) {
       {/* Details */}
       <div className="pointer-events-none relative z-[1] mb-3 space-y-1 px-1">
         <div className="flex items-center justify-center space-x-1.5">
-          <h4 className="truncate text-ns-body-sm font-semibold text-zinc-100">
+          <h3 className="truncate text-ns-body-sm font-semibold text-zinc-100">
             {artist.name}
-          </h4>
+          </h3>
           {artist.isVerified && (
             <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-blue-500 text-white" title="Verified Creator">
               <Check size={8} strokeWidth={4} />

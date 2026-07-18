@@ -39,8 +39,8 @@ export default function Home() {
         const [tracksData, artistsData] = await Promise.all([getTracks(), getArtistsWithTracks()]);
         const uniqueTracks = sortTracksNewest(tracksData);
         setAllTracksContext(uniqueTracks);
-        setTrendingTracks(uniqueTracks.slice(0, 4));
-        setFeaturedArtists(rankRecommendedArtists(artistsData, uniqueTracks).slice(0, 4));
+        setTrendingTracks(uniqueTracks.slice(0, 8));
+        setFeaturedArtists(rankRecommendedArtists(artistsData, uniqueTracks).slice(0, 8));
       } catch (err) {
         console.error('Failed to fetch home data:', err);
         setError(err);
@@ -84,9 +84,12 @@ export default function Home() {
             <h2 className="ns-section-title">{t('home.continueListening')}</h2>
             <p className="mt-1 text-sm text-zinc-500">{t('home.continueListeningDesc')}</p>
           </div>
-          <div className="ns-tabs-scroll -mx-4 flex gap-3 overflow-x-auto px-4 pb-2 min-[480px]:mx-0 min-[480px]:grid min-[480px]:grid-cols-2 min-[480px]:px-0 md:grid-cols-3 xl:grid-cols-4 sm:gap-5">
-            {recentlyPlayed.slice(0, 4).map((track) => (
-              <div key={track.id} className="w-[min(74vw,18rem)] shrink-0 min-[480px]:w-auto">
+          <div
+            data-testid="home-continue-grid"
+            className="ns-tabs-scroll -mx-4 flex gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:[grid-template-columns:repeat(auto-fill,minmax(min(240px,100%),1fr))] sm:gap-5 sm:px-0"
+          >
+            {recentlyPlayed.slice(0, 8).map((track) => (
+              <div key={track.id} className="w-[min(74vw,18rem)] shrink-0 sm:w-full sm:max-w-[17.5rem] sm:justify-self-start">
                 <TrackCard track={track} tracksContext={recentlyPlayed} />
               </div>
             ))}
@@ -95,7 +98,7 @@ export default function Home() {
       )}
 
       <section data-testid="home-releases" className="space-y-4">
-        <div className="flex items-end justify-between gap-4">
+        <div className="flex flex-wrap items-end gap-x-5 gap-y-2">
           <div className="min-w-0">
             <h2 className="ns-section-title">{t('home.featuredReleases')}</h2>
             <p className="mt-1 text-sm text-zinc-500">{t('home.latestReleasesDesc')}</p>
@@ -109,18 +112,21 @@ export default function Home() {
             <ArrowRight size={12} aria-hidden="true" />
           </button>
         </div>
-        <div className="ns-tabs-scroll -mx-4 flex gap-3 overflow-x-auto px-4 pb-2 min-[480px]:mx-0 min-[480px]:grid min-[480px]:grid-cols-2 min-[480px]:px-0 md:grid-cols-3 xl:grid-cols-4 sm:gap-5">
+        <div
+          data-testid="home-release-grid"
+          className="ns-tabs-scroll -mx-4 flex gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:[grid-template-columns:repeat(auto-fill,minmax(min(240px,100%),1fr))] sm:gap-5 sm:px-0"
+        >
           {error ? (
-            <div className="w-full min-[480px]:col-span-full">
+            <div className="w-full min-w-full shrink-0 sm:col-span-full sm:min-w-0">
               <ErrorState
                 message={t('home.loadError')}
                 onRetry={() => setHomeRevision((current) => current + 1)}
               />
             </div>
           ) : loading ? (
-            <div className="w-full min-[480px]:col-span-full"><LoadingState count={4} /></div>
+            <div className="w-full min-w-full shrink-0 sm:col-span-full sm:min-w-0"><LoadingState count={4} /></div>
           ) : trendingTracks.length === 0 ? (
-            <div className="w-full min-[480px]:col-span-full">
+            <div className="w-full min-w-full shrink-0 sm:col-span-full sm:min-w-0">
               <EmptyState
                 iconName="Music2"
                 title={t('empty.noReleasesYet')}
@@ -134,7 +140,7 @@ export default function Home() {
             </div>
           ) : (
             trendingTracks.map((track) => (
-              <div key={track.id} className="w-[min(74vw,18rem)] shrink-0 min-[480px]:w-auto">
+              <div key={track.id} className="w-[min(74vw,18rem)] shrink-0 sm:w-full sm:max-w-[17.5rem] sm:justify-self-start">
                 <TrackCard track={track} tracksContext={allTracksContext} />
               </div>
             ))
@@ -148,9 +154,12 @@ export default function Home() {
             <h2 className="ns-section-title">{t('home.featuredArtists')}</h2>
             <p className="mt-1 text-sm text-zinc-500">{t('home.featuredArtistsDesc')}</p>
           </div>
-          <div className="ns-tabs-scroll -mx-4 flex gap-3 overflow-x-auto px-4 pb-2 min-[480px]:mx-0 min-[480px]:grid min-[480px]:grid-cols-2 min-[480px]:px-0 md:grid-cols-3 xl:grid-cols-4 sm:gap-5">
+          <div
+            data-testid="home-artist-grid"
+            className="ns-tabs-scroll -mx-4 flex gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:[grid-template-columns:repeat(auto-fill,minmax(min(240px,100%),1fr))] sm:gap-5 sm:px-0"
+          >
             {featuredArtists.map((artist) => (
-              <div key={artist.id} className="w-[min(66vw,15rem)] shrink-0 min-[480px]:w-auto">
+              <div key={artist.id} className="w-[min(66vw,15rem)] shrink-0 sm:w-full sm:max-w-[15rem] sm:justify-self-start">
                 <ArtistCard artist={artist} />
               </div>
             ))}

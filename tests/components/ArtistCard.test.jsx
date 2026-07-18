@@ -39,6 +39,7 @@ describe('ArtistCard follow / unfollow', () => {
 
   it('renders the follow state from the artist payload (e.g. Followed Artists tab)', () => {
     renderCard({ isFollowing: true });
+    expect(screen.getByRole('heading', { level: 3, name: artist.name })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Following' })).toBeInTheDocument();
   });
 

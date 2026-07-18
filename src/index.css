@@ -823,8 +823,9 @@ main {
 
 .ns-artist-discography-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 10.5rem), 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 12rem), 14rem));
   gap: clamp(0.85rem, 1.7vw, 1.25rem);
+  justify-content: start;
 }
 
 .ns-artist-release-card {
@@ -865,6 +866,8 @@ main {
 
 .ns-artist-detail-grid--single {
   grid-template-columns: minmax(0, 1fr);
+  width: 100%;
+  max-width: 48rem;
 }
 
 .ns-artist-detail-panel {

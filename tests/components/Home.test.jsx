@@ -60,6 +60,15 @@ const realTrack = {
   isStreamable: false,
 };
 
+function makeTrack(index) {
+  return {
+    ...realTrack,
+    id: `track-${index}`,
+    title: `Real API Release ${index}`,
+    releaseDate: new Date(Date.UTC(2026, 0, index)).toISOString(),
+  };
+}
+
 describe('Home real API states', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -90,8 +99,36 @@ describe('Home real API states', () => {
 
     renderHome();
 
-    expect(await screen.findByText(realTrack.title)).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 3, name: realTrack.title })).toBeInTheDocument();
     expect(screen.queryByText(i18n.t('empty.noReleasesYet'))).not.toBeInTheDocument();
+  });
+
+  it.each([1, 2, 8])('keeps %i real release cards bounded in the responsive Home grid', async (count) => {
+    const tracks = Array.from({ length: count }, (_, index) => makeTrack(index + 1));
+    getTracks.mockResolvedValue(tracks);
+
+    renderHome();
+
+    await screen.findByText(tracks.at(-1).title);
+    const grid = screen.getByTestId('home-release-grid');
+    const cards = grid.querySelectorAll('[data-track-id]');
+
+    expect(cards).toHaveLength(count);
+    expect(grid.className).toContain(
+      'sm:[grid-template-columns:repeat(auto-fill,minmax(min(240px,100%),1fr))]'
+    );
+    expect(cards[0].parentElement.className).toContain('sm:max-w-[17.5rem]');
+    expect(cards[0].parentElement.className).toContain('sm:justify-self-start');
+  });
+
+  it('shows at most eight real releases from a larger catalogue', async () => {
+    const tracks = Array.from({ length: 9 }, (_, index) => makeTrack(index + 1));
+    getTracks.mockResolvedValue(tracks);
+
+    renderHome();
+
+    await screen.findByText(tracks.at(-1).title);
+    expect(screen.getByTestId('home-release-grid').querySelectorAll('[data-track-id]')).toHaveLength(8);
   });
 
   it('routes a genre chip to Discover with a taxonomy filter', async () => {

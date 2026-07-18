@@ -1,4 +1,6 @@
 import React from 'react';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
@@ -308,7 +310,23 @@ describe('ArtistPage', () => {
     renderArtist();
 
     expect(await screen.findByRole('heading', { level: 1, name: longName })).toHaveTextContent(longName);
-    expect(screen.getByRole('img', { name: `Generated avatar for ${longName}` })).toBeInTheDocument();
+    expect(screen.getAllByRole('img', { name: `Generated avatar for ${longName}` })).toHaveLength(1);
+  });
+
+  it('does not repeat the hero avatar in the About section', async () => {
+    getArtistById.mockResolvedValue({ ...baseArtist, avatarUrl: '/static-bloom.jpg' });
+    renderArtist();
+
+    await screen.findByRole('heading', { level: 1, name: 'Static Bloom' });
+    expect(screen.getAllByRole('img', { name: 'Static Bloom' })).toHaveLength(1);
+    expect(within(screen.getByTestId('artist-about')).queryByRole('img')).not.toBeInTheDocument();
+  });
+
+  it('keeps discography cards bounded and a single About panel readable', () => {
+    const css = readFileSync(path.join(process.cwd(), 'src/index.css'), 'utf8');
+    expect(css).toContain('grid-template-columns: repeat(auto-fill, minmax(min(100%, 12rem), 14rem));');
+    expect(css).toMatch(/\.ns-artist-discography-grid\s*\{[^}]*justify-content: start;/);
+    expect(css).toMatch(/\.ns-artist-detail-grid--single\s*\{[^}]*max-width: 48rem;/);
   });
 
   it('omits unsupported optional sections and empty social panels', async () => {

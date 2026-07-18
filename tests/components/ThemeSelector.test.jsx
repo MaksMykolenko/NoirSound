@@ -29,6 +29,37 @@ describe('ThemeSelector', () => {
     expect(screen.getByTestId('theme-option-system')).toHaveAttribute('aria-checked', 'false');
   });
 
+  it('uses a responsive 1/2/3-column grid with uniform semantic previews', () => {
+    render(<ThemeSelector />);
+
+    const grid = screen.getByTestId('theme-selector');
+    expect(grid.className).toContain('grid-cols-1');
+    expect(grid.className).toContain('md:grid-cols-2');
+    expect(grid.className).toContain('xl:grid-cols-3');
+    expect(grid.className).toContain('[grid-auto-rows:1fr]');
+
+    for (const themeId of THEME_IDS) {
+      const option = screen.getByTestId(`theme-option-${themeId}`);
+      expect(option.className).toContain('h-full');
+      expect(option.className).toContain('min-h-48');
+      expect(option.querySelector('[data-preview-theme]')).toBeInTheDocument();
+    }
+  });
+
+  it('previews the resolved palette for the System option without changing its geometry', () => {
+    useThemeStore.setState({ selectedTheme: 'system', resolvedTheme: 'light-minimal' });
+
+    render(<ThemeSelector />);
+
+    const system = screen.getByTestId('theme-option-system');
+    expect(system).toHaveAttribute('aria-checked', 'true');
+    expect(system.querySelector('[data-preview-theme]')).toHaveAttribute(
+      'data-preview-theme',
+      'light-minimal'
+    );
+    expect(system).toHaveTextContent('Light Minimal');
+  });
+
   it('applies and persists a selected theme immediately', async () => {
     const user = userEvent.setup();
     render(<ThemeSelector />);
@@ -39,6 +70,24 @@ describe('ThemeSelector', () => {
     expect(document.documentElement.dataset.themePreference).toBe('light-minimal');
     expect(localStorage.getItem('noirsound.theme')).toBe('light-minimal');
     expect(screen.getByTestId('theme-option-light-minimal')).toHaveAttribute('aria-checked', 'true');
+  });
+
+  it('supports roving focus and arrow-key selection across theme radios', async () => {
+    const user = userEvent.setup();
+    render(<ThemeSelector />);
+
+    const selected = screen.getByTestId('theme-option-noir-pink');
+    const next = screen.getByTestId('theme-option-midnight-blue');
+    expect(selected).toHaveAttribute('tabindex', '0');
+    expect(next).toHaveAttribute('tabindex', '-1');
+
+    selected.focus();
+    await user.keyboard('{ArrowRight}');
+
+    expect(next).toHaveFocus();
+    expect(next).toHaveAttribute('aria-checked', 'true');
+    expect(next).toHaveAttribute('tabindex', '0');
+    expect(document.documentElement.dataset.theme).toBe('midnight-blue');
   });
 
   it('includes and applies both platform-inspired themes', async () => {

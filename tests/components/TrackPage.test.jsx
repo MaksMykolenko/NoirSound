@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import i18n from '../../src/i18n';
@@ -88,13 +88,34 @@ describe('TrackPage refreshed design', () => {
     expect(screen.getByText(i18n.t('trackPage.beFirstToListen'))).toBeInTheDocument();
   });
 
-  it('shows a friendly related-tracks empty state', async () => {
+  it('uses the full main column and omits the related rail when no related tracks exist', async () => {
     getTrackById.mockResolvedValue(baseTrack);
     getTracks.mockResolvedValue([]);
     renderTrack();
     await screen.findByText('Midnight Protocol');
-    expect(screen.getByText(i18n.t('trackPage.noSimilarTitle'))).toBeInTheDocument();
-    expect(screen.getByText(i18n.t('trackPage.noSimilarDesc'))).toBeInTheDocument();
+    expect(screen.queryByTestId('track-related-rail')).not.toBeInTheDocument();
+    expect(screen.getByTestId('track-main-column')).toHaveClass('xl:col-span-12');
+    expect(within(screen.getByTestId('track-main-column')).getByTestId('track-lyrics-card')).toBeInTheDocument();
+  });
+
+  it('renders related tracks in a four-column rail as native links', async () => {
+    getTrackById.mockResolvedValue(baseTrack);
+    getTracks.mockResolvedValue([
+      {
+        ...baseTrack,
+        id: 't2',
+        title: 'Afterglow Signal',
+        artistId: 'a2',
+        artistName: 'Static Bloom',
+      },
+    ]);
+    renderTrack();
+
+    await screen.findByText('Midnight Protocol');
+    const rail = screen.getByTestId('track-related-rail');
+    expect(rail).toHaveClass('xl:col-span-4');
+    expect(screen.getByTestId('track-main-column')).toHaveClass('xl:col-span-8');
+    expect(within(rail).getByRole('link', { name: /Afterglow Signal/ })).toHaveAttribute('href', '/track/t2');
   });
 
   it('uses theme CSS variables for hero accents (no hardcoded pink)', async () => {

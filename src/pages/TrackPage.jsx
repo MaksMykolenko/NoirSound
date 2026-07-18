@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import PageMeta from '../components/meta/PageMeta';
 import { useTranslation } from 'react-i18next';
 import { Play, Pause, Heart, Plus, Check, Clock, Headphones, Share2, MoreHorizontal } from 'lucide-react';
@@ -348,17 +348,24 @@ export default function TrackPage() {
         </section>
       </div>
 
-      <TrackLyricsCard
-        track={track}
-        canEdit={canEditLyrics}
-        onLyricsChanged={handleLyricsChanged}
-      />
+      {/* Lyrics, description, comments / conditional related rail */}
+      <div
+        className="grid grid-cols-1 gap-6 xl:grid-cols-12 xl:gap-8"
+        data-testid="track-detail-layout"
+        data-has-related={relatedTracks.length > 0 ? 'true' : 'false'}
+      >
 
-      {/* Description + Comments / Related */}
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(17rem,22rem)] xl:gap-8">
+        {/* Main track details */}
+        <div
+          className={`min-w-0 space-y-6 xl:space-y-8 ${relatedTracks.length > 0 ? 'xl:col-span-8' : 'xl:col-span-12'}`}
+          data-testid="track-main-column"
+        >
+          <TrackLyricsCard
+            track={track}
+            canEdit={canEditLyrics}
+            onLyricsChanged={handleLyricsChanged}
+          />
 
-        {/* Description & Comments */}
-        <div className="min-w-0 space-y-6 xl:space-y-8">
           <section className="space-y-3 border-t border-zinc-800/60 pt-6">
             <h2 className="ns-section-title">{t('trackPage.description')}</h2>
             {track.description ? (
@@ -367,11 +374,11 @@ export default function TrackPage() {
               <p className="text-sm text-zinc-500">{t('trackPage.noDescription')}</p>
             )}
             {track.tags && track.tags.length > 0 && (
-              <div className="flex flex-wrap gap-2 pt-1">
+              <div className="flex flex-wrap gap-x-3 gap-y-1 pt-1">
                 {track.tags.map((tag) => (
                   <span
                     key={tag}
-                    className="rounded border border-zinc-800 bg-zinc-900 px-2.5 py-1 font-sans tabular-nums text-ns-label text-zinc-400"
+                    className="font-sans tabular-nums text-ns-label text-zinc-500"
                   >
                     #{tag}
                   </span>
@@ -385,21 +392,19 @@ export default function TrackPage() {
           </section>
         </div>
 
-        {/* Related tracks */}
-        <div className="space-y-4">
-          <h2 className="ns-section-title px-1">{t('trackPage.relatedTracks')}</h2>
-          {relatedTracks.length === 0 ? (
-            <div className="space-y-1.5 border-y border-zinc-800/60 px-2 py-6 text-center">
-              <p className="text-sm font-semibold text-zinc-300">{t('trackPage.noSimilarTitle')}</p>
-              <p className="text-sm text-zinc-500 leading-relaxed">{t('trackPage.noSimilarDesc')}</p>
-            </div>
-          ) : (
-            <div className="border-y border-zinc-800/60">
+        {/* Related tracks are a real secondary rail only when data exists. */}
+        {relatedTracks.length > 0 && (
+          <aside
+            className="self-start border-t border-zinc-800/60 pt-6 xl:col-span-4"
+            data-testid="track-related-rail"
+            aria-labelledby="track-related-title"
+          >
+            <h2 id="track-related-title" className="ns-section-title px-1">{t('trackPage.relatedTracks')}</h2>
+            <div className="mt-4 border-y border-zinc-800/60">
               {relatedTracks.map((relTrack) => (
-                <button
-                  type="button"
+                <Link
                   key={relTrack.id}
-                  onClick={() => navigate(`/track/${relTrack.id}`)}
+                  to={`/track/${relTrack.id}`}
                   className="group flex w-full cursor-pointer items-center gap-3 border-b border-zinc-900/70 p-3 text-left transition-colors last:border-b-0 hover:bg-zinc-900/40 focus:outline-none focus-visible:bg-zinc-900/50 focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-brand-red/40"
                 >
                   <FallbackCover
@@ -411,16 +416,16 @@ export default function TrackPage() {
                     imageClassName="object-cover"
                   />
                   <div className="min-w-0 flex-1">
-                    <h4 className="truncate text-ns-body-sm font-semibold text-zinc-200 group-hover:text-white">
+                    <h3 className="truncate text-ns-body-sm font-semibold text-zinc-200 group-hover:text-white">
                       {relTrack.title}
-                    </h4>
+                    </h3>
                     <p className="text-ns-meta text-zinc-500 mt-0.5 truncate">{relTrack.artistName}</p>
                   </div>
-                </button>
+                </Link>
               ))}
             </div>
-          )}
-        </div>
+          </aside>
+        )}
 
       </div>
     </div>

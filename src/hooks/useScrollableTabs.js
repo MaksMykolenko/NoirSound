@@ -1,12 +1,14 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 const EDGE_TOLERANCE = 2;
 
 export default function useScrollableTabs(activeKey) {
-  const containerRef = useRef(null);
+  const [container, setContainer] = useState(null);
+  const containerRef = useCallback((node) => {
+    setContainer(node);
+  }, []);
 
   useEffect(() => {
-    const container = containerRef.current;
     if (!container) return undefined;
 
     let animationFrame = 0;
@@ -35,10 +37,9 @@ export default function useScrollableTabs(activeKey) {
       container.removeEventListener('scroll', queueUpdate);
       window.removeEventListener('resize', queueUpdate);
     };
-  }, []);
+  }, [container]);
 
   useEffect(() => {
-    const container = containerRef.current;
     const selected = container?.querySelector('[aria-selected="true"], [aria-current="step"]');
     selected?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
 
@@ -50,7 +51,7 @@ export default function useScrollableTabs(activeKey) {
       container.dataset.atEnd = String(container.scrollLeft >= maxScroll - EDGE_TOLERANCE);
     });
     return () => cancelAnimationFrame(animationFrame);
-  }, [activeKey]);
+  }, [activeKey, container]);
 
   return containerRef;
 }

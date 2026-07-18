@@ -96,11 +96,11 @@ export default function TrackCard({ track, tracksContext = [] }) {
       {/* Track info details */}
       <div className="flex justify-between items-start px-1">
         <div className="min-w-0 flex-1">
-          <h4 className={`truncate text-ns-body-sm font-semibold ${
+          <h3 className={`truncate text-ns-body-sm font-semibold ${
             isCurrent ? 'text-brand-red' : 'text-zinc-200 group-hover:text-zinc-100'
           }`}>
             {track.title}
-          </h4>
+          </h3>
           <span className="mt-0.5 flex items-baseline justify-between gap-2">
             <span className="flex min-w-0 items-baseline gap-1.5">
               <button

@@ -47,6 +47,8 @@ const populatedDashboard = {
   topTracks: [populatedTrack],
   recentUploads: [populatedTrack],
   failedUploads: [],
+  geography: null,
+  trends: null,
 };
 
 function renderDashboard() {
@@ -92,7 +94,7 @@ describe('Dashboard polish', () => {
 
     renderDashboard();
 
-    expect(await screen.findByText('Published Releases (1)')).toBeInTheDocument();
+    expect(await screen.findByText(i18n.t('dashboard.publishedReleases', { count: 1 }))).toBeInTheDocument();
     const actions = getDashboardUploadActions();
     expect(actions).toHaveLength(1);
     expect(actions[0]).toHaveClass('ns-button-primary');
@@ -106,7 +108,7 @@ describe('Dashboard polish', () => {
 
     renderDashboard();
 
-    await screen.findByText('Published Releases (1)');
+    await screen.findByText(i18n.t('dashboard.publishedReleases', { count: 1 }));
     const [action] = getDashboardUploadActions();
     expect(action).not.toHaveClass('hidden');
     await user.click(action);
@@ -130,14 +132,56 @@ describe('Dashboard polish', () => {
     expect(getDashboardUploadActions()).toHaveLength(1);
   });
 
-  it('keeps one localized upload action in Ukrainian', async () => {
+  it('localizes dashboard headings, statuses, and actions in Ukrainian', async () => {
     await i18n.changeLanguage('uk');
     getArtistDashboard.mockResolvedValue(populatedDashboard);
 
     renderDashboard();
 
-    await screen.findByText('Published Releases (1)');
+    expect(await screen.findByRole('heading', { name: 'Опубліковані релізи (1)' })).toBeInTheDocument();
+    expect(screen.getByText('Опублікований')).toBeInTheDocument();
+    expect(screen.queryByText('PUBLISHED')).not.toBeInTheDocument();
+    const editLyricsActions = screen.getAllByRole('button', { name: 'Редагувати текст треку Midnight Signals' });
+    expect(editLyricsActions).toHaveLength(3);
+    editLyricsActions.forEach((action) => expect(action).toHaveAttribute('type', 'button'));
     expect(getDashboardUploadActions()).toHaveLength(1);
     expect(getDashboardUploadActions()[0]).toHaveTextContent('Завантажити новий трек');
+  });
+
+  it('uses the responsive density contract and one compact analytics unavailable region', async () => {
+    getArtistDashboard.mockResolvedValue(populatedDashboard);
+
+    renderDashboard();
+
+    await screen.findByRole('heading', {
+      name: i18n.t('dashboard.publishedReleases', { count: 1 }),
+    });
+
+    expect(screen.getByRole('region', { name: i18n.t('dashboard.title') })).toHaveClass('ns-metrics-strip');
+
+    const contentGrid = screen.getByTestId('dashboard-content-grid');
+    expect(contentGrid).toHaveClass('grid-cols-1', 'xl:grid-cols-12');
+    expect(screen.getByRole('heading', { name: i18n.t('dashboard.topTracks') }).closest('section')).toHaveClass('xl:col-span-7');
+    expect(screen.getByRole('heading', { name: i18n.t('dashboard.publishedReleases', { count: 1 }) }).closest('section')).toHaveClass('xl:col-span-5');
+    expect(screen.getByRole('heading', { name: i18n.t('dashboard.recentUploads') }).closest('section')).toHaveClass('xl:col-span-6');
+    expect(screen.getByRole('heading', { name: i18n.t('dashboard.failedUploads') }).closest('section')).toHaveClass('xl:col-span-6');
+
+    const analyticsRegion = screen.getByRole('region', { name: i18n.t('dashboard.analytics') });
+    expect(analyticsRegion).toBe(screen.getByTestId('dashboard-analytics-unavailable'));
+    expect(analyticsRegion).toHaveClass('py-4');
+    expect(within(analyticsRegion).getByText(i18n.t('dashboard.analyticsUnavailable'))).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: i18n.t('dashboard.geographyTitle') })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: i18n.t('dashboard.trendsTitle') })).not.toBeInTheDocument();
+  });
+
+  it('renders a compact localized state when recent uploads are absent', async () => {
+    getArtistDashboard.mockResolvedValue({
+      ...populatedDashboard,
+      recentUploads: [],
+    });
+
+    renderDashboard();
+
+    expect(await screen.findByText(i18n.t('dashboard.noRecentUploads'))).toBeInTheDocument();
   });
 });
