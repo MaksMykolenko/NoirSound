@@ -9,7 +9,7 @@ import FallbackCover from '../ui/FallbackCover';
 function releaseYear(value) {
   if (!value) return null;
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? null : date.getFullYear();
+  return Number.isNaN(date.getTime()) ? null : date.getUTCFullYear();
 }
 
 export default function ArtistReleaseCard({ track, tracksContext, queueSource }) {

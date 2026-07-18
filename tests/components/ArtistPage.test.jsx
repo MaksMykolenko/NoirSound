@@ -90,6 +90,23 @@ describe('ArtistPage', () => {
     usePlayerStore.setState(initialPlayerState, true);
   });
 
+  it('keeps the API calendar year for date-only values in negative UTC offsets', async () => {
+    const originalTimezone = process.env.TZ;
+    process.env.TZ = 'America/Los_Angeles';
+
+    try {
+      getArtistById.mockResolvedValue(baseArtist);
+      getTracksByArtist.mockResolvedValue([{ ...tracks[0], releaseDate: '2026-01-01' }]);
+      renderArtist();
+
+      await screen.findByRole('heading', { level: 1, name: 'Static Bloom' });
+      expect(releaseCard('t1').querySelector('p')).toHaveTextContent(/^2026$/);
+    } finally {
+      if (originalTimezone === undefined) delete process.env.TZ;
+      else process.env.TZ = originalTimezone;
+    }
+  });
+
   // Regression test: the component used to declare a useState hook
   // (`followActionPending`) after several early `return`s (loading /
   // error / not-found). Since the initial render always takes the
