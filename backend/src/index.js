@@ -4,6 +4,12 @@ const {
   safeConfigSummary,
   getAllowedOrigins
 } = require('./config');
+const {
+  PROFILE_BANNER_ORPHAN_GRACE_MS,
+  cleanupOrphanedProfileBanners
+} = require('./lib/profileMedia');
+
+const PROFILE_BANNER_SWEEP_INTERVAL_MS = 6 * 60 * 60 * 1000;
 
 // Build a Redis client for the rate limiter (production / when configured).
 // Returns null when Redis is not configured or in test, in which case the
@@ -75,6 +81,32 @@ function buildServer(options = {}) {
   fastify.decorate('storage', storage);
   fastify.decorate('audioQueue', audioQueue);
 
+  let profileBannerSweepTimer = null;
+  fastify.addHook('onReady', async () => {
+    if (typeof storage.listObjectsByPrefix !== 'function') return;
+    const sweep = async () => {
+      try {
+        const result = await cleanupOrphanedProfileBanners({
+          prisma: fastify.prisma,
+          storage,
+          graceMs: PROFILE_BANNER_ORPHAN_GRACE_MS,
+          logger: fastify.log
+        });
+        if (result.deleted > 0) {
+          fastify.log.info(result, 'Orphaned profile banners removed');
+        }
+      } catch (error) {
+        fastify.log.warn({ err: error }, 'Orphaned profile banner sweep failed');
+      }
+    };
+    await sweep();
+    profileBannerSweepTimer = setInterval(sweep, PROFILE_BANNER_SWEEP_INTERVAL_MS);
+    profileBannerSweepTimer.unref?.();
+  });
+  fastify.addHook('onClose', async () => {
+    if (profileBannerSweepTimer) clearInterval(profileBannerSweepTimer);
+  });
+
   // Security headers on every response (helmet-equivalent, no extra dep).
   fastify.addHook('onSend', async (request, reply, payload) => {
     reply.header('x-request-id', request.id);
@@ -128,6 +160,7 @@ function buildServer(options = {}) {
   });
   fastify.register(require('./routes/tracks'), { prefix: '/api/tracks' });
   fastify.register(require('./routes/artists'), { prefix: '/api/artists' });
+  fastify.register(require('./routes/profiles'), { prefix: '/api/profiles' });
   fastify.register(require('./routes/playlists'), { prefix: '/api/playlists' });
   fastify.register(require('./routes/uploads'), { prefix: '/api/uploads' });
   fastify.register(require('./routes/uploadBatches'), { prefix: '/api/uploads/batch' });

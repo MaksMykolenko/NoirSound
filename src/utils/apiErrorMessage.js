@@ -2,7 +2,16 @@ import i18n from '../i18n';
 
 // Backend error codes (stable, machine-readable) that have curated, localized
 // end-user copy under the `errors.<CODE>` i18n namespace.
-const FRIENDLY_CODES = new Set(['CSRF_VALIDATION_FAILED', 'RATE_LIMITED']);
+const FRIENDLY_CODES = new Set([
+  'CSRF_VALIDATION_FAILED',
+  'RATE_LIMITED',
+  'PROFILE_BANNER_INVALID',
+  'PROFILE_BANNER_UPLOAD_FAILED',
+  'PROFILE_BANNER_STORAGE_UNAVAILABLE',
+  'PROFILE_BANNER_CONFLICT',
+  'PROFILE_BIO_INVALID',
+  'PROFILE_UPDATE_FAILED',
+]);
 
 /**
  * Resolve a friendly, localized message for a failed API request.

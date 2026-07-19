@@ -42,7 +42,7 @@ function detectMediaType(buf) {
 
   // Images --------------------------------------------------------------
   if (startsWith(buf, [0xff, 0xd8, 0xff])) return 'image/jpeg';
-  if (startsWith(buf, [0x89, 0x50, 0x4e, 0x47])) return 'image/png';
+  if (startsWith(buf, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) return 'image/png';
   if (startsWith(buf, ascii('RIFF')) && startsWith(buf, ascii('WEBP'), 8)) return 'image/webp';
 
   return null;

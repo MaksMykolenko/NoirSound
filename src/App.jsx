@@ -35,6 +35,7 @@ const Upload = lazy(() => import('./pages/Upload'));
 const BatchUploadPage = lazy(() => import('./pages/upload/BatchUploadPage'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Profile = lazy(() => import('./pages/Profile'));
+const PublicProfile = lazy(() => import('./pages/PublicProfile'));
 const PlaylistPage = lazy(() => import('./pages/PlaylistPage'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 const LegalPage = lazy(() => import('./pages/LegalPage'));
@@ -150,6 +151,7 @@ export default function App() {
               <Route path="/upload/batch" element={<BatchUploadPage />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/profile" element={<Profile />} />
+              <Route path="/profile/:username" element={<PublicProfile />} />
               <Route path="/playlist/:id" element={<PlaylistPage />} />
               <Route path="/admin" element={<AdminLayout />}>
                 <Route index element={<Navigate to="/admin/overview" replace />} />

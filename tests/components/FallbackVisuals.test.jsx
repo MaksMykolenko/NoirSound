@@ -1,5 +1,5 @@
 import React from 'react';
-import { render } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import FallbackAvatar from '../../src/components/ui/FallbackAvatar';
 import FallbackCover from '../../src/components/ui/FallbackCover';
@@ -23,9 +23,21 @@ describe('deterministic fallback visuals', () => {
     const firstAvatar = first.getByRole('img');
     const firstKey = firstAvatar.getAttribute('data-visual-key');
     expect(firstAvatar).toHaveTextContent('NA');
+    expect(firstAvatar).toHaveClass('bg-zinc-900');
+    expect(firstAvatar).not.toHaveClass('bg-[var(--ns-card-soft)]');
     first.unmount();
 
     const second = render(<FallbackAvatar name="Northline Archive" />);
     expect(second.getByRole('img')).toHaveAttribute('data-visual-key', firstKey);
+  });
+
+  it('opts into semantic fallback colors without changing the shared default', () => {
+    render(<FallbackAvatar name="Theme Listener" semanticFallback />);
+
+    const avatar = screen.getByRole('img');
+    expect(avatar).toHaveClass('bg-[var(--ns-card-soft)]');
+    expect(avatar.querySelector('span')).toHaveClass('border-[var(--ns-border)]');
+    expect(avatar).toHaveTextContent('TL');
+    expect(avatar.querySelector('span:last-child')).toHaveClass('text-[var(--ns-text)]');
   });
 });

@@ -6,23 +6,30 @@ import { Bell, Check, Save, Shield } from 'lucide-react';
 import LanguageSwitcher from '../ui/LanguageSwitcher';
 import ThemeSelector from '../settings/ThemeSelector';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
+import ProfileBannerEditor from './ProfileBannerEditor';
+
+export const PROFILE_BIO_MAX_LENGTH = 500;
 
 export default function UserSettingsForm() {
   const { t } = useTranslation();
-  const { user, updateUser, addActivity } = useUserStore();
+  const { user, updateUser, uploadBanner, removeBanner, addActivity } = useUserStore();
   const { addToast } = useToastStore();
 
   // Local Form state initialized from Zustand
-  const [displayName, setDisplayName] = useState(user.displayName);
-  const [username, setUsername] = useState(user.username);
-  const [bio, setBio] = useState(user.bio);
-  const [location, setLocation] = useState(user.location);
+  const [displayName, setDisplayName] = useState(user?.displayName || '');
+  const [username, setUsername] = useState(user?.username || '');
+  const [bio, setBio] = useState(user?.bio || '');
+  const [location, setLocation] = useState(user?.location || '');
   const [isPrivate, setIsPrivate] = useState(false);
   const [emailNotify, setEmailNotify] = useState(true);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [pendingBannerFile, setPendingBannerFile] = useState(null);
+  const [bannerRemovalRequested, setBannerRemovalRequested] = useState(false);
+  const [bannerProgress, setBannerProgress] = useState(null);
+  const [bannerStatus, setBannerStatus] = useState('');
 
   const updateField = (setter) => (event) => {
     setter(event.target.value);
@@ -47,15 +54,40 @@ export default function UserSettingsForm() {
       setErrorMsg(t('profile.usernameRequired'));
       return;
     }
+    if (bio.length > PROFILE_BIO_MAX_LENGTH) {
+      setErrorMsg(t('profile.bioTooLong', {
+        max: PROFILE_BIO_MAX_LENGTH,
+        defaultValue: `Biography must be at most ${PROFILE_BIO_MAX_LENGTH} characters.`,
+      }));
+      return;
+    }
 
     setIsSubmitting(true);
+    setBannerStatus('');
+    if (pendingBannerFile) setBannerProgress(0);
     try {
       await updateUser({
         displayName: displayName.trim(),
         username: username.trim(),
-        bio: bio ? bio.trim() : '',
-        location: location ? location.trim() : '',
+        bio: bio.trim(),
+        location: location.trim(),
       });
+
+      if (bannerRemovalRequested) {
+        await removeBanner();
+        setBannerRemovalRequested(false);
+        setBannerStatus(t('profile.bannerRemoveSuccess', {
+          defaultValue: 'Profile banner removed.',
+        }));
+      } else if (pendingBannerFile) {
+        await uploadBanner(pendingBannerFile, {
+          onProgress: (progress) => setBannerProgress(Math.max(0, Math.min(100, Math.round(progress)))),
+        });
+        setPendingBannerFile(null);
+        setBannerStatus(t('profile.bannerUploadSuccess', {
+          defaultValue: 'Profile banner updated.',
+        }));
+      }
 
       addActivity('settings', 'Updated profile configuration settings');
       addToast(t('profile.savedSuccess'), 'success');
@@ -65,6 +97,7 @@ export default function UserSettingsForm() {
       // instead of the raw backend error code.
       setErrorMsg(getApiErrorMessage(err, t));
     } finally {
+      setBannerProgress(null);
       setIsSubmitting(false);
     }
   };
@@ -72,10 +105,38 @@ export default function UserSettingsForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       {errorMsg && (
-        <div className="flex items-center space-x-2.5 rounded-md border border-rose-500/20 bg-rose-500/10 p-3 text-sm text-rose-400">
+        <div role="alert" className="flex items-center space-x-2.5 rounded-md border border-rose-500/20 bg-rose-500/10 p-3 text-sm text-rose-400">
           <span className="font-semibold">{errorMsg}</span>
         </div>
       )}
+
+      <ProfileBannerEditor
+        currentBannerUrl={user?.bannerUrl || ''}
+        pendingFile={pendingBannerFile}
+        removalRequested={bannerRemovalRequested}
+        disabled={isSubmitting}
+        progress={bannerProgress}
+        statusMessage={bannerStatus}
+        onSelectFile={(file) => {
+          setPendingBannerFile(file);
+          setBannerRemovalRequested(false);
+          setBannerStatus('');
+          setErrorMsg('');
+          setIsSaved(false);
+        }}
+        onConfirmRemove={() => {
+          setPendingBannerFile(null);
+          setBannerRemovalRequested(Boolean(user?.bannerUrl));
+          setBannerStatus('');
+          setErrorMsg('');
+          setIsSaved(false);
+        }}
+        onUndoRemove={() => {
+          setBannerRemovalRequested(false);
+          setBannerStatus('');
+          setIsSaved(false);
+        }}
+      />
 
       <ThemeSelector className="border-b border-zinc-800/70 pb-5" />
 
@@ -127,8 +188,25 @@ export default function UserSettingsForm() {
           rows={3}
           value={bio}
           onChange={updateField(setBio)}
+          maxLength={PROFILE_BIO_MAX_LENGTH}
+          aria-describedby="settings-bio-help"
           className="ns-field w-full px-4 py-3 text-base resize-none sm:text-sm"
         />
+        <div id="settings-bio-help" className="flex items-start justify-between gap-4 text-ns-meta text-zinc-500">
+          <span>
+            {t('profile.bioHelp', {
+              max: PROFILE_BIO_MAX_LENGTH,
+              defaultValue: `Up to ${PROFILE_BIO_MAX_LENGTH} characters. Line breaks are preserved.`,
+            })}
+          </span>
+          <span aria-hidden="true" className="shrink-0 tabular-nums">
+            {t('profile.bioCounter', {
+              count: bio.length,
+              max: PROFILE_BIO_MAX_LENGTH,
+              defaultValue: '{{count}}/{{max}}',
+            })}
+          </span>
+        </div>
       </div>
 
       {/* Settings Options Row */}

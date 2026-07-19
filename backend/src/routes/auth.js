@@ -4,6 +4,18 @@ const { userOrIpKey } = require('../lib/rateLimitKeys');
 const { scaledRateLimitMax } = require('../lib/rateLimit');
 const { evaluateUploadAccess, ensureArtistProfile } = require('../lib/artistAccess');
 const { auditData, createAudit } = require('../lib/auditLog');
+const {
+  MAX_BANNER_BYTES,
+  ProfileMediaError,
+  bannerKeyFromUploadId,
+  completeBannerReplacement,
+  createBannerUploadId,
+  normalizeBio,
+  pendingBannerKeyFromUploadId,
+  removeProfileBanner,
+  serializeUserMedia,
+  validateBannerInit
+} = require('../lib/profileMedia');
 
 function withArtistAccess(user, artistProfile) {
   return {
@@ -13,6 +25,29 @@ function withArtistAccess(user, artistProfile) {
     artistProfileHidden: artistProfile?.isHidden || false,
     ...evaluateUploadAccess({ role: user.role, status: user.status, artistProfile })
   };
+}
+
+async function safeSerializedUser(fastify, user) {
+  const { passwordHash: _passwordHash, ...safeUser } = user;
+  return serializeUserMedia(fastify.storage, safeUser);
+}
+
+async function serializedUserWithArtistAccess(fastify, user, knownArtistProfile) {
+  const artistProfile = knownArtistProfile === undefined
+    ? await fastify.prisma.artistProfile.findUnique({
+        where: { userId: user.id },
+        select: { id: true, isHidden: true }
+      })
+    : knownArtistProfile;
+  return withArtistAccess(await safeSerializedUser(fastify, user), artistProfile);
+}
+
+function sendProfileMediaError(fastify, reply, error, fallbackMessage) {
+  if (error instanceof ProfileMediaError) {
+    return reply.status(error.statusCode).send({ error: error.code, message: error.message });
+  }
+  fastify.log.error(error);
+  return reply.status(500).send({ error: 'PROFILE_UPDATE_FAILED', message: fallbackMessage });
 }
 
 async function authRoutes(fastify, _options) {
@@ -56,10 +91,10 @@ async function authRoutes(fastify, _options) {
       // Issue a revocable session + JWT cookie
       await issueSession(fastify, reply, user);
 
-      // don't send password hash back
-      const { passwordHash: _, ...safeUser } = user;
-
-      return { message: 'Registered successfully', user: safeUser };
+      return {
+        message: 'Registered successfully',
+        user: await safeSerializedUser(fastify, user)
+      };
     } catch (error) {
       fastify.log.error(error);
       return reply.status(500).send({ error: 'Internal Server Error' });
@@ -97,8 +132,7 @@ async function authRoutes(fastify, _options) {
 
       await issueSession(fastify, reply, user);
 
-      const { passwordHash: _, ...safeUser } = user;
-      return { user: safeUser };
+      return { user: await safeSerializedUser(fastify, user) };
     } catch (error) {
       fastify.log.error(error);
       return reply.status(500).send({ error: 'Internal Server Error' });
@@ -125,11 +159,7 @@ async function authRoutes(fastify, _options) {
 
   // GET /api/auth/me
   fastify.get('/me', { preValidation: [fastify.authenticate] }, async (request) => {
-    const artistProfile = await fastify.prisma.artistProfile.findUnique({
-      where: { userId: request.user.id },
-      select: { id: true, isHidden: true }
-    });
-    return { user: withArtistAccess(request.user, artistProfile) };
+    return { user: await serializedUserWithArtistAccess(fastify, request.user) };
   });
 
   // PUT /api/auth/me
@@ -139,15 +169,30 @@ async function authRoutes(fastify, _options) {
       rateLimit: { max: scaledRateLimitMax(30), timeWindow: '1 hour', keyGenerator: userOrIpKey }
     }
   }, async (request, reply) => {
-    const { displayName, username, bio, location, avatarUrl, bannerUrl, preferredLanguage } = request.body || {};
+    const body = request.body || {};
+    if (Object.prototype.hasOwnProperty.call(body, 'bannerUrl')) {
+      return reply.status(400).send({
+        error: 'PROFILE_MEDIA_DIRECT_WRITE_FORBIDDEN',
+        message: 'Profile media must be changed through the managed upload endpoints.'
+      });
+    }
+    const { displayName, username, bio, location, avatarUrl, preferredLanguage } = body;
 
     try {
       const updateData = {};
       if (displayName !== undefined) updateData.displayName = displayName.trim();
-      if (bio !== undefined) updateData.bio = bio ? bio.trim() : null;
+      if (bio !== undefined) {
+        const normalizedBio = normalizeBio(bio);
+        if (!normalizedBio.ok) {
+          return reply.status(400).send({
+            error: 'PROFILE_BIO_INVALID',
+            message: normalizedBio.message
+          });
+        }
+        updateData.bio = normalizedBio.value;
+      }
       if (location !== undefined) updateData.location = location ? location.trim() : null;
       if (avatarUrl !== undefined) updateData.avatarUrl = avatarUrl;
-      if (bannerUrl !== undefined) updateData.bannerUrl = bannerUrl;
       if (preferredLanguage !== undefined) {
         const allowed = ['en', 'uk', 'pl', 'ru'];
         if (allowed.includes(preferredLanguage)) {
@@ -171,16 +216,96 @@ async function authRoutes(fastify, _options) {
         data: updateData
       });
 
-      const artistProfile = await fastify.prisma.artistProfile.findUnique({
-        where: { userId: updatedUser.id },
-        select: { id: true, isHidden: true }
-      });
-
-      const { passwordHash: _, ...safeUser } = updatedUser;
-      return { user: withArtistAccess(safeUser, artistProfile) };
+      return { user: await serializedUserWithArtistAccess(fastify, updatedUser) };
     } catch (error) {
       fastify.log.error(error);
       return reply.status(500).send({ error: 'Internal Server Error' });
+    }
+  });
+
+  fastify.post('/me/banner/init', {
+    preValidation: [fastify.authenticate],
+    config: {
+      rateLimit: { max: scaledRateLimitMax(10), timeWindow: '1 day', keyGenerator: userOrIpKey }
+    }
+  }, async (request, reply) => {
+    const validation = validateBannerInit(request.body);
+    if (!validation.ok) {
+      return reply.status(400).send({
+        error: 'PROFILE_BANNER_INVALID',
+        message: validation.message
+      });
+    }
+
+    const uploadId = createBannerUploadId(validation.mimeType);
+    const pendingBannerKey = pendingBannerKeyFromUploadId(request.user.id, uploadId);
+    try {
+      const uploadUrl = await fastify.storage.createPresignedPutUrl(
+        pendingBannerKey,
+        validation.mimeType,
+        900,
+        validation.fileSize
+      );
+      return {
+        uploadId,
+        uploadUrl,
+        method: 'PUT',
+        maxBytes: MAX_BANNER_BYTES
+      };
+    } catch (error) {
+      fastify.log.error({ err: error, userId: request.user.id }, 'Profile banner upload initialization failed');
+      return reply.status(502).send({
+        error: 'PROFILE_BANNER_UPLOAD_FAILED',
+        message: 'Banner upload could not be initialized.'
+      });
+    }
+  });
+
+  fastify.post('/me/banner/complete', {
+    preValidation: [fastify.authenticate],
+    config: {
+      rateLimit: { max: scaledRateLimitMax(30), timeWindow: '1 hour', keyGenerator: userOrIpKey }
+    }
+  }, async (request, reply) => {
+    const bannerKey = bannerKeyFromUploadId(request.user.id, request.body?.uploadId);
+    const pendingBannerKey = pendingBannerKeyFromUploadId(request.user.id, request.body?.uploadId);
+    if (!bannerKey || !pendingBannerKey) {
+      return reply.status(400).send({
+        error: 'PROFILE_BANNER_INVALID',
+        message: 'Banner upload id is invalid.'
+      });
+    }
+    try {
+      const updatedUser = await completeBannerReplacement({
+        prisma: fastify.prisma,
+        storage: fastify.storage,
+        userId: request.user.id,
+        pendingKey: pendingBannerKey,
+        newKey: bannerKey,
+        logger: fastify.log
+      });
+      return { user: await serializedUserWithArtistAccess(fastify, updatedUser) };
+    } catch (error) {
+      return sendProfileMediaError(fastify, reply, error, 'Banner upload could not be completed.');
+    }
+  });
+
+  fastify.delete('/me/banner', {
+    preValidation: [fastify.authenticate],
+    config: {
+      rateLimit: { max: scaledRateLimitMax(20), timeWindow: '1 hour', keyGenerator: userOrIpKey }
+    }
+  }, async (request, reply) => {
+    try {
+      const updatedUser = await removeProfileBanner({
+        prisma: fastify.prisma,
+        storage: fastify.storage,
+        userId: request.user.id,
+        logger: fastify.log
+      });
+      return { user: await serializedUserWithArtistAccess(fastify, updatedUser) };
+    } catch (error) {
+      return sendProfileMediaError(fastify, reply, error, 'Banner could not be removed.');
     }
   });
 
@@ -214,7 +339,10 @@ async function authRoutes(fastify, _options) {
         { userId: request.user.id, triggeredBy: 'SELF_SERVICE' }
       ));
     }
-    return { user: withArtistAccess(request.user, ensured.profile), created: ensured.created };
+    return {
+      user: await serializedUserWithArtistAccess(fastify, request.user, ensured.profile),
+      created: ensured.created
+    };
   });
 }
 

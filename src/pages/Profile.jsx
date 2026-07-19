@@ -124,7 +124,12 @@ export default function Profile() {
   return (
     <div className={activeTab === 'settings' ? 'flex flex-col pb-10' : 'ns-page-stack pb-10'}>
       {pageMeta}
-      <UserProfileHeader user={user} onEditClick={() => setSearchParams({ tab: 'settings' })} />
+      <UserProfileHeader
+        user={user}
+        viewerUserId={user.id}
+        shareUrl={`https://noirsound.co/profile/${encodeURIComponent(user.username)}`}
+        onEditClick={() => setSearchParams({ tab: 'settings' })}
+      />
 
       <div
         ref={tabsRef}
@@ -189,16 +194,17 @@ export default function Profile() {
 
         {activeTab === 'stats' && <ListeningStats />}
         
-        {activeTab === 'settings' && (
-          <div
-            data-testid="profile-settings-layout"
-            className="ns-layout-page ns-layout-page--form grid w-full grid-cols-1 gap-6 xl:grid-cols-12"
-          >
-            <div className="min-w-0 xl:col-span-12 2xl:col-span-9">
-              <UserSettingsForm />
-            </div>
+        {/* Keep the settings form mounted while moving between profile tabs so
+            an unsaved bio or selected local banner is never silently dropped. */}
+        <div
+          data-testid="profile-settings-layout"
+          aria-hidden={activeTab !== 'settings'}
+          className={`${activeTab === 'settings' ? 'grid' : 'hidden'} ns-layout-page ns-layout-page--form w-full grid-cols-1 gap-6 xl:grid-cols-12`}
+        >
+          <div className="min-w-0 xl:col-span-12 2xl:col-span-9">
+            <UserSettingsForm />
           </div>
-        )}
+        </div>
 
         {activeTab === 'activity' && (
           demoMode && activity.length > 0 ? (

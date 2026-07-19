@@ -6,6 +6,7 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import { execFileSync } from 'child_process';
 import jwt from 'jsonwebtoken';
 
@@ -40,6 +41,26 @@ import {
 
 const STRONG = 'b3f1c9a47d2e4f8a9c0b1d2e3f4a5b6c7d8e9f0a1b2c3d4e';
 const STRONG2 = 'a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718';
+const TEST_DIR = path.dirname(fileURLToPath(import.meta.url));
+
+describe('profile banner pending-object lifecycle', () => {
+  it('expires only the pending prefix after one day in local and production MinIO setup', () => {
+    const composeFiles = [
+      path.resolve(TEST_DIR, '../docker-compose.yml'),
+      path.resolve(TEST_DIR, '../../docker-compose.production.yml'),
+    ];
+
+    for (const composeFile of composeFiles) {
+      const source = fs.readFileSync(composeFile, 'utf8');
+      expect(source).toMatch(
+        /mc ilm rule add --prefix 'profile-banner-pending\/' --expire-days 1/
+      );
+      expect(source).not.toMatch(
+        /mc ilm rule add --prefix 'users\/' --expire-days 1/
+      );
+    }
+  });
+});
 
 describe('config / secret validation', () => {
   it('flags weak secrets and accepts strong ones', () => {
@@ -215,7 +236,9 @@ describe('file signature detection', () => {
     const wav = Buffer.concat([Buffer.from('RIFF'), Buffer.alloc(4), Buffer.from('WAVE')]);
     expect(detectMediaType(wav)).toBe('audio/wav');
     expect(detectMediaType(Buffer.from('ID3\x03'))).toBe('audio/mpeg');
-    expect(detectMediaType(Buffer.from([0x89, 0x50, 0x4e, 0x47]))).toBe('image/png');
+    expect(detectMediaType(Buffer.from([
+      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+    ]))).toBe('image/png');
     expect(detectMediaType(Buffer.from([0xff, 0xd8, 0xff, 0xe0]))).toBe('image/jpeg');
   });
   it('rejects scripts / executables as audio', () => {

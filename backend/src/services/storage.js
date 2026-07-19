@@ -4,6 +4,8 @@ const {
   GetObjectCommand,
   HeadObjectCommand,
   HeadBucketCommand,
+  CopyObjectCommand,
+  ListObjectsV2Command,
   DeleteObjectCommand
 } = require('@aws-sdk/client-s3');
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
@@ -32,12 +34,16 @@ const presignClient = new S3Client({
 
 const BUCKET = process.env.S3_BUCKET || 'noirsound-audio';
 
-async function createPresignedPutUrl(key, mimeType, expiresIn = 900) {
-  const command = new PutObjectCommand({
+async function createPresignedPutUrl(key, mimeType, expiresIn = 900, contentLength) {
+  const input = {
     Bucket: BUCKET,
     Key: key,
     ContentType: mimeType
-  });
+  };
+  if (Number.isInteger(contentLength) && contentLength > 0) {
+    input.ContentLength = contentLength;
+  }
+  const command = new PutObjectCommand(input);
   return getSignedUrl(presignClient, command, { expiresIn });
 }
 
@@ -104,6 +110,62 @@ async function getObjectStream(key) {
   return response.Body;
 }
 
+async function getObjectPrefix(key, byteLength = 16) {
+  const length = Math.max(1, Math.min(1024, Number(byteLength) || 16));
+  const response = await s3Client.send(new GetObjectCommand({
+    Bucket: BUCKET,
+    Key: key,
+    Range: `bytes=0-${length - 1}`
+  }));
+  const body = response.Body;
+  if (body && typeof body.transformToByteArray === 'function') {
+    return Buffer.from(await body.transformToByteArray()).subarray(0, length);
+  }
+
+  const chunks = [];
+  let total = 0;
+  for await (const chunk of body || []) {
+    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    const remaining = length - total;
+    if (remaining <= 0) break;
+    chunks.push(buffer.subarray(0, remaining));
+    total += Math.min(buffer.length, remaining);
+    if (total >= length) break;
+  }
+  return Buffer.concat(chunks, total);
+}
+
+async function copyObject(sourceKey, destinationKey) {
+  return s3Client.send(new CopyObjectCommand({
+    Bucket: BUCKET,
+    CopySource: encodeURI(`${BUCKET}/${sourceKey}`),
+    Key: destinationKey,
+    MetadataDirective: 'COPY'
+  }));
+}
+
+async function listObjectsByPrefix(prefix) {
+  const objects = [];
+  let continuationToken;
+  do {
+    const response = await s3Client.send(new ListObjectsV2Command({
+      Bucket: BUCKET,
+      Prefix: prefix,
+      ContinuationToken: continuationToken
+    }));
+    for (const object of response.Contents || []) {
+      if (!object.Key) continue;
+      objects.push({
+        key: object.Key,
+        lastModified: object.LastModified || null,
+        size: Number(object.Size || 0)
+      });
+    }
+    continuationToken = response.IsTruncated ? response.NextContinuationToken : undefined;
+  } while (continuationToken);
+  return objects;
+}
+
 async function deleteObject(key) {
   return s3Client.send(new DeleteObjectCommand({
     Bucket: BUCKET,
@@ -123,5 +185,8 @@ module.exports = {
   getObjectMetadata,
   putObject,
   getObjectStream,
+  getObjectPrefix,
+  copyObject,
+  listObjectsByPrefix,
   deleteObject
 };

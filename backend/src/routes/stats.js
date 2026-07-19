@@ -4,6 +4,7 @@ const { serializePublicTrack } = require('../lib/publicTrack');
 const { scaledRateLimitMax } = require('../lib/rateLimit');
 const { isQualifiedPlay, recalculateArtistMonthlyListeners } = require('../lib/statsAccess');
 const { hasLyrics } = require('../lib/lyrics');
+const { serializeUserMedia } = require('../lib/profileMedia');
 
 async function statsRoutes(fastify, _options) {
   // POST /api/tracks/:id/play-event
@@ -428,7 +429,17 @@ async function statsRoutes(fastify, _options) {
       // Every entry here is, by construction, already followed by the
       // caller -- no need for a second lookup, just mark it explicitly so
       // the shared ArtistCard component never has to guess/default this.
-      const artists = follows.map((f) => f.artist && { ...f.artist, isFollowing: true }).filter(Boolean);
+      const artists = (await Promise.all(follows.map(async (follow) => {
+        if (!follow.artist) return null;
+        return {
+          ...follow.artist,
+          user: await serializeUserMedia(fastify.storage, {
+            id: follow.artist.userId,
+            ...follow.artist.user
+          }),
+          isFollowing: true
+        };
+      }))).filter(Boolean);
       return { data: artists };
     } catch (error) {
       fastify.log.error(error);

@@ -6,10 +6,19 @@ import {
   initialDemoUser,
   login,
   logout,
+  removeProfileBanner,
   register,
   updateProfile,
+  uploadProfileBanner,
 } from '../api/user';
 import { getListeningStats, recordPlayEvent } from '../api/stats';
+
+function announceProfileChanged(user) {
+  if (typeof window === 'undefined' || !user) return;
+  window.dispatchEvent(new CustomEvent('noirsound:user-profile-changed', {
+    detail: { id: user.id, username: user.username },
+  }));
+}
 
 export const EMPTY_LISTENING_STATS = Object.freeze({
   totalListeningSeconds: 0,
@@ -116,6 +125,21 @@ export const useUserStore = create((set) => ({
   updateUser: async (updates) => {
     const user = await updateProfile(updates);
     set({ user });
+    announceProfileChanged(user);
+    return user;
+  },
+
+  uploadBanner: async (file, options) => {
+    const user = await uploadProfileBanner(file, options);
+    set({ user });
+    announceProfileChanged(user);
+    return user;
+  },
+
+  removeBanner: async () => {
+    const user = await removeProfileBanner();
+    set({ user });
+    announceProfileChanged(user);
     return user;
   },
 

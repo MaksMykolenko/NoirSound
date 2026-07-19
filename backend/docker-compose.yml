@@ -51,6 +51,10 @@ services:
       until /usr/bin/mc alias set myminio http://minio:9000 noirsound_minio_user noirsound_minio_password; do sleep 1; done;
       /usr/bin/mc mb myminio/noirsound-audio --ignore-existing;
       /usr/bin/mc anonymous set none myminio/noirsound-audio;
+      case "$$(/usr/bin/mc ilm rule ls myminio/noirsound-audio 2>/dev/null)" in
+        *profile-banner-pending/*) ;;
+        *) /usr/bin/mc ilm rule add --prefix 'profile-banner-pending/' --expire-days 1 myminio/noirsound-audio ;;
+      esac;
       "
 
 volumes:

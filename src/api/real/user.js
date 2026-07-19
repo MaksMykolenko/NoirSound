@@ -1,4 +1,4 @@
-import { apiFetch, notifyApiError } from '../client';
+import { ApiError, apiFetch, notifyApiError } from '../client';
 
 export const demoUser = null;
 
@@ -10,6 +10,13 @@ export async function getCurrentUser() {
     if (error.status !== 401) notifyApiError(error);
     throw error;
   }
+}
+
+export async function getPublicProfile(username) {
+  const response = await apiFetch(`/profiles/${encodeURIComponent(username)}`, {
+    suppressErrorToast: true,
+  });
+  return response.profile ?? response.user ?? response;
 }
 
 export async function login(email, password) {
@@ -35,6 +42,79 @@ export async function updateProfile(profileData) {
     method: 'PUT',
     body: JSON.stringify(profileData),
   });
+  return response.user ?? response;
+}
+
+function putProfileBanner(uploadUrl, file, onProgress) {
+  if (typeof XMLHttpRequest === 'undefined') {
+    return fetch(uploadUrl, {
+      method: 'PUT',
+      headers: { 'Content-Type': file.type },
+      body: file,
+    }).then((response) => {
+      if (!response.ok) {
+        throw new ApiError(
+          'Profile banner storage upload failed.',
+          response.status,
+          { error: 'PROFILE_BANNER_STORAGE_UNAVAILABLE' }
+        );
+      }
+      onProgress?.(100);
+    });
+  }
+
+  return new Promise((resolve, reject) => {
+    const request = new XMLHttpRequest();
+    request.open('PUT', uploadUrl);
+    request.setRequestHeader('Content-Type', file.type);
+    request.upload.addEventListener('progress', (event) => {
+      if (event.lengthComputable) {
+        onProgress?.(Math.round((event.loaded / event.total) * 100));
+      }
+    });
+    request.addEventListener('load', () => {
+      if (request.status >= 200 && request.status < 300) {
+        onProgress?.(100);
+        resolve();
+      } else {
+        reject(new ApiError(
+          'Profile banner storage upload failed.',
+          request.status,
+          { error: 'PROFILE_BANNER_STORAGE_UNAVAILABLE' }
+        ));
+      }
+    });
+    request.addEventListener('error', () => {
+      reject(new ApiError(
+        'Profile banner storage upload failed.',
+        0,
+        { error: 'PROFILE_BANNER_STORAGE_UNAVAILABLE' }
+      ));
+    });
+    request.send(file);
+  });
+}
+
+export async function uploadProfileBanner(file, { onProgress } = {}) {
+  const init = await apiFetch('/auth/me/banner/init', {
+    method: 'POST',
+    body: JSON.stringify({
+      fileName: file.name,
+      mimeType: file.type,
+      fileSize: file.size,
+    }),
+  });
+
+  await putProfileBanner(init.uploadUrl, file, onProgress);
+  const response = await apiFetch('/auth/me/banner/complete', {
+    method: 'POST',
+    body: JSON.stringify({ uploadId: init.uploadId }),
+  });
+  return response.user ?? response;
+}
+
+export async function removeProfileBanner() {
+  const response = await apiFetch('/auth/me/banner', { method: 'DELETE' });
   return response.user ?? response;
 }
 

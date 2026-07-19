@@ -1,6 +1,7 @@
 const { serializePublicTrack } = require('../lib/publicTrack');
 const { userOrIpKey } = require('../lib/rateLimitKeys');
 const { scaledRateLimitMax } = require('../lib/rateLimit');
+const { serializeUserMedia } = require('../lib/profileMedia');
 
 // Best-effort current-user id from the session cookie, without requiring
 // authentication. Public artist routes stay public either way; when a
@@ -87,6 +88,10 @@ async function artistsRoutes(fastify, _options) {
         .filter((g) => Boolean(g) && !FORBIDDEN_GENRES.has(g.toUpperCase()));
 
       const { tracks: _, ...cleanArtist } = artist;
+      cleanArtist.user = await serializeUserMedia(
+        fastify.storage,
+        { id: artist.userId, ...artist.user }
+      );
       const [withFollowState] = await attachIsFollowing(fastify.prisma, cleanArtist, optionalUserId(request));
       return { artist: { ...withFollowState, genres: combinedGenres } };
     } catch (error) {

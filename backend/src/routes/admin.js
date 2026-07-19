@@ -30,6 +30,7 @@ const {
 } = require('../lib/statsAccess');
 const { runStatsIntegrityCheck } = require('../lib/statsIntegrity');
 const { hasLyrics } = require('../lib/lyrics');
+const { serializeUserMedia } = require('../lib/profileMedia');
 
 const execFileAsync = promisify(execFile);
 const USER_ROLES = ['LISTENER', 'ARTIST', 'ADMIN'];
@@ -548,9 +549,10 @@ async function adminRoutes(fastify) {
         include: { actor: { select: { id: true, username: true, displayName: true } } }
       })
     ]);
+    const serializedUser = await serializeUserMedia(fastify.storage, user);
     return {
       user: {
-        ...user,
+        ...serializedUser,
         sessions: { active: user._count.sessions },
         counts: user._count,
         ...summarizeArtistAccess(user),

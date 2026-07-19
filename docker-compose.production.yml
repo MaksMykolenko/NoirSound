@@ -126,6 +126,10 @@ services:
       until mc alias set ns http://minio:9000 ${S3_ACCESS_KEY_ID} ${S3_SECRET_ACCESS_KEY}; do sleep 1; done;
       mc mb --ignore-existing ns/${S3_BUCKET};
       mc anonymous set none ns/${S3_BUCKET};
+      case "$$(mc ilm rule ls ns/${S3_BUCKET} 2>/dev/null)" in
+        *profile-banner-pending/*) ;;
+        *) mc ilm rule add --prefix 'profile-banner-pending/' --expire-days 1 ns/${S3_BUCKET} ;;
+      esac;
       "
 
 volumes:

@@ -1,6 +1,14 @@
 'use strict';
 
 const { optionalAuthenticatedUserId } = require('../lib/optionalAuth');
+const { userOrIpKey } = require('../lib/rateLimitKeys');
+const { scaledRateLimitMax } = require('../lib/rateLimit');
+const {
+  BANNER_MIME_TYPES,
+  MAX_BANNER_BYTES,
+  bannerKeyFromUploadId,
+  legacyBannerKeyFromUploadId
+} = require('../lib/profileMedia');
 
 /**
  * Public, no-auth media routes used by social/OG previews.
@@ -9,6 +17,52 @@ const { optionalAuthenticatedUserId } = require('../lib/optionalAuth');
  * and never expose private storage object keys or presigned MinIO URLs.
  */
 module.exports = async function publicRoutes(fastify) {
+  fastify.get('/profile-banners/:userId/:uploadId', {
+    config: {
+      rateLimit: {
+        max: scaledRateLimitMax(120),
+        timeWindow: '1 minute',
+        keyGenerator: userOrIpKey
+      }
+    }
+  }, async (request, reply) => {
+    const { userId, uploadId } = request.params;
+    const candidateKeys = [
+      bannerKeyFromUploadId(userId, uploadId),
+      legacyBannerKeyFromUploadId(userId, uploadId)
+    ].filter(Boolean);
+    if (candidateKeys.length === 0) return reply.notFound('Profile banner not found.');
+
+    try {
+      const owner = await fastify.prisma.user.findFirst({
+        where: { id: userId, status: 'ACTIVE', bannerUrl: { in: candidateKeys } },
+        select: { id: true, bannerUrl: true }
+      });
+      if (!owner) return reply.notFound('Profile banner not found.');
+      const bannerKey = owner.bannerUrl;
+
+      const metadata = await fastify.storage.getObjectMetadata(bannerKey);
+      const mimeType = String(metadata?.mimeType || '').toLowerCase();
+      if (
+        !metadata?.exists
+        || !BANNER_MIME_TYPES.has(mimeType)
+        || !Number.isFinite(Number(metadata.size))
+        || Number(metadata.size) <= 0
+        || Number(metadata.size) > MAX_BANNER_BYTES
+      ) {
+        return reply.notFound('Profile banner not found.');
+      }
+
+      const stream = await fastify.storage.getObjectStream(bannerKey);
+      reply.header('content-type', mimeType);
+      reply.header('cache-control', 'public, max-age=300');
+      return reply.send(stream);
+    } catch (err) {
+      fastify.log.error({ err, userId }, 'public profile banner: stream failed');
+      return reply.notFound('Profile banner not found.');
+    }
+  });
+
   fastify.get('/playlist-covers/:playlistId', async (request, reply) => {
     const fallback = () => reply.redirect('/og/default-track.png', 302);
     try {
