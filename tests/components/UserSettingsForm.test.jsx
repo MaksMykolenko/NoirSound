@@ -402,7 +402,11 @@ describe('UserSettingsForm', () => {
     expect(profileSource).toContain('min-w-0 xl:col-span-12');
     expect(profileSource).not.toContain('2xl:col-span-9');
     expect(profileSource).toContain('className="flex flex-col pb-10"');
-    expect(profileSource).toMatch(/data-testid="profile-tabs"[\s\S]*?mt-4[\s\S]*?overflow-x-auto/);
+    expect(profileSource).toMatch(/data-testid="profile-tabs"[\s\S]*?mt-4[\s\S]*?overflow-x-auto[\s\S]*?xl:mt-0/);
+    expect(profileSource).toMatch(
+      /data-testid="profile-tab-content"[\s\S]*?'pt-6 xl:pt-4'[\s\S]*?'pt-4 xl:pt-3'/
+    );
+    expect(profileSource).not.toMatch(/data-testid="profile-tab-content"[^>]*(?:min-h|minHeight|height:)/);
     expect(profileSource).not.toContain('sm:ml-auto');
     expect(profileSource).toContain('useScrollableTabs(`${activeTab}:${i18n.resolvedLanguage}`)');
     expect(profileSource).toMatch(

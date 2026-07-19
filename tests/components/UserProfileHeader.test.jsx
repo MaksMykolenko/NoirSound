@@ -65,18 +65,28 @@ describe('UserProfileHeader', () => {
     expect(css).not.toMatch(/\.ns-profile-hero__avatar\s*\{[^}]*bottom:\s*0/);
     expect(css).not.toMatch(/\.ns-profile-hero__avatar\s*\{[^}]*transform:\s*translateY\((?:30%|50%|-50%)\);/);
     expect(css).toMatch(/0 0 0 4px var\(--ns-bg\)/);
-    expect(css).toMatch(/--ns-profile-avatar-size:\s*6\.5rem;\s*--ns-profile-avatar-protrusion:\s*4\.55rem/);
-    expect(css).toMatch(/--ns-profile-avatar-size:\s*7rem;\s*--ns-profile-avatar-protrusion:\s*4\.9rem/);
-    expect(css).toMatch(/--ns-profile-avatar-size:\s*8rem;\s*--ns-profile-avatar-protrusion:\s*5\.6rem/);
-    expect(css).toMatch(/--ns-profile-avatar-size:\s*clamp\(8\.5rem, 9vw, 10rem\);\s*--ns-profile-avatar-protrusion:\s*clamp\(5\.95rem, 6\.3vw, 7rem\)/);
+    expect(css).toMatch(/--ns-profile-avatar-size:\s*6\.5rem;\s*--ns-profile-avatar-protrusion:\s*calc\(var\(--ns-profile-avatar-size\) \* 0\.7\)/);
+    expect(css).toMatch(/@media \(min-width: 640px\)[\s\S]*?--ns-profile-avatar-size:\s*7rem/);
+    expect(css).toMatch(/@media \(min-width: 768px\)[\s\S]*?--ns-profile-avatar-size:\s*8rem/);
+    expect(css).toMatch(/@media \(min-width: 1280px\)[\s\S]*?--ns-profile-avatar-size:\s*8rem/);
+    expect(css).toMatch(/@media \(min-width: 1800px\)[\s\S]*?--ns-profile-avatar-size:\s*8\.5rem/);
+    expect(css).toMatch(/@media \(min-width: 2200px\)[\s\S]*?--ns-profile-avatar-size:\s*9rem/);
     expect(css).toMatch(/\.ns-profile-hero__content\s*\{[^}]*var\(--ns-profile-avatar-protrusion\)/);
     expect(css).toMatch(/@media \(min-width: 1280px\)[\s\S]*?height:\s*clamp\(13\.75rem, 18vw, 16\.875rem\)/);
-    expect(css).toMatch(/@media \(min-width: 1280px\)[\s\S]*?grid-template-columns:\s*minmax\(0, 42rem\) auto/);
-    expect(css).toMatch(/@media \(min-width: 1280px\)[\s\S]*?justify-content:\s*start/);
+    expect(css).toMatch(/@media \(min-width: 1280px\)[\s\S]*?grid-template-columns:\s*minmax\(0, 1fr\) auto/);
+    expect(css).toMatch(/@media \(min-width: 1280px\)[\s\S]*?align-items:\s*start/);
+    expect(css).toMatch(
+      /@media \(min-width: 1280px\)[\s\S]*?padding:\s*calc\(var\(--ns-profile-avatar-protrusion\) \+ var\(--ns-space-4\)\)\s*var\(--ns-profile-inline-padding\)\s*var\(--ns-space-5\)/
+    );
     expect(css).not.toMatch(/\.ns-profile-hero__content\s*\{[^}]*justify-content:\s*space-between/);
     expect(css).toMatch(/\.ns-profile-hero__actions\s*\{[^}]*position:\s*static/);
     expect(css).toMatch(/\.ns-profile-hero__bio\s*\{[^}]*overflow-wrap:\s*anywhere/);
     expect(css).not.toMatch(/\.ns-profile-hero(?:__content)?\s*\{[^}]*min-height:/);
+
+    const headingGroup = screen.getByRole('heading', { name: profile.displayName }).parentElement;
+    const metadata = screen.getByText(/Demo environment|Kyiv/).closest('div.flex');
+    expect(headingGroup).toHaveClass('xl:flex', 'xl:flex-wrap', 'xl:space-y-0');
+    expect(metadata).toHaveClass('pt-1', 'xl:pt-0');
   });
 
   it('keeps real, generated, broken, and loading avatars in the same geometry slot', () => {

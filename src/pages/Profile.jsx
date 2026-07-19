@@ -136,7 +136,7 @@ export default function Profile() {
       <div
         ref={tabsRef}
         data-testid="profile-tabs"
-        className="ns-tabs-scroll ns-tabs-polish sticky top-0 z-10 mt-4 flex shrink-0 scroll-mt-2 gap-1 overflow-x-auto border-b border-zinc-800/60 bg-[var(--ns-bg)]"
+        className="ns-tabs-scroll ns-tabs-polish sticky top-0 z-10 mt-4 flex shrink-0 scroll-mt-2 gap-1 overflow-x-auto border-b border-zinc-800/60 bg-[var(--ns-bg)] xl:mt-0"
         role="tablist"
       >
         {tabs.map((tab) => {
@@ -161,7 +161,10 @@ export default function Profile() {
         })}
       </div>
 
-      <div className={activeTab === 'settings' ? 'pt-6' : 'pt-4'}>
+      <div
+        data-testid="profile-tab-content"
+        className={activeTab === 'settings' ? 'pt-6 xl:pt-4' : 'pt-4 xl:pt-3'}
+      >
         {activeTab === 'overview' && (
           <section className="space-y-4">
             <h2 className="ns-eyebrow px-1">{t('nav.recentlyPlayed')}</h2>

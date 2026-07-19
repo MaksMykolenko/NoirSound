@@ -644,7 +644,7 @@ main {
    30% of the avatar overlaps the banner and 70% sits below its lower edge. */
 .ns-profile-hero {
   --ns-profile-avatar-size: 6.5rem;
-  --ns-profile-avatar-protrusion: 4.55rem;
+  --ns-profile-avatar-protrusion: calc(var(--ns-profile-avatar-size) * 0.7);
   --ns-profile-content-max: 80rem;
   --ns-profile-inline-padding: clamp(1rem, 3vw, 2rem);
   position: relative;
@@ -764,7 +764,6 @@ main {
 @media (min-width: 640px) {
   .ns-profile-hero {
     --ns-profile-avatar-size: 7rem;
-    --ns-profile-avatar-protrusion: 4.9rem;
   }
 
   .ns-profile-hero__banner {
@@ -775,7 +774,6 @@ main {
 @media (min-width: 768px) {
   .ns-profile-hero {
     --ns-profile-avatar-size: 8rem;
-    --ns-profile-avatar-protrusion: 5.6rem;
   }
 
   .ns-profile-hero__banner {
@@ -785,8 +783,7 @@ main {
 
 @media (min-width: 1280px) {
   .ns-profile-hero {
-    --ns-profile-avatar-size: clamp(8.5rem, 9vw, 10rem);
-    --ns-profile-avatar-protrusion: clamp(5.95rem, 6.3vw, 7rem);
+    --ns-profile-avatar-size: 8rem;
   }
 
   .ns-profile-hero__banner {
@@ -794,11 +791,26 @@ main {
   }
 
   .ns-profile-hero__content {
-    grid-template-columns: minmax(0, 42rem) auto;
-    justify-content: start;
-    align-items: end;
-    column-gap: var(--ns-space-8);
-    row-gap: var(--ns-space-6);
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    column-gap: var(--ns-space-6);
+    row-gap: 0;
+    padding:
+      calc(var(--ns-profile-avatar-protrusion) + var(--ns-space-4))
+      var(--ns-profile-inline-padding)
+      var(--ns-space-5);
+  }
+}
+
+@media (min-width: 1800px) {
+  .ns-profile-hero {
+    --ns-profile-avatar-size: 8.5rem;
+  }
+}
+
+@media (min-width: 2200px) {
+  .ns-profile-hero {
+    --ns-profile-avatar-size: 9rem;
   }
 }
 

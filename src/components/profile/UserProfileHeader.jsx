@@ -116,8 +116,8 @@ export default function UserProfileHeader({
       </div>
 
       <div className="ns-profile-hero__content">
-        <div className="ns-profile-hero__identity min-w-0 space-y-2.5">
-          <div className="space-y-1">
+        <div className="ns-profile-hero__identity min-w-0 space-y-2.5 xl:space-y-2">
+          <div className="space-y-1 xl:flex xl:flex-wrap xl:items-center xl:gap-x-3 xl:gap-y-1 xl:space-y-0">
             <h1 className="break-words font-sans text-2xl font-semibold leading-tight tracking-tight text-zinc-100 md:text-3xl">
               {displayName}
             </h1>
@@ -141,7 +141,7 @@ export default function UserProfileHeader({
             {user.bio || t('profile.noBio')}
           </p>
 
-          <div className="flex flex-wrap items-center gap-4 pt-1 font-sans tabular-nums text-ns-label text-zinc-500">
+          <div className="flex flex-wrap items-center gap-4 pt-1 font-sans tabular-nums text-ns-label text-zinc-500 xl:pt-0">
             <span className="flex items-center space-x-1">
               <MapPin size={12} className="text-zinc-600" aria-hidden="true" />
               <span>{user.location || t('profile.locationPrivate')} · {isCreator ? t('profile.creator') : t('profile.listener')}</span>
