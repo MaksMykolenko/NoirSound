@@ -5,6 +5,7 @@ import { cleanup, render, screen, waitFor, within } from '@testing-library/react
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import UserSettingsForm from '../../src/components/profile/UserSettingsForm';
+import UserProfileHeader from '../../src/components/profile/UserProfileHeader';
 import { MAX_PROFILE_BANNER_BYTES } from '../../src/components/profile/profileBannerValidation';
 import i18n from '../../src/i18n';
 import { useThemeStore } from '../../src/store/themeStore';
@@ -14,6 +15,16 @@ import { DEFAULT_THEME } from '../../src/theme/themes';
 
 const originalUserState = useUserStore.getState();
 const originalToastState = useToastStore.getState();
+
+function BannerLifecycleHarness() {
+  const user = useUserStore((state) => state.user);
+  return (
+    <>
+      <UserProfileHeader user={user} viewerUserId={user.id} />
+      <UserSettingsForm />
+    </>
+  );
+}
 
 describe('UserSettingsForm', () => {
   let updateUser;
@@ -164,6 +175,51 @@ describe('UserSettingsForm', () => {
     expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:noirsound-profile-banner');
   });
 
+  it('publishes an activated banner to the profile hero immediately and keeps it after remount', async () => {
+    const user = userEvent.setup();
+    const initialUser = { ...useUserStore.getState().user, bannerUrl: null };
+    const activatedBannerUrl = '/api/public/profile-banners/listener-1/activated-banner.jpg';
+    useUserStore.setState({ user: initialUser });
+    updateUser.mockResolvedValue(initialUser);
+    uploadBanner.mockImplementation(async (file, { onProgress }) => {
+      expect(file).toMatchObject({ name: 'activated-banner.jpg', type: 'image/jpeg' });
+      onProgress(100);
+      const activatedUser = { ...initialUser, bannerUrl: activatedBannerUrl };
+      useUserStore.setState({ user: activatedUser });
+      return activatedUser;
+    });
+
+    const mounted = render(<BannerLifecycleHarness />);
+    expect(screen.getByTestId('profile-banner-fallback')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Upload banner' })).toBeInTheDocument();
+
+    await user.upload(
+      screen.getByLabelText('Choose a profile banner'),
+      new File(['valid-jpeg'], 'activated-banner.jpg', { type: 'image/jpeg' })
+    );
+    expect(screen.getByAltText('Profile banner preview')).toHaveAttribute(
+      'src',
+      'blob:noirsound-profile-banner'
+    );
+    expect(screen.getByRole('button', { name: 'Replace banner' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Remove banner' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: i18n.t('actions.saveChanges') }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('profile-banner-image')).toHaveAttribute('src', activatedBannerUrl);
+    });
+    expect(screen.getByRole('status')).toHaveTextContent('Profile banner updated.');
+    expect(screen.getByRole('button', { name: 'Replace banner' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Remove banner' })).toBeInTheDocument();
+
+    mounted.unmount();
+    render(<BannerLifecycleHarness />);
+    expect(screen.getByTestId('profile-banner-image')).toHaveAttribute('src', activatedBannerUrl);
+    expect(screen.getByRole('button', { name: 'Replace banner' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Remove banner' })).toBeInTheDocument();
+  });
+
   it('rejects unsupported or oversized banner files before staging them', async () => {
     const user = userEvent.setup({ applyAccept: false });
     render(<UserSettingsForm />);
@@ -255,6 +311,8 @@ describe('UserSettingsForm', () => {
       'blob:noirsound-profile-banner'
     );
     expect(screen.getByRole('button', { name: i18n.t('actions.saveChanges') })).toBeEnabled();
+    expect(screen.queryByText('Profile banner updated.')).not.toBeInTheDocument();
+    expect(addToast).not.toHaveBeenCalled();
   });
 
   it('limits biography input to 500 characters and keeps the visual counter quiet', () => {

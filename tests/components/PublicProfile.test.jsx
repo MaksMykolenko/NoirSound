@@ -87,6 +87,28 @@ describe('PublicProfile', () => {
     });
   });
 
+  it('refetches the mounted public-profile cache after the owner banner changes', async () => {
+    const updatedBannerUrl = '/api/public/profile-banners/profile-1/updated-banner.jpg';
+    getPublicProfile
+      .mockResolvedValueOnce(publicProfile)
+      .mockResolvedValueOnce({ ...publicProfile, bannerUrl: updatedBannerUrl });
+    renderPublicProfile();
+
+    expect(await screen.findByTestId('profile-banner-image')).toHaveAttribute(
+      'src',
+      publicProfile.bannerUrl
+    );
+
+    window.dispatchEvent(new CustomEvent('noirsound:user-profile-changed', {
+      detail: { id: publicProfile.id, username: publicProfile.username },
+    }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('profile-banner-image')).toHaveAttribute('src', updatedBannerUrl);
+    });
+    expect(getPublicProfile).toHaveBeenCalledTimes(2);
+  });
+
   it('uses stable user ids for ownership even when the viewer username differs', async () => {
     const user = userEvent.setup();
     useUserStore.setState({

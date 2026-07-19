@@ -113,10 +113,12 @@ describe('public profile API client', () => {
     expect(progress).toHaveBeenNthCalledWith(1, 75);
     expect(progress).toHaveBeenLastCalledWith(100);
     expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[0][0]).toMatch(/\/auth\/me\/banner\/init$/);
     expect(fetchMock.mock.calls[0][1]).toMatchObject({
       method: 'POST',
       body: JSON.stringify({ fileName: 'wide.png', mimeType: 'image/png', fileSize: file.size }),
     });
+    expect(fetchMock.mock.calls[1][0]).toMatch(/\/auth\/me\/banner\/complete$/);
     expect(fetchMock.mock.calls[1][1]).toMatchObject({
       method: 'POST',
       body: JSON.stringify({ uploadId: 'opaque-upload.png' }),
