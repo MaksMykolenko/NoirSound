@@ -4,8 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { getPublicProfile } from '../api/user';
 import { useUserStore } from '../store/userStore';
-import UserProfileHeader from '../components/profile/UserProfileHeader';
-import LoadingState from '../components/ui/LoadingState';
+import UserProfileHeader, { UserProfileHeaderSkeleton } from '../components/profile/UserProfileHeader';
 import PageMeta from '../components/meta/PageMeta';
 
 export default function PublicProfile() {
@@ -41,10 +40,9 @@ export default function PublicProfile() {
 
   if (profileQuery.isPending) {
     return (
-      <div className="pb-10" role="status" aria-label={t('profile.loadingPublicProfile')}>
+      <div className="pb-10">
         <PageMeta title={`${t('nav.profile')} · NoirSound`} canonical={canonicalUrl} />
-        <span className="sr-only">{t('profile.loadingPublicProfile')}</span>
-        <LoadingState type="list" count={2} />
+        <UserProfileHeaderSkeleton label={t('profile.loadingPublicProfile')} />
       </div>
     );
   }

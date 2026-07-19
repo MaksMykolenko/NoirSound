@@ -18,24 +18,32 @@ export default function useScrollableTabs(activeKey) {
       container.dataset.atStart = String(container.scrollLeft <= EDGE_TOLERANCE);
       container.dataset.atEnd = String(container.scrollLeft >= maxScroll - EDGE_TOLERANCE);
     };
-    const queueUpdate = () => {
+    const queueOverflowUpdate = () => {
       cancelAnimationFrame(animationFrame);
       animationFrame = requestAnimationFrame(updateOverflowState);
     };
+    const queueResizeUpdate = () => {
+      cancelAnimationFrame(animationFrame);
+      animationFrame = requestAnimationFrame(() => {
+        const selected = container.querySelector('[aria-selected="true"], [aria-current="step"]');
+        selected?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+        updateOverflowState();
+      });
+    };
 
     updateOverflowState();
-    container.addEventListener('scroll', queueUpdate, { passive: true });
-    window.addEventListener('resize', queueUpdate);
+    container.addEventListener('scroll', queueOverflowUpdate, { passive: true });
+    window.addEventListener('resize', queueResizeUpdate);
     const resizeObserver = typeof ResizeObserver === 'function'
-      ? new ResizeObserver(queueUpdate)
+      ? new ResizeObserver(queueResizeUpdate)
       : null;
     resizeObserver?.observe(container);
 
     return () => {
       cancelAnimationFrame(animationFrame);
       resizeObserver?.disconnect();
-      container.removeEventListener('scroll', queueUpdate);
-      window.removeEventListener('resize', queueUpdate);
+      container.removeEventListener('scroll', queueOverflowUpdate);
+      window.removeEventListener('resize', queueResizeUpdate);
     };
   }, [container]);
 

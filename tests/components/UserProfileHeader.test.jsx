@@ -4,7 +4,7 @@ import path from 'node:path';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import UserProfileHeader from '../../src/components/profile/UserProfileHeader';
+import UserProfileHeader, { UserProfileHeaderSkeleton } from '../../src/components/profile/UserProfileHeader';
 import i18n from '../../src/i18n';
 import { useToastStore } from '../../src/store/toastStore';
 
@@ -42,7 +42,7 @@ describe('UserProfileHeader', () => {
     useToastStore.setState(originalToastState, true);
   });
 
-  it('renders a decorative banner and a semantic exact-half avatar overlap for the owner', () => {
+  it('keeps 30% of the avatar inside the banner and reserves its 70% lower protrusion', () => {
     render(
       <UserProfileHeader
         user={profile}
@@ -53,15 +53,48 @@ describe('UserProfileHeader', () => {
     );
 
     expect(screen.getByTestId('profile-banner-image')).toHaveAttribute('alt', '');
+    expect(screen.getByTestId('profile-banner')).toHaveAttribute('data-profile-banner');
     expect(screen.getByTestId('user-profile-header')).toHaveAttribute('data-owner', 'true');
     expect(screen.getByTestId('profile-avatar-overlap')).toHaveClass('ns-profile-hero__avatar');
+    expect(screen.getByTestId('profile-avatar-overlap')).toHaveAttribute('data-profile-avatar');
     expect(screen.getByText(/First line/)).toHaveClass('whitespace-pre-line');
     expect(screen.getByRole('button', { name: i18n.t('profile.editProfile') })).toBeInTheDocument();
 
     const css = readFileSync(path.join(process.cwd(), 'src/index.css'), 'utf8');
-    expect(css).toMatch(/\.ns-profile-hero__avatar\s*\{[\s\S]*?bottom:\s*0;[\s\S]*?transform:\s*translateY\(50%\);/);
+    expect(css).toMatch(/\.ns-profile-hero__avatar\s*\{[^}]*top:\s*100%;[^}]*transform:\s*translateY\(-30%\);/);
+    expect(css).not.toMatch(/\.ns-profile-hero__avatar\s*\{[^}]*bottom:\s*0/);
+    expect(css).not.toMatch(/\.ns-profile-hero__avatar\s*\{[^}]*transform:\s*translateY\((?:30%|50%|-50%)\);/);
     expect(css).toMatch(/0 0 0 4px var\(--ns-bg\)/);
-    expect(css).toMatch(/\.ns-profile-hero__content\s*\{[\s\S]*?var\(--ns-profile-avatar-size\) \/ 2/);
+    expect(css).toMatch(/--ns-profile-avatar-size:\s*6\.5rem;\s*--ns-profile-avatar-protrusion:\s*4\.55rem/);
+    expect(css).toMatch(/--ns-profile-avatar-size:\s*7rem;\s*--ns-profile-avatar-protrusion:\s*4\.9rem/);
+    expect(css).toMatch(/--ns-profile-avatar-size:\s*8rem;\s*--ns-profile-avatar-protrusion:\s*5\.6rem/);
+    expect(css).toMatch(/--ns-profile-avatar-size:\s*clamp\(8\.5rem, 9vw, 10rem\);\s*--ns-profile-avatar-protrusion:\s*clamp\(5\.95rem, 6\.3vw, 7rem\)/);
+    expect(css).toMatch(/\.ns-profile-hero__content\s*\{[^}]*var\(--ns-profile-avatar-protrusion\)/);
+    expect(css).toMatch(/@media \(min-width: 1280px\)[\s\S]*?height:\s*clamp\(13\.75rem, 18vw, 16\.875rem\)/);
+    expect(css).toMatch(/@media \(min-width: 1280px\)[\s\S]*?grid-template-columns:\s*minmax\(0, 42rem\) auto/);
+    expect(css).toMatch(/@media \(min-width: 1280px\)[\s\S]*?justify-content:\s*start/);
+    expect(css).not.toMatch(/\.ns-profile-hero__content\s*\{[^}]*justify-content:\s*space-between/);
+    expect(css).toMatch(/\.ns-profile-hero__actions\s*\{[^}]*position:\s*static/);
+    expect(css).toMatch(/\.ns-profile-hero__bio\s*\{[^}]*overflow-wrap:\s*anywhere/);
+    expect(css).not.toMatch(/\.ns-profile-hero(?:__content)?\s*\{[^}]*min-height:/);
+  });
+
+  it('keeps real, generated, broken, and loading avatars in the same geometry slot', () => {
+    const { rerender } = render(<UserProfileHeader user={{ ...profile, avatarUrl: '/avatar.jpg' }} />);
+    const realSlotClass = screen.getByTestId('profile-avatar-overlap').className;
+    expect(screen.getByRole('img', { name: profile.displayName })).toBeInTheDocument();
+
+    rerender(<UserProfileHeader user={{ ...profile, avatarUrl: null }} />);
+    expect(screen.getByTestId('profile-avatar-overlap')).toHaveClass('ns-profile-hero__avatar');
+    expect(screen.getByTestId('profile-avatar-overlap').className).toBe(realSlotClass);
+    expect(screen.getByRole('img', { name: `Generated avatar for ${profile.displayName}` })).toBeInTheDocument();
+
+    rerender(<UserProfileHeaderSkeleton label="Loading profile" />);
+    expect(screen.getByTestId('profile-avatar-skeleton')).toHaveClass(
+      'ns-profile-hero__avatar',
+      'ns-profile-hero__skeleton-surface'
+    );
+    expect(screen.getByTestId('profile-banner-skeleton')).toHaveClass('ns-profile-hero__banner');
   });
 
   it('hides owner controls for a different stable user id and uses the semantic fallback', () => {
@@ -74,6 +107,7 @@ describe('UserProfileHeader', () => {
     );
 
     expect(screen.getByTestId('profile-banner-fallback')).toBeInTheDocument();
+    expect(screen.getByTestId('profile-banner')).toHaveAttribute('data-profile-banner');
     expect(screen.queryByRole('button', { name: i18n.t('profile.editProfile') })).not.toBeInTheDocument();
     expect(screen.getByRole('button', {
       name: i18n.t('profile.copyProfileLink', { name: profile.displayName }),

@@ -11,6 +11,39 @@ function isRenderableBannerUrl(value) {
   return /^https?:\/\//i.test(url) || /^\/(?!\/)/.test(url) || /^blob:/i.test(url);
 }
 
+export function UserProfileHeaderSkeleton({ label }) {
+  return (
+    <section
+      className="ns-profile-hero"
+      data-testid="user-profile-header-skeleton"
+      role="status"
+      aria-busy="true"
+      aria-label={label}
+    >
+      <span className="sr-only">{label}</span>
+      <div className="ns-profile-hero__banner-wrap" aria-hidden="true">
+        <div
+          className="ns-profile-hero__banner ns-profile-hero__skeleton-surface"
+          data-profile-banner
+          data-testid="profile-banner-skeleton"
+        />
+        <div
+          className="ns-profile-hero__avatar ns-profile-hero__skeleton-surface"
+          data-profile-avatar
+          data-testid="profile-avatar-skeleton"
+        />
+      </div>
+      <div className="ns-profile-hero__content" aria-hidden="true">
+        <div className="ns-profile-hero__identity ns-profile-hero__skeleton-stack">
+          <span className="ns-profile-hero__skeleton-line ns-profile-hero__skeleton-line--title" />
+          <span className="ns-profile-hero__skeleton-line ns-profile-hero__skeleton-line--meta" />
+          <span className="ns-profile-hero__skeleton-line ns-profile-hero__skeleton-line--bio" />
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default function UserProfileHeader({
   user,
   viewerUserId = null,
@@ -44,7 +77,11 @@ export default function UserProfileHeader({
   return (
     <section className="ns-profile-hero" data-testid="user-profile-header" data-owner={isOwner || undefined}>
       <div className="ns-profile-hero__banner-wrap">
-        <div className="ns-profile-hero__banner" data-testid="profile-banner">
+        <div
+          className="ns-profile-hero__banner"
+          data-profile-banner
+          data-testid="profile-banner"
+        >
           {showBannerImage ? (
             <img
               src={bannerUrl}
@@ -63,7 +100,11 @@ export default function UserProfileHeader({
           )}
         </div>
 
-        <div className="ns-profile-hero__avatar" data-testid="profile-avatar-overlap">
+        <div
+          className="ns-profile-hero__avatar"
+          data-profile-avatar
+          data-testid="profile-avatar-overlap"
+        >
           <FallbackAvatar
             src={user.avatarUrl}
             name={displayName}
@@ -75,7 +116,7 @@ export default function UserProfileHeader({
       </div>
 
       <div className="ns-profile-hero__content">
-        <div className="min-w-0 flex-1 space-y-2.5">
+        <div className="ns-profile-hero__identity min-w-0 space-y-2.5">
           <div className="space-y-1">
             <h1 className="break-words font-sans text-2xl font-semibold leading-tight tracking-tight text-zinc-100 md:text-3xl">
               {displayName}
@@ -96,7 +137,7 @@ export default function UserProfileHeader({
             </div>
           </div>
 
-          <p className="max-w-2xl whitespace-pre-line break-words text-sm leading-relaxed text-zinc-300 md:text-base">
+          <p className="ns-profile-hero__bio max-w-2xl whitespace-pre-line text-sm leading-relaxed text-zinc-300 md:text-base">
             {user.bio || t('profile.noBio')}
           </p>
 
@@ -112,7 +153,7 @@ export default function UserProfileHeader({
           </div>
         </div>
 
-        <div className="flex shrink-0 items-center gap-3.5 pt-2 md:pt-0">
+        <div className="ns-profile-hero__actions flex shrink-0 items-center gap-3.5">
           {isOwner && onEditClick && (
             <button
               type="button"

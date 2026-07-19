@@ -22,7 +22,7 @@ import ArtistCard from '../components/artists/ArtistCard';
 import PlaylistCard from '../components/playlists/PlaylistCard';
 import ListeningStats from '../components/profile/ListeningStats';
 import UserActivityItem from '../components/profile/UserActivityItem';
-import UserProfileHeader from '../components/profile/UserProfileHeader';
+import UserProfileHeader, { UserProfileHeaderSkeleton } from '../components/profile/UserProfileHeader';
 import UserSettingsForm from '../components/profile/UserSettingsForm';
 import TrackListItem from '../components/tracks/TrackListItem';
 import EmptyState from '../components/ui/EmptyState';
@@ -32,7 +32,7 @@ import PageMeta from '../components/meta/PageMeta';
 import useScrollableTabs from '../hooks/useScrollableTabs';
 
 export default function Profile() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -49,7 +49,7 @@ export default function Profile() {
   const activeTab = tabs.some((tab) => tab.id === searchParams.get('tab'))
     ? searchParams.get('tab')
     : 'overview';
-  const tabsRef = useScrollableTabs(activeTab);
+  const tabsRef = useScrollableTabs(`${activeTab}:${i18n.resolvedLanguage}`);
   const demoMode = isMockMode();
 
   const {
@@ -104,7 +104,9 @@ export default function Profile() {
     />
   );
 
-  if (!authHydrated) return <>{pageMeta}<LoadingState type="list" count={4} /></>;
+  if (!authHydrated) {
+    return <>{pageMeta}<UserProfileHeaderSkeleton label={t('profile.loadingPublicProfile')} /></>;
+  }
   if (authError) return <>{pageMeta}<ErrorState title="Session unavailable" message={authError} /></>;
   if (!user) {
     return (
@@ -122,7 +124,7 @@ export default function Profile() {
   }
 
   return (
-    <div className={activeTab === 'settings' ? 'flex flex-col pb-10' : 'ns-page-stack pb-10'}>
+    <div className="flex flex-col pb-10">
       {pageMeta}
       <UserProfileHeader
         user={user}
@@ -134,7 +136,7 @@ export default function Profile() {
       <div
         ref={tabsRef}
         data-testid="profile-tabs"
-        className={`ns-tabs-scroll ns-tabs-polish sticky top-0 z-10 flex shrink-0 scroll-mt-2 gap-1 overflow-x-auto border-b border-zinc-800/60 bg-[var(--ns-bg)] ${activeTab === 'settings' ? 'mt-5' : ''}`}
+        className="ns-tabs-scroll ns-tabs-polish sticky top-0 z-10 mt-4 flex shrink-0 scroll-mt-2 gap-1 overflow-x-auto border-b border-zinc-800/60 bg-[var(--ns-bg)]"
         role="tablist"
       >
         {tabs.map((tab) => {
@@ -147,7 +149,7 @@ export default function Profile() {
               role="tab"
               aria-selected={active}
               aria-current={active ? 'page' : undefined}
-              className={`ns-tab flex shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2.5 font-sans text-ns-label font-medium transition-colors sm:gap-2 sm:px-5 sm:py-3 ${tab.id === 'settings' ? 'ml-2 sm:ml-auto' : ''} ${
+              className={`ns-tab flex shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2.5 font-sans text-ns-label font-medium transition-colors sm:gap-2 sm:px-5 sm:py-3 ${tab.id === 'settings' ? 'ml-2' : ''} ${
                 active ? 'border-brand-red text-rose-300' : 'border-transparent text-zinc-500 hover:text-zinc-300'
               }`}
             >
@@ -159,7 +161,7 @@ export default function Profile() {
         })}
       </div>
 
-      <div className={activeTab === 'settings' ? 'pt-6' : 'pt-2'}>
+      <div className={activeTab === 'settings' ? 'pt-6' : 'pt-4'}>
         {activeTab === 'overview' && (
           <section className="space-y-4">
             <h2 className="ns-eyebrow px-1">{t('nav.recentlyPlayed')}</h2>
@@ -201,7 +203,7 @@ export default function Profile() {
           aria-hidden={activeTab !== 'settings'}
           className={`${activeTab === 'settings' ? 'grid' : 'hidden'} ns-layout-page ns-layout-page--form w-full grid-cols-1 gap-6 xl:grid-cols-12`}
         >
-          <div className="min-w-0 xl:col-span-12 2xl:col-span-9">
+          <div className="min-w-0 xl:col-span-12">
             <UserSettingsForm />
           </div>
         </div>

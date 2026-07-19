@@ -29,9 +29,11 @@ describe('useScrollableTabs', () => {
   const originalScrollWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'scrollWidth');
   const originalClientWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientWidth');
   const scrolledElements = [];
+  let resizeObserverCallback;
 
   beforeEach(() => {
     scrolledElements.length = 0;
+    resizeObserverCallback = null;
     Object.defineProperty(Element.prototype, 'scrollIntoView', {
       configurable: true,
       value: vi.fn(function scrollIntoView(options) {
@@ -52,6 +54,10 @@ describe('useScrollableTabs', () => {
     });
     vi.stubGlobal('cancelAnimationFrame', vi.fn());
     vi.stubGlobal('ResizeObserver', class ResizeObserver {
+      constructor(callback) {
+        resizeObserverCallback = callback;
+      }
+
       observe() {}
       disconnect() {}
     });
@@ -107,5 +113,25 @@ describe('useScrollableTabs', () => {
       options: { block: 'nearest', inline: 'nearest' },
     });
     expect(screen.getByTestId('tabs')).toHaveAttribute('data-overflowing', 'true');
+  });
+
+  it('keeps the selected tab visible when the viewport or tablist size changes', () => {
+    render(<Harness activeKey="second" />);
+    scrolledElements.length = 0;
+
+    fireEvent(window, new Event('resize'));
+
+    expect(scrolledElements.at(-1)).toMatchObject({
+      element: screen.getByRole('button', { name: 'Second' }),
+      options: { block: 'nearest', inline: 'nearest' },
+    });
+
+    scrolledElements.length = 0;
+    act(() => resizeObserverCallback?.([]));
+
+    expect(scrolledElements.at(-1)).toMatchObject({
+      element: screen.getByRole('button', { name: 'Second' }),
+      options: { block: 'nearest', inline: 'nearest' },
+    });
   });
 });

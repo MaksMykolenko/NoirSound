@@ -171,6 +171,8 @@ describe('UserSettingsForm', () => {
 
     await user.upload(input, new File(['svg'], 'banner.svg', { type: 'image/svg+xml' }));
     expect(screen.getByRole('alert')).toHaveTextContent('Choose a JPEG, PNG, or WebP image.');
+    expect(input).toHaveAttribute('aria-invalid', 'true');
+    expect(input).toHaveAttribute('aria-errormessage', 'profile-banner-file-error');
 
     const oversized = new File(['large'], 'banner.webp', { type: 'image/webp' });
     Object.defineProperty(oversized, 'size', { value: MAX_PROFILE_BANNER_BYTES + 1 });
@@ -266,13 +268,85 @@ describe('UserSettingsForm', () => {
     expect(counter.closest('[aria-live]')).toBeNull();
   });
 
+  it('uses a bounded responsive preview and a complete desktop control rail', () => {
+    render(<UserSettingsForm />);
+
+    const layout = screen.getByTestId('profile-banner-settings-grid');
+    const preview = screen.getByTestId('profile-banner-preview');
+    const previewColumn = preview.parentElement;
+    const controls = screen.getByTestId('profile-banner-controls');
+
+    expect(layout).toHaveClass('grid-cols-1', 'lg:grid-cols-12');
+    expect(previewColumn).toHaveClass('lg:col-span-7', 'xl:col-span-8');
+    expect(preview).toHaveClass('aspect-[3/1]', 'max-h-[260px]', 'max-w-[780px]');
+    expect(controls).toHaveClass('lg:col-span-5', 'xl:col-span-4');
+    expect(within(controls).getByRole('heading', { name: 'Profile banner' })).toBeInTheDocument();
+    expect(within(controls).getByText(/JPEG, PNG, or WebP up to 8 MB/)).toBeInTheDocument();
+    expect(within(controls).getByRole('button', { name: 'Replace banner' })).toBeInTheDocument();
+    expect(within(controls).getByRole('button', { name: 'Remove banner' })).toBeInTheDocument();
+  });
+
+  it('keeps the empty preview semantic and reserves no unavailable Remove action', () => {
+    useUserStore.setState({
+      user: { ...useUserStore.getState().user, bannerUrl: null },
+    });
+    render(<UserSettingsForm />);
+
+    const preview = screen.getByTestId('profile-banner-preview');
+    const controls = screen.getByTestId('profile-banner-controls');
+    const fallback = within(preview).getByRole('img', { name: 'No profile banner selected' });
+
+    expect(fallback).toHaveClass('bg-[var(--ns-surface-elevated)]');
+    expect(fallback.className).not.toContain('gradient');
+    expect(within(controls).getByRole('button', { name: 'Upload banner' })).toBeInTheDocument();
+    expect(within(controls).queryByRole('button', { name: 'Remove banner' })).not.toBeInTheDocument();
+  });
+
+  it('places identity and biography before Appearance while keeping one final Save action', () => {
+    render(<UserSettingsForm />);
+
+    const biography = screen.getByLabelText(i18n.t('profile.biography'));
+    const themeSelector = screen.getByTestId('theme-selector');
+    const save = screen.getByRole('button', { name: i18n.t('actions.saveChanges') });
+
+    expect(biography.compareDocumentPosition(themeSelector) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(themeSelector.compareDocumentPosition(save) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getAllByRole('button', { name: i18n.t('actions.saveChanges') })).toHaveLength(1);
+  });
+
+  it('preserves staged biography and banner drafts across a parent rerender', async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(<UserSettingsForm />);
+    const biography = screen.getByLabelText(i18n.t('profile.biography'));
+
+    await user.clear(biography);
+    await user.type(biography, 'Unsaved biography draft');
+    await user.upload(
+      screen.getByLabelText('Choose a profile banner'),
+      new File(['valid'], 'unsaved.jpg', { type: 'image/jpeg' })
+    );
+    rerender(<UserSettingsForm />);
+
+    expect(screen.getByLabelText(i18n.t('profile.biography'))).toHaveValue('Unsaved biography draft');
+    expect(screen.getByAltText('Profile banner preview')).toHaveAttribute(
+      'src',
+      'blob:noirsound-profile-banner'
+    );
+    expect(uploadBanner).not.toHaveBeenCalled();
+  });
+
   it('keeps the settings route on the wide shell with tabs sticky inside the main scroller', () => {
     const profileSource = readFileSync(path.join(process.cwd(), 'src/pages/Profile.jsx'), 'utf8');
 
     expect(profileSource).toMatch(/data-testid="profile-tabs"[\s\S]*?sticky top-0[\s\S]*?scroll-mt-2/);
     expect(profileSource).toMatch(/data-testid="profile-settings-layout"[\s\S]*?xl:grid-cols-12/);
     expect(profileSource).toContain('ns-layout-page--form');
-    expect(profileSource).toContain('2xl:col-span-9');
+    expect(profileSource).toContain('min-w-0 xl:col-span-12');
+    expect(profileSource).not.toContain('2xl:col-span-9');
+    expect(profileSource).toContain('className="flex flex-col pb-10"');
+    expect(profileSource).toMatch(/data-testid="profile-tabs"[\s\S]*?mt-4[\s\S]*?overflow-x-auto/);
+    expect(profileSource).not.toContain('sm:ml-auto');
+    expect(profileSource).toContain('useScrollableTabs(`${activeTab}:${i18n.resolvedLanguage}`)');
     expect(profileSource).toMatch(
       /Keep the settings form mounted[\s\S]*?activeTab === 'settings'[\s\S]*?'hidden'[\s\S]*?<UserSettingsForm \/>/
     );

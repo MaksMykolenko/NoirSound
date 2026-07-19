@@ -138,8 +138,6 @@ export default function UserSettingsForm() {
         }}
       />
 
-      <ThemeSelector className="border-b border-zinc-800/70 pb-5" />
-
       {/* Inputs grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         <div className="space-y-1.5">
@@ -254,6 +252,10 @@ export default function UserSettingsForm() {
       <div className="border-y border-zinc-800/60 py-4">
         <LanguageSwitcher />
       </div>
+
+      {/* Appearance is intentionally after profile identity and language so the
+          full theme gallery never pushes biography editing out of reach. */}
+      <ThemeSelector className="border-b border-zinc-800/70 pb-5" />
 
       {/* Compact footer action stays clear of the fixed player and mobile navigation. */}
       <div className="flex justify-end border-t border-zinc-800/60 pt-4">

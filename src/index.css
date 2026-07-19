@@ -640,10 +640,12 @@ main {
   gap: var(--ns-space-4);
 }
 
-/* User profile hero: the banner owns a stable layout slot while the avatar
-   crosses its lower edge by exactly half of the avatar's responsive size. */
+/* User profile hero: real and fallback media share stable layout slots while
+   30% of the avatar overlaps the banner and 70% sits below its lower edge. */
 .ns-profile-hero {
-  --ns-profile-avatar-size: 7rem;
+  --ns-profile-avatar-size: 6.5rem;
+  --ns-profile-avatar-protrusion: 4.55rem;
+  --ns-profile-content-max: 80rem;
   --ns-profile-inline-padding: clamp(1rem, 3vw, 2rem);
   position: relative;
   overflow: visible;
@@ -659,7 +661,7 @@ main {
 
 .ns-profile-hero__banner {
   position: relative;
-  height: 10rem;
+  height: clamp(9.0625rem, 40vw, 11rem);
   overflow: hidden;
   border-radius: var(--ns-radius-card) var(--ns-radius-card) var(--ns-radius-sm) var(--ns-radius-sm);
   background: var(--ns-surface-elevated);
@@ -678,20 +680,21 @@ main {
 }
 
 .ns-profile-hero__banner-fallback {
-  background:
-    radial-gradient(circle at 20% 26%, color-mix(in srgb, var(--ns-accent) 20%, transparent), transparent 42%),
-    linear-gradient(135deg, var(--ns-surface-elevated), var(--ns-bg-elevated));
+  background: color-mix(in srgb, var(--ns-surface-elevated) 88%, var(--ns-accent) 12%);
 }
 
 .ns-profile-hero__avatar {
   position: absolute;
-  left: var(--ns-profile-inline-padding);
-  bottom: 0;
+  left: max(
+    var(--ns-profile-inline-padding),
+    calc((100% - var(--ns-profile-content-max)) / 2 + var(--ns-profile-inline-padding))
+  );
+  top: 100%;
   z-index: 2;
   width: var(--ns-profile-avatar-size);
   height: var(--ns-profile-avatar-size);
   overflow: hidden;
-  transform: translateY(50%);
+  transform: translateY(-30%);
   border-radius: 9999px;
   background: var(--ns-card-solid);
   box-shadow:
@@ -700,20 +703,68 @@ main {
 }
 
 .ns-profile-hero__content {
-  display: flex;
+  box-sizing: border-box;
+  display: grid;
+  width: 100%;
+  max-width: var(--ns-profile-content-max);
   min-width: 0;
-  flex-direction: column;
+  margin-inline: auto;
+  grid-template-columns: minmax(0, 1fr);
   align-items: flex-start;
   gap: var(--ns-space-5);
   padding:
-    calc((var(--ns-profile-avatar-size) / 2) + var(--ns-space-5))
+    calc(var(--ns-profile-avatar-protrusion) + var(--ns-space-5))
     var(--ns-profile-inline-padding)
-    var(--ns-space-5);
+    var(--ns-space-6);
+}
+
+.ns-profile-hero__identity {
+  min-width: 0;
+}
+
+.ns-profile-hero__bio {
+  overflow-wrap: anywhere;
+}
+
+.ns-profile-hero__actions {
+  position: static;
+}
+
+.ns-profile-hero__skeleton-surface,
+.ns-profile-hero__skeleton-line {
+  background: color-mix(in srgb, var(--ns-surface-elevated) 82%, var(--ns-text-muted) 18%);
+}
+
+.ns-profile-hero__skeleton-stack {
+  display: flex;
+  width: min(100%, 32rem);
+  flex-direction: column;
+  gap: var(--ns-space-3);
+}
+
+.ns-profile-hero__skeleton-line {
+  display: block;
+  height: 0.75rem;
+  border-radius: 9999px;
+}
+
+.ns-profile-hero__skeleton-line--title {
+  width: min(72%, 18rem);
+  height: 2rem;
+}
+
+.ns-profile-hero__skeleton-line--meta {
+  width: min(48%, 12rem);
+}
+
+.ns-profile-hero__skeleton-line--bio {
+  width: min(88%, 28rem);
 }
 
 @media (min-width: 640px) {
   .ns-profile-hero {
-    --ns-profile-avatar-size: 8rem;
+    --ns-profile-avatar-size: 7rem;
+    --ns-profile-avatar-protrusion: 4.9rem;
   }
 
   .ns-profile-hero__banner {
@@ -722,23 +773,32 @@ main {
 }
 
 @media (min-width: 768px) {
-  .ns-profile-hero__banner {
-    height: 12.5rem;
+  .ns-profile-hero {
+    --ns-profile-avatar-size: 8rem;
+    --ns-profile-avatar-protrusion: 5.6rem;
   }
 
-  .ns-profile-hero__content {
-    flex-direction: row;
-    justify-content: space-between;
+  .ns-profile-hero__banner {
+    height: clamp(11.875rem, 22vw, 14.375rem);
   }
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 1280px) {
   .ns-profile-hero {
-    --ns-profile-avatar-size: clamp(9rem, 10vw, 11rem);
+    --ns-profile-avatar-size: clamp(8.5rem, 9vw, 10rem);
+    --ns-profile-avatar-protrusion: clamp(5.95rem, 6.3vw, 7rem);
   }
 
   .ns-profile-hero__banner {
-    height: clamp(13.75rem, 22vw, 20rem);
+    height: clamp(13.75rem, 18vw, 16.875rem);
+  }
+
+  .ns-profile-hero__content {
+    grid-template-columns: minmax(0, 42rem) auto;
+    justify-content: start;
+    align-items: end;
+    column-gap: var(--ns-space-8);
+    row-gap: var(--ns-space-6);
   }
 }
 
