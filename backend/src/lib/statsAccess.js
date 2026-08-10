@@ -121,10 +121,15 @@ async function recalculateAllArtistMonthlyListeners(prisma, now = new Date()) {
  * needed. Intended for admin/on-demand use and for the repair script.
  */
 async function recalculateAllTrackPlayCounts(prisma) {
-  const [tracks, grouped] = await Promise.all([
-    prisma.track.findMany({ select: { id: true, plays: true } }),
-    prisma.playEvent.groupBy({ by: ['trackId'], where: { qualified: true }, _count: { _all: true } })
-  ]);
+  // The Prisma pg adapter can reuse one client for these calls. Keep them
+  // sequential so a seed/recalculation never issues client.query() while the
+  // same client is still executing the previous query.
+  const tracks = await prisma.track.findMany({ select: { id: true, plays: true } });
+  const grouped = await prisma.playEvent.groupBy({
+    by: ['trackId'],
+    where: { qualified: true },
+    _count: { _all: true }
+  });
   const actualByTrack = new Map(grouped.map((group) => [group.trackId, group._count._all]));
   const results = [];
   for (const track of tracks) {

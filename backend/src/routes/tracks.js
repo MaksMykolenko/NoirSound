@@ -279,7 +279,11 @@ async function tracksRoutes(fastify, _options) {
             data: { likes: { increment: 1 } }
           });
         }
-        return tx.track.count({ where: { id: request.params.id } });
+        // Resolve the final query before the interactive transaction callback
+        // returns. Handing Prisma's thenable straight back lets the pg adapter
+        // begin transaction cleanup while the query is still in flight.
+        const trackCount = await tx.track.count({ where: { id: request.params.id } });
+        return trackCount;
       });
       if (trackExists === 0) {
         return reply.status(404).send({ error: 'Track not found' });

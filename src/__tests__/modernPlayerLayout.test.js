@@ -68,6 +68,13 @@ describe('modern player layout contract', () => {
     expect(discover).toMatch(/data-testid="genre-quick-tabs"[\s\S]*?overflow-x-auto/);
   });
 
+  it('keeps every batch-upload step label isolated in a scroll-snap item', () => {
+    const batchUpload = source('src/pages/upload/BatchUploadPage.jsx');
+    expect(batchUpload).toMatch(/<ol className="[^"]*min-w-max[^"]*snap-x/);
+    expect(batchUpload).toMatch(/<li key=\{key\} className="shrink-0 snap-start"/);
+    expect(batchUpload).toMatch(/whitespace-nowrap/);
+  });
+
   it('limits narrow track rows to play and one context action without dropping menu access', () => {
     const trackListItem = source('src/components/tracks/TrackListItem.jsx');
     const playlistRows = source('src/components/playlists/PlaylistTrackTable.jsx');

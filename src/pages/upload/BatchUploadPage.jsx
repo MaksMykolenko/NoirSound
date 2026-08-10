@@ -351,16 +351,16 @@ export default function BatchUploadPage() {
         )}
       </header>
 
-      <nav ref={stepsRef} aria-label={t('batchUpload.steps')} className="ns-tabs-scroll ns-tabs-polish overflow-x-auto border-y border-zinc-800">
-        <ol className="flex min-w-max">
+      <nav ref={stepsRef} data-testid="batch-upload-steps" aria-label={t('batchUpload.steps')} className="ns-tabs-scroll ns-tabs-polish overflow-x-auto border-y border-zinc-800 scroll-smooth">
+        <ol className="flex min-w-max snap-x snap-mandatory">
           {STEP_KEYS.map((key, index) => (
-            <li key={key}>
+            <li key={key} className="shrink-0 snap-start">
               <button
                 type="button"
                 disabled={!batch && index > 0}
                 onClick={() => setStep(index)}
                 aria-current={step === index ? 'step' : undefined}
-                className={`flex min-h-12 items-center gap-2 border-b-2 px-3 font-sans text-ns-meta font-medium sm:px-4 ${
+                className={`flex min-h-12 shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-3 font-sans text-ns-meta font-medium sm:px-4 ${
                   step === index ? 'border-brand-red text-zinc-100' : index < step ? 'border-transparent text-emerald-300' : 'border-transparent text-zinc-500'
                 } disabled:opacity-35`}
               >

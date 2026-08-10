@@ -106,8 +106,8 @@ test.describe('Theme system behavior', () => {
     await page.goto('/');
 
     await expect(page.getByTestId('home-hero-discover')).toHaveCSS(
-      'background-image',
-      /rgb\(30, 215, 96\)/
+      'background-color',
+      'rgb(30, 215, 96)'
     );
     await expect(page.getByTestId('player-accent-indicator')).toHaveCSS(
       'color',
@@ -124,8 +124,8 @@ test.describe('Theme system behavior', () => {
     const submitButton = page.locator('form button[type="submit"]');
     await expect(submitButton).toHaveCount(1);
     await expect(submitButton).toHaveCSS(
-      'background-image',
-      /rgb\(255, 106, 0\)/
+      'background-color',
+      'rgb(255, 106, 0)'
     );
   });
 

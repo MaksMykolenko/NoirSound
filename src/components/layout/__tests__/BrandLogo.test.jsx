@@ -28,6 +28,13 @@ describe('BrandLogo', () => {
     expect(screen.getByRole('link', { name: 'NoirSound home' })).toHaveAttribute('href', '/');
   });
 
+  it('uses theme-aware wordmark text instead of a hard-coded white color', () => {
+    const { container } = renderBrandLogo();
+    const wordmark = container.querySelector('.text-zinc-100');
+    expect(wordmark).toHaveTextContent('NoirSound');
+    expect(wordmark).not.toHaveClass('text-white');
+  });
+
   it('animates all equalizer bars only while a track is playing', () => {
     usePlayerStore.setState({ currentTrack: demoTrack, isPlaying: true });
     const { container, rerender } = renderBrandLogo();
