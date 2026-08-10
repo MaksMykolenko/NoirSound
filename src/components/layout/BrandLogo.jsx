@@ -31,7 +31,7 @@ export default function BrandLogo({ size = 'md', showSubtitle = true, onClick })
 
       <div className="min-w-0">
         <div className="flex items-center gap-1.5">
-          <span className={`${isCompact ? 'text-lg' : 'text-xl'} truncate font-sans font-bold tracking-tight text-white`}>
+          <span data-testid="brand-wordmark" className={`${isCompact ? 'text-lg' : 'text-xl'} truncate font-sans font-bold tracking-tight text-zinc-100`}>
             NoirSound
           </span>
           {isPlaying && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand-red" aria-hidden="true" />}

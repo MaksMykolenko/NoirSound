@@ -10,7 +10,7 @@ export default function ToastContainer() {
       {toasts.map((toast) => (
         <div
           key={toast.id}
-          className="pointer-events-auto flex w-full animate-fade-in items-start gap-3 rounded-lg border border-[var(--ns-border)] bg-[var(--ns-card-solid)] p-4 shadow-2xl sm:w-[340px]"
+          className="pointer-events-none flex w-full animate-fade-in items-start gap-3 rounded-lg border border-[var(--ns-border)] bg-[var(--ns-card-solid)] p-4 shadow-2xl sm:w-[340px]"
           role={toast.type === 'error' ? 'alert' : 'status'}
         >
           <div className="shrink-0 mt-0.5">
@@ -23,7 +23,7 @@ export default function ToastContainer() {
           </div>
           <button
             onClick={() => removeToast(toast.id)}
-            className="shrink-0 ns-icon-button !min-h-9 !min-w-9 text-zinc-500"
+            className="pointer-events-auto shrink-0 ns-icon-button !min-h-9 !min-w-9 text-zinc-500"
             aria-label="Dismiss notification"
           >
             <X size={14} />

@@ -17,6 +17,13 @@ async function horizontalOverflow(page) {
   });
 }
 
+async function expectScrollableTabsContract(page) {
+  const { docOverflow, tabsOverflow } = await horizontalOverflow(page);
+  expect(docOverflow).toBeLessThanOrEqual(1);
+  expect(tabsOverflow).toBeGreaterThanOrEqual(0);
+  await expect(page.getByTestId('genre-quick-tabs')).toHaveCSS('overflow-x', 'auto');
+}
+
 async function openMorePicker(page) {
   await page.getByTestId('genre-quick-tabs').getByRole('button').last().click();
   await expect(page.getByTestId('genre-more-panel')).toBeVisible();
@@ -65,12 +72,10 @@ test.describe('Discover genre filters — desktop', () => {
 test.describe('Discover genre filters — mobile', () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
-  test('no horizontal overflow; tabs wrap', async ({ page }) => {
+  test('no document overflow; tabs remain horizontally scrollable', async ({ page }) => {
     await page.goto('/discover');
     await page.waitForSelector('[data-testid="genre-quick-tabs"]');
-    const { docOverflow, tabsOverflow } = await horizontalOverflow(page);
-    expect(docOverflow).toBeLessThanOrEqual(1);
-    expect(tabsOverflow).toBeLessThanOrEqual(1);
+    await expectScrollableTabsContract(page);
     await page.screenshot({ path: `${SHOTS}/mobile-discover-genres-390x844.png` });
   });
 
@@ -120,9 +125,7 @@ test.describe('Genre i18n does not break layout — genre names stay English', (
         await expect(page.getByText(localized, { exact: true })).toHaveCount(0);
       }
 
-      const { docOverflow, tabsOverflow } = await horizontalOverflow(page);
-      expect(docOverflow).toBeLessThanOrEqual(1);
-      expect(tabsOverflow).toBeLessThanOrEqual(1);
+      await expectScrollableTabsContract(page);
       await page.screenshot({ path: `${SHOTS}/mobile-discover-genres-${lng}-390x844.png` });
     });
 

@@ -1,6 +1,7 @@
 const path = require('path');
 const { spawnSync } = require('child_process');
 const { Client } = require('pg');
+const { readdirSync } = require('fs');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
 function run(command, args, env) {
@@ -13,6 +14,18 @@ function run(command, args, env) {
     process.exit(result.status || 1);
   }
 }
+
+function resetAndSeed(prismaBin, env) {
+  run(prismaBin, ['migrate', 'reset', '--force'], env);
+  run(process.execPath, ['prisma/seed.js', 'demo'], env);
+}
+
+const DATABASE_TEST_FILES = [
+  'tests/artistAccess.test.js',
+  'tests/endpoints.test.js',
+  'tests/seedStrategy.test.js',
+  'tests/statsQA.test.js',
+];
 
 async function ensureTestDatabase(testUrl) {
   const parsed = new URL(testUrl);
@@ -58,9 +71,25 @@ async function main() {
   const vitestBin = path.join(__dirname, '..', 'node_modules', '.bin', 'vitest');
 
   run(prismaBin, ['generate'], env);
-  run(prismaBin, ['migrate', 'reset', '--force'], env);
-  run(process.execPath, ['prisma/seed.js', 'demo'], env);
-  run(vitestBin, ['run'], env);
+
+  const allTestFiles = readdirSync(path.join(__dirname))
+    .filter((file) => file.endsWith('.test.js'))
+    .map((file) => `tests/${file}`)
+    .sort();
+  const unitTestFiles = allTestFiles.filter((file) => !DATABASE_TEST_FILES.includes(file));
+
+  // Unit/mocked suites do not touch the shared PostgreSQL fixture and can run
+  // together, but the cleanup-script safety contracts still inspect the
+  // database in dry-run mode. Establish the schema and fixture before that
+  // group so a brand-new CI service database behaves like a warmed local one.
+  // Each real integration file then gets its own reset + demo seed so a
+  // destructive fixture or leaked role/status can never affect another file.
+  resetAndSeed(prismaBin, env);
+  run(vitestBin, ['run', ...unitTestFiles], env);
+  for (const testFile of DATABASE_TEST_FILES) {
+    resetAndSeed(prismaBin, env);
+    run(vitestBin, ['run', testFile], env);
+  }
 }
 
 main().catch((error) => {

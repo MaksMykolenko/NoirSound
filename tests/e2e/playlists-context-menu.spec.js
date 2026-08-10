@@ -24,7 +24,7 @@ async function createFixture(page, { withTrack = false } = {}) {
     const tracksResponse = await page.request.get(`${API_BASE}/tracks`);
     expect(tracksResponse.ok()).toBeTruthy();
     const body = await tracksResponse.json();
-    const track = (body.data || body.tracks || body)[0];
+    const track = (body.data || body.tracks || body).find((candidate) => candidate.isStreamable);
     expect(track?.id).toBeTruthy();
     const added = await page.request.post(`${API_BASE}/playlists/${playlist.id}/tracks`, {
       data: { trackId: track.id },
@@ -46,7 +46,7 @@ test.describe('Playlists and custom context menu', () => {
     const editedName = `Edited Playlist ${suffix}`;
 
     await page.goto('/library?tab=playlists');
-    await page.getByRole('button', { name: 'New playlist' }).click();
+    await page.locator('main header').getByRole('button', { name: 'New playlist' }).click();
     const createDialog = page.getByRole('dialog', { name: 'New Playlist' });
     await createDialog.getByLabel('Playlist name').fill(initialName);
     await createDialog.getByText('Public playlist').click();
@@ -71,16 +71,18 @@ test.describe('Playlists and custom context menu', () => {
     const playlist = await createFixture(page, { withTrack: true });
     await page.goto(`/playlist/${playlist.id}`);
 
-    const track = page.locator('[data-track-id]').filter({ visible: true });
+    const track = page.locator('table tr[data-track-id]');
     await expect(track).toHaveCount(1);
-    await track.getByRole('link').click({ button: 'right' });
+    await track.click({ button: 'right' });
     await expect(page.getByRole('menuitem', { name: 'Play next' })).toBeVisible();
     await expect(page.getByRole('menuitem', { name: 'Add to playlist' })).toBeVisible();
     await page.keyboard.press('Escape');
+    await expect(track).toBeFocused();
 
     const hero = page.getByTestId('playlist-hero');
     await hero.focus();
-    await page.keyboard.press('Shift+F10');
+    await expect(hero).toBeFocused();
+    await hero.press('Shift+F10');
     await expect(page.getByRole('menuitem', { name: 'Edit playlist' })).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(hero).toBeFocused();

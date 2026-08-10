@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { FileAudio, ImagePlus, Save, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import GenrePicker from '../../ui/GenrePicker';
@@ -67,7 +68,7 @@ export default function BatchTrackSettingsDrawer({ item, open, onClose, onSave, 
     }, coverFile);
   };
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-[var(--ns-z-overlay)]" role="presentation">
       <button type="button" className="absolute inset-0 bg-black/75" aria-label={t('actions.close')} onClick={onClose} />
       <section
@@ -201,6 +202,7 @@ export default function BatchTrackSettingsDrawer({ item, open, onClose, onSave, 
           </button>
         </footer>
       </section>
-    </div>
+    </div>,
+    document.body
   );
 }

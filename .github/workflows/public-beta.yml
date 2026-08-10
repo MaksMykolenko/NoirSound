@@ -175,7 +175,7 @@ jobs:
       REDIS_URL: redis://localhost:6379
       JWT_SECRET: ci_e2e_secret_change_me_0123456789abcd
       COOKIE_SECRET: ci_e2e_cookie_secret_abcdef0123456789
-      FRONTEND_ORIGIN: http://localhost:5173
+      FRONTEND_ORIGIN: http://localhost:4173
       S3_ENDPOINT: http://localhost:9000
       S3_PUBLIC_ENDPOINT: http://localhost:9000
       S3_BUCKET: noirsound-audio
@@ -184,6 +184,8 @@ jobs:
       VITE_API_BASE_URL: http://localhost:3000/api
       VITE_USE_MOCK_API: 'false'
       RATE_LIMIT_MULTIPLIER: '20'
+      E2E_PORT: '4173'
+      E2E_BASE_URL: http://localhost:4173
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -203,7 +205,7 @@ jobs:
         run: npm ci && (cd backend && npm ci)
       - name: Migrate and seed
         working-directory: backend
-        run: npx prisma generate && npx prisma migrate deploy && node prisma/seed.js minimal
+        run: npx prisma generate && npx prisma migrate deploy && node prisma/seed.js demo
       - name: Start backend and worker
         working-directory: backend
         run: |
