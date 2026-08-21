@@ -252,6 +252,27 @@ impl WebSocketManager {
         let msg_type = json.get("type").and_then(|t| t.as_str()).unwrap_or("");
 
         match msg_type {
+            "connection.ready" => {
+                log::info!("Connection ready from server: {}", text);
+                let mut s = state.write().await;
+                s.status = ConnectionStatus::Connected;
+                s.server_state = "Connected".to_string();
+                if let Some(dev_id) = json.get("deviceId").and_then(|d| d.as_str()) {
+                    s.device_id = Some(dev_id.to_string());
+                }
+                if let Some(settings_json) = json.get("settings") {
+                    if let Some(enabled) = settings_json.get("enabled").and_then(|v| v.as_bool()) {
+                        s.settings.enabled = enabled;
+                    }
+                    if let Some(cover) = settings_json.get("showCover").and_then(|v| v.as_bool()) {
+                        s.settings.show_cover = cover;
+                    }
+                    if let Some(timer) = settings_json.get("showTimer").and_then(|v| v.as_bool()) {
+                        s.settings.show_timer = timer;
+                    }
+                }
+                let _ = app_handle.emit("connection_status", s.to_dto());
+            }
             "ping" => {
                 let _ = write_sink
                     .send(Message::Text("{\"type\":\"pong\"}".to_string()))
@@ -278,9 +299,12 @@ impl WebSocketManager {
                         }
 
                         let mut s = state.write().await;
+                        s.status = ConnectionStatus::Connected;
+                        s.server_state = "Connected".to_string();
                         s.current_track = Some(track.clone());
                         s.last_update = Some(chrono::Utc::now().to_rfc3339());
                         let _ = app_handle.emit("presence_update", Some(track));
+                        let _ = app_handle.emit("connection_status", s.to_dto());
                     }
                 }
             }

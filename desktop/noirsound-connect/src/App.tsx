@@ -89,9 +89,18 @@ export default function App() {
       }));
     }).then((fn) => { unlistenPresence = fn; });
 
-    listen<{ status: ConnectionStatus; isDiscordAvailable: boolean }>('connection_status', (event) => {
+    listen<{
+      status: ConnectionStatus;
+      isDiscordAvailable: boolean;
+      track?: TrackMetadata | null;
+      diagnostics?: DiagnosticsData;
+      settings?: AppSettings;
+    }>('connection_status', (event) => {
       setStatus(event.payload.status);
       setIsDiscordAvailable(event.payload.isDiscordAvailable);
+      if (event.payload.diagnostics) setDiagnostics(event.payload.diagnostics);
+      if (event.payload.settings) setSettings(event.payload.settings);
+      if (event.payload.track !== undefined) setCurrentTrack(event.payload.track);
     }).then((fn) => { unlistenStatus = fn; });
 
     return () => {
