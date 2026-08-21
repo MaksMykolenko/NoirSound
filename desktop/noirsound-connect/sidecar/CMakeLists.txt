@@ -9,6 +9,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 if(APPLE)
     set(CMAKE_MACOSX_RPATH ON)
     set(CMAKE_INSTALL_RPATH "@executable_path;@executable_path/../Frameworks;@loader_path;@loader_path/../Frameworks")
+    set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 endif()
 
 # Source files
@@ -22,8 +23,8 @@ add_executable(noirsound-discord-bridge ${SOURCES})
 
 # Check for SDK in environment or standard directories
 set(SEARCH_PATHS
-    $ENV{DISCORD_SOCIAL_SDK_ROOT}
-    $ENV{DISCORD_PARTNER_SDK_ROOT}
+    "$ENV{DISCORD_SOCIAL_SDK_ROOT}"
+    "$ENV{DISCORD_PARTNER_SDK_ROOT}"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../../vendor/discord-social-sdk"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../../../vendor/discord-social-sdk"
     "$ENV{HOME}/Downloads/discord-social-sdk"
@@ -35,8 +36,8 @@ set(SDK_ROOT_DIR "")
 
 foreach(PATH_CANDIDATE ${SEARCH_PATHS})
     if(PATH_CANDIDATE AND EXISTS "${PATH_CANDIDATE}")
-        if(EXISTS "${PATH_CANDIDATE}/include/discord.h" OR
-           EXISTS "${PATH_CANDIDATE}/include/discordpp.h" OR
+        if(EXISTS "${PATH_CANDIDATE}/include/discordpp.h" OR
+           EXISTS "${PATH_CANDIDATE}/include/discord.h" OR
            EXISTS "${PATH_CANDIDATE}/discord_partner_sdk.framework" OR
            EXISTS "${PATH_CANDIDATE}/Headers/discordpp.h")
             set(SDK_FOUND TRUE)
@@ -50,34 +51,60 @@ if(SDK_FOUND)
     message(STATUS "Found Discord Social/Partner SDK at: ${SDK_ROOT_DIR}")
     target_compile_definitions(noirsound-discord-bridge PRIVATE DISCORD_SOCIAL_SDK_AVAILABLE)
 
-    # 1. Check for macOS Framework packaging (discord_partner_sdk.framework)
-    if(APPLE AND EXISTS "${SDK_ROOT_DIR}/discord_partner_sdk.framework")
-        target_include_directories(noirsound-discord-bridge PRIVATE "${SDK_ROOT_DIR}/discord_partner_sdk.framework/Headers")
-        target_link_libraries(noirsound-discord-bridge PRIVATE "-F${SDK_ROOT_DIR} -framework discord_partner_sdk")
-        message(STATUS "Discord adapter: REAL (macOS Framework: discord_partner_sdk.framework)")
-    # 2. Check for traditional include/ and lib/ packaging
-    elseif(EXISTS "${SDK_ROOT_DIR}/include")
+    if(EXISTS "${SDK_ROOT_DIR}/include")
         target_include_directories(noirsound-discord-bridge PRIVATE "${SDK_ROOT_DIR}/include")
-        find_library(DISCORD_SDK_LIB
-            NAMES discord_game_sdk discord_social_sdk discord_partner_sdk
-            PATHS "${SDK_ROOT_DIR}/lib/arm64" "${SDK_ROOT_DIR}/lib/x86_64" "${SDK_ROOT_DIR}/lib"
+    endif()
+
+    if(APPLE)
+        # 1. Search for macOS Framework
+        find_library(DISCORD_FRAMEWORK
+            NAMES discord_partner_sdk DiscordPartnerSDK
+            PATHS "${SDK_ROOT_DIR}"
             NO_DEFAULT_PATH
         )
-        if(DISCORD_SDK_LIB)
-            target_link_libraries(noirsound-discord-bridge PRIVATE ${DISCORD_SDK_LIB})
-            message(STATUS "Discord adapter: REAL (Dynamic library: ${DISCORD_SDK_LIB})")
+
+        # 2. Search for dynamic library
+        find_library(DISCORD_DYLIB
+            NAMES discord_partner_sdk discord_game_sdk discord_social_sdk
+            PATHS "${SDK_ROOT_DIR}/lib/arm64" "${SDK_ROOT_DIR}/lib" "${SDK_ROOT_DIR}/lib/release"
+            NO_DEFAULT_PATH
+        )
+
+        if(DISCORD_FRAMEWORK)
+            target_include_directories(noirsound-discord-bridge PRIVATE "${DISCORD_FRAMEWORK}/Headers")
+            target_link_libraries(noirsound-discord-bridge PRIVATE "${DISCORD_FRAMEWORK}")
+            message(STATUS "Discord adapter: REAL (macOS Framework: ${DISCORD_FRAMEWORK})")
+        elseif(DISCORD_DYLIB)
+            target_link_libraries(noirsound-discord-bridge PRIVATE "${DISCORD_DYLIB}")
+            message(STATUS "Discord adapter: REAL (Dynamic library: ${DISCORD_DYLIB})")
         else()
             message(STATUS "Discord adapter: REAL (Headers only)")
         endif()
     else()
-        target_include_directories(noirsound-discord-bridge PRIVATE "${SDK_ROOT_DIR}")
-        message(STATUS "Discord adapter: REAL (Headers linked)")
+        find_library(DISCORD_LIB
+            NAMES discord_partner_sdk discord_game_sdk discord_social_sdk
+            PATHS "${SDK_ROOT_DIR}/lib/arm64" "${SDK_ROOT_DIR}/lib/x86_64" "${SDK_ROOT_DIR}/lib"
+            NO_DEFAULT_PATH
+        )
+        if(DISCORD_LIB)
+            target_link_libraries(noirsound-discord-bridge PRIVATE "${DISCORD_LIB}")
+            message(STATUS "Discord adapter: REAL (Library: ${DISCORD_LIB})")
+        endif()
     endif()
 else()
     if(DEFINED ENV{NOIRSOUND_DISCORD_REQUIRE_REAL_SDK} AND "$ENV{NOIRSOUND_DISCORD_REQUIRE_REAL_SDK}" STREQUAL "1")
         message(FATAL_ERROR "NOIRSOUND_DISCORD_REQUIRE_REAL_SDK is enabled but Discord Social SDK was not found! Real SDK is strictly required for production builds.")
     endif()
     message(STATUS "Discord adapter: MOCK (MockDiscordPresenceAdapter)")
+endif()
+
+if(APPLE AND DISCORD_FRAMEWORK)
+    add_custom_command(TARGET noirsound-discord-bridge POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${SDK_ROOT_DIR}/discord_partner_sdk.framework"
+            "$<TARGET_FILE_DIR:noirsound-discord-bridge>/discord_partner_sdk.framework"
+        COMMENT "Copying discord_partner_sdk.framework to build directory for direct execution"
+    )
 endif()
 
 # Installation target

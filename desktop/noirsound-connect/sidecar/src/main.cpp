@@ -105,6 +105,12 @@ void ProcessCommand(const std::string& line, noirsound::DiscordPresenceAdapter* 
         SendJson("{\"type\":\"pong\",\"timestamp\":" +
                  std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(
                      std::chrono::system_clock::now().time_since_epoch()).count()) + "}");
+    } else if (command == "init") {
+        std::string app_id = ExtractStringField(line, "application_id");
+        if (app_id.empty()) app_id = ExtractStringField(line, "appId");
+        if (app_id.empty()) app_id = "1540281435296895066";
+        adapter->Initialize(app_id);
+        SendJson("{\"type\":\"initialized\",\"appId\":\"" + EscapeJson(app_id) + "\"}");
     } else if (command == "get_status") {
         adapter->RunCallbacks();
         SendJson("{\"type\":\"discord_available\",\"value\":" +
@@ -112,13 +118,18 @@ void ProcessCommand(const std::string& line, noirsound::DiscordPresenceAdapter* 
     } else if (command == "set_presence") {
         noirsound::PresenceData data;
         data.track_id = ExtractStringField(line, "trackId");
+        if (data.track_id.empty()) data.track_id = ExtractStringField(line, "track_id");
         data.title = ExtractStringField(line, "title");
         data.artist = ExtractStringField(line, "artist");
         data.album = ExtractStringField(line, "album");
         data.cover_url = ExtractStringField(line, "coverUrl");
+        if (data.cover_url.empty()) data.cover_url = ExtractStringField(line, "cover_url");
         data.share_url = ExtractStringField(line, "shareUrl");
+        if (data.share_url.empty()) data.share_url = ExtractStringField(line, "share_url");
         data.start_timestamp = ExtractInt64Field(line, "startTimestamp", 0);
+        if (data.start_timestamp == 0) data.start_timestamp = ExtractInt64Field(line, "start_timestamp", 0);
         data.end_timestamp = ExtractInt64Field(line, "endTimestamp", 0);
+        if (data.end_timestamp == 0) data.end_timestamp = ExtractInt64Field(line, "end_timestamp", 0);
         data.show_cover = ExtractBoolField(line, "showCover", true);
         data.show_timer = ExtractBoolField(line, "showTimer", true);
 

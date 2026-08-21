@@ -4,7 +4,7 @@
 #include <memory>
 
 #ifdef DISCORD_SOCIAL_SDK_AVAILABLE
-#include "discord.h"
+#include "discordpp.h"
 #endif
 
 namespace noirsound {

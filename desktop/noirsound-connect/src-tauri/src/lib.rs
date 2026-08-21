@@ -167,11 +167,6 @@ pub fn run() {
     let app_state: SharedState = Arc::new(RwLock::new(AppState::new(api_base_url)));
     let sidecar_manager = Arc::new(SidecarManager::new());
 
-    let sidecar_init = sidecar_manager.clone();
-    tokio::spawn(async move {
-        let _ = sidecar_init.start().await;
-    });
-
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_autostart::init(
@@ -184,6 +179,12 @@ pub fn run() {
             move |app| {
                 let app_handle = app.handle().clone();
 
+                // Start sidecar Discord bridge process asynchronously
+                let sidecar_init = sidecar_clone.clone();
+                tauri::async_runtime::spawn(async move {
+                    let _ = sidecar_init.start().await;
+                });
+
                 // Setup system tray / menu bar
                 if let Err(e) = tray::setup_tray(&app_handle, state_clone.clone(), sidecar_clone.clone()) {
                     log::warn!("Failed to setup system tray: {}", e);
@@ -192,7 +193,7 @@ pub fn run() {
                 // Check if already paired with credentials in Keychain
                 let has_refresh = get_refresh_token().is_some();
                 if has_refresh {
-                    let mut s = tokio::runtime::Handle::current().block_on(state_clone.write());
+                    let mut s = tauri::async_runtime::block_on(state_clone.write());
                     s.status = ConnectionStatus::Connecting;
                     s.device_id = get_device_id();
                 }

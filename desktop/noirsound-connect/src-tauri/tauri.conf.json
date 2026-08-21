@@ -31,7 +31,8 @@
     "active": true,
     "targets": "all",
     "resources": [
-      "../sidecar/build/noirsound-discord-bridge"
+      "../sidecar/build/noirsound-discord-bridge",
+      "../../../vendor/discord-social-sdk/discord_partner_sdk.framework"
     ],
     "icon": [
       "icons/32x32.png",
@@ -41,7 +42,9 @@
       "icons/icon.ico"
     ],
     "macOS": {
-      "frameworks": [],
+      "frameworks": [
+        "../../../vendor/discord-social-sdk/discord_partner_sdk.framework"
+      ],
       "minimumSystemVersion": "11.0"
     }
   }

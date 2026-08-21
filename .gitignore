@@ -55,11 +55,5 @@ desktop/**/build/
 desktop/**/node_modules/
 
 # Discord Social SDK binaries and archives
-vendor/discord-social-sdk/**/*.dylib
-vendor/discord-social-sdk/**/*.so
-vendor/discord-social-sdk/**/*.dll
-vendor/discord-social-sdk/**/*.lib
-vendor/discord-social-sdk/**/*.zip
-vendor/discord-social-sdk/**/*.tar.gz
-vendor/discord-social-sdk/**/*.h
+vendor/
 !vendor/discord-social-sdk/README.md
