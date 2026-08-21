@@ -7,6 +7,7 @@ import LanguageSwitcher from '../ui/LanguageSwitcher';
 import ThemeSelector from '../settings/ThemeSelector';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import ProfileBannerEditor from './ProfileBannerEditor';
+import DesktopConnectSettings from '../settings/DesktopConnectSettings';
 
 export const PROFILE_BIO_MAX_LENGTH = 500;
 
@@ -252,6 +253,9 @@ export default function UserSettingsForm() {
       <div className="border-y border-zinc-800/60 py-4">
         <LanguageSwitcher />
       </div>
+
+      {/* Desktop Connect & Discord Rich Presence */}
+      <DesktopConnectSettings className="border-b border-zinc-800/70 pb-5" />
 
       {/* Appearance is intentionally after profile identity and language so the
           full theme gallery never pushes biography editing out of reach. */}

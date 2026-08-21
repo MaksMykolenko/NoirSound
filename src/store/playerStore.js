@@ -3,6 +3,7 @@ import { API_BASE_URL, useMockApi } from '../api/client';
 import { getRecentlyPlayed } from '../api/stats';
 import { setTrackLiked } from '../api/tracks';
 import { useUserStore } from './userStore';
+import connectPresenceService from '../services/noirsoundConnect';
 
 function reportPlaybackError(message) {
   if (typeof window !== 'undefined') {
@@ -313,6 +314,7 @@ export const usePlayerStore = create((set, get) => {
       try {
         await audio.play();
         set({ isPlaying: true });
+        connectPresenceService.notifyPlay(track, 0);
         // Do NOT report a play or touch recently-played here -- starting
         // playback is not a listen. Both happen only once the qualifying
         // threshold is actually crossed (see trackQualifyingProgress),
@@ -337,8 +339,11 @@ export const usePlayerStore = create((set, get) => {
       if (isPlaying) {
         audio.pause();
         set({ isPlaying: false });
+        connectPresenceService.notifyPause(currentTrack, audio.currentTime);
       } else {
-        audio.play().catch(err => {
+        audio.play().then(() => {
+          connectPresenceService.notifyResume(currentTrack, audio.currentTime);
+        }).catch(err => {
           console.error('Toggle play failed.', err);
           const message = err.message || 'Audio playback failed.';
           set({
@@ -351,14 +356,24 @@ export const usePlayerStore = create((set, get) => {
     },
 
     pause: () => {
-      if (audio) audio.pause();
+      const { currentTrack } = get();
+      if (audio) {
+        audio.pause();
+        if (currentTrack) {
+          connectPresenceService.notifyPause(currentTrack, audio.currentTime);
+        }
+      }
       set({ isPlaying: false });
     },
 
     seek: (time) => {
+      const { currentTrack } = get();
       if (audio) {
         audio.currentTime = time;
         set({ progress: time });
+        if (currentTrack) {
+          connectPresenceService.notifySeek(currentTrack, time);
+        }
       }
     },
 
@@ -384,6 +399,7 @@ export const usePlayerStore = create((set, get) => {
           // No more tracks: stop and reset
           if (audio) audio.pause();
           set({ isPlaying: false, progress: 0 });
+          connectPresenceService.notifyEnded();
           return;
         }
       }

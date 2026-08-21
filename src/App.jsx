@@ -37,6 +37,7 @@ const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Profile = lazy(() => import('./pages/Profile'));
 const PublicProfile = lazy(() => import('./pages/PublicProfile'));
 const PlaylistPage = lazy(() => import('./pages/PlaylistPage'));
+const ConnectDesktop = lazy(() => import('./pages/ConnectDesktop'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 const LegalPage = lazy(() => import('./pages/LegalPage'));
 const AdminLayout = lazy(() => import('./pages/admin/AdminLayout'));
@@ -153,6 +154,7 @@ export default function App() {
               <Route path="/profile" element={<Profile />} />
               <Route path="/profile/:username" element={<PublicProfile />} />
               <Route path="/playlist/:id" element={<PlaylistPage />} />
+              <Route path="/connect/desktop" element={<ConnectDesktop />} />
               <Route path="/admin" element={<AdminLayout />}>
                 <Route index element={<Navigate to="/admin/overview" replace />} />
                 <Route path="overview" element={<AdminOverview />} />

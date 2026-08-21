@@ -1,0 +1,29 @@
+[package]
+name = "noirsound-connect"
+version = "0.1.0"
+description = "NoirSound Connect desktop companion app for Discord Rich Presence"
+authors = ["NoirSound Team"]
+edition = "2021"
+
+[lib]
+name = "noirsound_connect_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.0", features = [] }
+
+[dependencies]
+tauri = { version = "2.2", features = ["tray-icon"] }
+tauri-plugin-autostart = "2"
+tauri-plugin-shell = "2"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.38", features = ["full"] }
+tokio-tungstenite = { version = "0.23", features = ["native-tls"] }
+futures-util = "0.3"
+reqwest = { version = "0.12", features = ["json"] }
+keyring = "2.1"
+open = "5.1"
+chrono = "0.4"
+log = "0.4"
+env_logger = "0.11"

@@ -152,6 +152,9 @@ function buildServer(options = {}) {
     });
   }
 
+  // WebSocket support for real-time presence relay
+  fastify.register(require('@fastify/websocket'));
+
   // Register routes
   fastify.register(require('./routes/auth'), { prefix: '/api/auth' });
   fastify.register(require('./routes/googleAuth'), {
@@ -168,6 +171,10 @@ function buildServer(options = {}) {
   fastify.register(require('./routes/reports'), { prefix: '/api/reports' });
   fastify.register(require('./routes/admin'), { prefix: '/api/admin' });
   fastify.register(require('./routes/stats'), { prefix: '/api' });
+  fastify.register(require('./routes/desktopConnect'), {
+    prefix: '/api/desktop-connect',
+    presenceManager: options.presenceManager
+  });
   // Public, no-auth media (OG cover previews — never exposes private keys).
   fastify.register(require('./routes/public'), { prefix: '/api/public' });
   // Server-rendered metadata for crawler-visible routes (/, /track/:id,
