@@ -6,6 +6,8 @@
 #include <thread>
 #include <atomic>
 #include <csignal>
+#include <poll.h>
+#include <unistd.h>
 #include "discord_adapter.hpp"
 #include "mock_discord_adapter.hpp"
 #include "discord_social_sdk_adapter.hpp"
@@ -17,7 +19,7 @@ void SignalHandler(int /*signal*/) {
     g_running = false;
 }
 
-// Simple and safe string helpers
+// Safe string escaping for JSON
 std::string EscapeJson(const std::string& s) {
     std::ostringstream o;
     for (char c : s) {
@@ -96,6 +98,51 @@ void SendJson(const std::string& json) {
     std::cout.flush();
 }
 
+void ProcessCommand(const std::string& line, noirsound::DiscordPresenceAdapter* adapter) {
+    std::string command = ExtractStringField(line, "command");
+
+    if (command == "ping") {
+        SendJson("{\"type\":\"pong\",\"timestamp\":" +
+                 std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(
+                     std::chrono::system_clock::now().time_since_epoch()).count()) + "}");
+    } else if (command == "get_status") {
+        adapter->RunCallbacks();
+        SendJson("{\"type\":\"discord_available\",\"value\":" +
+                 std::string(adapter->IsDiscordAvailable() ? "true" : "false") + "}");
+    } else if (command == "set_presence") {
+        noirsound::PresenceData data;
+        data.track_id = ExtractStringField(line, "trackId");
+        data.title = ExtractStringField(line, "title");
+        data.artist = ExtractStringField(line, "artist");
+        data.album = ExtractStringField(line, "album");
+        data.cover_url = ExtractStringField(line, "coverUrl");
+        data.share_url = ExtractStringField(line, "shareUrl");
+        data.start_timestamp = ExtractInt64Field(line, "startTimestamp", 0);
+        data.end_timestamp = ExtractInt64Field(line, "endTimestamp", 0);
+        data.show_cover = ExtractBoolField(line, "showCover", true);
+        data.show_timer = ExtractBoolField(line, "showTimer", true);
+
+        bool success = adapter->UpdatePresence(data);
+        adapter->RunCallbacks();
+
+        if (success) {
+            SendJson("{\"type\":\"presence_updated\",\"trackId\":\"" + EscapeJson(data.track_id) + "\"}");
+        } else {
+            SendJson("{\"type\":\"error\",\"code\":\"UPDATE_FAILED\",\"message\":\"Failed to update Discord presence.\"}");
+        }
+    } else if (command == "clear_presence") {
+        adapter->ClearPresence();
+        adapter->RunCallbacks();
+        SendJson("{\"type\":\"presence_cleared\"}");
+    } else if (command == "shutdown") {
+        adapter->Shutdown();
+        SendJson("{\"type\":\"shutdown_acknowledged\"}");
+        g_running = false;
+    } else {
+        SendJson("{\"type\":\"error\",\"code\":\"UNKNOWN_COMMAND\",\"message\":\"Command not recognized.\"}");
+    }
+}
+
 } // namespace
 
 int main(int argc, char* argv[]) {
@@ -133,52 +180,45 @@ int main(int argc, char* argv[]) {
              EscapeJson(adapter->GetAdapterName()) + "\",\"discord_available\":" +
              (init_ok && adapter->IsDiscordAvailable() ? "true" : "false") + "}");
 
-    std::string line;
-    while (g_running && std::getline(std::cin, line)) {
-        if (line.empty()) continue;
+    std::string line_buffer;
 
-        std::string command = ExtractStringField(line, "command");
+    while (g_running) {
+        struct pollfd fds[1];
+        fds[0].fd = STDIN_FILENO;
+        fds[0].events = POLLIN;
 
-        if (command == "ping") {
-            SendJson("{\"type\":\"pong\",\"timestamp\":" +
-                     std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(
-                         std::chrono::system_clock::now().time_since_epoch()).count()) + "}");
-        } else if (command == "get_status") {
-            adapter->RunCallbacks();
-            SendJson("{\"type\":\"discord_available\",\"value\":" +
-                     std::string(adapter->IsDiscordAvailable() ? "true" : "false") + "}");
-        } else if (command == "set_presence") {
-            noirsound::PresenceData data;
-            data.track_id = ExtractStringField(line, "trackId");
-            data.title = ExtractStringField(line, "title");
-            data.artist = ExtractStringField(line, "artist");
-            data.album = ExtractStringField(line, "album");
-            data.cover_url = ExtractStringField(line, "coverUrl");
-            data.share_url = ExtractStringField(line, "shareUrl");
-            data.start_timestamp = ExtractInt64Field(line, "startTimestamp", 0);
-            data.end_timestamp = ExtractInt64Field(line, "endTimestamp", 0);
-            data.show_cover = ExtractBoolField(line, "showCover", true);
-            data.show_timer = ExtractBoolField(line, "showTimer", true);
+        int ret = poll(fds, 1, 50); // 50ms tick for responsive callbacks
 
-            bool success = adapter->UpdatePresence(data);
-            adapter->RunCallbacks();
-
-            if (success) {
-                SendJson("{\"type\":\"presence_updated\",\"trackId\":\"" + EscapeJson(data.track_id) + "\"}");
-            } else {
-                SendJson("{\"type\":\"error\",\"code\":\"UPDATE_FAILED\",\"message\":\"Failed to update Discord presence.\"}");
+        if (ret > 0 && (fds[0].revents & POLLIN)) {
+            char buf[1024];
+            ssize_t bytes_read = read(STDIN_FILENO, buf, sizeof(buf) - 1);
+            if (bytes_read <= 0) {
+                // EOF on stdin -> parent exited, trigger clean shutdown
+                break;
             }
-        } else if (command == "clear_presence") {
-            adapter->ClearPresence();
-            adapter->RunCallbacks();
-            SendJson("{\"type\":\"presence_cleared\"}");
-        } else if (command == "shutdown") {
-            adapter->Shutdown();
-            SendJson("{\"type\":\"shutdown_acknowledged\"}");
+            buf[bytes_read] = '\0';
+            line_buffer.append(buf, bytes_read);
+
+            size_t newline_pos;
+            while ((newline_pos = line_buffer.find('\n')) != std::string::npos) {
+                std::string line = line_buffer.substr(0, newline_pos);
+                line_buffer.erase(0, newline_pos + 1);
+
+                if (!line.empty() && line.back() == '\r') {
+                    line.pop_back();
+                }
+
+                if (!line.empty()) {
+                    ProcessCommand(line, adapter.get());
+                }
+            }
+        } else if (ret > 0 && (fds[0].revents & (POLLERR | POLLHUP | POLLNVAL))) {
+            // Error or HUP on stdin
             break;
-        } else {
-            SendJson("{\"type\":\"error\",\"code\":\"UNKNOWN_COMMAND\",\"message\":\"Command not recognized.\"}");
         }
+
+        // Pump asynchronous Discord callbacks on every tick
+        adapter->RunCallbacks();
     }
 
     adapter->Shutdown();

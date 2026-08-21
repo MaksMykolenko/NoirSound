@@ -17,8 +17,25 @@ const {
 const { scaledRateLimitMax } = require('../lib/rateLimit');
 const { userOrIpKey } = require('../lib/rateLimitKeys');
 
+function isConnectEnabled() {
+  if (process.env.NOIRSOUND_CONNECT_ENABLED === 'false' || process.env.NOIRSOUND_CONNECT_ENABLED === '0') {
+    return false;
+  }
+  return true;
+}
+
 module.exports = async function desktopConnectRoutes(fastify, options) {
   const presenceManager = options.presenceManager || getPresenceManager();
+
+  // Route-level hook to enforce feature flag
+  fastify.addHook('preHandler', async (request, reply) => {
+    if (!isConnectEnabled()) {
+      return reply.status(503).send({
+        error: 'feature_disabled',
+        message: 'NoirSound Connect is temporarily disabled.'
+      });
+    }
+  });
 
   // 1. Device Pairing: Start flow from Desktop App
   fastify.post('/device/start', {
@@ -514,6 +531,7 @@ module.exports = async function desktopConnectRoutes(fastify, options) {
       await presenceManager.publish(`channel:desktop-presence:${request.user.id}`, {
         version: 1,
         type: 'presence.clear',
+        trackId: trackId || null,
         sequence: Number(clientSequence) || 1,
         occurredAt: timestamp
       });
@@ -600,6 +618,11 @@ module.exports = async function desktopConnectRoutes(fastify, options) {
 
   // 11. WebSocket Connection for Desktop App
   fastify.get('/presence', { websocket: true }, async (socket, req) => {
+    if (!isConnectEnabled()) {
+      socket.close(1008, 'Feature disabled');
+      return;
+    }
+
     let deviceUser = null;
     let deviceId = null;
     let unsubscribeRedis = null;

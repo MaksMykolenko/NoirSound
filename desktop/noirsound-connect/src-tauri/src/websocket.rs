@@ -308,10 +308,30 @@ impl WebSocketManager {
                 });
             }
             "presence.clear" => {
-                let _ = sidecar.clear_presence().await;
-                let mut s = state.write().await;
-                s.current_track = None;
-                let _ = app_handle.emit("presence_update", Option::<TrackMetadata>::None);
+                // Cancel any pending pause timer
+                {
+                    let mut guard = pause_cancel_tx.lock().await;
+                    if let Some(tx) = guard.take() {
+                        let _ = tx.send(()).await;
+                    }
+                }
+
+                let clear_track_id = json.get("trackId").and_then(|t| t.as_str());
+                let should_clear = {
+                    let s = state.read().await;
+                    if let (Some(req_id), Some(ref curr)) = (clear_track_id, &s.current_track) {
+                        curr.id == req_id
+                    } else {
+                        true
+                    }
+                };
+
+                if should_clear {
+                    let _ = sidecar.clear_presence().await;
+                    let mut s = state.write().await;
+                    s.current_track = None;
+                    let _ = app_handle.emit("presence_update", Option::<TrackMetadata>::None);
+                }
             }
             "settings.updated" => {
                 if let Some(settings_json) = json.get("settings") {

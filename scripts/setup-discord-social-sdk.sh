@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # NoirSound Connect - Discord Social SDK Setup Helper
-# This script creates the standard vendor directory layout for the official Discord SDK.
+# Supports both discord_partner_sdk.framework and traditional include/lib packaging
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
@@ -14,28 +14,24 @@ echo "Target directory: ${TARGET_DIR}"
 mkdir -p "${TARGET_DIR}/include"
 mkdir -p "${TARGET_DIR}/lib/arm64"
 mkdir -p "${TARGET_DIR}/lib/x86_64"
-mkdir -p "${TARGET_DIR}/bin"
 
 cat << 'EOF' > "${TARGET_DIR}/README.md"
-# Discord Social SDK Placement
+# Discord Social / Partner SDK Placement
 
-Place the official Discord Social SDK files in this directory:
+Place the official Discord SDK in this directory using either format:
 
-- `include/` -> `discord.h` and any related headers
-- `lib/arm64/` -> `libdiscord_game_sdk.dylib` (macOS arm64 / Apple Silicon)
-- `lib/x86_64/` -> `libdiscord_game_sdk.dylib` (macOS x86_64 / Intel)
+### Option A: macOS Framework (Current official package)
+- Place `discord_partner_sdk.framework` directly inside this directory (`vendor/discord-social-sdk/discord_partner_sdk.framework`).
 
-Then set the environment variable:
-export DISCORD_SOCIAL_SDK_ROOT="$(pwd)"
+### Option B: Traditional Headers & Library
+- `include/` -> `discordpp.h` or `discord.h`
+- `lib/arm64/` -> `libdiscord_game_sdk.dylib` or `libdiscord_partner_sdk.dylib` (Apple Silicon arm64)
 
-To verify the setup:
-bash ../../scripts/verify-discord-social-sdk.sh
+Then verify the setup:
+./scripts/verify-discord-social-sdk.sh
 EOF
 
 echo ""
 echo "Directory structure created at: ${TARGET_DIR}"
-echo "Please copy the official Discord Social SDK files into:"
-echo "  - ${TARGET_DIR}/include/ (headers: discord.h)"
-echo "  - ${TARGET_DIR}/lib/arm64/ (library: libdiscord_game_sdk.dylib)"
-echo ""
-echo "Run scripts/verify-discord-social-sdk.sh to verify installation."
+echo "Please copy the official Discord SDK package into: ${TARGET_DIR}"
+echo "Run scripts/verify-discord-social-sdk.sh to verify."

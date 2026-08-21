@@ -233,3 +233,42 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("Error while running NoirSound Connect");
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::state::{AppState, ConnectionStatus, TrackMetadata};
+
+    #[test]
+    fn test_app_state_initialization_and_dto() {
+        let mut state = AppState::new("https://noirsound.co".to_string());
+        assert_eq!(state.status, ConnectionStatus::NotPaired);
+        assert_eq!(state.api_base_url, "https://noirsound.co");
+
+        state.device_id = Some("1234567890abcdef".to_string());
+        let dto = state.to_dto();
+        assert_eq!(dto.diagnostics.masked_device_id, "1234…cdef");
+        assert_eq!(dto.diagnostics.app_version, "0.1.0");
+    }
+
+    #[test]
+    fn test_track_metadata_json_roundtrip() {
+        let track = TrackMetadata {
+            id: "track-123".to_string(),
+            title: "Midnight Echo".to_string(),
+            artist_name: "Shadow".to_string(),
+            album_title: Some("Echoes".to_string()),
+            duration_ms: 180000,
+            position_ms: 45000,
+            cover_url: Some("https://noirsound.co/api/public/covers/track-123".to_string()),
+            share_url: "https://noirsound.co/track/track-123".to_string(),
+        };
+
+        let json = serde_json::to_string(&track).unwrap();
+        assert!(json.contains("\"title\":\"Midnight Echo\""));
+        assert!(json.contains("\"artistName\":\"Shadow\""));
+
+        let deserialized: TrackMetadata = serde_json::from_str(&json).unwrap();
+        assert_eq!(deserialized.id, "track-123");
+        assert_eq!(deserialized.duration_ms, 180000);
+    }
+}

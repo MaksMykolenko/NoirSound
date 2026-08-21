@@ -66,19 +66,27 @@ class InMemoryPresenceStore extends EventEmitter {
 class RedisPresenceManager {
   constructor(options = {}) {
     this.isTest = options.isTest || process.env.NODE_ENV === 'test';
+    this.isProduction = process.env.NODE_ENV === 'production';
     this.redisUrl = options.redisUrl || process.env.REDIS_URL;
     this.redisHost = options.redisHost || process.env.REDIS_HOST;
     this.redisPort = Number(options.redisPort || process.env.REDIS_PORT || 6379);
 
-    if (this.isTest || (!this.redisUrl && !this.redisHost)) {
+    if (this.isTest || (!this.redisUrl && !this.redisHost && !this.isProduction)) {
       this.inMemory = new InMemoryPresenceStore();
       this.client = null;
       this.subClient = null;
+    } else if (this.isProduction && !this.redisUrl && !this.redisHost) {
+      // In production, Redis is strictly required for multi-instance consistency
+      this.inMemory = null;
+      this.client = null;
+      this.subClient = null;
+      this.isConfigured = false;
     } else {
       this.inMemory = null;
+      this.isConfigured = true;
       const connectionOptions = {
         maxRetriesPerRequest: 2,
-        enableOfflineQueue: true,
+        enableOfflineQueue: false,
         lazyConnect: false,
         connectionName: 'noirsound-desktop-presence'
       };
@@ -90,12 +98,20 @@ class RedisPresenceManager {
             ...connectionOptions
           });
 
-      this.client.on('error', () => {
+      this.client.on('error', (err) => {
         // gracefully handle logging
       });
 
       this.subscribers = new Map(); // channel -> Set<callback>
     }
+  }
+
+  isAvailable() {
+    if (this.inMemory) return true;
+    if (this.isProduction && (!this.client || this.client.status !== 'ready')) {
+      return false;
+    }
+    return Boolean(this.client);
   }
 
   async get(key) {

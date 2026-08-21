@@ -7,7 +7,7 @@
     "frontendDist": "../dist",
     "devUrl": "http://localhost:1420",
     "beforeDevCommand": "npm run dev",
-    "beforeBuildCommand": "npm run build"
+    "beforeBuildCommand": "npm run build && (cd sidecar/build && cmake --build .)"
   },
   "app": {
     "windows": [
@@ -30,6 +30,9 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "resources": [
+      "../sidecar/build/noirsound-discord-bridge"
+    ],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
