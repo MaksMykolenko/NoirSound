@@ -86,7 +86,7 @@ impl SidecarManager {
         let is_running_clone = self.is_running.clone();
         let is_discord_available_clone = self.is_discord_available.clone();
 
-        tokio::spawn(async move {
+        tauri::async_runtime::spawn(async move {
             let mut reader = BufReader::new(stdout).lines();
             while is_running_clone.load(Ordering::SeqCst) {
                 match reader.next_line().await {

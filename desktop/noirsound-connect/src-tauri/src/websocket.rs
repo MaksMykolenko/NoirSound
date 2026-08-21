@@ -44,7 +44,7 @@ impl WebSocketManager {
         let is_running = self.is_running.clone();
         let pause_cancel_tx = self.pause_cancel_tx.clone();
 
-        tokio::spawn(async move {
+        tauri::async_runtime::spawn(async move {
             let backoff_delays = [1, 2, 4, 8, 15, 30];
             let mut backoff_idx = 0;
 
@@ -296,7 +296,7 @@ impl WebSocketManager {
                 }
 
                 let sidecar_clone = sidecar.clone();
-                tokio::spawn(async move {
+                tauri::async_runtime::spawn(async move {
                     tokio::select! {
                         _ = tokio::time::sleep(Duration::from_secs(10)) => {
                             let _ = sidecar_clone.clear_presence().await;
@@ -340,7 +340,7 @@ impl WebSocketManager {
                         s.settings.enabled = enabled;
                         if !enabled {
                             let sidecar_clone = sidecar.clone();
-                            tokio::spawn(async move {
+                            tauri::async_runtime::spawn(async move {
                                 let _ = sidecar_clone.clear_presence().await;
                             });
                         }

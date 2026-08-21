@@ -164,7 +164,14 @@ pub fn run() {
     let api_base_url = std::env::var("NOIRSOUND_API_URL")
         .unwrap_or_else(|_| "https://noirsound.co".to_string());
 
-    let app_state: SharedState = Arc::new(RwLock::new(AppState::new(api_base_url)));
+    let mut initial_state = AppState::new(api_base_url);
+    let has_refresh = get_refresh_token().is_some();
+    if has_refresh {
+        initial_state.status = ConnectionStatus::Connecting;
+        initial_state.device_id = get_device_id();
+    }
+
+    let app_state: SharedState = Arc::new(RwLock::new(initial_state));
     let sidecar_manager = Arc::new(SidecarManager::new());
 
     tauri::Builder::default()
@@ -188,14 +195,6 @@ pub fn run() {
                 // Setup system tray / menu bar
                 if let Err(e) = tray::setup_tray(&app_handle, state_clone.clone(), sidecar_clone.clone()) {
                     log::warn!("Failed to setup system tray: {}", e);
-                }
-
-                // Check if already paired with credentials in Keychain
-                let has_refresh = get_refresh_token().is_some();
-                if has_refresh {
-                    let mut s = tauri::async_runtime::block_on(state_clone.write());
-                    s.status = ConnectionStatus::Connecting;
-                    s.device_id = get_device_id();
                 }
 
                 let ws_manager = Arc::new(WebSocketManager::new(

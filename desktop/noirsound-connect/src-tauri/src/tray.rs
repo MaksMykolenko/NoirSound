@@ -62,7 +62,7 @@ pub fn setup_tray(
                 "quit" => {
                     let sc = sidecar_clone.clone();
                     let handle = app_handle.clone();
-                    tokio::spawn(async move {
+                    tauri::async_runtime::spawn(async move {
                         sc.shutdown().await;
                         handle.exit(0);
                     });
