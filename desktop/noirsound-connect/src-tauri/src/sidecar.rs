@@ -34,7 +34,9 @@ impl SidecarManager {
 
         let candidates = [
             exe_dir.join("noirsound-discord-bridge"),
+            exe_dir.join("../MacOS/noirsound-discord-bridge"),
             exe_dir.join("../Resources/noirsound-discord-bridge"),
+            exe_dir.join("../Resources/_up_/sidecar/build/noirsound-discord-bridge"),
             exe_dir.join("../../../sidecar/build/noirsound-discord-bridge"),
             PathBuf::from("desktop/noirsound-connect/sidecar/build/noirsound-discord-bridge"),
             PathBuf::from("sidecar/build/noirsound-discord-bridge"),
@@ -43,6 +45,7 @@ impl SidecarManager {
 
         for path in &candidates {
             if path.exists() {
+                log::info!("Found sidecar binary at {:?}", path);
                 return Some(path.clone());
             }
         }
@@ -56,11 +59,13 @@ impl SidecarManager {
             ];
             for path in &cwd_candidates {
                 if path.exists() {
+                    log::info!("Found sidecar binary at cwd {:?}", path);
                     return Some(path.clone());
                 }
             }
         }
 
+        log::warn!("Could not find sidecar binary in candidates");
         None
     }
 
@@ -68,12 +73,14 @@ impl SidecarManager {
         let binary_path = Self::find_sidecar_binary()
             .ok_or_else(|| "Could not locate noirsound-discord-bridge binary".to_string())?;
 
-        let mut child = Command::new(binary_path)
+        log::info!("Spawning Discord bridge sidecar from {:?}", binary_path);
+
+        let mut child = Command::new(&binary_path)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
-            .stderr(Stdio::null())
+            .stderr(Stdio::inherit())
             .spawn()
-            .map_err(|e| format!("Failed to spawn Discord bridge sidecar: {}", e))?;
+            .map_err(|e| format!("Failed to spawn Discord bridge sidecar from {:?}: {}", binary_path, e))?;
 
         let stdin = child.stdin.take().ok_or("Failed to capture sidecar stdin")?;
         let stdout = child.stdout.take().ok_or("Failed to capture sidecar stdout")?;

@@ -31,6 +31,10 @@ export interface DiagnosticsData {
   maskedDeviceId: string;
   serverState: string;
   discordBridgeState: string;
+  adapterName?: string;
+  applicationId?: string;
+  lastCommand?: string;
+  lastResult?: string;
   lastPresenceUpdate: string | null;
 }
 

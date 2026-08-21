@@ -31,10 +31,22 @@ export default function DiagnosticsModal({
           </button>
         </div>
 
-        <div className="space-y-2.5 text-xs font-mono text-zinc-400">
+        <div className="space-y-2 text-xs font-mono text-zinc-400 max-h-[320px] overflow-y-auto pr-1 custom-scrollbar">
           <div className="flex justify-between border-b border-zinc-900 pb-1.5">
             <span className="text-zinc-500">Версія застосунку:</span>
             <span className="text-zinc-200">{diagnostics.appVersion}</span>
+          </div>
+
+          <div className="flex justify-between border-b border-zinc-900 pb-1.5">
+            <span className="text-zinc-500">Discord Adapter:</span>
+            <span className="text-zinc-200 truncate max-w-[160px]" title={diagnostics.adapterName || 'Discord IPC Protocol'}>
+              {diagnostics.adapterName || 'Discord IPC'}
+            </span>
+          </div>
+
+          <div className="flex justify-between border-b border-zinc-900 pb-1.5">
+            <span className="text-zinc-500">Application ID:</span>
+            <span className="text-zinc-200">{diagnostics.applicationId || '1540281435296895066'}</span>
           </div>
 
           <div className="flex justify-between border-b border-zinc-900 pb-1.5">
@@ -58,6 +70,20 @@ export default function DiagnosticsModal({
             <span className="text-zinc-500 flex items-center gap-1"><Cpu size={11} /> Discord міст:</span>
             <span className="text-zinc-200">{diagnostics.discordBridgeState}</span>
           </div>
+
+          {diagnostics.lastCommand && (
+            <div className="flex justify-between border-b border-zinc-900 pb-1.5">
+              <span className="text-zinc-500">Last Command:</span>
+              <span className="text-zinc-300 truncate max-w-[150px]">{diagnostics.lastCommand}</span>
+            </div>
+          )}
+
+          {diagnostics.lastResult && (
+            <div className="flex justify-between border-b border-zinc-900 pb-1.5">
+              <span className="text-zinc-500">Last Result:</span>
+              <span className="text-emerald-400">{diagnostics.lastResult}</span>
+            </div>
+          )}
 
           <div className="flex justify-between">
             <span className="text-zinc-500 flex items-center gap-1"><Radio size={11} /> Останнє оновлення:</span>

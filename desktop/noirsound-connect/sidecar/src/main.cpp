@@ -11,6 +11,7 @@
 #include "discord_adapter.hpp"
 #include "mock_discord_adapter.hpp"
 #include "discord_social_sdk_adapter.hpp"
+#include "discord_rpc_adapter.hpp"
 
 namespace {
 std::atomic<bool> g_running{true};
@@ -162,6 +163,7 @@ int main(int argc, char* argv[]) {
 
     std::string application_id = "1540281435296895066";
     bool use_mock = false;
+    std::string adapter_type = "rpc"; // default to high-performance native Discord IPC RPC
 
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
@@ -169,21 +171,22 @@ int main(int argc, char* argv[]) {
             use_mock = true;
         } else if (arg.rfind("--app-id=", 0) == 0) {
             application_id = arg.substr(9);
+        } else if (arg.rfind("--adapter=", 0) == 0) {
+            adapter_type = arg.substr(10);
         }
     }
 
     std::unique_ptr<noirsound::DiscordPresenceAdapter> adapter;
 
-#ifdef DISCORD_SOCIAL_SDK_AVAILABLE
     if (use_mock) {
         adapter = std::make_unique<noirsound::MockDiscordPresenceAdapter>();
-    } else {
+#ifdef DISCORD_SOCIAL_SDK_AVAILABLE
+    } else if (adapter_type == "social_sdk") {
         adapter = std::make_unique<noirsound::DiscordSocialSdkAdapter>();
-    }
-#else
-    // Fallback to Mock if SDK is not compiled
-    adapter = std::make_unique<noirsound::MockDiscordPresenceAdapter>();
 #endif
+    } else {
+        adapter = std::make_unique<noirsound::DiscordRpcPresenceAdapter>();
+    }
 
     bool init_ok = adapter->Initialize(application_id);
 
@@ -203,28 +206,29 @@ int main(int argc, char* argv[]) {
         if (ret > 0 && (fds[0].revents & POLLIN)) {
             char buf[1024];
             ssize_t bytes_read = read(STDIN_FILENO, buf, sizeof(buf) - 1);
-            if (bytes_read <= 0) {
-                // EOF on stdin -> parent exited, trigger clean shutdown
+            if (bytes_read > 0) {
+                buf[bytes_read] = '\0';
+                line_buffer.append(buf, bytes_read);
+
+                size_t newline_pos;
+                while ((newline_pos = line_buffer.find('\n')) != std::string::npos) {
+                    std::string line = line_buffer.substr(0, newline_pos);
+                    line_buffer.erase(0, newline_pos + 1);
+
+                    if (!line.empty() && line.back() == '\r') {
+                        line.pop_back();
+                    }
+
+                    if (!line.empty()) {
+                        ProcessCommand(line, adapter.get());
+                    }
+                }
+            } else if (bytes_read == 0) {
+                // Pipe closed by parent process
                 break;
             }
-            buf[bytes_read] = '\0';
-            line_buffer.append(buf, bytes_read);
-
-            size_t newline_pos;
-            while ((newline_pos = line_buffer.find('\n')) != std::string::npos) {
-                std::string line = line_buffer.substr(0, newline_pos);
-                line_buffer.erase(0, newline_pos + 1);
-
-                if (!line.empty() && line.back() == '\r') {
-                    line.pop_back();
-                }
-
-                if (!line.empty()) {
-                    ProcessCommand(line, adapter.get());
-                }
-            }
-        } else if (ret > 0 && (fds[0].revents & (POLLERR | POLLHUP | POLLNVAL))) {
-            // Error or HUP on stdin
+        } else if (ret > 0 && (fds[0].revents & POLLHUP)) {
+            // Parent pipe disconnected
             break;
         }
 

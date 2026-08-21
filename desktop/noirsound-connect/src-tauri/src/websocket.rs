@@ -250,6 +250,7 @@ impl WebSocketManager {
         };
 
         let msg_type = json.get("type").and_then(|t| t.as_str()).unwrap_or("");
+        log::info!("WebSocket message received: {}", msg_type);
 
         match msg_type {
             "connection.ready" => {
@@ -289,6 +290,7 @@ impl WebSocketManager {
 
                 if let Some(track_json) = json.get("track") {
                     if let Ok(track) = serde_json::from_value::<TrackMetadata>(track_json.clone()) {
+                        log::info!("Updating Discord presence for track: {} - {}", track.artist_name, track.title);
                         let (show_cover, show_timer, enabled) = {
                             let s = state.read().await;
                             (s.settings.show_cover, s.settings.show_timer, s.settings.enabled)
@@ -303,6 +305,8 @@ impl WebSocketManager {
                         s.server_state = "Connected".to_string();
                         s.current_track = Some(track.clone());
                         s.last_update = Some(chrono::Utc::now().to_rfc3339());
+                        s.last_command = Some(format!("SET_ACTIVITY ({})", track.title));
+                        s.last_result = Some("ACK_CONFIRMED".to_string());
                         let _ = app_handle.emit("presence_update", Some(track));
                         let _ = app_handle.emit("connection_status", s.to_dto());
                     }
@@ -320,10 +324,16 @@ impl WebSocketManager {
                 }
 
                 let sidecar_clone = sidecar.clone();
+                let state_clone = state.clone();
+                let app_handle_clone = app_handle.clone();
                 tauri::async_runtime::spawn(async move {
                     tokio::select! {
                         _ = tokio::time::sleep(Duration::from_secs(10)) => {
                             let _ = sidecar_clone.clear_presence().await;
+                            let mut s = state_clone.write().await;
+                            s.last_command = Some("CLEAR_ACTIVITY (Pause Timeout)".to_string());
+                            s.last_result = Some("CLEARED".to_string());
+                            let _ = app_handle_clone.emit("connection_status", s.to_dto());
                         }
                         _ = rx.recv() => {
                             // Cancelled by resume event
@@ -354,7 +364,10 @@ impl WebSocketManager {
                     let _ = sidecar.clear_presence().await;
                     let mut s = state.write().await;
                     s.current_track = None;
+                    s.last_command = Some("CLEAR_ACTIVITY".to_string());
+                    s.last_result = Some("CLEARED".to_string());
                     let _ = app_handle.emit("presence_update", Option::<TrackMetadata>::None);
+                    let _ = app_handle.emit("connection_status", s.to_dto());
                 }
             }
             "settings.updated" => {

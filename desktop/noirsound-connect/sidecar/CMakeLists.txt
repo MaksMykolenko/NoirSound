@@ -17,6 +17,7 @@ set(SOURCES
     src/main.cpp
     src/mock_discord_adapter.cpp
     src/discord_social_sdk_adapter.cpp
+    src/discord_rpc_adapter.cpp
 )
 
 add_executable(noirsound-discord-bridge ${SOURCES})

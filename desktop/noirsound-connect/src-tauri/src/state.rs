@@ -55,6 +55,10 @@ pub struct DiagnosticsData {
     pub masked_device_id: String,
     pub server_state: String,
     pub discord_bridge_state: String,
+    pub adapter_name: Option<String>,
+    pub application_id: Option<String>,
+    pub last_command: Option<String>,
+    pub last_result: Option<String>,
     pub last_presence_update: Option<String>,
 }
 
@@ -78,6 +82,9 @@ pub struct AppState {
     pub is_discord_available: bool,
     pub last_update: Option<String>,
     pub server_state: String,
+    pub adapter_name: String,
+    pub last_command: Option<String>,
+    pub last_result: Option<String>,
 }
 
 impl AppState {
@@ -92,6 +99,9 @@ impl AppState {
             is_discord_available: true,
             last_update: None,
             server_state: "Disconnected".to_string(),
+            adapter_name: "DiscordRpcPresenceAdapter (Official Local IPC Protocol)".to_string(),
+            last_command: None,
+            last_result: None,
         }
     }
 
@@ -118,6 +128,10 @@ impl AppState {
                 } else {
                     "Unavailable".to_string()
                 },
+                adapter_name: Some(self.adapter_name.clone()),
+                application_id: Some("1540281435296895066".to_string()),
+                last_command: self.last_command.clone(),
+                last_result: self.last_result.clone(),
                 last_presence_update: self.last_update.clone(),
             },
             is_discord_available: self.is_discord_available,

@@ -38,10 +38,23 @@ export default function ConnectedView({
             Зараз грає
           </span>
           {hasTrack && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-rose-500/10 px-2 py-0.5 text-[10px] font-medium text-rose-400 border border-rose-500/20">
-              <Radio size={9} className="animate-pulse" />
-              Транслюється в Discord
-            </span>
+            settings.enabled ? (
+              isDiscordAvailable ? (
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-400 border border-emerald-500/20">
+                  <Radio size={9} className="animate-pulse text-emerald-400" />
+                  Discord прийняв activity
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-400 border border-amber-500/20">
+                  <Radio size={9} className="text-amber-400" />
+                  Discord activity pending
+                </span>
+              )
+            ) : (
+              <span className="inline-flex items-center gap-1 rounded-full bg-zinc-800 px-2 py-0.5 text-[10px] font-medium text-zinc-400 border border-zinc-700">
+                Активність вимкнено
+              </span>
+            )
           )}
         </div>
 

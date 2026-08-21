@@ -5,6 +5,7 @@
 
 #include "discord_social_sdk_adapter.hpp"
 #include <iostream>
+#include <sys/stat.h>
 
 namespace noirsound {
 
@@ -33,6 +34,18 @@ bool DiscordSocialSdkAdapter::Initialize(const std::string& application_id) {
     try {
         impl_->client = std::make_unique<discordpp::Client>();
         impl_->client->SetApplicationId(client_id);
+        
+        impl_->client->AddLogCallback([](std::string message, discordpp::LoggingSeverity severity) {
+            std::cerr << "[DiscordSDK][" << EnumToString(severity) << "] " << message << std::endl;
+        }, discordpp::LoggingSeverity::Verbose);
+
+        const char* home = std::getenv("HOME");
+        if (home) {
+            std::string log_dir = std::string(home) + "/Library/Logs/NoirSoundConnect/DiscordSDK";
+            mkdir(log_dir.c_str(), 0755);
+            impl_->client->SetLogDir(log_dir, discordpp::LoggingSeverity::Verbose);
+        }
+
         discord_available_ = true;
         is_initialized_ = true;
         return true;
