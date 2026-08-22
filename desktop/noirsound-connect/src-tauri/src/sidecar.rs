@@ -1,3 +1,4 @@
+use crate::state::TrackMetadata;
 use std::path::PathBuf;
 use std::process::Stdio;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -5,13 +6,18 @@ use std::sync::Arc;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::process::{Child, ChildStdin, Command};
 use tokio::sync::Mutex;
-use crate::state::TrackMetadata;
 
 pub struct SidecarManager {
     stdin: Arc<Mutex<Option<ChildStdin>>>,
     is_running: Arc<AtomicBool>,
     is_discord_available: Arc<AtomicBool>,
     child_handle: Arc<Mutex<Option<Child>>>,
+}
+
+impl Default for SidecarManager {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl SidecarManager {
@@ -80,10 +86,21 @@ impl SidecarManager {
             .stdout(Stdio::piped())
             .stderr(Stdio::inherit())
             .spawn()
-            .map_err(|e| format!("Failed to spawn Discord bridge sidecar from {:?}: {}", binary_path, e))?;
+            .map_err(|e| {
+                format!(
+                    "Failed to spawn Discord bridge sidecar from {:?}: {}",
+                    binary_path, e
+                )
+            })?;
 
-        let stdin = child.stdin.take().ok_or("Failed to capture sidecar stdin")?;
-        let stdout = child.stdout.take().ok_or("Failed to capture sidecar stdout")?;
+        let stdin = child
+            .stdin
+            .take()
+            .ok_or("Failed to capture sidecar stdin")?;
+        let stdout = child
+            .stdout
+            .take()
+            .ok_or("Failed to capture sidecar stdout")?;
 
         *self.stdin.lock().await = Some(stdin);
         *self.child_handle.lock().await = Some(child);
@@ -102,13 +119,19 @@ impl SidecarManager {
                             if let Some(msg_type) = json.get("type").and_then(|t| t.as_str()) {
                                 match msg_type {
                                     "ready" => {
-                                        if let Some(avail) = json.get("discord_available").and_then(|a| a.as_bool()) {
-                                            is_discord_available_clone.store(avail, Ordering::Relaxed);
+                                        if let Some(avail) =
+                                            json.get("discord_available").and_then(|a| a.as_bool())
+                                        {
+                                            is_discord_available_clone
+                                                .store(avail, Ordering::Relaxed);
                                         }
                                     }
                                     "discord_available" => {
-                                        if let Some(avail) = json.get("value").and_then(|v| v.as_bool()) {
-                                            is_discord_available_clone.store(avail, Ordering::Relaxed);
+                                        if let Some(avail) =
+                                            json.get("value").and_then(|v| v.as_bool())
+                                        {
+                                            is_discord_available_clone
+                                                .store(avail, Ordering::Relaxed);
                                         }
                                     }
                                     _ => {}

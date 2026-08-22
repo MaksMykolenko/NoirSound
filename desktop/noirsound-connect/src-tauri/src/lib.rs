@@ -8,7 +8,9 @@ use std::sync::Arc;
 use tauri::{Manager, State, WindowEvent};
 use tokio::sync::RwLock;
 
-use keychain::{clear_all_credentials, get_device_id, get_refresh_token, save_device_id, save_refresh_token};
+use keychain::{
+    clear_all_credentials, get_device_id, get_refresh_token, save_device_id, save_refresh_token,
+};
 use sidecar::SidecarManager;
 use state::{AppState, AppStateDto, ConnectionStatus, SharedState};
 use websocket::WebSocketManager;
@@ -161,8 +163,8 @@ fn open_browser(url: String) -> Result<(), String> {
 pub fn run() {
     let _ = env_logger::try_init();
 
-    let api_base_url = std::env::var("NOIRSOUND_API_URL")
-        .unwrap_or_else(|_| "https://noirsound.co".to_string());
+    let api_base_url =
+        std::env::var("NOIRSOUND_API_URL").unwrap_or_else(|_| "https://noirsound.co".to_string());
 
     let mut initial_state = AppState::new(api_base_url);
     let has_refresh = get_refresh_token().is_some();
@@ -175,6 +177,13 @@ pub fn run() {
     let sidecar_manager = Arc::new(SidecarManager::new());
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            use tauri::Manager;
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.show();
+                let _ = window.set_focus();
+            }
+        }))
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
@@ -193,7 +202,9 @@ pub fn run() {
                 });
 
                 // Setup system tray / menu bar
-                if let Err(e) = tray::setup_tray(&app_handle, state_clone.clone(), sidecar_clone.clone()) {
+                if let Err(e) =
+                    tray::setup_tray(&app_handle, state_clone.clone(), sidecar_clone.clone())
+                {
                     log::warn!("Failed to setup system tray: {}", e);
                 }
 
@@ -270,5 +281,40 @@ mod tests {
         let deserialized: TrackMetadata = serde_json::from_str(&json).unwrap();
         assert_eq!(deserialized.id, "track-123");
         assert_eq!(deserialized.duration_ms, 180000);
+    }
+
+    #[tokio::test]
+    async fn test_sidecar_manager_lifecycle() {
+        use crate::sidecar::SidecarManager;
+
+        let manager = SidecarManager::new();
+        let start_res = manager.start().await;
+        assert!(
+            start_res.is_ok(),
+            "Sidecar failed to start: {:?}",
+            start_res.err()
+        );
+
+        // Wait brief moment for ready handshake
+        tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+
+        let track = TrackMetadata {
+            id: "test-sidecar-1".to_string(),
+            title: "Test Track".to_string(),
+            artist_name: "Test Artist".to_string(),
+            album_title: None,
+            duration_ms: 200000,
+            position_ms: 10000,
+            cover_url: None,
+            share_url: "https://noirsound.co/track/test-sidecar-1".to_string(),
+        };
+
+        let set_res = manager.set_presence(&track, true, true).await;
+        assert!(set_res.is_ok());
+
+        let clear_res = manager.clear_presence().await;
+        assert!(clear_res.is_ok());
+
+        manager.shutdown().await;
     }
 }

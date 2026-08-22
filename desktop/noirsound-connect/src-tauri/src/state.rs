@@ -85,6 +85,7 @@ pub struct AppState {
     pub adapter_name: String,
     pub last_command: Option<String>,
     pub last_result: Option<String>,
+    pub last_sequence: u64,
 }
 
 impl AppState {
@@ -102,6 +103,7 @@ impl AppState {
             adapter_name: "DiscordRpcPresenceAdapter (Official Local IPC Protocol)".to_string(),
             last_command: None,
             last_result: None,
+            last_sequence: 0,
         }
     }
 

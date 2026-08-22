@@ -1,9 +1,9 @@
+use crate::sidecar::SidecarManager;
+use crate::state::SharedState;
+use std::sync::Arc;
 use tauri::menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{AppHandle, Manager};
-use std::sync::Arc;
-use crate::sidecar::SidecarManager;
-use crate::state::SharedState;
 
 pub fn setup_tray(
     app: &AppHandle,
@@ -11,14 +11,39 @@ pub fn setup_tray(
     sidecar: Arc<SidecarManager>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let header_item = MenuItem::with_id(app, "header", "NoirSound Connect", false, None::<&str>)?;
-    let server_status_item = MenuItem::with_id(app, "server_status", "NoirSound: Підключено", false, None::<&str>)?;
-    let discord_status_item = MenuItem::with_id(app, "discord_status", "Discord: Підключено", false, None::<&str>)?;
+    let server_status_item = MenuItem::with_id(
+        app,
+        "server_status",
+        "NoirSound: Підключено",
+        false,
+        None::<&str>,
+    )?;
+    let discord_status_item = MenuItem::with_id(
+        app,
+        "discord_status",
+        "Discord: Підключено",
+        false,
+        None::<&str>,
+    )?;
     let playing_item = MenuItem::with_id(app, "playing", "Зараз грає: —", false, None::<&str>)?;
 
     let separator1 = PredefinedMenuItem::separator(app)?;
-    let presence_toggle = CheckMenuItem::with_id(app, "presence_toggle", "Показувати активність у Discord", true, true, None::<&str>)?;
+    let presence_toggle = CheckMenuItem::with_id(
+        app,
+        "presence_toggle",
+        "Показувати активність у Discord",
+        true,
+        true,
+        None::<&str>,
+    )?;
     let open_web = MenuItem::with_id(app, "open_web", "Відкрити NoirSound", true, None::<&str>)?;
-    let open_app = MenuItem::with_id(app, "open_app", "Відкрити NoirSound Connect", true, None::<&str>)?;
+    let open_app = MenuItem::with_id(
+        app,
+        "open_app",
+        "Відкрити NoirSound Connect",
+        true,
+        None::<&str>,
+    )?;
     let reconnect = MenuItem::with_id(app, "reconnect", "Перепідключити", true, None::<&str>)?;
     let separator2 = PredefinedMenuItem::separator(app)?;
     let quit = MenuItem::with_id(app, "quit", "Вийти", true, None::<&str>)?;

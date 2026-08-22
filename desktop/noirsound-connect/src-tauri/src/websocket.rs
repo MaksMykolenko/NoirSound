@@ -1,7 +1,7 @@
+use futures_util::{SinkExt, StreamExt};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
-use futures_util::{SinkExt, StreamExt};
 use tauri::{AppHandle, Emitter};
 use tokio::sync::{mpsc, Mutex};
 use tokio_tungstenite::connect_async;
@@ -9,7 +9,9 @@ use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tokio_tungstenite::tungstenite::http::HeaderValue;
 use tokio_tungstenite::tungstenite::Message;
 
-use crate::keychain::{clear_all_credentials, get_device_id, get_refresh_token, save_refresh_token};
+use crate::keychain::{
+    clear_all_credentials, get_device_id, get_refresh_token, save_refresh_token,
+};
 use crate::sidecar::SidecarManager;
 use crate::state::{ConnectionStatus, SharedState, TrackMetadata};
 
@@ -72,10 +74,10 @@ impl WebSocketManager {
                     s.api_base_url.clone()
                 };
 
-                let ws_url = if api_base.starts_with("https://") {
-                    format!("wss://{}/api/desktop-connect/presence", &api_base["https://".len()..])
-                } else if api_base.starts_with("http://") {
-                    format!("ws://{}/api/desktop-connect/presence", &api_base["http://".len()..])
+                let ws_url = if let Some(stripped) = api_base.strip_prefix("https://") {
+                    format!("wss://{}/api/desktop-connect/presence", stripped)
+                } else if let Some(stripped) = api_base.strip_prefix("http://") {
+                    format!("ws://{}/api/desktop-connect/presence", stripped)
                 } else {
                     format!("wss://{}/api/desktop-connect/presence", api_base)
                 };
@@ -156,8 +158,17 @@ impl WebSocketManager {
         token: &str,
     ) -> Result<
         (
-            futures_util::stream::SplitSink<tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>, Message>,
-            futures_util::stream::SplitStream<tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>>,
+            futures_util::stream::SplitSink<
+                tokio_tungstenite::WebSocketStream<
+                    tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>,
+                >,
+                Message,
+            >,
+            futures_util::stream::SplitStream<
+                tokio_tungstenite::WebSocketStream<
+                    tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>,
+                >,
+            >,
         ),
         String,
     > {
@@ -187,10 +198,10 @@ impl WebSocketManager {
         }
 
         // Refresh token from Keychain
-        let refresh_token = get_refresh_token()
-            .ok_or_else(|| "No refresh token found in Keychain".to_string())?;
-        let device_id = get_device_id()
-            .ok_or_else(|| "No device ID found in Keychain".to_string())?;
+        let refresh_token =
+            get_refresh_token().ok_or_else(|| "No refresh token found in Keychain".to_string())?;
+        let device_id =
+            get_device_id().ok_or_else(|| "No device ID found in Keychain".to_string())?;
 
         let api_base = {
             let s = state.read().await;
@@ -280,6 +291,19 @@ impl WebSocketManager {
                     .await;
             }
             "presence.update" => {
+                let msg_seq = json.get("sequence").and_then(|v| v.as_u64()).unwrap_or(0);
+                {
+                    let s = state.read().await;
+                    if msg_seq > 0 && msg_seq < s.last_sequence {
+                        log::warn!(
+                            "Ignoring stale presence.update (seq {} < last_sequence {})",
+                            msg_seq,
+                            s.last_sequence
+                        );
+                        return;
+                    }
+                }
+
                 // Cancel any pending pause timer
                 {
                     let mut guard = pause_cancel_tx.lock().await;
@@ -290,10 +314,18 @@ impl WebSocketManager {
 
                 if let Some(track_json) = json.get("track") {
                     if let Ok(track) = serde_json::from_value::<TrackMetadata>(track_json.clone()) {
-                        log::info!("Updating Discord presence for track: {} - {}", track.artist_name, track.title);
+                        log::info!(
+                            "Updating Discord presence for track: {} - {}",
+                            track.artist_name,
+                            track.title
+                        );
                         let (show_cover, show_timer, enabled) = {
                             let s = state.read().await;
-                            (s.settings.show_cover, s.settings.show_timer, s.settings.enabled)
+                            (
+                                s.settings.show_cover,
+                                s.settings.show_timer,
+                                s.settings.enabled,
+                            )
                         };
 
                         if enabled {
@@ -301,6 +333,9 @@ impl WebSocketManager {
                         }
 
                         let mut s = state.write().await;
+                        if msg_seq > 0 {
+                            s.last_sequence = msg_seq;
+                        }
                         s.status = ConnectionStatus::Connected;
                         s.server_state = "Connected".to_string();
                         s.current_track = Some(track.clone());
@@ -313,6 +348,19 @@ impl WebSocketManager {
                 }
             }
             "presence.pause" => {
+                let msg_seq = json.get("sequence").and_then(|v| v.as_u64()).unwrap_or(0);
+                {
+                    let s = state.read().await;
+                    if msg_seq > 0 && msg_seq < s.last_sequence {
+                        log::warn!(
+                            "Ignoring stale presence.pause (seq {} < last_sequence {})",
+                            msg_seq,
+                            s.last_sequence
+                        );
+                        return;
+                    }
+                }
+
                 // Start 10-second pause timer before clearing Discord presence
                 let (tx, mut rx) = mpsc::channel::<()>(1);
                 {
@@ -331,6 +379,9 @@ impl WebSocketManager {
                         _ = tokio::time::sleep(Duration::from_secs(10)) => {
                             let _ = sidecar_clone.clear_presence().await;
                             let mut s = state_clone.write().await;
+                            if msg_seq > 0 {
+                                s.last_sequence = msg_seq;
+                            }
                             s.last_command = Some("CLEAR_ACTIVITY (Pause Timeout)".to_string());
                             s.last_result = Some("CLEARED".to_string());
                             let _ = app_handle_clone.emit("connection_status", s.to_dto());
@@ -342,6 +393,19 @@ impl WebSocketManager {
                 });
             }
             "presence.clear" => {
+                let msg_seq = json.get("sequence").and_then(|v| v.as_u64()).unwrap_or(0);
+                {
+                    let s = state.read().await;
+                    if msg_seq > 0 && msg_seq < s.last_sequence {
+                        log::warn!(
+                            "Ignoring stale presence.clear (seq {} < last_sequence {})",
+                            msg_seq,
+                            s.last_sequence
+                        );
+                        return;
+                    }
+                }
+
                 // Cancel any pending pause timer
                 {
                     let mut guard = pause_cancel_tx.lock().await;
@@ -363,6 +427,9 @@ impl WebSocketManager {
                 if should_clear {
                     let _ = sidecar.clear_presence().await;
                     let mut s = state.write().await;
+                    if msg_seq > 0 {
+                        s.last_sequence = msg_seq;
+                    }
                     s.current_track = None;
                     s.last_command = Some("CLEAR_ACTIVITY".to_string());
                     s.last_result = Some("CLEARED".to_string());

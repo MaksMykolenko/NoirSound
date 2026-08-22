@@ -42,10 +42,11 @@ NoirSound Connect реалізовано за моделлю **виділено�
 ┌─────────────────────────────────────────────────────────────┐
 │             noirsound-discord-bridge (C++ Sidecar)          │
 │  ├── DiscordPresenceAdapter (Interface)                     │
-│  ├── DiscordSocialSdkAdapter (Official Discord SDK)         │
+│  ├── DiscordRpcPresenceAdapter (Official Local IPC Protocol)│
+│  ├── DiscordSocialSdkAdapter (Optional Discord SDK)         │
 │  └── MockDiscordPresenceAdapter (CI / Mock Fallback)        │
 └──────────────────────────────┬──────────────────────────────┘
-                               │ Local Discord IPC
+                               │ Local Discord IPC (discord-ipc-0..9)
                                ▼
 ┌─────────────────────────────────────────────────────────────┐
 │               Discord Desktop Client                        │

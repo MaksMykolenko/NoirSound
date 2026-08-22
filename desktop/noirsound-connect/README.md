@@ -10,8 +10,10 @@
 - **Secure Device Pairing**: Authenticates via an opaque cryptographic device code and 8-character user code.
 - **Keychain Storage**: Refresh tokens are securely stored in the macOS Keychain; access tokens reside in memory only.
 - **Zero Discord Credentials**: Direct Rich Presence via local Discord Desktop IPC without OAuth, Client Secrets, or Bot Tokens.
-- **Dual Adapter Architecture**:
-  - `DiscordSocialSdkAdapter`: Links against the official Discord Social SDK.
+- **Zero Discord Credentials**: Direct Rich Presence via local Discord Desktop IPC without OAuth, Client Secrets, or Bot Tokens.
+- **Triple Adapter Architecture**:
+  - `DiscordRpcPresenceAdapter` (Default Production): Official native Discord local IPC RPC protocol (`discord-ipc-0`..`9`), type 2 Listening activity, zero external dependencies.
+  - `DiscordSocialSdkAdapter` (Optional): Integration with Discord Social SDK framework.
   - `MockDiscordPresenceAdapter`: Built-in mock mode for CI and environments without Discord Desktop running.
 
 ---
@@ -30,19 +32,19 @@ desktop/noirsound-connect/
 
 ## Development & Build Commands
 
-### 1. Build C++ Sidecar Bridge
+### 1. Build & Test C++ Sidecar Bridge
 
 ```bash
 cd sidecar
 mkdir -p build && cd build
 cmake ..
 cmake --build .
+ctest --output-on-failure
 ```
 
-To link the official Discord Social SDK:
+To optionally link the Discord Social SDK:
 ```bash
-export DISCORD_SOCIAL_SDK_ROOT="/path/to/vendor/discord-social-sdk"
-cd sidecar/build && cmake .. && cmake --build .
+cd sidecar/build && cmake .. -DENABLE_DISCORD_SOCIAL_SDK=ON && cmake --build .
 ```
 
 ### 2. Run Desktop UI in Development

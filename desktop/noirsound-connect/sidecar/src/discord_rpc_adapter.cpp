@@ -4,8 +4,10 @@
 #include <vector>
 #include <chrono>
 #include <cstring>
+#include <algorithm>
 #include <unistd.h>
 #include <fcntl.h>
+#include <poll.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <glob.h>
@@ -22,9 +24,40 @@ enum class IpcOpcode : uint32_t {
     Pong = 4
 };
 
+// Safe UTF-8 substring truncation to avoid cutting inside a multi-byte sequence
+std::string TruncateUtf8(const std::string& str, size_t max_bytes) {
+    if (str.length() <= max_bytes) return str;
+    size_t len = max_bytes;
+
+    // Walk backward while on a continuation byte (10xxxxxx)
+    while (len > 0 && (static_cast<unsigned char>(str[len]) & 0xC0) == 0x80) {
+        len--;
+    }
+
+    // If the byte at len - 1 starts a multi-byte character that overflows max_bytes, exclude it
+    if (len > 0) {
+        size_t char_start = len - 1;
+        while (char_start > 0 && (static_cast<unsigned char>(str[char_start]) & 0xC0) == 0x80) {
+            char_start--;
+        }
+        unsigned char lead = static_cast<unsigned char>(str[char_start]);
+        size_t char_len = 1;
+        if ((lead & 0xE0) == 0xC0) char_len = 2;
+        else if ((lead & 0xF0) == 0xE0) char_len = 3;
+        else if ((lead & 0xF8) == 0xF0) char_len = 4;
+
+        if (char_start + char_len > max_bytes) {
+            len = char_start;
+        }
+    }
+
+    return str.substr(0, len);
+}
+
 std::string EscapeJson(const std::string& s) {
     std::ostringstream o;
-    for (char c : s) {
+    for (size_t i = 0; i < s.size(); ++i) {
+        char c = s[i];
         if (c == '"') o << "\\\"";
         else if (c == '\\') o << "\\\\";
         else if (c == '\b') o << "\\b";
@@ -32,8 +65,9 @@ std::string EscapeJson(const std::string& s) {
         else if (c == '\n') o << "\\n";
         else if (c == '\r') o << "\\r";
         else if (c == '\t') o << "\\t";
-        else if ('\x00' <= c && c <= '\x1f') {
-            o << "\\u00" << (c < 16 ? "0" : "") << std::hex << (int)c;
+        else if (static_cast<unsigned char>(c) < 0x20) {
+            o << "\\u00" << (static_cast<unsigned char>(c) < 16 ? "0" : "")
+              << std::hex << static_cast<int>(static_cast<unsigned char>(c)) << std::dec;
         } else {
             o << c;
         }
@@ -41,14 +75,18 @@ std::string EscapeJson(const std::string& s) {
     return o.str();
 }
 
-std::string FindDiscordIpcSocket() {
+std::vector<std::string> FindCandidateIpcSockets() {
+    std::vector<std::string> candidates;
+
     // 1. Check TMPDIR environment variable
     const char* tmp_env = std::getenv("TMPDIR");
     if (tmp_env) {
         for (int i = 0; i < 10; ++i) {
-            std::string path = std::string(tmp_env) + "/discord-ipc-" + std::to_string(i);
+            std::string path = std::string(tmp_env);
+            if (!path.empty() && path.back() != '/') path += '/';
+            path += "discord-ipc-" + std::to_string(i);
             if (access(path.c_str(), F_OK) == 0) {
-                return path;
+                candidates.push_back(path);
             }
         }
     }
@@ -57,22 +95,58 @@ std::string FindDiscordIpcSocket() {
     for (int i = 0; i < 10; ++i) {
         std::string path = "/tmp/discord-ipc-" + std::to_string(i);
         if (access(path.c_str(), F_OK) == 0) {
-            return path;
+            candidates.push_back(path);
         }
     }
 
     // 3. Check macOS /var/folders glob
     glob_t glob_result;
     if (glob("/var/folders/*/*/*/discord-ipc-*", GLOB_NOSORT, nullptr, &glob_result) == 0) {
-        if (glob_result.gl_pathc > 0) {
-            std::string path = glob_result.gl_pathv[0];
-            globfree(&glob_result);
-            return path;
+        for (size_t i = 0; i < glob_result.gl_pathc; ++i) {
+            std::string path = glob_result.gl_pathv[i];
+            candidates.push_back(path);
         }
         globfree(&glob_result);
     }
 
-    return "";
+    // Deduplicate candidates while preserving order
+    std::vector<std::string> unique_candidates;
+    for (const auto& c : candidates) {
+        if (std::find(unique_candidates.begin(), unique_candidates.end(), c) == unique_candidates.end()) {
+            unique_candidates.push_back(c);
+        }
+    }
+
+    return unique_candidates;
+}
+
+bool WriteAll(int fd, const uint8_t* data, size_t total_size) {
+    size_t written = 0;
+    while (written < total_size) {
+        ssize_t n = write(fd, data + written, total_size - written);
+        if (n > 0) {
+            written += static_cast<size_t>(n);
+        } else if (n < 0) {
+            if (errno == EINTR) {
+                continue;
+            }
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                struct pollfd pfd{};
+                pfd.fd = fd;
+                pfd.events = POLLOUT;
+                int ret = poll(&pfd, 1, 100); // 100ms timeout
+                if (ret > 0 && (pfd.revents & POLLOUT)) {
+                    continue;
+                }
+                return false;
+            }
+            return false;
+        } else {
+            // EOF / 0 bytes written
+            return false;
+        }
+    }
+    return true;
 }
 
 } // namespace
@@ -86,54 +160,66 @@ struct DiscordRpcPresenceAdapter::Impl {
     std::string connected_user;
     std::string last_command = "none";
     std::string last_result = "none";
+    uint32_t reconnect_count = 0;
     std::chrono::steady_clock::time_point last_reconnect_attempt;
     std::vector<uint8_t> read_buffer;
     uint64_t nonce_counter = 0;
     std::optional<PresenceData> pending_presence;
 
-    bool Connect() {
+    bool TryConnectSocket(const std::string& path) {
         Close();
 
-        socket_path = FindDiscordIpcSocket();
-        if (socket_path.empty()) {
-            discord_available = false;
-            is_ready = false;
-            return false;
-        }
-
-        socket_fd = socket(AF_UNIX, SOCK_STREAM, 0);
-        if (socket_fd < 0) {
-            discord_available = false;
-            return false;
-        }
+        int fd = socket(AF_UNIX, SOCK_STREAM, 0);
+        if (fd < 0) return false;
 
         // Set non-blocking
-        int flags = fcntl(socket_fd, F_GETFL, 0);
+        int flags = fcntl(fd, F_GETFL, 0);
         if (flags >= 0) {
-            fcntl(socket_fd, F_SETFL, flags | O_NONBLOCK);
+            fcntl(fd, F_SETFL, flags | O_NONBLOCK);
         }
 
         struct sockaddr_un addr{};
         addr.sun_family = AF_UNIX;
-        std::strncpy(addr.sun_path, socket_path.c_str(), sizeof(addr.sun_path) - 1);
+        std::strncpy(addr.sun_path, path.c_str(), sizeof(addr.sun_path) - 1);
 
-        int res = connect(socket_fd, (struct sockaddr*)&addr, sizeof(addr));
+        int res = connect(fd, (struct sockaddr*)&addr, sizeof(addr));
         if (res < 0 && errno != EINPROGRESS) {
-            Close();
-            discord_available = false;
+            close(fd);
             return false;
         }
+
+        socket_fd = fd;
+        socket_path = path;
 
         // Send Handshake
         std::string handshake_json = "{\"v\":1,\"client_id\":\"" + EscapeJson(app_id) + "\"}";
         if (!SendPacket(IpcOpcode::Handshake, handshake_json)) {
             Close();
-            discord_available = false;
             return false;
         }
 
         discord_available = true;
         return true;
+    }
+
+    bool Connect() {
+        std::vector<std::string> candidates = FindCandidateIpcSockets();
+        if (candidates.empty()) {
+            discord_available = false;
+            is_ready = false;
+            return false;
+        }
+
+        for (const auto& path : candidates) {
+            if (TryConnectSocket(path)) {
+                reconnect_count++;
+                return true;
+            }
+        }
+
+        discord_available = false;
+        is_ready = false;
+        return false;
     }
 
     void Close() {
@@ -156,8 +242,7 @@ struct DiscordRpcPresenceAdapter::Impl {
         std::memcpy(packet.data() + 4, &len, 4);
         std::memcpy(packet.data() + 8, json.data(), len);
 
-        ssize_t written = write(socket_fd, packet.data(), packet.size());
-        return (written == static_cast<ssize_t>(packet.size()));
+        return WriteAll(socket_fd, packet.data(), packet.size());
     }
 
     void ProcessIncomingData() {
@@ -173,12 +258,15 @@ struct DiscordRpcPresenceAdapter::Impl {
                     // Server closed connection
                     Close();
                     discord_available = false;
+                } else if (errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR) {
+                    Close();
+                    discord_available = false;
                 }
                 break;
             }
         }
 
-        // Parse frames
+        // Parse framing
         while (read_buffer.size() >= 8) {
             uint32_t op = 0;
             uint32_t len = 0;
@@ -232,21 +320,25 @@ struct DiscordRpcPresenceAdapter::Impl {
         nonce_counter++;
         std::string nonce = "noirsound-" + std::to_string(nonce_counter);
 
+        std::string safe_title = TruncateUtf8(data.title, 128);
+        std::string safe_artist = TruncateUtf8(data.artist, 128);
+        std::string safe_album = TruncateUtf8(data.album, 128);
+
         std::ostringstream json;
         json << "{\"cmd\":\"SET_ACTIVITY\",\"args\":{\"pid\":" << getpid() << ",\"activity\":{";
         json << "\"type\":2,"; // Listening
-        json << "\"details\":\"" << EscapeJson(data.title) << "\",";
+        json << "\"details\":\"" << EscapeJson(safe_title) << "\",";
 
-        std::string state_str = data.artist;
-        if (!data.album.empty()) {
-            std::string full_state = data.artist + " • " + data.album;
+        std::string state_str = safe_artist;
+        if (!safe_album.empty()) {
+            std::string full_state = safe_artist + " • " + safe_album;
             if (full_state.length() <= 128) {
                 state_str = full_state;
             }
         }
-        json << "\"state\":\"" << EscapeJson(state_str) << "\"";
+        json << "\"state\":\"" << EscapeJson(TruncateUtf8(state_str, 128)) << "\"";
 
-        // Timestamps
+        // Timestamps (milliseconds)
         if (data.show_timer && data.end_timestamp > 0) {
             json << ",\"timestamps\":{";
             json << "\"start\":" << (data.start_timestamp > 0 ? data.start_timestamp * 1000 : std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count()) << ",";
@@ -255,25 +347,31 @@ struct DiscordRpcPresenceAdapter::Impl {
         }
 
         // Assets
+        // Rule: if album exists, large_text = album; else large_text = "NoirSound" (no title duplication)
+        std::string large_text = !safe_album.empty() ? safe_album : "NoirSound";
+        large_text = TruncateUtf8(large_text, 128);
+
         json << ",\"assets\":{";
         if (data.show_cover && !data.cover_url.empty()) {
             json << "\"large_image\":\"" << EscapeJson(data.cover_url) << "\",";
         } else {
             json << "\"large_image\":\"noirsound\",";
         }
-        json << "\"large_text\":\"" << EscapeJson(!data.album.empty() ? data.album : data.title) << "\",";
+        json << "\"large_text\":\"" << EscapeJson(large_text) << "\",";
         json << "\"small_image\":\"noirsound\",";
         json << "\"small_text\":\"NoirSound\"";
         json << "}";
 
         // Buttons
         if (!data.share_url.empty()) {
-            json << ",\"buttons\":[{\"label\":\"Слухати в NoirSound\",\"url\":\"" << EscapeJson(data.share_url) << "\"}]";
+            std::string label = TruncateUtf8("Слухати в NoirSound", 32);
+            std::string url = TruncateUtf8(data.share_url, 512);
+            json << ",\"buttons\":[{\"label\":\"" << EscapeJson(label) << "\",\"url\":\"" << EscapeJson(url) << "\"}]";
         }
 
         json << "}},\"nonce\":\"" << nonce << "\"}";
 
-        last_command = "SET_ACTIVITY (Listening)";
+        last_command = "SET_ACTIVITY (" + safe_title + ")";
         return SendPacket(IpcOpcode::Frame, json.str());
     }
 
