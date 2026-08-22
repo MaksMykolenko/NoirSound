@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "build:sidecar": "cmake -S sidecar -B sidecar/build -DCMAKE_BUILD_TYPE=Release -DENABLE_DISCORD_SOCIAL_SDK=OFF && cmake --build sidecar/build --config Release",
     "preview": "vite preview",
     "tauri": "tauri"
   },

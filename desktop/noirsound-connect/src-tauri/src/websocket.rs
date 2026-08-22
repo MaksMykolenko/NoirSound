@@ -427,9 +427,10 @@ impl WebSocketManager {
                 if should_clear {
                     let _ = sidecar.clear_presence().await;
                     let mut s = state.write().await;
-                    if msg_seq > 0 {
-                        s.last_sequence = msg_seq;
-                    }
+                    // Browser sequence numbers are scoped to a single page lifetime.
+                    // A terminal clear ends that epoch so a newly opened tab can
+                    // legitimately begin again at sequence 1.
+                    s.last_sequence = 0;
                     s.current_track = None;
                     s.last_command = Some("CLEAR_ACTIVITY".to_string());
                     s.last_result = Some("CLEARED".to_string());

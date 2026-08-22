@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { Radio, Power, RefreshCw, Terminal, AlertCircle } from 'lucide-react';
@@ -29,9 +29,13 @@ export default function App() {
   const [isDiagnosticsOpen, setIsDiagnosticsOpen] = useState(false);
   const [isLoadingPairing, setIsLoadingPairing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const pairingStartInFlight = useRef(false);
 
   // Initialize pairing flow
   const startPairingFlow = useCallback(async () => {
+    if (pairingStartInFlight.current) return;
+
+    pairingStartInFlight.current = true;
     setIsLoadingPairing(true);
     setErrorMessage(null);
     try {
@@ -44,12 +48,13 @@ export default function App() {
     } catch (err: any) {
       setErrorMessage(err?.toString() || 'Не вдалося створити код сполучення');
     } finally {
+      pairingStartInFlight.current = false;
       setIsLoadingPairing(false);
     }
   }, []);
 
   // Sync initial state from Tauri backend
-  const syncState = useCallback(async () => {
+  const syncState = useCallback(async (startPairingIfNeeded = false) => {
     try {
       const state = await invoke<{
         status: ConnectionStatus;
@@ -65,45 +70,80 @@ export default function App() {
       setDiagnostics(state.diagnostics);
       setIsDiscordAvailable(state.isDiscordAvailable);
 
-      if (state.status === 'not_paired') {
+      if (startPairingIfNeeded && state.status === 'not_paired') {
         startPairingFlow();
       }
     } catch {
       // Running in browser dev mode without Tauri runtime
-      startPairingFlow();
+      if (startPairingIfNeeded) startPairingFlow();
     }
   }, [startPairingFlow]);
 
   useEffect(() => {
-    syncState();
+    // Take an immediate snapshot so the UI is never gated on event-listener setup.
+    void syncState(true);
 
-    // Listen for backend events
+    let disposed = false;
     let unlistenPresence: () => void;
     let unlistenStatus: () => void;
 
-    listen<TrackMetadata | null>('presence_update', (event) => {
-      setCurrentTrack(event.payload);
-      setDiagnostics((prev) => ({
-        ...prev,
-        lastPresenceUpdate: new Date().toLocaleTimeString()
-      }));
-    }).then((fn) => { unlistenPresence = fn; });
+    const subscribeAndSync = async () => {
+      const [presenceResult, statusResult] = await Promise.allSettled([
+        listen<TrackMetadata | null>('presence_update', (event) => {
+          setCurrentTrack(event.payload);
+          setDiagnostics((prev) => ({
+            ...prev,
+            lastPresenceUpdate: new Date().toLocaleTimeString()
+          }));
+        }),
+        listen<{
+          status: ConnectionStatus;
+          isDiscordAvailable: boolean;
+          track?: TrackMetadata | null;
+          diagnostics?: DiagnosticsData;
+          settings?: AppSettings;
+        }>('connection_status', (event) => {
+          setStatus(event.payload.status);
+          setIsDiscordAvailable(event.payload.isDiscordAvailable);
+          if (event.payload.diagnostics) setDiagnostics(event.payload.diagnostics);
+          if (event.payload.settings) setSettings(event.payload.settings);
+          if (event.payload.track !== undefined) setCurrentTrack(event.payload.track);
+        })
+      ]);
 
-    listen<{
-      status: ConnectionStatus;
-      isDiscordAvailable: boolean;
-      track?: TrackMetadata | null;
-      diagnostics?: DiagnosticsData;
-      settings?: AppSettings;
-    }>('connection_status', (event) => {
-      setStatus(event.payload.status);
-      setIsDiscordAvailable(event.payload.isDiscordAvailable);
-      if (event.payload.diagnostics) setDiagnostics(event.payload.diagnostics);
-      if (event.payload.settings) setSettings(event.payload.settings);
-      if (event.payload.track !== undefined) setCurrentTrack(event.payload.track);
-    }).then((fn) => { unlistenStatus = fn; });
+      if (disposed) {
+        if (presenceResult.status === 'fulfilled') presenceResult.value();
+        if (statusResult.status === 'fulfilled') statusResult.value();
+        return;
+      }
+
+      if (presenceResult.status === 'fulfilled') unlistenPresence = presenceResult.value;
+      if (statusResult.status === 'fulfilled') unlistenStatus = statusResult.value;
+
+      // Read state only after listeners are installed so startup WSS events
+      // cannot land in the gap between the initial snapshot and subscription.
+      await syncState();
+    };
+
+    void subscribeAndSync();
+
+    // Tauri events are edge-triggered and are not replayed. Reconcile with the
+    // authoritative Rust state so a startup race or listener failure cannot
+    // leave server/track diagnostics stale indefinitely.
+    const syncFromBackend = () => { void syncState(); };
+    const syncInterval = window.setInterval(syncFromBackend, 2000);
+    const syncWhenVisible = () => {
+      if (document.visibilityState === 'visible') syncFromBackend();
+    };
+
+    window.addEventListener('focus', syncFromBackend);
+    document.addEventListener('visibilitychange', syncWhenVisible);
 
     return () => {
+      disposed = true;
+      window.clearInterval(syncInterval);
+      window.removeEventListener('focus', syncFromBackend);
+      document.removeEventListener('visibilitychange', syncWhenVisible);
       if (unlistenPresence) unlistenPresence();
       if (unlistenStatus) unlistenStatus();
     };
