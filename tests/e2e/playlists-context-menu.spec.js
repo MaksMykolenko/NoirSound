@@ -21,7 +21,9 @@ async function createFixture(page, { withTrack = false } = {}) {
   const playlist = (await created.json()).playlist;
 
   if (withTrack) {
-    const tracksResponse = await page.request.get(`${API_BASE}/tracks`);
+    // Keep this legacy-action test deterministic even when another E2E case
+    // has just published a Beat, whose menu intentionally uses Beat wording.
+    const tracksResponse = await page.request.get(`${API_BASE}/tracks?contentType=MUSIC`);
     expect(tracksResponse.ok()).toBeTruthy();
     const body = await tracksResponse.json();
     const track = (body.data || body.tracks || body).find((candidate) => candidate.isStreamable);
