@@ -226,6 +226,26 @@ describe('PlaylistPage — playlist detail table', () => {
       expect(screen.getByText(i18n.t('playlists.tracksCount', { count: 4 }))).toBeInTheDocument();
       expect(screen.getByText(formatDurationLong(635, i18n.t.bind(i18n)))).toBeInTheDocument();
     });
+
+    it('keeps a Beat playable in the shared playlist and labels its desktop and mobile rows', async () => {
+      const beat = {
+        ...trackB,
+        contentType: 'BEAT',
+        beatBpm: 140,
+        beatKey: 'D Minor',
+      };
+      getPlaylistById.mockResolvedValue(buildPlaylist({ tracks: [trackA, beat] }));
+      renderPlaylistPage();
+      await screen.findByText('Late Night Circuit');
+
+      const desktopRow = screen.getByRole('table').querySelector('tr[data-track-id="t-b"]');
+      expect(within(desktopRow).getByTestId('beat-badge')).toHaveTextContent(i18n.t('content.beat'));
+      const mobileRow = document.querySelector('.md\\:hidden [data-track-id="t-b"]');
+      expect(within(mobileRow).getByTestId('beat-badge')).toHaveTextContent(i18n.t('content.beat'));
+      expect(within(desktopRow).getByLabelText(
+        i18n.t('playlists.playFromHere', { title: beat.title })
+      )).toBeInTheDocument();
+    });
   });
 
   describe('playback integration', () => {

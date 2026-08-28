@@ -118,6 +118,8 @@ export default function BatchUploadPage() {
       failed: items.filter((item) => item.status === 'FAILED').length,
       published: items.filter((item) => item.status === 'PUBLISHED').length,
       lyrics: items.filter((item) => item.hasLyrics).length,
+      music: items.filter((item) => item.target !== 'EXCLUDED' && item.contentType !== 'BEAT').length,
+      beats: items.filter((item) => item.target !== 'EXCLUDED' && item.contentType === 'BEAT').length,
     };
   }, [batch]);
 
@@ -446,6 +448,8 @@ export default function BatchUploadPage() {
                     [counts.singles, t('batchUpload.standaloneSingles')],
                     [counts.playlist, t('batchUpload.playlistTracks')],
                     [counts.excluded, t('batchUpload.excluded')],
+                    [counts.music, t('content.music')],
+                    [counts.beats, t('content.beats')],
                     [counts.lyrics, t('batchUpload.lyricsAdded')],
                     [batch.missingFields.length, t('batchUpload.blockingErrors')],
                   ].map(([value, label]) => (
@@ -526,6 +530,8 @@ export default function BatchUploadPage() {
               <div className="mt-4 space-y-2 text-sm text-zinc-400">
                 <p className="flex justify-between"><span>{t('batchUpload.singles')}</span><strong className="text-zinc-200">{counts.singles}</strong></p>
                 <p className="flex justify-between"><span>{t('batchUpload.playlistTracks')}</span><strong className="text-zinc-200">{counts.playlist}</strong></p>
+                <p className="flex justify-between"><span>{t('content.music')}</span><strong className="text-zinc-200">{counts.music}</strong></p>
+                <p className="flex justify-between"><span>{t('content.beats')}</span><strong className="text-zinc-200">{counts.beats}</strong></p>
                 <p className="flex justify-between"><span>{t('batchUpload.ready')}</span><strong className="text-emerald-300">{counts.ready}</strong></p>
                 <p className="flex justify-between"><span>{t('batchUpload.failed')}</span><strong className="text-rose-300">{counts.failed}</strong></p>
               </div>
@@ -534,7 +540,7 @@ export default function BatchUploadPage() {
               {batch.items.map((item) => (
                 <button key={item.id} type="button" onClick={() => setSelectedItem(item)} className="flex w-full items-center gap-3 p-2.5 text-left hover:bg-zinc-900/50">
                   {item.status === 'PROCESSING' ? <LoaderCircle size={15} className="text-amber-300 animate-spin" /> : item.status === 'READY' || item.status === 'PUBLISHED' ? <CheckCircle2 size={15} className="text-emerald-400" /> : item.status === 'FAILED' ? <AlertCircle size={15} className="text-rose-400" /> : <FileAudio size={15} className="text-zinc-500" />}
-                  <span className="min-w-0 flex-1"><span className="block truncate text-ns-body-sm font-semibold text-zinc-300">{item.title}</span><span className="block font-sans tabular-nums text-ns-meta text-zinc-600">{item.target}</span></span>
+                  <span className="min-w-0 flex-1"><span className="block truncate text-ns-body-sm font-semibold text-zinc-300">{item.title}</span><span className="block font-sans tabular-nums text-ns-meta text-zinc-600">{item.target} · {item.contentType === 'BEAT' ? t('content.beats') : t('content.music')}</span></span>
                   {item.missingFields?.length > 0 && <span className="w-2 h-2 rounded-full bg-amber-400" />}
                 </button>
               ))}

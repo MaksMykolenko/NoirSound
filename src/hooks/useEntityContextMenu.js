@@ -32,7 +32,7 @@ export function useTrackContextMenu(track, options = {}) {
   const navigate = useSafeNavigate();
   const player = usePlayerStore();
   const addToast = useToastStore((state) => state.addToast);
-  const { openAddToPlaylist } = useContextMenuController();
+  const { openAddToPlaylist, openReport } = useContextMenuController();
   const { t } = useTranslation();
   return useContextMenu(() => buildTrackContextActions({
     track,
@@ -40,9 +40,10 @@ export function useTrackContextMenu(track, options = {}) {
     navigate,
     addToast,
     openAddToPlaylist,
+    openReport,
     t,
     ...options,
-  }), [track, player, navigate, addToast, openAddToPlaylist, t, options.removeFromQueue, options.removeFromPlaylist, options.moveUp, options.moveDown]);
+  }), [track, player, navigate, addToast, openAddToPlaylist, openReport, t, options.removeFromQueue, options.removeFromPlaylist, options.moveUp, options.moveDown]);
 }
 
 export function usePlaylistContextMenu(playlist, options = {}) {

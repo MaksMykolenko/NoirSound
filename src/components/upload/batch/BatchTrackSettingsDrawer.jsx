@@ -5,6 +5,9 @@ import { useTranslation } from 'react-i18next';
 import GenrePicker from '../../ui/GenrePicker';
 import LyricsEditor from '../../lyrics/LyricsEditor';
 import { formatBytes } from './batchUploadUtils';
+import BeatMetadataFields from '../BeatMetadataFields';
+import ContentTypeSelector from '../ContentTypeSelector';
+import { beatMetadataFromTrack, beatMetadataPayload } from '../beatMetadata';
 
 const TABS = ['details', 'artwork', 'lyrics', 'rights'];
 
@@ -23,12 +26,15 @@ export default function BatchTrackSettingsDrawer({ item, open, onClose, onSave, 
       genre: item.genre || '',
       tags: (item.tags || []).join(', '),
       description: item.description || '',
+      contentType: item.contentType === 'BEAT' ? 'BEAT' : 'MUSIC',
+      ...beatMetadataFromTrack(item),
       explicit: Boolean(item.explicit),
       visibility: item.visibility || 'PUBLIC',
       copyrightConfirmed: Boolean(item.copyrightConfirmed),
       lyricsText: item.lyricsText || '',
       lyricsType: item.lyricsType || 'NONE',
       lyricsLanguage: item.lyricsLanguage || '',
+      lyricsSynced: Array.isArray(item.lyricsSynced) ? item.lyricsSynced : null,
       lyricsRightsConfirmed: Boolean(item.lyricsRightsConfirmed),
       target: item.target || 'SINGLE',
       playlistOrder: item.playlistOrder || 1,
@@ -49,6 +55,11 @@ export default function BatchTrackSettingsDrawer({ item, open, onClose, onSave, 
   const set = (field, value) => setForm((current) => ({ ...current, [field]: value }));
 
   const save = async () => {
+    const hasSyncedLyrics = form.lyricsType === 'SYNCED'
+      && Array.isArray(form.lyricsSynced)
+      && form.lyricsSynced.length > 0;
+    const hasPlainLyrics = Boolean(form.lyricsText.trim());
+    const hasLyrics = hasSyncedLyrics || hasPlainLyrics;
     await onSave({
       title: form.title,
       primaryArtistName: form.primaryArtistName,
@@ -56,13 +67,16 @@ export default function BatchTrackSettingsDrawer({ item, open, onClose, onSave, 
       genre: form.genre || null,
       tags: form.tags.split(',').map((value) => value.trim()).filter(Boolean),
       description: form.description,
+      contentType: form.contentType,
+      ...beatMetadataPayload(form.contentType, form),
       explicit: form.explicit,
       visibility: form.visibility,
       copyrightConfirmed: form.copyrightConfirmed,
       lyricsText: form.lyricsText,
-      lyricsType: form.lyricsText.trim() ? 'PLAIN' : 'NONE',
-      lyricsLanguage: form.lyricsText.trim() ? form.lyricsLanguage || null : null,
-      lyricsRightsConfirmed: form.lyricsText.trim() ? form.lyricsRightsConfirmed : false,
+      lyricsType: hasSyncedLyrics ? 'SYNCED' : hasPlainLyrics ? 'PLAIN' : 'NONE',
+      lyricsLanguage: hasLyrics ? form.lyricsLanguage || null : null,
+      lyricsSynced: hasSyncedLyrics ? form.lyricsSynced : null,
+      lyricsRightsConfirmed: hasLyrics ? form.lyricsRightsConfirmed : false,
       target: form.target,
       playlistOrder: form.target === 'PLAYLIST' ? Number(form.playlistOrder) || 1 : null,
     }, coverFile);
@@ -112,6 +126,11 @@ export default function BatchTrackSettingsDrawer({ item, open, onClose, onSave, 
 
           {activeTab === 'details' && (
             <div className="space-y-5" data-testid="batch-details-tab">
+              <ContentTypeSelector
+                value={form.contentType}
+                onChange={(value) => set('contentType', value)}
+                idPrefix={`batch-content-type-${item.id}`}
+              />
               <div className="grid sm:grid-cols-2 gap-4">
                 <label className="space-y-1.5">
                   <span className="font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-zinc-400">{t('batchUpload.trackTitle')}</span>
@@ -162,6 +181,13 @@ export default function BatchTrackSettingsDrawer({ item, open, onClose, onSave, 
                   <span className="font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-zinc-400">{t('batchUpload.playlistOrder')}</span>
                   <input type="number" min="1" className="ns-field !rounded px-4" value={form.playlistOrder} onChange={(event) => set('playlistOrder', event.target.value)} />
                 </label>
+              )}
+              {form.contentType === 'BEAT' && (
+                <BeatMetadataFields
+                  value={form}
+                  onChange={setForm}
+                  idPrefix={`batch-beat-${item.id}`}
+                />
               )}
             </div>
           )}

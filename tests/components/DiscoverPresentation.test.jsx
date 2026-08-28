@@ -83,4 +83,36 @@ describe('Discover real-data presentation', () => {
     expect(screen.getByRole('button', { name: i18n.t('discover.uploadFirstTrack') })).toBeInTheDocument();
     expect(screen.queryByText('Nightcrawler')).not.toBeInTheDocument();
   });
+
+  it('requests and presents the dedicated Beats view with Beat-only filters', () => {
+    const beat = {
+      ...playableTrack,
+      id: 'beat-1',
+      title: 'Cold Circuit Beat',
+      contentType: 'BEAT',
+      beatBpm: 136,
+      beatKey: 'C Minor',
+      beatMood: 'Cold',
+      beatStyle: 'Trap',
+    };
+    useDiscoverTracks.mockReturnValue({
+      data: [playableTrack, beat],
+      isLoading: false,
+      error: null,
+    });
+    useArtistsWithTracks.mockReturnValue({ data: [artist], isLoading: false, error: null });
+
+    render(
+      <MemoryRouter initialEntries={['/discover?content=BEAT']}>
+        <Discover />
+      </MemoryRouter>
+    );
+
+    expect(useDiscoverTracks).toHaveBeenCalledWith({ contentType: 'BEAT' });
+    expect(useArtistsWithTracks).toHaveBeenCalledWith({ contentType: 'BEAT' });
+    expect(screen.getByTestId('beat-discover-filters')).toBeInTheDocument();
+    expect(screen.getAllByText('Cold Circuit Beat').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Unique Release')).not.toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: i18n.t('content.beats') })).toHaveAttribute('aria-selected', 'true');
+  });
 });

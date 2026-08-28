@@ -126,6 +126,39 @@ describe('TrackPage refreshed design', () => {
     expect(container.innerHTML).toContain('--ns-border');
   });
 
+  it('renders a Beat detail surface without inventing a separate player or empty lyrics block', async () => {
+    getTrackById.mockResolvedValue({
+      ...baseTrack,
+      contentType: 'BEAT',
+      beatBpm: 142,
+      beatKey: 'F# Minor',
+      beatMood: 'Dark',
+      beatStyle: 'Trap',
+      beatLicenseType: 'Contact for terms',
+      beatUsageNotes: 'Non-commercial demos are allowed.',
+      beatContactEnabled: true,
+      hasLyrics: false,
+    });
+    getTracks.mockResolvedValue([
+      { ...baseTrack, id: 'music-related', title: 'Music candidate', contentType: 'MUSIC' },
+      { ...baseTrack, id: 'beat-related', title: 'Beat candidate', contentType: 'BEAT' },
+    ]);
+
+    renderTrack();
+
+    await screen.findByText('Midnight Protocol');
+    expect(screen.getByTestId('beat-badge')).toHaveTextContent(i18n.t('content.beat'));
+    const details = screen.getByTestId('beat-details');
+    expect(within(details).getByText('142')).toBeInTheDocument();
+    expect(within(details).getByText('F# Minor')).toBeInTheDocument();
+    expect(within(details).getByText('Non-commercial demos are allowed.')).toBeInTheDocument();
+    expect(within(details).getByRole('link', { name: i18n.t('beats.contactProducer') })).toHaveAttribute('href', '/artist/a1#contact');
+    expect(screen.queryByTestId('track-lyrics-card')).not.toBeInTheDocument();
+    expect(screen.getByText('Beat candidate')).toBeInTheDocument();
+    expect(screen.queryByText('Music candidate')).not.toBeInTheDocument();
+    expect(screen.getAllByText(i18n.t('beats.playBeat')).length).toBeGreaterThan(0);
+  });
+
   it('keeps the genre pill in English regardless of UI language', async () => {
     getTrackById.mockResolvedValue(baseTrack);
     for (const lng of ['uk', 'pl', 'ru']) {

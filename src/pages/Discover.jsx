@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useDeferredValue, useEffect, useState, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useDiscoverTracks } from '../hooks/queries/useTracks';
@@ -21,6 +21,9 @@ import {
   selectFeaturedTracks,
   sortTracksNewest,
 } from '../utils/presentation';
+import { isBeatTrack } from '../utils/trackContent';
+
+const CONTENT_TABS = ['ALL', 'MUSIC', 'BEAT'];
 
 // Quick-filter tabs: a small, curated set of groups so the bar never overflows
 // on mobile. The full taxonomy lives behind the "More" picker.
@@ -53,13 +56,21 @@ function filterFromQuery(genreParam, groupParam) {
 export default function Discover() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const requestedGenre = searchParams.get('genre');
   const requestedGroup = searchParams.get('group');
   const browseAllRequested = searchParams.get('browse') === 'all';
+  const requestedContent = String(searchParams.get('content') || '').toUpperCase();
+  const contentType = CONTENT_TABS.includes(requestedContent) ? requestedContent : 'ALL';
   const [filter, setFilter] = useState(() => filterFromQuery(requestedGenre, requestedGroup));
   const [moreOpen, setMoreOpen] = useState(() => browseAllRequested);
   const [searchQuery, setSearchQuery] = useState('');
+  const [beatMood, setBeatMood] = useState('');
+  const [beatStyle, setBeatStyle] = useState('');
+  const [beatKey, setBeatKey] = useState('');
+  const [beatBpmRange, setBeatBpmRange] = useState('');
+  const [beatSort, setBeatSort] = useState('recent');
+  const deferredSearchQuery = useDeferredValue(searchQuery.trim());
   const pageMeta = (
     <PageMeta
       title={`${t('discover.title')} · NoirSound`}
@@ -78,13 +89,16 @@ export default function Discover() {
     isLoading: tracksLoading,
     error: tracksError,
     refetch: refetchTracks,
-  } = useDiscoverTracks();
+  } = useDiscoverTracks({
+    ...(contentType === 'ALL' ? {} : { contentType }),
+    ...(deferredSearchQuery ? { query: deferredSearchQuery } : {}),
+  });
   const {
     data: artistsData,
     isLoading: artistsLoading,
     error: artistsError,
     refetch: refetchArtists,
-  } = useArtistsWithTracks();
+  } = useArtistsWithTracks(contentType === 'ALL' ? {} : { contentType });
 
   const tracks = useMemo(() => sortTracksNewest(tracksData || []), [tracksData]);
   const artists = useMemo(
@@ -101,8 +115,23 @@ export default function Discover() {
 
     const query = searchQuery.trim().toLowerCase();
     const querySlug = query.replace(/[\s-]+/g, '_');
-    return tracks.filter((track) => {
+    const filtered = tracks.filter((track) => {
+      if (contentType === 'MUSIC' && isBeatTrack(track)) return false;
+      if (contentType === 'BEAT' && !isBeatTrack(track)) return false;
       if (!matchesGenreFilter(track)) return false;
+      if (contentType === 'BEAT') {
+        const normalizedMood = beatMood.trim().toLowerCase();
+        const normalizedStyle = beatStyle.trim().toLowerCase();
+        const normalizedKey = beatKey.trim().toLowerCase();
+        if (normalizedMood && !String(track.beatMood || '').toLowerCase().includes(normalizedMood)) return false;
+        if (normalizedStyle && !String(track.beatStyle || '').toLowerCase().includes(normalizedStyle)) return false;
+        if (normalizedKey && !String(track.beatKey || '').toLowerCase().includes(normalizedKey)) return false;
+        const bpm = Number(track.beatBpm);
+        if (beatBpmRange === 'under-90' && !(bpm > 0 && bpm < 90)) return false;
+        if (beatBpmRange === '90-119' && !(bpm >= 90 && bpm <= 119)) return false;
+        if (beatBpmRange === '120-149' && !(bpm >= 120 && bpm <= 149)) return false;
+        if (beatBpmRange === '150-plus' && !(bpm >= 150)) return false;
+      }
       if (!query) return true;
 
       const genreKey = normalizeGenre(track.genre);
@@ -113,9 +142,17 @@ export default function Discover() {
         || (genreKey && genreKey.includes(querySlug))
         || (genreKey && getGenreLabel(genreKey).toLowerCase().includes(query))
         || (track.tags && track.tags.some((tag) => tag.toLowerCase().includes(query)))
+        || (track.beatMood && track.beatMood.toLowerCase().includes(query))
+        || (track.beatStyle && track.beatStyle.toLowerCase().includes(query))
+        || (track.beatKey && track.beatKey.toLowerCase().includes(query))
+        || (track.beatBpm && String(track.beatBpm).includes(query))
       );
     });
-  }, [tracks, filter, searchQuery]);
+    if (contentType === 'BEAT' && beatSort === 'played') {
+      return [...filtered].sort((left, right) => Number(right.plays || 0) - Number(left.plays || 0));
+    }
+    return filtered;
+  }, [tracks, filter, searchQuery, contentType, beatMood, beatStyle, beatKey, beatBpmRange, beatSort]);
 
   const recommendedArtists = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -144,6 +181,21 @@ export default function Discover() {
     setSearchQuery('');
     setFilter(ALL_FILTER);
     setMoreOpen(false);
+    setBeatMood('');
+    setBeatStyle('');
+    setBeatKey('');
+    setBeatBpmRange('');
+    setBeatSort('recent');
+    const next = new URLSearchParams(searchParams);
+    next.delete('content');
+    setSearchParams(next, { replace: true });
+  };
+
+  const selectContentType = (nextContentType) => {
+    const next = new URLSearchParams(searchParams);
+    if (nextContentType === 'ALL') next.delete('content');
+    else next.set('content', nextContentType);
+    setSearchParams(next, { replace: true });
   };
 
   const isTabActive = (tab) => {
@@ -159,8 +211,8 @@ export default function Discover() {
       return (
         <EmptyState
           iconName="UploadCloud"
-          title={t('empty.noReleasesYet')}
-          description={t('discover.publishedTracksAppear')}
+          title={contentType === 'BEAT' ? t('beats.noBeats') : t('empty.noReleasesYet')}
+          description={contentType === 'BEAT' ? t('beats.noBeatsDescription') : t('discover.publishedTracksAppear')}
           actionText={t('discover.uploadFirstTrack')}
           onAction={() => navigate('/upload')}
         />
@@ -238,6 +290,30 @@ export default function Discover() {
           <p className="ns-page-lede">{t('discover.subtitle')}</p>
         </div>
 
+        <div
+          className="ns-tabs-scroll flex gap-1 overflow-x-auto border-b border-zinc-800/70"
+          role="tablist"
+          aria-label={t('content.contentType')}
+          data-testid="discover-content-tabs"
+        >
+          {CONTENT_TABS.map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              role="tab"
+              aria-selected={contentType === tab}
+              onClick={() => selectContentType(tab)}
+              className={`ns-tab min-h-11 shrink-0 border-b-2 px-5 font-sans text-sm font-semibold transition-colors ${
+                contentType === tab
+                  ? 'border-brand-red text-zinc-100'
+                  : 'border-transparent text-zinc-500 hover:text-zinc-300'
+              }`}
+            >
+              {tab === 'ALL' ? t('content.all') : tab === 'MUSIC' ? t('content.music') : t('content.beats')}
+            </button>
+          ))}
+        </div>
+
         {/* Search stays prominent instead of reading as a dashboard filter card. */}
         <div className="flex flex-col md:flex-row md:items-center gap-3">
           <div className="relative flex-1">
@@ -260,6 +336,39 @@ export default function Discover() {
 
       {/* Search and filters */}
       <div className="space-y-4 border-y border-zinc-800/60 py-4">
+        {contentType === 'BEAT' && (
+          <div className="grid gap-3 rounded-md border border-zinc-800/70 bg-zinc-950/20 p-3 sm:grid-cols-2 xl:grid-cols-5" data-testid="beat-discover-filters">
+            <label className="space-y-1">
+              <span className="ns-eyebrow">{t('beats.mood')}</span>
+              <input className="ns-field px-3" value={beatMood} onChange={(event) => setBeatMood(event.target.value)} placeholder={t('beats.anyMood')} />
+            </label>
+            <label className="space-y-1">
+              <span className="ns-eyebrow">{t('beats.style')}</span>
+              <input className="ns-field px-3" value={beatStyle} onChange={(event) => setBeatStyle(event.target.value)} placeholder={t('beats.anyStyle')} />
+            </label>
+            <label className="space-y-1">
+              <span className="ns-eyebrow">{t('beats.key')}</span>
+              <input className="ns-field px-3" value={beatKey} onChange={(event) => setBeatKey(event.target.value)} placeholder={t('beats.anyKey')} />
+            </label>
+            <label className="space-y-1">
+              <span className="ns-eyebrow">{t('beats.bpm')}</span>
+              <select className="ns-field px-3" value={beatBpmRange} onChange={(event) => setBeatBpmRange(event.target.value)}>
+                <option value="">{t('beats.anyBpm')}</option>
+                <option value="under-90">&lt; 90</option>
+                <option value="90-119">90–119</option>
+                <option value="120-149">120–149</option>
+                <option value="150-plus">150+</option>
+              </select>
+            </label>
+            <label className="space-y-1">
+              <span className="ns-eyebrow">{t('beats.sort')}</span>
+              <select className="ns-field px-3" value={beatSort} onChange={(event) => setBeatSort(event.target.value)}>
+                <option value="recent">{t('beats.recentlyAdded')}</option>
+                <option value="played">{t('beats.mostPlayed')}</option>
+              </select>
+            </label>
+          </div>
+        )}
         {/* Quick filters stay in one scrollable row on mobile. */}
         <div
           data-testid="genre-quick-tabs"
@@ -340,7 +449,9 @@ export default function Discover() {
 
         {/* Left 2 Cols: Tracks list */}
         {(!showFeatured || listTracks.length > 0) && <section className="min-w-0 space-y-4">
-          <h2 className="ns-section-title">{t('discover.allReleases')}</h2>
+          <h2 className="ns-section-title">
+            {contentType === 'BEAT' ? t('beats.freshBeats') : contentType === 'MUSIC' ? t('discover.music') : t('discover.allReleases')}
+          </h2>
           <div data-testid="all-releases" className="space-y-1">
             {listTracks.length === 0 ? (
               renderListEmpty()

@@ -57,6 +57,7 @@ export const rejectTrack = (id, reason) => mutate(`/admin/tracks/${encodeURIComp
 export const restoreTrack = (id, reason) => mutate(`/admin/tracks/${encodeURIComponent(id)}/restore`, { reason });
 export const forceReprocessTrack = (id, reason) => mutate(`/admin/tracks/${encodeURIComponent(id)}/force-reprocess`, { reason });
 export const removeTrackLyrics = (id, reason) => mutate(`/admin/tracks/${encodeURIComponent(id)}/lyrics/remove`, { reason });
+export const updateTrackContentType = (id, payload) => mutate(`/admin/tracks/${encodeURIComponent(id)}/content-type`, payload);
 
 export const getAdminArtists = (params) => get('/admin/artists', params);
 export const getAdminArtist = (id) => get(`/admin/artists/${encodeURIComponent(id)}`);

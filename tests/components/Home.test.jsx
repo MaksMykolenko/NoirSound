@@ -103,6 +103,30 @@ describe('Home real API states', () => {
     expect(screen.queryByText(i18n.t('empty.noReleasesYet'))).not.toBeInTheDocument();
   });
 
+  it('keeps Music and Beats in separate Home sections while sharing normal track cards', async () => {
+    const music = { ...realTrack, id: 'music-1', title: 'Finished Song', contentType: 'MUSIC' };
+    const beat = {
+      ...realTrack,
+      id: 'beat-1',
+      title: 'Midnight Beat',
+      contentType: 'BEAT',
+      beatBpm: 138,
+      beatKey: 'D Minor',
+    };
+    getTracks.mockResolvedValue([music, beat]);
+
+    renderHome();
+
+    const musicSection = await screen.findByTestId('home-releases');
+    const beatSection = screen.getByTestId('home-fresh-beats');
+    expect(within(musicSection).getByText('Finished Song')).toBeInTheDocument();
+    expect(within(musicSection).queryByText('Midnight Beat')).not.toBeInTheDocument();
+    expect(within(beatSection).getByText('Midnight Beat')).toBeInTheDocument();
+    expect(within(beatSection).queryByText('Finished Song')).not.toBeInTheDocument();
+    expect(within(beatSection).getByTestId('beat-badge')).toBeInTheDocument();
+    expect(within(beatSection).getByText(/138 BPM/)).toBeInTheDocument();
+  });
+
   it.each([1, 2, 8])('keeps %i real release cards bounded in the responsive Home grid', async (count) => {
     const tracks = Array.from({ length: count }, (_, index) => makeTrack(index + 1));
     getTracks.mockResolvedValue(tracks);

@@ -9,6 +9,7 @@ import {
   removeTrackLyrics,
   restoreTrack,
   unhideTrack,
+  updateTrackContentType,
 } from '../../api/admin';
 import { useToastStore } from '../../store/toastStore';
 import {
@@ -29,6 +30,7 @@ export default function AdminTrackDetail() {
   const addToast = useToastStore((state) => state.addToast);
   const { data, loading, error, reload } = useAdminData(() => getAdminTrack(id), [id]);
   const [pendingAction, setPendingAction] = useState(null);
+  const [selectedContentType, setSelectedContentType] = useState('');
 
   if (loading) return <AdminLoading />;
   if (error) return <AdminError error={error} onRetry={reload} />;
@@ -42,6 +44,10 @@ export default function AdminTrackDetail() {
     restore: (reason) => restoreTrack(id, reason),
     reprocess: (reason) => forceReprocessTrack(id, reason),
     removeLyrics: (reason) => removeTrackLyrics(id, reason),
+    contentType: (reason) => updateTrackContentType(id, {
+      contentType: selectedContentType || track.contentType || 'MUSIC',
+      reason,
+    }),
   };
 
   async function confirm(reason) {
@@ -68,6 +74,7 @@ export default function AdminTrackDetail() {
           <dl className="mt-4 grid gap-4 sm:grid-cols-2">
             {[
               [t('admin.status'), <StatusBadge key="status" status={track.status} />],
+              [t('admin.contentType'), track.contentType === 'BEAT' ? t('content.beat') : t('content.music')],
               [t('admin.genre'), track.genre ? getGenreLabel(track.genre) : '—'],
               [t('admin.tags'), track.tags?.join(', ') || '—'],
               [t('admin.plays'), track.plays],
@@ -86,6 +93,25 @@ export default function AdminTrackDetail() {
         <AdminPanel className="p-4">
           <h2 className="text-sm font-bold">{t('admin.actions')}</h2>
           <div className="mt-4 flex flex-col gap-2">
+            <label className="space-y-1.5">
+              <span className="ns-eyebrow">{t('admin.contentType')}</span>
+              <select
+                className="ns-field px-3"
+                value={selectedContentType || track.contentType || 'MUSIC'}
+                onChange={(event) => setSelectedContentType(event.target.value)}
+              >
+                <option value="MUSIC">{t('content.music')}</option>
+                <option value="BEAT">{t('content.beats')}</option>
+              </select>
+            </label>
+            <button
+              type="button"
+              disabled={(selectedContentType || track.contentType || 'MUSIC') === (track.contentType || 'MUSIC')}
+              onClick={() => setPendingAction('contentType')}
+              className="ns-button-secondary rounded px-3 py-2 text-sm disabled:opacity-40"
+            >
+              {t('admin.updateContentType')}
+            </button>
             {track.status === 'PUBLISHED' && <button type="button" onClick={() => setPendingAction('hide')} className="ns-button-secondary rounded px-3 py-2 text-sm">{t('admin.hide')}</button>}
             {track.status === 'HIDDEN' && <button type="button" onClick={() => setPendingAction('unhide')} className="ns-button-secondary rounded px-3 py-2 text-sm">{t('admin.unhide')}</button>}
             {['PUBLISHED', 'PENDING_REVIEW', 'HIDDEN'].includes(track.status) && <button type="button" onClick={() => setPendingAction('reject')} className="rounded bg-[var(--ns-danger)] px-3 py-2 text-sm font-semibold text-white">{t('admin.reject')}</button>}
@@ -97,6 +123,27 @@ export default function AdminTrackDetail() {
           </div>
         </AdminPanel>
       </div>
+      {track.contentType === 'BEAT' && (
+        <AdminPanel className="p-4" data-testid="admin-beat-metadata">
+          <h2 className="text-sm font-bold">{t('beats.beatMetadata')}</h2>
+          <dl className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              [t('beats.bpm'), track.beatBpm ?? '—'],
+              [t('beats.key'), track.beatKey || '—'],
+              [t('beats.mood'), track.beatMood || '—'],
+              [t('beats.style'), track.beatStyle || '—'],
+              [t('beats.licenseType'), track.beatLicenseType || '—'],
+              [t('beats.usageNotes'), track.beatUsageNotes || '—'],
+              [t('beats.contactEnabled'), track.beatContactEnabled ? t('admin.yes') : t('admin.no')],
+            ].map(([label, value]) => (
+              <div key={label}>
+                <dt className="font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-[var(--ns-text-muted)]">{label}</dt>
+                <dd className="mt-1 whitespace-pre-wrap text-sm text-[var(--ns-text-secondary)]">{value}</dd>
+              </div>
+            ))}
+          </dl>
+        </AdminPanel>
+      )}
       <AdminPanel className="p-4">
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-sm font-bold">{t('admin.lyricsModeration')}</h2>

@@ -10,6 +10,9 @@ import GenrePicker from '../ui/GenrePicker';
 import { getLocalizedGenre } from '../../i18n/genreLabels';
 import LyricsEditor from '../lyrics/LyricsEditor';
 import { lyricsCounts, MAX_LYRICS_LINES } from '../lyrics/lyricsUtils';
+import BeatMetadataFields from './BeatMetadataFields';
+import ContentTypeSelector from './ContentTypeSelector';
+import { beatMetadataPayload, EMPTY_BEAT_METADATA } from './beatMetadata';
 
 export default function UploadForm() {
   const { t } = useTranslation();
@@ -33,6 +36,8 @@ export default function UploadForm() {
   const [genre, setGenre] = useState('');
   const [description, setDescription] = useState('');
   const [tags, setTags] = useState('');
+  const [contentType, setContentType] = useState('MUSIC');
+  const [beatMetadata, setBeatMetadata] = useState(() => ({ ...EMPTY_BEAT_METADATA }));
   const [rightsChecked, setRightsChecked] = useState(false);
   const [lyricsForm, setLyricsForm] = useState({
     lyricsText: '',
@@ -74,6 +79,8 @@ export default function UploadForm() {
       // 1. Execute upload (gets S3 urls and puts them)
       const res = await uploadMutation.mutateAsync({
         title, genre, description, tags: tags.split(',').map(t => t.trim()).filter(Boolean),
+        contentType,
+        ...beatMetadataPayload(contentType, beatMetadata),
         audioFile,
         coverFile,
         copyrightConfirmed: rightsChecked,
@@ -148,6 +155,8 @@ export default function UploadForm() {
     setGenre('');
     setDescription('');
     setTags('');
+    setContentType('MUSIC');
+    setBeatMetadata({ ...EMPTY_BEAT_METADATA });
     setRightsChecked(false);
     setLyricsForm({
       lyricsText: '',
@@ -267,6 +276,9 @@ export default function UploadForm() {
           <div className="min-w-0 flex-1">
             <h4 className="text-sm font-bold text-zinc-200 truncate">{title}</h4>
             <p className="text-sm text-zinc-500">{getLocalizedGenre(genre)} • {tags || 'No tags'}</p>
+            <span className="mt-1 inline-flex rounded border border-zinc-700 px-1.5 py-0.5 font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-zinc-400">
+              {contentType === 'BEAT' ? t('content.beats') : t('content.music')}
+            </span>
           </div>
         </div>
 
@@ -366,6 +378,10 @@ export default function UploadForm() {
             <span className="font-semibold">{errorMsg}</span>
           </div>
         )}
+
+        <section aria-label={t('content.uploadAs')}>
+          <ContentTypeSelector value={contentType} onChange={setContentType} idPrefix="single-upload-content-type" />
+        </section>
 
         <section className="space-y-4" aria-labelledby="upload-assets-title">
           <div>
@@ -492,6 +508,14 @@ export default function UploadForm() {
             <p className="pt-0.5 text-ns-label leading-relaxed text-zinc-500">{t('uploadForm.tagsHelper')}</p>
           </div>
         </section>
+
+        {contentType === 'BEAT' && (
+          <BeatMetadataFields
+            value={beatMetadata}
+            onChange={setBeatMetadata}
+            idPrefix="single-upload-beat"
+          />
+        )}
 
         <details className="border-y border-zinc-800/70 py-4">
           <summary className="cursor-pointer text-sm font-bold text-zinc-200 marker:text-brand-red">

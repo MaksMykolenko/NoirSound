@@ -33,6 +33,11 @@ enum TrackStatus {
   HIDDEN
 }
 
+enum TrackContentType {
+  MUSIC
+  BEAT
+}
+
 enum LyricsType {
   NONE
   PLAIN
@@ -187,6 +192,15 @@ model Track {
   likes           Int         @default(0)
   releaseDate     DateTime    @default(now())
 
+  contentType       TrackContentType @default(MUSIC)
+  beatKey           String?
+  beatBpm           Int?
+  beatMood          String?
+  beatStyle         String?
+  beatLicenseType   String?
+  beatUsageNotes    String?
+  beatContactEnabled Boolean         @default(false)
+
   originalAudioKey      String?
   processedAudioKey     String?
   coverImageKey         String?
@@ -221,6 +235,7 @@ model Track {
 
   @@index([status])
   @@index([artistId])
+  @@index([contentType, status, publishedAt])
 }
 
 model TrackAudioAsset {
@@ -461,6 +476,14 @@ model UploadBatchItem {
   explicit              Boolean               @default(false)
   isPublic              Boolean               @default(true)
   copyrightConfirmed    Boolean               @default(false)
+  contentType           TrackContentType      @default(MUSIC)
+  beatKey               String?
+  beatBpm               Int?
+  beatMood              String?
+  beatStyle             String?
+  beatLicenseType       String?
+  beatUsageNotes        String?
+  beatContactEnabled    Boolean               @default(false)
   lyricsText            String?
   lyricsType            LyricsType            @default(NONE)
   lyricsLanguage        String?

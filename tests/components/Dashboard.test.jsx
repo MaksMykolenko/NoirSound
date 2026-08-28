@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import i18n from '../../src/i18n';
 import { getArtistDashboard } from '../../src/api';
 import { useUserStore } from '../../src/store/userStore';
+import { formatNumber } from '../../src/utils/formatLocale';
 
 vi.mock('../../src/api', async (importOriginal) => {
   const actual = await importOriginal();
@@ -49,6 +50,19 @@ const populatedDashboard = {
   failedUploads: [],
   geography: null,
   trends: null,
+};
+
+const beatTrack = {
+  id: 'beat-1',
+  title: 'Concrete Pulse',
+  genre: 'hip-hop',
+  contentType: 'BEAT',
+  beatBpm: 138,
+  beatKey: 'F# minor',
+  status: 'PUBLISHED',
+  plays: 18,
+  coverUrl: null,
+  hasLyrics: false,
 };
 
 function renderDashboard() {
@@ -100,6 +114,38 @@ describe('Dashboard polish', () => {
     expect(actions[0]).toHaveClass('ns-button-primary');
     expect(screen.getAllByRole('heading', { name: 'Midnight Signals' })).toHaveLength(3);
     expect(screen.getAllByText('42').length).toBeGreaterThan(0);
+  });
+
+  it('renders backend-provided Music and Beats catalogue metrics and separate top lists', async () => {
+    getArtistDashboard.mockResolvedValue({
+      ...populatedDashboard,
+      tracks: [populatedTrack, beatTrack],
+      recentUploads: [beatTrack, populatedTrack],
+      musicTrackCount: 8,
+      beatTrackCount: 3,
+      musicPlays: 1240,
+      beatPlays: 318,
+      topMusicTracks: [populatedTrack],
+      topBeats: [beatTrack],
+    });
+
+    renderDashboard();
+
+    const breakdown = await screen.findByTestId('dashboard-content-breakdown');
+    expect(within(breakdown).getByText(i18n.t('dashboard.musicReleases', { defaultValue: 'Music releases' }))).toBeInTheDocument();
+    expect(within(breakdown).getByText('8')).toBeInTheDocument();
+    expect(within(breakdown).getByText('3')).toBeInTheDocument();
+    expect(within(breakdown).getByText(formatNumber(1240))).toBeInTheDocument();
+    expect(within(breakdown).getByText('318')).toBeInTheDocument();
+
+    expect(screen.getByRole('heading', {
+      name: i18n.t('dashboard.topMusic', { defaultValue: 'Top music' }),
+    })).toBeInTheDocument();
+    expect(screen.getByRole('heading', {
+      name: i18n.t('dashboard.topBeats', { defaultValue: 'Top beats' }),
+    })).toBeInTheDocument();
+    expect(screen.getAllByTestId('beat-badge').length).toBeGreaterThan(0);
+    expect(screen.getAllByText(beatTrack.title).length).toBeGreaterThan(0);
   });
 
   it('uses one responsive DOM action and navigates it to the upload route', async () => {

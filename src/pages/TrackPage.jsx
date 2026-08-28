@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import PageMeta from '../components/meta/PageMeta';
 import { useTranslation } from 'react-i18next';
-import { Play, Pause, Heart, Plus, Check, Clock, Headphones, Share2, MoreHorizontal } from 'lucide-react';
+import { Play, Pause, Heart, Plus, Check, Clock, Headphones, Share2, MoreHorizontal, MessageCircle } from 'lucide-react';
 import { usePlayerStore } from '../store/playerStore';
 import { useToastStore } from '../store/toastStore';
 import { getTrackById, getTracks } from '../api';
@@ -20,6 +20,8 @@ import { normalizeGenre } from '../constants/musicGenres';
 import TrackLyricsCard from '../components/lyrics/TrackLyricsCard';
 import { useUserStore } from '../store/userStore';
 import { useTrackContextMenu } from '../hooks/useEntityContextMenu';
+import { BeatMetadataInline, TrackTypeBadge } from '../components/tracks/TrackContentMeta';
+import { isBeatTrack } from '../utils/trackContent';
 
 function formatReleaseDate(iso, lang) {
   if (!iso) return null;
@@ -75,6 +77,7 @@ export default function TrackPage() {
           sortTracksNewest(allT)
             .filter((candidate) => {
               if (candidate.id === t.id) return false;
+              if (isBeatTrack(candidate) !== isBeatTrack(t)) return false;
               const candGenre = normalizeGenre(candidate.genre)
                 || (candidate.genre || '').trim().toLowerCase();
               return Boolean(targetGenre) && candGenre === targetGenre;
@@ -130,6 +133,7 @@ export default function TrackPage() {
   const inQueue = queue.some((qt) => qt.id === track.id);
   const canPlay = track.isStreamable ?? Boolean(track.audioUrl);
   const canEditLyrics = user?.role === 'ADMIN' || user?.artistProfileId === track.artistId;
+  const isBeat = isBeatTrack(track);
 
   const genreLabel = getLocalizedGenre(track.genre);
   const showGenre = Boolean(genreLabel) && genreLabel !== 'No genre';
@@ -139,7 +143,9 @@ export default function TrackPage() {
   const playCount = Number(track.plays || 0);
   const trackNote = playCount === 0
     ? t('trackPage.beFirstToListen')
-    : t('trackPage.uploadedBy', { name: track.artistName });
+    : isBeat
+      ? t('beats.producedBy', { name: track.artistName })
+      : t('trackPage.uploadedBy', { name: track.artistName });
 
   const handlePlayClick = () => {
     if (!canPlay) return;
@@ -183,7 +189,7 @@ export default function TrackPage() {
     <div className="ns-page-stack">
       <PageMeta
         title={`${track.title} — ${track.artistName} · NoirSound`}
-        description={`${showGenre ? `${genreLabel} · ` : ''}${hasDuration ? `${durationStr} · ` : ''}Listen to ${track.title} by ${track.artistName} on NoirSound.`}
+        description={`${showGenre ? `${genreLabel} · ` : ''}${hasDuration ? `${durationStr} · ` : ''}${isBeat ? 'Listen to this beat' : `Listen to ${track.title}`} by ${track.artistName} on NoirSound.`}
         canonical={`https://noirsound.co/track/${track.id}`}
       />
 
@@ -223,11 +229,14 @@ export default function TrackPage() {
             {/* Track info + actions + metadata */}
             <div className="min-w-0 space-y-4 text-center md:pr-12 md:text-left">
               <div className="space-y-2.5">
-                {showGenre && (
-                  <span className="inline-block bg-[var(--ns-accent-soft)] px-2 py-0.5 font-sans tabular-nums text-ns-label font-medium uppercase tracking-ns-label text-rose-300 select-none">
-                    {genreLabel}
-                  </span>
-                )}
+                <div className="flex flex-wrap items-center justify-center gap-2 md:justify-start">
+                  <TrackTypeBadge track={track} />
+                  {showGenre && (
+                    <span className="inline-block bg-[var(--ns-accent-soft)] px-2 py-0.5 font-sans tabular-nums text-ns-label font-medium uppercase tracking-ns-label text-rose-300 select-none">
+                      {genreLabel}
+                    </span>
+                  )}
+                </div>
                 <h1 className="ns-display-title ns-display-title--entity text-zinc-100">
                   {track.title}
                 </h1>
@@ -250,7 +259,7 @@ export default function TrackPage() {
                   {isPlayingThis
                     ? <Pause size={16} fill="currentColor" strokeWidth={0} />
                     : <Play size={16} fill="currentColor" strokeWidth={0} className="translate-x-[0.5px]" />}
-                  <span>{!canPlay ? t('trackPage.audioUnavailable') : isPlayingThis ? t('trackPage.pauseTrack') : t('trackPage.playTrack')}</span>
+                  <span>{!canPlay ? t('trackPage.audioUnavailable') : isPlayingThis ? t('trackPage.pauseTrack') : isBeat ? t('beats.playBeat') : t('trackPage.playTrack')}</span>
                 </button>
 
                 <button
@@ -319,6 +328,7 @@ export default function TrackPage() {
 
               {/* Subtle contextual note */}
               <p className="text-sm text-zinc-500/90">{trackNote}</p>
+              <BeatMetadataInline track={track} className="justify-center md:justify-start" limit={4} />
             </div>
           </>
         </section>
@@ -360,11 +370,53 @@ export default function TrackPage() {
           className={`min-w-0 space-y-6 xl:space-y-8 ${relatedTracks.length > 0 ? 'xl:col-span-8' : 'xl:col-span-12'}`}
           data-testid="track-main-column"
         >
-          <TrackLyricsCard
-            track={track}
-            canEdit={canEditLyrics}
-            onLyricsChanged={handleLyricsChanged}
-          />
+          {(!isBeat || track.hasLyrics) && (
+            <TrackLyricsCard
+              track={track}
+              canEdit={canEditLyrics}
+              onLyricsChanged={handleLyricsChanged}
+            />
+          )}
+
+          {isBeat && (
+            <section className="space-y-4 border-t border-zinc-800/60 pt-6" data-testid="beat-details">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h2 className="ns-section-title">{t('beats.beatDetails')}</h2>
+                  <p className="mt-1 text-sm text-zinc-500">{t('beats.beatDetailsDescription')}</p>
+                </div>
+                {track.beatContactEnabled && (
+                  <Link
+                    to={`/artist/${track.artistId}#contact`}
+                    className="ns-button-secondary inline-flex min-h-11 items-center gap-2 px-4 text-sm"
+                  >
+                    <MessageCircle size={15} aria-hidden="true" />
+                    {t('beats.contactProducer')}
+                  </Link>
+                )}
+              </div>
+              <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                {[
+                  [t('beats.bpm'), track.beatBpm],
+                  [t('beats.key'), track.beatKey],
+                  [t('beats.mood'), track.beatMood],
+                  [t('beats.style'), track.beatStyle],
+                  [t('beats.licenseType'), track.beatLicenseType],
+                ].filter(([, value]) => value !== null && value !== undefined && value !== '').map(([label, value]) => (
+                  <div key={label} className="rounded border border-zinc-800/70 bg-zinc-950/20 p-3">
+                    <dt className="ns-eyebrow">{label}</dt>
+                    <dd className="mt-1 text-sm font-semibold text-zinc-200">{value}</dd>
+                  </div>
+                ))}
+              </dl>
+              {track.beatUsageNotes && (
+                <div className="rounded border border-zinc-800/70 bg-zinc-950/20 p-4">
+                  <h3 className="ns-eyebrow">{t('beats.usageNotes')}</h3>
+                  <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-zinc-300">{track.beatUsageNotes}</p>
+                </div>
+              )}
+            </section>
+          )}
 
           <section className="space-y-3 border-t border-zinc-800/60 pt-6">
             <h2 className="ns-section-title">{t('trackPage.description')}</h2>
@@ -399,7 +451,7 @@ export default function TrackPage() {
             data-testid="track-related-rail"
             aria-labelledby="track-related-title"
           >
-            <h2 id="track-related-title" className="ns-section-title px-1">{t('trackPage.relatedTracks')}</h2>
+            <h2 id="track-related-title" className="ns-section-title px-1">{isBeat ? t('beats.relatedBeats') : t('trackPage.relatedTracks')}</h2>
             <div className="mt-4 border-y border-zinc-800/60">
               {relatedTracks.map((relTrack) => (
                 <Link

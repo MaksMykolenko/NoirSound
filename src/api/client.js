@@ -57,7 +57,7 @@ export async function apiFetch(endpoint, options = {}) {
         errorData = { error: response.statusText || 'Unknown error' };
       }
       const apiError = new ApiError(
-        errorData.error || errorData.message || 'API request failed',
+        errorData.message || errorData.error || 'API request failed',
         response.status,
         errorData
       );

@@ -14,7 +14,7 @@ import {
   Radio,
 } from 'lucide-react';
 import PageMeta from '../components/meta/PageMeta';
-import { followArtist, unfollowArtist, getArtistById, getTracksByArtist } from '../api';
+import { followArtist, unfollowArtist, getArtistById, getTracksByArtist, getPlaylistsByArtist } from '../api';
 import { useUserStore } from '../store/userStore';
 import { useToastStore } from '../store/toastStore';
 import { usePlayerStore } from '../store/playerStore';
@@ -27,6 +27,8 @@ import FallbackAvatar from '../components/ui/FallbackAvatar';
 import { sortTracksNewest } from '../utils/presentation';
 import { formatNumber } from '../utils/formatLocale';
 import { getLocalizedGenre } from '../i18n/genreLabels';
+import PlaylistCard from '../components/playlists/PlaylistCard';
+import { isBeatTrack } from '../utils/trackContent';
 
 const POPULAR_TRACK_LIMIT = 5;
 
@@ -96,6 +98,7 @@ export default function ArtistPage() {
 
   const [artist, setArtist] = useState(null);
   const [artistTracks, setArtistTracks] = useState([]);
+  const [artistPlaylists, setArtistPlaylists] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isFollowing, setIsFollowing] = useState(false);
@@ -111,15 +114,17 @@ export default function ArtistPage() {
       setLoading(true);
       setError(null);
       try {
-        const [artistResponse, tracksResponse] = await Promise.all([
+        const [artistResponse, tracksResponse, playlistsResponse] = await Promise.all([
           getArtistById(id),
           getTracksByArtist(id),
+          getPlaylistsByArtist(id),
         ]);
         if (!active) return;
         setArtist(artistResponse);
         setIsFollowing(Boolean(artistResponse.isFollowing));
         setFollowerCount(null);
         setArtistTracks(sortTracksNewest(tracksResponse));
+        setArtistPlaylists(playlistsResponse || []);
         setShowAllPopular(false);
         setBioExpanded(false);
       } catch (err) {
@@ -212,6 +217,8 @@ export default function ArtistPage() {
   }
 
   const followerDisplayCount = followerCount ?? artist.followers;
+  const musicTracks = artistTracks.filter((track) => !isBeatTrack(track));
+  const beatTracks = artistTracks.filter(isBeatTrack);
   const popularTracks = [...artistTracks].sort((left, right) => Number(right.plays || 0) - Number(left.plays || 0));
   const playableTracks = popularTracks.filter((track) => track.isStreamable ?? Boolean(track.audioUrl));
   const artistQueueSource = { type: 'artist', id: artist.id, name: artist.name };
@@ -243,7 +250,7 @@ export default function ArtistPage() {
     <div className="ns-page-stack pb-10">
       <PageMeta
         title={`${artist.name} — NoirSound`}
-        description={artist.bio || `${artist.name} is an independent artist on NoirSound. Listen to releases and follow new music.`}
+        description={artist.bio || `${artist.name} is an independent creator on NoirSound. Listen to music and beats.`}
         canonical={`https://noirsound.co/artist/${artist.id}`}
       />
 
@@ -351,6 +358,19 @@ export default function ArtistPage() {
         </div>
       </section>
 
+      <nav className="ns-tabs-scroll flex gap-1 overflow-x-auto border-b border-zinc-800/70" aria-label={t('profile.creatorSections')}>
+        {[
+          ['artist-music', t('artist.music')],
+          ['artist-beats', t('artist.beats')],
+          ['artist-playlists', t('artist.playlists')],
+          ['artist-about', t('profile.about')],
+        ].map(([target, label]) => (
+          <a key={target} href={`#${target}`} className="ns-tab min-h-11 shrink-0 border-b-2 border-transparent px-4 py-3 text-sm font-semibold text-zinc-400 hover:border-zinc-700 hover:text-zinc-100">
+            {label}
+          </a>
+        ))}
+      </nav>
+
       <section className="ns-page-section" data-testid="artist-popular" aria-labelledby="artist-popular-title">
         <div className="ns-section-header-row">
           <h2 id="artist-popular-title" className="ns-section-title">{t('profile.popular')}</h2>
@@ -389,16 +409,16 @@ export default function ArtistPage() {
         )}
       </section>
 
-      <section className="ns-page-section" data-testid="artist-discography" aria-labelledby="artist-discography-title">
+      <section id="artist-music" className="ns-page-section scroll-mt-24" data-testid="artist-discography" aria-labelledby="artist-discography-title">
         <div className="ns-section-header-row">
-          <h2 id="artist-discography-title" className="ns-section-title">{t('profile.discography')}</h2>
+          <h2 id="artist-discography-title" className="ns-section-title">{t('artist.music')}</h2>
         </div>
 
-        {artistTracks.length === 0 ? (
+        {musicTracks.length === 0 ? (
           <p className="text-ns-body-sm text-zinc-500">{t('profile.artistNoReleasesDesc')}</p>
         ) : (
           <div className="ns-artist-discography-grid">
-            {artistTracks.map((track) => (
+            {musicTracks.map((track) => (
               <ArtistReleaseCard
                 key={track.id}
                 track={track}
@@ -410,8 +430,48 @@ export default function ArtistPage() {
         )}
       </section>
 
+      <section id="artist-beats" className="ns-page-section scroll-mt-24" data-testid="artist-beats" aria-labelledby="artist-beats-title">
+        <div className="ns-section-header-row">
+          <div>
+            <h2 id="artist-beats-title" className="ns-section-title">{t('artist.beats')}</h2>
+            <p className="mt-1 text-sm text-zinc-500">{t('artist.beatsByCreator')}</p>
+          </div>
+        </div>
+        {beatTracks.length === 0 ? (
+          <div className="ns-artist-empty-section">
+            <Radio size={20} aria-hidden="true" />
+            <div>
+              <h3>{t('beats.noBeats')}</h3>
+              <p>{t('artist.noBeatsUploaded')}</p>
+            </div>
+          </div>
+        ) : (
+          <div className="ns-artist-discography-grid">
+            {beatTracks.map((track) => (
+              <ArtistReleaseCard
+                key={track.id}
+                track={track}
+                tracksContext={playableTracks}
+                queueSource={artistQueueSource}
+              />
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section id="artist-playlists" className="ns-page-section scroll-mt-24" data-testid="artist-playlists" aria-labelledby="artist-playlists-title">
+        <h2 id="artist-playlists-title" className="ns-section-title">{t('artist.playlists')}</h2>
+        {artistPlaylists.length === 0 ? (
+          <p className="mt-3 text-ns-body-sm text-zinc-500">{t('artist.noPlaylists')}</p>
+        ) : (
+          <div className="mt-4 grid grid-cols-1 gap-4 min-[430px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+            {artistPlaylists.map((playlist) => <PlaylistCard key={playlist.id} playlist={playlist} />)}
+          </div>
+        )}
+      </section>
+
       <div className={`ns-artist-detail-grid ${socialItems.length === 0 ? 'ns-artist-detail-grid--single' : ''}`}>
-        <section className="ns-artist-detail-panel" data-testid="artist-about" aria-labelledby="artist-about-title">
+        <section id="artist-about" className="ns-artist-detail-panel scroll-mt-24" data-testid="artist-about" aria-labelledby="artist-about-title">
           <h2 id="artist-about-title" className="ns-section-title">{t('profile.about')}</h2>
           <div className="mt-4 min-w-0">
             <p className={`max-w-3xl text-ns-body leading-[var(--ns-line-body)] text-zinc-300 ${hasLongBio && !bioExpanded ? 'ns-artist-bio--collapsed' : ''}`}>
@@ -453,7 +513,7 @@ export default function ArtistPage() {
         </section>
 
         {socialItems.length > 0 && (
-          <section className="ns-artist-detail-panel" data-testid="artist-socials" aria-labelledby="artist-socials-title">
+          <section id="contact" className="ns-artist-detail-panel scroll-mt-24" data-testid="artist-socials" aria-labelledby="artist-socials-title">
             <h2 id="artist-socials-title" className="ns-section-title">{t('profile.socialLinks')}</h2>
             <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2">
               {socialItems.map(({ key, label, Icon, href }) => (

@@ -6,7 +6,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import i18n from '../../src/i18n';
-import { getArtistById, getTracksByArtist, followArtist } from '../../src/api';
+import { getArtistById, getTracksByArtist, getPlaylistsByArtist, followArtist } from '../../src/api';
 import { useUserStore } from '../../src/store/userStore';
 import { usePlayerStore } from '../../src/store/playerStore';
 
@@ -16,6 +16,7 @@ vi.mock('../../src/api', async (importOriginal) => {
     ...actual,
     getArtistById: vi.fn(),
     getTracksByArtist: vi.fn(),
+    getPlaylistsByArtist: vi.fn(),
     followArtist: vi.fn(),
     unfollowArtist: vi.fn(),
   };
@@ -85,6 +86,7 @@ describe('ArtistPage', () => {
     vi.clearAllMocks();
     await i18n.changeLanguage('en');
     getTracksByArtist.mockResolvedValue([]);
+    getPlaylistsByArtist.mockResolvedValue([]);
     useUserStore.setState({
       user: { id: 'listener-1', role: 'LISTENER' },
       setAuthModalOpen: vi.fn(),
@@ -201,6 +203,41 @@ describe('ArtistPage', () => {
     const about = screen.getByTestId('artist-about');
     expect(popular.nextElementSibling).toBe(discography);
     expect(discography.compareDocumentPosition(about) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('separates Music and Beats and renders the creator playlist section', async () => {
+    const beat = {
+      ...tracks[1],
+      id: 'beat-1',
+      title: 'Concrete Pulse',
+      contentType: 'BEAT',
+      beatBpm: 138,
+      beatKey: 'F# Minor',
+      beatMood: 'Dark',
+    };
+    getArtistById.mockResolvedValue(baseArtist);
+    getTracksByArtist.mockResolvedValue([{ ...tracks[0], contentType: 'MUSIC' }, beat]);
+    getPlaylistsByArtist.mockResolvedValue([{
+      id: 'playlist-1',
+      name: 'Producer Sketches',
+      description: 'Public creator playlist',
+      creator: 'Static Bloom',
+      tracks: [],
+      trackCount: 0,
+      isPublic: true,
+    }]);
+
+    renderArtist();
+
+    const musicSection = await screen.findByTestId('artist-discography');
+    const beatsSection = screen.getByTestId('artist-beats');
+    const playlistsSection = screen.getByTestId('artist-playlists');
+    expect(within(musicSection).getByText('Night Signal')).toBeInTheDocument();
+    expect(within(musicSection).queryByText('Concrete Pulse')).not.toBeInTheDocument();
+    expect(within(beatsSection).getByText('Concrete Pulse')).toBeInTheDocument();
+    expect(within(beatsSection).getByTestId('beat-badge')).toBeInTheDocument();
+    expect(within(beatsSection).getByText(/138 BPM/)).toBeInTheDocument();
+    expect(within(playlistsSection).getByText('Producer Sketches')).toBeInTheDocument();
   });
 
   it('starts the real artist queue in popularity order', async () => {

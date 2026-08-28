@@ -56,6 +56,7 @@ describe('real API client · CSRF contract', () => {
     expect(err).toBeInstanceOf(ApiError);
     expect(err.status).toBe(403);
     expect(err.code).toBe('CSRF_VALIDATION_FAILED');
+    expect(err.message).toBe('Cross-origin state-changing request rejected.');
     // The dispatched api-error event carries the code so the UI can localize it.
     expect(events.at(-1)).toMatchObject({ status: 403, code: 'CSRF_VALIDATION_FAILED' });
   });

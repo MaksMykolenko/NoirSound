@@ -38,11 +38,31 @@ export default function BatchItemList({ items, onOpen, onTarget, onReorder, onRe
               <div className="flex items-center gap-2">
                 <span className="font-sans tabular-nums text-ns-meta text-zinc-600 sm:hidden">{index + 1}</span>
                 <p className="truncate text-sm font-bold text-zinc-200">{item.title}</p>
+                <span
+                  data-testid={`batch-content-type-${item.id}`}
+                  className={`shrink-0 rounded border px-1.5 py-0.5 font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label ${
+                    item.contentType === 'BEAT'
+                      ? 'border-brand-red/35 bg-brand-red/10 text-brand-red'
+                      : 'border-zinc-700 text-zinc-500'
+                  }`}
+                >
+                  {item.contentType === 'BEAT' ? t('content.beats') : t('content.music')}
+                </span>
                 {item.missingFields?.length > 0 && <AlertTriangle size={14} className="text-amber-300 shrink-0" />}
                 {item.status === 'READY' && <CheckCircle2 size={14} className="text-emerald-400 shrink-0" />}
                 {item.hasLyrics && <FileText size={14} className="text-brand-red shrink-0" aria-label={t('lyrics.title')} />}
               </div>
               <p className="truncate font-sans tabular-nums text-ns-meta text-zinc-500">{item.fileName} · {formatBytes(item.fileSize)} · {item.genre ? getGenreLabel(item.genre, i18n.language) : t('batchUpload.missingGenre')}</p>
+              {item.contentType === 'BEAT' && (item.beatBpm || item.beatKey || item.beatMood || item.beatStyle) && (
+                <p className="truncate font-sans tabular-nums text-ns-meta text-zinc-500" data-testid={`batch-beat-summary-${item.id}`}>
+                  {[
+                    item.beatBpm ? `${item.beatBpm} ${t('beats.bpm')}` : '',
+                    item.beatKey ? `${t('beats.key')}: ${item.beatKey}` : '',
+                    item.beatMood || '',
+                    item.beatStyle || '',
+                  ].filter(Boolean).join(' · ')}
+                </p>
+              )}
               <p className="truncate font-sans tabular-nums text-ns-meta text-zinc-600">
                 {item.hasLyrics
                   ? `${t('batchUpload.lyricsAdded')} · ${item.lyricsRightsConfirmed ? t('batchUpload.lyricsRightsConfirmed') : t('lyrics.rightsRequired')}`

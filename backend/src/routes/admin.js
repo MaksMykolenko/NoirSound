@@ -31,6 +31,8 @@ const {
 const { runStatsIntegrityCheck } = require('../lib/statsIntegrity');
 const { hasLyrics } = require('../lib/lyrics');
 const { serializeUserMedia } = require('../lib/profileMedia');
+const { parseTrackContentType } = require('../lib/trackContentType');
+const { validateBeatMetadata } = require('../lib/beatMetadata');
 
 const execFileAsync = promisify(execFile);
 const USER_ROLES = ['LISTENER', 'ARTIST', 'ADMIN'];
@@ -935,8 +937,13 @@ async function adminRoutes(fastify) {
     const search = sanitizeSearch(request.query.search);
     const status = enumFilter(request.query.status, TRACK_STATUSES);
     if (request.query.status && status === undefined) return invalidFilter(reply, 'status');
+    const contentTypeResult = parseTrackContentType(request.query.contentType, { defaultValue: null });
+    if (!contentTypeResult.ok) {
+      return sendAdminError(reply, 400, contentTypeResult.error, contentTypeResult.message);
+    }
     const where = {
       ...(status ? { status } : {}),
+      ...(contentTypeResult.value ? { contentType: contentTypeResult.value } : {}),
       ...(search ? {
         OR: [
           { id: { contains: search, mode: 'insensitive' } },
@@ -959,6 +966,7 @@ async function adminRoutes(fastify) {
           title: true,
           slug: true,
           genre: true,
+          contentType: true,
           status: true,
           plays: true,
           likes: true,
@@ -1010,6 +1018,14 @@ async function adminRoutes(fastify) {
         slug: true,
         coverUrl: true,
         genre: true,
+        contentType: true,
+        beatKey: true,
+        beatBpm: true,
+        beatMood: true,
+        beatStyle: true,
+        beatLicenseType: true,
+        beatUsageNotes: true,
+        beatContactEnabled: true,
         tags: true,
         durationSeconds: true,
         description: true,
@@ -1111,6 +1127,59 @@ async function adminRoutes(fastify) {
     setTrackStatus(request, reply, 'REJECTED', 'TRACK_REJECT', ['PUBLISHED', 'PENDING_REVIEW', 'HIDDEN']));
   fastify.post('/tracks/:id/restore', mutate, (request, reply) =>
     setTrackStatus(request, reply, 'PENDING_REVIEW', 'TRACK_RESTORE', ['REJECTED']));
+
+  fastify.post('/tracks/:id/content-type', mutate, async (request, reply) => {
+    const reason = requiredReason(request.body);
+    if (!reason) return sendAdminError(reply, 400, 'ADMIN_REASON_REQUIRED', 'A reason is required.');
+    const track = await fastify.prisma.track.findUnique({ where: { id: request.params.id } });
+    if (!track) return sendAdminError(reply, 404, 'ADMIN_TRACK_NOT_FOUND', 'Track not found.');
+
+    const contentTypeResult = parseTrackContentType(request.body?.contentType);
+    if (!contentTypeResult.ok) {
+      return sendAdminError(reply, 400, contentTypeResult.error, contentTypeResult.message);
+    }
+    const beatMetadataResult = validateBeatMetadata({ ...track, ...request.body }, {
+      contentType: contentTypeResult.value
+    });
+    if (!beatMetadataResult.ok) {
+      return sendAdminError(reply, 400, beatMetadataResult.error, beatMetadataResult.message, {
+        field: beatMetadataResult.field
+      });
+    }
+
+    const updated = await fastify.prisma.$transaction(async (tx) => {
+      const next = await tx.track.update({
+        where: { id: track.id },
+        data: {
+          contentType: contentTypeResult.value,
+          ...beatMetadataResult.data
+        }
+      });
+      await createAudit(tx, auditData(
+        request.user.id,
+        'TRACK_CONTENT_TYPE_UPDATE',
+        'TRACK',
+        track.id,
+        reason,
+        { previousContentType: track.contentType || 'MUSIC', contentType: next.contentType }
+      ));
+      return next;
+    });
+
+    return {
+      track: {
+        id: updated.id,
+        contentType: updated.contentType,
+        beatKey: updated.beatKey,
+        beatBpm: updated.beatBpm,
+        beatMood: updated.beatMood,
+        beatStyle: updated.beatStyle,
+        beatLicenseType: updated.beatLicenseType,
+        beatUsageNotes: updated.beatUsageNotes,
+        beatContactEnabled: updated.beatContactEnabled
+      }
+    };
+  });
 
   fastify.post('/tracks/:id/lyrics/remove', mutate, async (request, reply) => {
     const reason = requiredReason(request.body);

@@ -24,6 +24,7 @@ describe('presentation mappers', () => {
     expect(track.coverUrl).toBeNull();
     expect(track.duration).toBeNull();
     expect(track.isStreamable).toBe(false);
+    expect(track.contentType).toBe('MUSIC');
     expect(track.title).not.toBe('Nightcrawler');
   });
 
@@ -54,5 +55,46 @@ describe('presentation mappers', () => {
     expect(track.coverUrl).toContain('/tracks/track-2/cover');
     expect(track.audioUrl).toContain('/tracks/track-2/stream');
     expect(track.isStreamable).toBe(true);
+  });
+
+  it('maps Beat metadata while clearing stale Beat fields from legacy Music shapes', () => {
+    const beat = mapTrackResponse({
+      id: 'beat-1',
+      title: 'Cold Signal',
+      status: 'PUBLISHED',
+      contentType: 'beat',
+      beatBpm: '136',
+      beatKey: ' C Minor ',
+      beatMood: ' Dark ',
+      beatStyle: ' Trap ',
+      beatLicenseType: ' Contact ',
+      beatUsageNotes: ' Demo use ',
+      beatContactEnabled: true,
+      artist: { user: { displayName: 'Producer' } },
+      tags: [],
+    });
+    expect(beat).toMatchObject({
+      contentType: 'BEAT',
+      beatBpm: 136,
+      beatKey: 'C Minor',
+      beatMood: 'Dark',
+      beatStyle: 'Trap',
+      beatLicenseType: 'Contact',
+      beatUsageNotes: 'Demo use',
+      beatContactEnabled: true,
+    });
+
+    const music = mapTrackResponse({
+      id: 'music-1',
+      title: 'Song',
+      contentType: 'MUSIC',
+      beatBpm: 136,
+      beatUsageNotes: 'stale',
+      artist: { user: { displayName: 'Artist' } },
+      tags: [],
+    });
+    expect(music.contentType).toBe('MUSIC');
+    expect(music).not.toHaveProperty('beatBpm');
+    expect(music).not.toHaveProperty('beatUsageNotes');
   });
 });

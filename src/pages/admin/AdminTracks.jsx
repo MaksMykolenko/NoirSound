@@ -24,10 +24,11 @@ export default function AdminTracks() {
   const [searchParams] = useSearchParams();
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState(searchParams.get('status') || '');
+  const [contentType, setContentType] = useState(searchParams.get('contentType') || '');
   const [page, setPage] = useState(1);
   const { data, loading, error, reload } = useAdminData(
-    () => getAdminTracks({ search, status, page }),
-    [search, status, page]
+    () => getAdminTracks({ search, status, contentType, page }),
+    [search, status, contentType, page]
   );
 
   return (
@@ -44,13 +45,23 @@ export default function AdminTracks() {
               ...['PUBLISHED', 'HIDDEN', 'FAILED', 'PROCESSING', 'REJECTED', 'PENDING_REVIEW', 'DRAFT'].map((value) => [value, t(`admin.statusValues.${value}`)]),
             ]}
           />
+          <AdminSelect
+            label={t('admin.contentType')}
+            value={contentType}
+            onChange={(value) => { setContentType(value); setPage(1); }}
+            options={[
+              ['', t('content.all')],
+              ['MUSIC', t('content.music')],
+              ['BEAT', t('content.beats')],
+            ]}
+          />
         </AdminSearch>
         {loading ? <AdminLoading /> : error ? <AdminError error={error} onRetry={reload} /> : !data?.data?.length ? (
           <AdminEmpty text={t('admin.noTracksFound')} />
         ) : (
           <AdminTable>
             <thead><tr>
-              {[t('admin.track'), t('admin.artist'), t('admin.genre'), t('admin.status'), t('admin.plays'), t('admin.reports'), t('admin.updated'), t('admin.actions')].map((label) => (
+              {[t('admin.track'), t('admin.artist'), t('admin.contentType'), t('admin.genre'), t('admin.status'), t('admin.plays'), t('admin.reports'), t('admin.updated'), t('admin.actions')].map((label) => (
                 <AdminTableHead key={label}>{label}</AdminTableHead>
               ))}
             </tr></thead>
@@ -61,6 +72,9 @@ export default function AdminTracks() {
                 </td>
                 <td className="px-4 py-3 text-sm text-[var(--ns-text-secondary)]">
                   <span className="block max-w-[14rem] break-words">{track.artist?.user?.displayName}</span>
+                </td>
+                <td className="px-4 py-3 text-sm">
+                  <span className="ns-badge ns-status-neutral">{track.contentType === 'BEAT' ? t('content.beat') : t('content.music')}</span>
                 </td>
                 <td className="px-4 py-3 text-sm text-[var(--ns-text-muted)]">{track.genre ? getGenreLabel(track.genre) : '—'}</td>
                 <td className="px-4 py-3"><StatusBadge status={track.status} /></td>

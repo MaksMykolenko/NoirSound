@@ -1,7 +1,15 @@
 import { mockTracks } from './data';
+import { normalizeTrackContentType } from '../../utils/trackContent';
 
-export async function getTracks() {
-  return [...mockTracks];
+function filterByContentType(tracks, options = {}) {
+  const requested = typeof options === 'string' ? options : options?.contentType;
+  if (!requested) return tracks;
+  const normalized = normalizeTrackContentType(requested);
+  return tracks.filter((track) => normalizeTrackContentType(track.contentType) === normalized);
+}
+
+export async function getTracks(options = {}) {
+  return filterByContentType([...mockTracks], options);
 }
 
 export async function getTrackById(id) {
@@ -10,18 +18,26 @@ export async function getTrackById(id) {
   return track;
 }
 
-export async function getTracksByArtist(artistId) {
-  return mockTracks.filter((track) => track.artistId === artistId);
+export async function getTracksByArtist(artistId, options = {}) {
+  return filterByContentType(mockTracks.filter((track) => track.artistId === artistId), options);
 }
 
-export async function getDiscoverTracks() {
-  return [...mockTracks];
+export async function getDiscoverTracks(options = {}) {
+  return filterByContentType([...mockTracks], options);
 }
 
-export async function searchTracks(query) {
+export async function searchTracks(query, options = {}) {
   const normalizedQuery = query.trim().toLowerCase();
-  return mockTracks.filter((track) =>
-    [track.title, track.artistName, track.genre, ...(track.tags || [])]
+  return filterByContentType(mockTracks, options).filter((track) =>
+    [
+      track.title,
+      track.artistName,
+      track.genre,
+      track.beatMood,
+      track.beatStyle,
+      track.beatKey,
+      ...(track.tags || []),
+    ]
       .some((value) => String(value || '').toLowerCase().includes(normalizedQuery))
   );
 }
@@ -30,6 +46,6 @@ export async function setTrackLiked() {
   return { success: true };
 }
 
-export async function getLikedTracks() {
-  return [...mockTracks].slice(0, 3);
+export async function getLikedTracks(options = {}) {
+  return filterByContentType([...mockTracks].slice(0, 3), options);
 }

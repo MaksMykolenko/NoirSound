@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { usePlayerStore } from '../../store/playerStore';
 import { useTrackContextMenu } from '../../hooks/useEntityContextMenu';
 import FallbackCover from '../ui/FallbackCover';
+import { BeatMetadataInline, TrackTypeBadge } from '../tracks/TrackContentMeta';
 
 function releaseYear(value) {
   if (!value) return null;
@@ -86,9 +87,11 @@ export default function ArtistReleaseCard({ track, tracksContext, queueSource })
         </div>
 
         <div className="mt-3 min-w-0 px-0.5">
-          <h3 className={`ns-artist-release-card__title text-ns-body-sm font-semibold ${isCurrent ? 'text-brand-red' : 'text-zinc-200'}`}>
-            {track.title}
+          <h3 className={`ns-artist-release-card__title flex min-w-0 items-center gap-1.5 text-ns-body-sm font-semibold ${isCurrent ? 'text-brand-red' : 'text-zinc-200'}`}>
+            <span className="truncate">{track.title}</span>
+            <TrackTypeBadge track={track} />
           </h3>
+          <BeatMetadataInline track={track} className="mt-1 flex" />
           {year !== null && (
             <p className="mt-1 truncate font-sans tabular-nums text-ns-meta text-zinc-500">
               {year}

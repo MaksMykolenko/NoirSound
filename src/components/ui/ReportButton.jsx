@@ -18,13 +18,9 @@ const REASON_LABELS = {
  * Report control for a track, comment, user, or playlist.
  * Renders a small button that opens a reason modal and submits to /api/reports.
  */
-export default function ReportButton({ targetType, targetId, className = '', label = 'Report' }) {
+export function ReportDialog({ targetType, targetId, onClose }) {
   const { t } = useTranslation();
-  const user = useUserStore((s) => s.user);
-  const setAuthModalOpen = useUserStore((s) => s.setAuthModalOpen);
   const addToast = useToastStore((s) => s.addToast);
-
-  const [open, setOpen] = useState(false);
   const [reason, setReason] = useState('COPYRIGHT');
   const [details, setDetails] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -35,27 +31,78 @@ export default function ReportButton({ targetType, targetId, className = '', lab
     LYRICS_INCORRECT: t('reports.reasonLyricsIncorrect'),
   };
 
-  function handleOpen() {
-    if (!user) {
-      setAuthModalOpen(true);
-      return;
-    }
-    setOpen(true);
-  }
-
   async function handleSubmit(e) {
     e.preventDefault();
     setSubmitting(true);
     try {
       await submitReport({ targetType, targetId, reason, details: details.trim() || undefined });
       addToast('Report submitted. Our moderators will review it.', 'success');
-      setOpen(false);
+      onClose();
       setDetails('');
     } catch (err) {
       addToast(err.message || 'Could not submit report.', 'error');
     } finally {
       setSubmitting(false);
     }
+  }
+
+  return (
+    <div className="fixed inset-0 z-[var(--ns-z-dialog)] flex items-center justify-center bg-black/75 p-4" onClick={onClose}>
+      <form
+        onClick={(e) => e.stopPropagation()}
+        onSubmit={handleSubmit}
+        className="w-full max-w-md rounded-lg border border-zinc-700/70 bg-zinc-950 p-5 shadow-xl"
+      >
+        <h2 className="mb-1 text-lg font-semibold tracking-tight text-white">Report {targetType.toLowerCase()}</h2>
+        <p className="text-sm text-zinc-500 mb-4">Tell us what’s wrong. False reports may affect your account.</p>
+
+        <label className="block text-sm font-semibold text-zinc-400 mb-1">Reason</label>
+        <select
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          className="ns-field mb-4 w-full rounded-md px-3 py-2 text-base sm:text-sm"
+        >
+          {REPORT_REASONS.map((r) => (
+            <option key={r} value={r}>{reasonLabels[r] || r}</option>
+          ))}
+        </select>
+
+        <label className="block text-sm font-semibold text-zinc-400 mb-1">Details (optional)</label>
+        <textarea
+          value={details}
+          onChange={(e) => setDetails(e.target.value.slice(0, 500))}
+          rows={3}
+          maxLength={500}
+          className="ns-field mb-4 w-full resize-none rounded-md px-3 py-2 text-base sm:text-sm"
+          placeholder="Add any context that helps moderators."
+        />
+
+        <div className="flex justify-end gap-2">
+          <button type="button" onClick={onClose}
+            className="ns-button-secondary rounded-md px-4 py-2 text-sm">
+            Cancel
+          </button>
+          <button type="submit" disabled={submitting}
+            className="ns-button-primary rounded-md px-4 py-2 text-sm font-semibold disabled:opacity-60">
+            {submitting ? 'Submitting…' : 'Submit report'}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+export default function ReportButton({ targetType, targetId, className = '', label = 'Report' }) {
+  const user = useUserStore((s) => s.user);
+  const setAuthModalOpen = useUserStore((s) => s.setAuthModalOpen);
+  const [open, setOpen] = useState(false);
+
+  function handleOpen() {
+    if (!user) {
+      setAuthModalOpen(true);
+      return;
+    }
+    setOpen(true);
   }
 
   return (
@@ -68,50 +115,8 @@ export default function ReportButton({ targetType, targetId, className = '', lab
       >
         <Flag className="w-3.5 h-3.5" /> {label}
       </button>
-
       {open && (
-        <div className="fixed inset-0 z-[var(--ns-z-dialog)] flex items-center justify-center bg-black/75 p-4" onClick={() => setOpen(false)}>
-          <form
-            onClick={(e) => e.stopPropagation()}
-            onSubmit={handleSubmit}
-            className="w-full max-w-md rounded-lg border border-zinc-700/70 bg-zinc-950 p-5 shadow-xl"
-          >
-            <h2 className="mb-1 text-lg font-semibold tracking-tight text-white">Report {targetType.toLowerCase()}</h2>
-            <p className="text-sm text-zinc-500 mb-4">Tell us what’s wrong. False reports may affect your account.</p>
-
-            <label className="block text-sm font-semibold text-zinc-400 mb-1">Reason</label>
-            <select
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              className="ns-field mb-4 w-full rounded-md px-3 py-2 text-base sm:text-sm"
-            >
-              {REPORT_REASONS.map((r) => (
-                <option key={r} value={r}>{reasonLabels[r] || r}</option>
-              ))}
-            </select>
-
-            <label className="block text-sm font-semibold text-zinc-400 mb-1">Details (optional)</label>
-            <textarea
-              value={details}
-              onChange={(e) => setDetails(e.target.value.slice(0, 500))}
-              rows={3}
-              maxLength={500}
-              className="ns-field mb-4 w-full resize-none rounded-md px-3 py-2 text-base sm:text-sm"
-              placeholder="Add any context that helps moderators."
-            />
-
-            <div className="flex justify-end gap-2">
-              <button type="button" onClick={() => setOpen(false)}
-                className="ns-button-secondary rounded-md px-4 py-2 text-sm">
-                Cancel
-              </button>
-              <button type="submit" disabled={submitting}
-                className="ns-button-primary rounded-md px-4 py-2 text-sm font-semibold disabled:opacity-60">
-                {submitting ? 'Submitting…' : 'Submit report'}
-              </button>
-            </div>
-          </form>
-        </div>
+        <ReportDialog targetType={targetType} targetId={targetId} onClose={() => setOpen(false)} />
       )}
     </>
   );

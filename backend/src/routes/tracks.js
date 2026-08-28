@@ -4,15 +4,54 @@ const { scaledRateLimitMax } = require('../lib/rateLimit');
 const { optionalAuthenticatedUserId } = require('../lib/optionalAuth');
 const { auditData, createAudit } = require('../lib/auditLog');
 const { hasLyrics, serializeLyrics, validateLyricsPayload } = require('../lib/lyrics');
+const { parseTrackContentType } = require('../lib/trackContentType');
 
 async function tracksRoutes(fastify, _options) {
   // GET /api/tracks
   fastify.get('/', async (request, reply) => {
     try {
+      const contentTypeResult = parseTrackContentType(request.query.contentType, {
+        defaultValue: null
+      });
+      if (!contentTypeResult.ok) {
+        return reply.status(400).send({
+          error: contentTypeResult.error,
+          message: contentTypeResult.message
+        });
+      }
+      const rawQuery = request.query.q;
+      if (rawQuery !== undefined && (typeof rawQuery !== 'string' || rawQuery.trim().length > 120)) {
+        return reply.status(400).send({
+          error: 'SEARCH_QUERY_INVALID',
+          message: 'Search query must be a string no longer than 120 characters.'
+        });
+      }
+      const query = rawQuery?.trim();
       const tracks = await fastify.prisma.track.findMany({
         where: {
           status: 'PUBLISHED',
           isPublic: true,
+          ...(contentTypeResult.value ? { contentType: contentTypeResult.value } : {}),
+          ...(query ? {
+            OR: [
+              { title: { contains: query, mode: 'insensitive' } },
+              { genre: { contains: query, mode: 'insensitive' } },
+              { description: { contains: query, mode: 'insensitive' } },
+              { beatKey: { contains: query, mode: 'insensitive' } },
+              { beatMood: { contains: query, mode: 'insensitive' } },
+              { beatStyle: { contains: query, mode: 'insensitive' } },
+              {
+                artist: {
+                  user: {
+                    OR: [
+                      { displayName: { contains: query, mode: 'insensitive' } },
+                      { username: { contains: query, mode: 'insensitive' } }
+                    ]
+                  }
+                }
+              }
+            ]
+          } : {}),
           artist: { isHidden: false, user: { status: 'ACTIVE' } }
         },
         include: {

@@ -7,8 +7,18 @@ function mapTrackList(response) {
   return data.map(mapTrackResponse).filter(Boolean);
 }
 
-export async function getTracks() {
-  return mapTrackList(await apiFetch('/tracks'));
+function trackQuery(options = {}) {
+  const contentType = typeof options === 'string' ? options : options?.contentType;
+  const query = typeof options === 'object' ? options?.query?.trim() : '';
+  const search = new URLSearchParams();
+  if (contentType) search.set('contentType', contentType);
+  if (query) search.set('q', query);
+  const encoded = search.toString();
+  return encoded ? `?${encoded}` : '';
+}
+
+export async function getTracks(options = {}) {
+  return mapTrackList(await apiFetch(`/tracks${trackQuery(options)}`));
 }
 
 export async function getTrackById(id) {
@@ -16,20 +26,28 @@ export async function getTrackById(id) {
   return mapTrackResponse(response.track ?? response);
 }
 
-export async function getTracksByArtist(artistId) {
-  return mapTrackList(await apiFetch(`/artists/${artistId}/tracks`));
+export async function getTracksByArtist(artistId, options = {}) {
+  return mapTrackList(await apiFetch(`/artists/${artistId}/tracks${trackQuery(options)}`));
 }
 
-export async function getDiscoverTracks() {
-  return getTracks();
+export async function getDiscoverTracks(options = {}) {
+  return getTracks(options);
 }
 
-export async function searchTracks(query) {
-  const tracks = await getTracks();
+export async function searchTracks(query, options = {}) {
+  const tracks = await getTracks(options);
   const normalizedQuery = query.trim().toLowerCase();
   if (!normalizedQuery) return tracks;
   return tracks.filter((track) =>
-    [track.title, track.artistName, track.genre, ...(track.tags || [])]
+    [
+      track.title,
+      track.artistName,
+      track.genre,
+      track.beatMood,
+      track.beatStyle,
+      track.beatKey,
+      ...(track.tags || []),
+    ]
       .some((value) => String(value || '').toLowerCase().includes(normalizedQuery))
   );
 }
@@ -40,6 +58,6 @@ export async function setTrackLiked(trackId, liked) {
   });
 }
 
-export async function getLikedTracks() {
-  return mapTrackList(await apiFetch('/me/liked-tracks'));
+export async function getLikedTracks(options = {}) {
+  return mapTrackList(await apiFetch(`/me/liked-tracks${trackQuery(options)}`));
 }

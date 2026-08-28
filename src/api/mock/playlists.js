@@ -67,6 +67,12 @@ export async function getPlaylists() {
   return playlistState.filter((playlist) => playlist.isPublic).map(detail);
 }
 
+export async function getPlaylistsByArtist(artistId) {
+  return playlistState
+    .filter((playlist) => playlist.isPublic && playlist.ownerArtistId === artistId)
+    .map(detail);
+}
+
 export async function getPlaylistById(id) {
   return detail(findPlaylist(id));
 }

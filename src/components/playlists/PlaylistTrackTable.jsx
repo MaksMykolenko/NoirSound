@@ -7,6 +7,7 @@ import { useTrackContextMenu } from '../../hooks/useEntityContextMenu';
 import FallbackCover from '../ui/FallbackCover';
 import { formatDuration } from '../../utils/formatTime';
 import { formatDate } from '../../utils/formatLocale';
+import { TrackTypeBadge } from '../tracks/TrackContentMeta';
 
 // Desktop columns are "# | Title | Artist | Album / Release | Date added |
 // Duration | Actions" -- sorting is exposed as one shared pill row
@@ -171,6 +172,7 @@ function DesktopRow({
                 <span className={`truncate text-ns-body-sm font-semibold ${isCurrent ? 'text-brand-red' : 'text-zinc-100'}`}>
                   {track.title}
                 </span>
+                <TrackTypeBadge track={track} />
                 {track.explicit && (
                   <span className="shrink-0 rounded border border-zinc-700 bg-zinc-800 px-1 text-ns-meta font-bold uppercase tracking-ns-label text-zinc-400">E</span>
                 )}
@@ -351,6 +353,7 @@ function MobileRow({
               {track.explicit && <span className="ml-1.5 rounded border border-zinc-700 bg-zinc-800 px-1 align-middle text-ns-meta font-bold text-zinc-400">E</span>}
               {isCurrent && <span className="sr-only">{t('playlists.currentlyPlaying')}</span>}
             </span>
+            <TrackTypeBadge track={track} className="mt-1" />
             <span className="block truncate font-sans tabular-nums text-ns-label text-zinc-500">
               {track.artistName}
               <span className="text-zinc-600"> • </span>

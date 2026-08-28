@@ -8,22 +8,26 @@ import { useUserStore } from '../../src/store/userStore';
 import AdminLayout from '../../src/pages/admin/AdminLayout';
 import AdminOverview from '../../src/pages/admin/AdminOverview';
 import AdminTracks from '../../src/pages/admin/AdminTracks';
+import AdminTrackDetail from '../../src/pages/admin/AdminTrackDetail';
 import AdminUsers from '../../src/pages/admin/AdminUsers';
 import AdminUserDetail from '../../src/pages/admin/AdminUserDetail';
 import { ConfirmActionModal } from '../../src/components/admin/AdminUI';
 import {
   getAdminOverview,
   getAdminTracks,
+  getAdminTrack,
   getAdminUser,
   getAdminUsers,
   suspendUser,
   grantArtistAccess,
   ensureArtistProfile,
+  updateTrackContentType,
 } from '../../src/api/admin';
 
 vi.mock('../../src/api/admin', () => ({
   getAdminOverview: vi.fn(),
   getAdminTracks: vi.fn(),
+  getAdminTrack: vi.fn(),
   getAdminUsers: vi.fn(),
   getAdminUser: vi.fn(),
   suspendUser: vi.fn(),
@@ -35,6 +39,7 @@ vi.mock('../../src/api/admin', () => ({
   grantArtistAccess: vi.fn(),
   revokeArtistAccess: vi.fn(),
   ensureArtistProfile: vi.fn(),
+  updateTrackContentType: vi.fn(),
   hideArtist: vi.fn(),
   unhideArtist: vi.fn(),
 }));
@@ -55,6 +60,7 @@ function renderAdmin(path, element) {
         <Route path="/admin" element={<AdminLayout />}>
           <Route path="overview" element={element} />
           <Route path="tracks" element={element} />
+          <Route path="tracks/:id" element={element} />
           <Route path="users" element={element} />
           <Route path="users/:id" element={element} />
         </Route>
@@ -188,7 +194,56 @@ describe('Admin console', () => {
 
     await user.click(screen.getByRole('button', { name: i18n.t('admin.next') }));
     await waitFor(() => {
-      expect(getAdminTracks).toHaveBeenLastCalledWith({ search: '', status: '', page: 2 });
+      expect(getAdminTracks).toHaveBeenLastCalledWith({ search: '', status: '', contentType: '', page: 2 });
+    });
+  });
+
+  it('renders Beat metadata and requires an audited reason to change content type', async () => {
+    getAdminTrack.mockResolvedValue({
+      track: {
+        id: 'beat-1',
+        title: 'Midnight Instrumental',
+        contentType: 'BEAT',
+        beatBpm: 140,
+        beatKey: 'F# Minor',
+        beatMood: 'Dark',
+        beatStyle: 'Trap',
+        beatLicenseType: 'Contact for terms',
+        beatUsageNotes: 'Demo use only.',
+        beatContactEnabled: true,
+        status: 'PUBLISHED',
+        plays: 42,
+        genre: 'TRAP',
+        tags: [],
+        updatedAt: '2026-08-27T12:00:00.000Z',
+        hasLyrics: false,
+        lyricsType: 'NONE',
+        artist: { id: 'artist-1', user: { displayName: 'Producer One' } },
+        uploads: [{ status: 'COMPLETED' }],
+        _count: { comments: 0 },
+      },
+      reports: [],
+    });
+    updateTrackContentType.mockResolvedValue({ track: { id: 'beat-1', contentType: 'MUSIC' } });
+    const user = userEvent.setup();
+
+    renderAdmin('/admin/tracks/beat-1', <AdminTrackDetail />);
+
+    const beatMetadata = await screen.findByTestId('admin-beat-metadata');
+    expect(within(beatMetadata).getByText('140')).toBeInTheDocument();
+    expect(within(beatMetadata).getByText('F# Minor')).toBeInTheDocument();
+    expect(within(beatMetadata).getByText('Demo use only.')).toBeInTheDocument();
+
+    await user.selectOptions(screen.getByRole('combobox', { name: i18n.t('admin.contentType') }), 'MUSIC');
+    await user.click(screen.getByRole('button', { name: i18n.t('admin.updateContentType') }));
+    await user.type(screen.getByRole('textbox'), 'Incorrectly categorized upload');
+    await user.click(screen.getByRole('button', { name: i18n.t('admin.confirm') }));
+
+    await waitFor(() => {
+      expect(updateTrackContentType).toHaveBeenCalledWith('beat-1', {
+        contentType: 'MUSIC',
+        reason: 'Incorrectly categorized upload',
+      });
     });
   });
 

@@ -3,12 +3,14 @@ import { useUserStore } from '../../store/userStore';
 import AddToPlaylistModal from '../playlists/AddToPlaylistModal';
 import ContextMenu from './ContextMenu';
 import { ContextMenuContext } from './contextMenuController';
+import { ReportDialog } from '../ui/ReportButton';
 
 export default function ContextMenuProvider({ children }) {
   const user = useUserStore((state) => state.user);
   const setAuthModalOpen = useUserStore((state) => state.setAuthModalOpen);
   const [menu, setMenu] = useState(null);
   const [addTrack, setAddTrack] = useState(null);
+  const [reportTarget, setReportTarget] = useState(null);
 
   const closeContextMenu = useCallback(() => setMenu(null), []);
   const openContextMenu = useCallback((items, anchor, invoker) => {
@@ -24,6 +26,14 @@ export default function ContextMenuProvider({ children }) {
     }
     setAddTrack(track);
   }, [closeContextMenu, setAuthModalOpen, user]);
+  const openReport = useCallback((target) => {
+    closeContextMenu();
+    if (!user) {
+      setAuthModalOpen(true);
+      return;
+    }
+    setReportTarget(target);
+  }, [closeContextMenu, setAuthModalOpen, user]);
 
   useEffect(() => {
     const close = () => closeContextMenu();
@@ -35,7 +45,8 @@ export default function ContextMenuProvider({ children }) {
     openContextMenu,
     closeContextMenu,
     openAddToPlaylist,
-  }), [closeContextMenu, openAddToPlaylist, openContextMenu]);
+    openReport,
+  }), [closeContextMenu, openAddToPlaylist, openContextMenu, openReport]);
 
   return (
     <ContextMenuContext.Provider value={value}>
@@ -49,6 +60,13 @@ export default function ContextMenuProvider({ children }) {
         />
       )}
       {addTrack && <AddToPlaylistModal track={addTrack} onClose={() => setAddTrack(null)} />}
+      {reportTarget && (
+        <ReportDialog
+          targetType={reportTarget.targetType}
+          targetId={reportTarget.targetId}
+          onClose={() => setReportTarget(null)}
+        />
+      )}
     </ContextMenuContext.Provider>
   );
 }

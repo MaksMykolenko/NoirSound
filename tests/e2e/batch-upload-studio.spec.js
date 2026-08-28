@@ -22,13 +22,13 @@ test.describe('Batch Upload Studio', () => {
       }))
     );
     await page.getByRole('button', { name: 'Create batch draft' }).click();
-    const firstTrackButton = page.getByRole('button', { name: /^batch one batch_one\.wav/ });
+    const firstTrackButton = page.getByRole('button', { name: /^batch one\b.*\bbatch_one\.wav/ });
     await expect(firstTrackButton).toBeVisible();
 
     const names = ['batch one', 'batch two', 'batch three', 'batch four'];
     for (let index = 0; index < names.length; index += 1) {
       await page.getByRole('button', {
-        name: new RegExp(`^${names[index]} batch_${['one', 'two', 'three', 'four'][index]}\\.wav`),
+        name: new RegExp(`^${names[index]}\\b.*\\bbatch_${['one', 'two', 'three', 'four'][index]}\\.wav`),
       }).click();
       const drawer = page.getByRole('dialog');
       await expect(drawer).toBeVisible();

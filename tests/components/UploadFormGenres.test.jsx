@@ -94,4 +94,29 @@ describe('UploadForm genre selection', () => {
     await user.click(screen.getByRole('checkbox', { name: i18n.t('lyrics.rightsConfirm') }));
     expect(screen.queryByText(i18n.t('lyrics.rightsRequired'))).toBeNull();
   });
+
+  it('defaults to Music and reveals optional beat metadata only after selecting Beat', async () => {
+    const user = userEvent.setup();
+    render(<UploadForm />);
+
+    const music = screen.getByRole('radio', { name: /^Music/ });
+    const beat = screen.getByRole('radio', { name: /^Beat/ });
+    expect(music).toBeChecked();
+    expect(beat).not.toBeChecked();
+    expect(screen.queryByTestId('beat-metadata-fields')).not.toBeInTheDocument();
+
+    await user.click(beat);
+    expect(beat).toBeChecked();
+    expect(screen.getByTestId('beat-metadata-fields')).toBeInTheDocument();
+    expect(screen.getByLabelText(i18n.t('beats.bpm'))).toHaveAttribute('min', '40');
+    expect(screen.getByLabelText(i18n.t('beats.bpm'))).toHaveAttribute('max', '240');
+
+    const lyricsSummary = screen.getAllByText(i18n.t('upload.lyricsSection'))
+      .find((element) => element.tagName === 'SUMMARY');
+    expect(lyricsSummary.closest('details')).not.toHaveAttribute('open');
+
+    await user.click(music);
+    expect(music).toBeChecked();
+    expect(screen.queryByTestId('beat-metadata-fields')).not.toBeInTheDocument();
+  });
 });

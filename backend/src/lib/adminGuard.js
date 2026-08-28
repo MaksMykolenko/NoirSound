@@ -20,8 +20,8 @@ function adminMutationOptions(fastify) {
   };
 }
 
-function sendAdminError(reply, status, code, message) {
-  return reply.status(status).send({ error: code, message });
+function sendAdminError(reply, status, code, message, details = {}) {
+  return reply.status(status).send({ error: code, message, ...details });
 }
 
 function requiredReason(body, maxLength = 1000) {

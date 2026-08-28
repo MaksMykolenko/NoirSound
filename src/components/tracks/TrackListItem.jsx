@@ -7,6 +7,7 @@ import { formatNumber } from '../../utils/formatLocale';
 import FallbackCover from '../ui/FallbackCover';
 import { getLocalizedGenre } from '../../i18n/genreLabels';
 import { useTrackContextMenu } from '../../hooks/useEntityContextMenu';
+import { BeatMetadataInline, TrackTypeBadge } from './TrackContentMeta';
 
 export default function TrackListItem({
   track,
@@ -123,11 +124,12 @@ export default function TrackListItem({
           <Link
             to={`/track/${track.id}`}
             onKeyDown={contextMenuProps.onKeyDown}
-            className={`block truncate text-ns-body-sm font-semibold focus-visible:outline-none focus-visible:underline ${
+            className={`flex min-w-0 items-center gap-1.5 text-ns-body-sm font-semibold focus-visible:outline-none focus-visible:underline ${
               isCurrent ? 'text-brand-red' : 'text-zinc-200'
             }`}
           >
-            {track.title}
+            <span className="truncate">{track.title}</span>
+            <TrackTypeBadge track={track} />
           </Link>
           <button
             type="button"
@@ -136,6 +138,7 @@ export default function TrackListItem({
           >
             {track.artistName}
           </button>
+          <BeatMetadataInline track={track} className="mt-0.5 flex" />
           {!canPlay && (
             <span className="inline-block mt-1 text-ns-meta font-bold uppercase tracking-ns-label text-amber-300/80">
               Audio unavailable
@@ -147,7 +150,7 @@ export default function TrackListItem({
       {/* Middle section: Genre, Plays count */}
       <div className="hidden min-[430px]:flex items-center space-x-3 sm:space-x-6 px-2 sm:px-4 shrink-0">
         <span className="hidden max-w-[14ch] truncate font-sans tabular-nums text-ns-label font-medium text-zinc-500 select-none md:inline-block">
-          {getLocalizedGenre(track.genre)}
+          {track.contentType === 'BEAT' ? <TrackTypeBadge track={track} /> : getLocalizedGenre(track.genre)}
         </span>
         <span className="hidden font-sans tabular-nums text-ns-label text-zinc-500 select-none sm:inline">
           {formatNumber(track.plays || 0)} plays

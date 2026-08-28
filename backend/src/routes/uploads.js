@@ -5,6 +5,8 @@ const { scaledRateLimitMax } = require('../lib/rateLimit');
 const { auditData, createAudit } = require('../lib/auditLog');
 const { evaluateUploadAccess, ensureArtistProfile } = require('../lib/artistAccess');
 const { validateLyricsPayload } = require('../lib/lyrics');
+const { parseTrackContentType } = require('../lib/trackContentType');
+const { validateBeatMetadata } = require('../lib/beatMetadata');
 
 const MAX_AUDIO_BYTES = 50 * 1024 * 1024;
 const MAX_COVER_BYTES = 5 * 1024 * 1024;
@@ -123,6 +125,23 @@ async function uploadsRoutes(fastify) {
     if (validationError) {
       return reply.status(400).send({ error: validationError });
     }
+    const contentTypeResult = parseTrackContentType(request.body.contentType);
+    if (!contentTypeResult.ok) {
+      return reply.status(400).send({
+        error: contentTypeResult.error,
+        message: contentTypeResult.message
+      });
+    }
+    const beatMetadataResult = validateBeatMetadata(request.body, {
+      contentType: contentTypeResult.value
+    });
+    if (!beatMetadataResult.ok) {
+      return reply.status(400).send({
+        error: beatMetadataResult.error,
+        message: beatMetadataResult.message,
+        field: beatMetadataResult.field
+      });
+    }
     const lyricsResult = validateLyricsPayload(request.body);
     if (!lyricsResult.ok) {
       return reply.status(400).send({
@@ -201,6 +220,8 @@ async function uploadsRoutes(fastify) {
             tags: [...new Set(tags.map((tag) => tag.trim()))],
             status: 'DRAFT',
             copyrightConfirmed,
+            contentType: contentTypeResult.value,
+            ...beatMetadataResult.data,
             ...lyricsData,
             lyricsUpdatedAt: lyricsPresent ? new Date() : null,
             originalAudioKey,
@@ -252,7 +273,8 @@ async function uploadsRoutes(fastify) {
         audioUploadUrl,
         coverUploadUrl,
         method: 'PUT',
-        status: 'UPLOADING'
+        status: 'UPLOADING',
+        contentType: persisted.track.contentType
       };
     } catch (error) {
       fastify.log.error({ err: error }, 'Could not create presigned upload URLs');
@@ -411,7 +433,8 @@ async function uploadsRoutes(fastify) {
             id: true,
             status: true,
             processedAudioKey: true,
-            durationSeconds: true
+            durationSeconds: true,
+            contentType: true
           }
         }
       }
@@ -431,6 +454,7 @@ async function uploadsRoutes(fastify) {
       trackStatus: upload.track?.status || null,
       processedAudioReady: Boolean(upload.track?.processedAudioKey),
       durationSeconds: upload.track?.durationSeconds || 0,
+      contentType: upload.track?.contentType || 'MUSIC',
       error: upload.status === 'FAILED'
         ? upload.errorMessage || 'Audio processing failed.'
         : null,

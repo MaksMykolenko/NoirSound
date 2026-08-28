@@ -10,10 +10,10 @@ export function useArtists() {
 }
 
 /** Returns only artists with at least one published track. */
-export function useArtistsWithTracks() {
+export function useArtistsWithTracks(options = {}) {
   return useQuery({
-    queryKey: ['artists', 'withTracks'],
-    queryFn: getArtistsWithTracks,
+    queryKey: ['artists', 'withTracks', options.contentType || 'ALL'],
+    queryFn: () => getArtistsWithTracks(options),
   });
 }
 

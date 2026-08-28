@@ -169,8 +169,17 @@ async function playlistsRoutes(fastify) {
   fastify.get('/', async (request, reply) => {
     try {
       const viewer = await optionalViewer(fastify, request);
+      const artistProfileId = typeof request.query.artistId === 'string'
+        ? request.query.artistId.trim()
+        : '';
+      if (artistProfileId.length > 100) {
+        return apiError(reply, 400, 'PLAYLIST_ARTIST_FILTER_INVALID', 'Artist filter is invalid.');
+      }
       const playlists = await fastify.prisma.playlist.findMany({
-        where: { isPublic: true },
+        where: {
+          isPublic: true,
+          ...(artistProfileId ? { artistProfileId } : {})
+        },
         orderBy: { updatedAt: 'desc' },
         include: playlistInclude(viewer?.id)
       });

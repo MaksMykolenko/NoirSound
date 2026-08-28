@@ -1,6 +1,7 @@
 'use strict';
 
 const { hasLyrics: trackHasLyrics } = require('./lyrics');
+const { publicBeatMetadata } = require('./beatMetadata');
 
 /**
  * Convert an internal Track record into the public API shape.
@@ -25,6 +26,14 @@ function serializePublicTrack(track) {
     lyricsSynced: _lyricsSynced,
     lyricsRightsConfirmed: _lyricsRightsConfirmed,
     lyricsUpdatedAt: _lyricsUpdatedAt,
+    contentType: _contentType,
+    beatKey: _beatKey,
+    beatBpm: _beatBpm,
+    beatMood: _beatMood,
+    beatStyle: _beatStyle,
+    beatLicenseType: _beatLicenseType,
+    beatUsageNotes: _beatUsageNotes,
+    beatContactEnabled: _beatContactEnabled,
     audioAsset: _audioAsset,
     uploads: _uploads,
     ...safeTrack
@@ -33,6 +42,7 @@ function serializePublicTrack(track) {
   const hasLyrics = trackHasLyrics(track);
   return {
     ...safeTrack,
+    ...publicBeatMetadata(track),
     hasCoverImage: Boolean(coverImageKey),
     isStreamable: track.status === 'PUBLISHED' && Boolean(processedAudioKey),
     hasLyrics,

@@ -6,6 +6,7 @@ import { formatDuration } from '../../utils/formatTime';
 import { getLocalizedGenre } from '../../i18n/genreLabels';
 import FallbackCover from '../ui/FallbackCover';
 import { useTrackContextMenu } from '../../hooks/useEntityContextMenu';
+import { BeatMetadataInline, TrackTypeBadge } from './TrackContentMeta';
 
 export default function TrackCard({ track, tracksContext = [] }) {
   const navigate = useNavigate();
@@ -96,10 +97,11 @@ export default function TrackCard({ track, tracksContext = [] }) {
       {/* Track info details */}
       <div className="flex justify-between items-start px-1">
         <div className="min-w-0 flex-1">
-          <h3 className={`truncate text-ns-body-sm font-semibold ${
+          <h3 className={`flex min-w-0 items-center gap-1.5 text-ns-body-sm font-semibold ${
             isCurrent ? 'text-brand-red' : 'text-zinc-200 group-hover:text-zinc-100'
           }`}>
-            {track.title}
+            <span className="truncate">{track.title}</span>
+            <TrackTypeBadge track={track} />
           </h3>
           <span className="mt-0.5 flex items-baseline justify-between gap-2">
             <span className="flex min-w-0 items-baseline gap-1.5">
@@ -124,6 +126,7 @@ export default function TrackCard({ track, tracksContext = [] }) {
               {formatDuration(track.duration)}
             </span>
           </span>
+          <BeatMetadataInline track={track} className="mt-1 flex" />
         </div>
 
         <button

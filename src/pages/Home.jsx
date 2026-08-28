@@ -18,11 +18,13 @@ import {
   rankRecommendedArtists,
   sortTracksNewest,
 } from '../utils/presentation';
+import { isBeatTrack } from '../utils/trackContent';
 
 export default function Home() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [trendingTracks, setTrendingTracks] = useState([]);
+  const [freshBeats, setFreshBeats] = useState([]);
   const [featuredArtists, setFeaturedArtists] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -39,7 +41,8 @@ export default function Home() {
         const [tracksData, artistsData] = await Promise.all([getTracks(), getArtistsWithTracks()]);
         const uniqueTracks = sortTracksNewest(tracksData);
         setAllTracksContext(uniqueTracks);
-        setTrendingTracks(uniqueTracks.slice(0, 8));
+        setTrendingTracks(uniqueTracks.filter((track) => !isBeatTrack(track)).slice(0, 8));
+        setFreshBeats(uniqueTracks.filter(isBeatTrack).slice(0, 8));
         setFeaturedArtists(rankRecommendedArtists(artistsData, uniqueTracks).slice(0, 8));
       } catch (err) {
         console.error('Failed to fetch home data:', err);
@@ -100,8 +103,8 @@ export default function Home() {
       <section data-testid="home-releases" className="space-y-4">
         <div className="flex flex-wrap items-end gap-x-5 gap-y-2">
           <div className="min-w-0">
-            <h2 className="ns-section-title">{t('home.featuredReleases')}</h2>
-            <p className="mt-1 text-sm text-zinc-500">{t('home.latestReleasesDesc')}</p>
+            <h2 className="ns-section-title">{t('home.newMusic')}</h2>
+            <p className="mt-1 text-sm text-zinc-500">{t('home.newMusicDesc')}</p>
           </div>
           <button
             type="button"
@@ -142,6 +145,49 @@ export default function Home() {
             trendingTracks.map((track) => (
               <div key={track.id} className="w-[min(74vw,18rem)] shrink-0 sm:w-full sm:max-w-[17.5rem] sm:justify-self-start">
                 <TrackCard track={track} tracksContext={allTracksContext} />
+              </div>
+            ))
+          )}
+        </div>
+      </section>
+
+      <section data-testid="home-fresh-beats" className="space-y-4">
+        <div className="flex flex-wrap items-end gap-x-5 gap-y-2">
+          <div className="min-w-0">
+            <h2 className="ns-section-title">{t('beats.freshBeats')}</h2>
+            <p className="mt-1 text-sm text-zinc-500">{t('home.freshBeatsDesc')}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate('/discover?content=BEAT')}
+            className="flex shrink-0 cursor-pointer items-center space-x-1 whitespace-nowrap font-sans text-ns-meta font-medium text-brand-red hover:underline"
+          >
+            <span>{t('home.exploreAll')}</span>
+            <ArrowRight size={12} aria-hidden="true" />
+          </button>
+        </div>
+        <div className="ns-tabs-scroll -mx-4 flex gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:[grid-template-columns:repeat(auto-fill,minmax(min(240px,100%),1fr))] sm:gap-5 sm:px-0">
+          {error ? (
+            <div className="w-full min-w-full shrink-0 sm:col-span-full sm:min-w-0">
+              <ErrorState message={t('home.loadError')} onRetry={() => setHomeRevision((current) => current + 1)} />
+            </div>
+          ) : loading ? (
+            <div className="w-full min-w-full shrink-0 sm:col-span-full sm:min-w-0"><LoadingState count={4} /></div>
+          ) : freshBeats.length === 0 ? (
+            <div className="w-full min-w-full shrink-0 sm:col-span-full sm:min-w-0">
+              <EmptyState
+                iconName="AudioLines"
+                title={t('beats.noBeats')}
+                description={t('beats.noBeatsDescription')}
+                actionText={t('content.uploadBeat')}
+                onAction={() => navigate('/upload')}
+                className="!my-0 !max-w-none"
+              />
+            </div>
+          ) : (
+            freshBeats.map((track) => (
+              <div key={track.id} className="w-[min(74vw,18rem)] shrink-0 sm:w-full sm:max-w-[17.5rem] sm:justify-self-start">
+                <TrackCard track={track} tracksContext={freshBeats} />
               </div>
             ))
           )}

@@ -111,7 +111,14 @@ export default function BatchPlaylistEditor({ batch, onSave, onOpenTrack, saving
                   <GripVertical size={16} className="text-zinc-600 cursor-grab" />
                   <span className="w-6 text-center text-ns-label text-zinc-500">{index + 1}</span>
                   <button type="button" className="min-w-0 flex-1 text-left" onClick={() => onOpenTrack(item)}>
-                    <p className="text-sm font-bold text-zinc-200 truncate">{item.title || t('batchUpload.untitledTrack')}</p>
+                    <p className="flex items-center gap-2 text-sm font-bold text-zinc-200">
+                      <span className="truncate">{item.title || t('batchUpload.untitledTrack')}</span>
+                      {item.contentType === 'BEAT' && (
+                        <span className="shrink-0 rounded border border-brand-red/35 bg-brand-red/10 px-1.5 py-0.5 font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-brand-red">
+                          {t('content.beats')}
+                        </span>
+                      )}
+                    </p>
                     <p className="text-ns-label text-zinc-500 truncate">{item.primaryArtistName} · {item.genre ? getGenreLabel(item.genre, i18n.language) : t('batchUpload.missingGenre')} · {item.status}</p>
                   </button>
                   <div className="col-span-3 flex items-center justify-end gap-1 sm:col-span-1">

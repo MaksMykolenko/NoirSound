@@ -2,6 +2,7 @@ const { serializePublicTrack } = require('../lib/publicTrack');
 const { userOrIpKey } = require('../lib/rateLimitKeys');
 const { scaledRateLimitMax } = require('../lib/rateLimit');
 const { serializeUserMedia } = require('../lib/profileMedia');
+const { parseTrackContentType } = require('../lib/trackContentType');
 
 // Best-effort current-user id from the session cookie, without requiring
 // authentication. Public artist routes stay public either way; when a
@@ -39,11 +40,28 @@ async function artistsRoutes(fastify, _options) {
   fastify.get('/', async (request, reply) => {
     try {
       const filterPublished = request.query.hasPublishedTracks === 'true';
+      const contentTypeResult = parseTrackContentType(request.query.contentType, {
+        defaultValue: null
+      });
+      if (!contentTypeResult.ok) {
+        return reply.status(400).send({
+          error: contentTypeResult.error,
+          message: contentTypeResult.message
+        });
+      }
 
       const where = {
         isHidden: false,
         user: { status: 'ACTIVE' },
-        ...(filterPublished ? { tracks: { some: { status: 'PUBLISHED', isPublic: true } } } : {})
+        ...(filterPublished || contentTypeResult.value ? {
+          tracks: {
+            some: {
+              status: 'PUBLISHED',
+              isPublic: true,
+              ...(contentTypeResult.value ? { contentType: contentTypeResult.value } : {})
+            }
+          }
+        } : {})
       };
 
       const artists = await fastify.prisma.artistProfile.findMany({
@@ -103,6 +121,15 @@ async function artistsRoutes(fastify, _options) {
   // GET /api/artists/:id/tracks
   fastify.get('/:id/tracks', async (request, reply) => {
     try {
+      const contentTypeResult = parseTrackContentType(request.query.contentType, {
+        defaultValue: null
+      });
+      if (!contentTypeResult.ok) {
+        return reply.status(400).send({
+          error: contentTypeResult.error,
+          message: contentTypeResult.message
+        });
+      }
       const artist = await fastify.prisma.artistProfile.findFirst({
         where: { id: request.params.id, isHidden: false, user: { status: 'ACTIVE' } },
         select: { id: true }
@@ -115,7 +142,8 @@ async function artistsRoutes(fastify, _options) {
         where: {
           artistId: artist.id,
           status: 'PUBLISHED',
-          isPublic: true
+          isPublic: true,
+          ...(contentTypeResult.value ? { contentType: contentTypeResult.value } : {})
         },
         include: {
           artist: {

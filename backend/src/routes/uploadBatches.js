@@ -5,6 +5,8 @@ const { normalizeGenre } = require('../constants/musicGenres');
 const { evaluateUploadAccess, ensureArtistProfile } = require('../lib/artistAccess');
 const { auditData, createAudit } = require('../lib/auditLog');
 const { validateLyricsPayload } = require('../lib/lyrics');
+const { parseTrackContentType } = require('../lib/trackContentType');
+const { BEAT_METADATA_FIELDS, validateBeatMetadata } = require('../lib/beatMetadata');
 const { userOrIpKey } = require('../lib/rateLimitKeys');
 const { scaledRateLimitMax } = require('../lib/rateLimit');
 const {
@@ -151,6 +153,14 @@ function trackDataFromItem(item, batch) {
     explicit: item.explicit,
     isPublic: item.isPublic,
     copyrightConfirmed: item.copyrightConfirmed,
+    contentType: item.contentType,
+    beatKey: item.beatKey,
+    beatBpm: item.beatBpm,
+    beatMood: item.beatMood,
+    beatStyle: item.beatStyle,
+    beatLicenseType: item.beatLicenseType,
+    beatUsageNotes: item.beatUsageNotes,
+    beatContactEnabled: item.beatContactEnabled,
     lyricsText: item.lyricsText,
     lyricsType: item.lyricsType,
     lyricsLanguage: item.lyricsLanguage,
@@ -512,6 +522,29 @@ async function uploadBatchesRoutes(fastify) {
       }
       data.description = cleanString(body.description, 2000) || null;
     }
+    if ('contentType' in body || BEAT_METADATA_FIELDS.some((field) => field in body)) {
+      const contentTypeResult = parseTrackContentType(body.contentType, {
+        defaultValue: item.contentType || 'MUSIC'
+      });
+      if (!contentTypeResult.ok) {
+        return reply.status(400).send({
+          error: contentTypeResult.error,
+          message: contentTypeResult.message
+        });
+      }
+      const beatMetadataResult = validateBeatMetadata({ ...item, ...body }, {
+        contentType: contentTypeResult.value
+      });
+      if (!beatMetadataResult.ok) {
+        return reply.status(400).send({
+          error: beatMetadataResult.error,
+          message: beatMetadataResult.message,
+          field: beatMetadataResult.field
+        });
+      }
+      data.contentType = contentTypeResult.value;
+      Object.assign(data, beatMetadataResult.data);
+    }
     const lyricsFields = [
       'lyricsText',
       'lyricsType',
@@ -623,6 +656,14 @@ async function uploadBatchesRoutes(fastify) {
           explicit: latest.explicit,
           isPublic: latest.isPublic,
           copyrightConfirmed: latest.copyrightConfirmed,
+          contentType: latest.contentType,
+          beatKey: latest.beatKey,
+          beatBpm: latest.beatBpm,
+          beatMood: latest.beatMood,
+          beatStyle: latest.beatStyle,
+          beatLicenseType: latest.beatLicenseType,
+          beatUsageNotes: latest.beatUsageNotes,
+          beatContactEnabled: latest.beatContactEnabled,
           lyricsText: latest.lyricsText,
           lyricsType: latest.lyricsType,
           lyricsLanguage: latest.lyricsLanguage,
@@ -1075,6 +1116,14 @@ async function uploadBatchesRoutes(fastify) {
               explicit: item.explicit,
               isPublic: item.isPublic,
               copyrightConfirmed: item.copyrightConfirmed,
+              contentType: item.contentType,
+              beatKey: item.beatKey,
+              beatBpm: item.beatBpm,
+              beatMood: item.beatMood,
+              beatStyle: item.beatStyle,
+              beatLicenseType: item.beatLicenseType,
+              beatUsageNotes: item.beatUsageNotes,
+              beatContactEnabled: item.beatContactEnabled,
               lyricsText: item.lyricsText,
               lyricsType: item.lyricsType,
               lyricsLanguage: item.lyricsLanguage,
@@ -1192,3 +1241,4 @@ module.exports = uploadBatchesRoutes;
 module.exports.MAX_BATCH_FILES = MAX_BATCH_FILES;
 module.exports.MAX_BATCH_BYTES = MAX_BATCH_BYTES;
 module.exports.validateBatchFiles = validateBatchFiles;
+module.exports.trackDataFromItem = trackDataFromItem;
