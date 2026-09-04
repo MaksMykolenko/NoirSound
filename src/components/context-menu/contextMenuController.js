@@ -4,6 +4,7 @@ const noopController = {
   openContextMenu: () => {},
   closeContextMenu: () => {},
   openAddToPlaylist: () => {},
+  openReport: () => {},
 };
 
 export const ContextMenuContext = createContext(noopController);

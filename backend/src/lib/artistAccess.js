@@ -147,7 +147,8 @@ async function grantArtistAccess(client, target, options = {}) {
       data: {
         ...(roleChanged ? { role: nextRole } : {}),
         ...(statusChanged ? { status: nextStatus } : {})
-      }
+      },
+      select: { id: true }
     });
   }
 
@@ -203,7 +204,11 @@ async function revokeArtistAccess(client, target, options = {}) {
   const nextRole = target.role === 'ARTIST' ? 'LISTENER' : target.role;
   const roleChanged = nextRole !== previousRole;
   if (roleChanged) {
-    await client.user.update({ where: { id: target.id }, data: { role: nextRole } });
+    await client.user.update({
+      where: { id: target.id },
+      data: { role: nextRole },
+      select: { id: true }
+    });
   }
 
   let profile = target.artistProfile || null;

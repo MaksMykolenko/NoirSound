@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter, useLocation } from 'react-router-dom';
+import i18n from '../../src/i18n';
 import AppLayout from '../../src/components/layout/AppLayout';
 import PlayerBar from '../../src/components/player/PlayerBar';
 import { __getAudioElementForTests, usePlayerStore } from '../../src/store/playerStore';
@@ -76,7 +77,8 @@ function clickWithoutFollowingNativeNavigation(element, init = {}) {
 }
 
 describe('player track navigation', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
+    await i18n.changeLanguage('en');
     localStorage.removeItem('noirsound.playerCollapsed');
     document.body.style.overflow = '';
     usePlayerStore.setState({
@@ -104,6 +106,23 @@ describe('player track navigation', () => {
       delete window.matchMedia;
     }
     document.body.style.overflow = '';
+  });
+
+  it.each([
+    ['en', 'Previous track', 'Change repeat mode. Current mode: none', 'Track progress'],
+    ['uk', 'Попередній трек', 'Змінити режим повтору. Поточний режим: вимкнено', 'Позиція відтворення'],
+    ['pl', 'Poprzedni utwór', 'Zmień tryb powtarzania. Bieżący tryb: wyłączone', 'Postęp odtwarzania'],
+    ['ru', 'Предыдущий трек', 'Изменить режим повтора. Текущий режим: выключен', 'Позиция воспроизведения'],
+  ])('localizes shared player controls in %s while preserving the authored title', async (language, previousLabel, repeatLabel, progressLabel) => {
+    await i18n.changeLanguage(language);
+    usePlayerStore.setState({ repeatMode: 'none' });
+    render(<PlayerBar isQueueOpen={false} onToggleQueue={vi.fn()} />, { wrapper: MemoryRouter });
+
+    const transport = screen.getByTestId('standard-player-transport');
+    expect(within(transport).getByRole('button', { name: previousLabel })).toBeInTheDocument();
+    expect(within(transport).getByRole('button', { name: repeatLabel })).toBeInTheDocument();
+    expect(screen.getByRole('slider', { name: progressLabel })).toBeInTheDocument();
+    expect(within(screen.getByTestId('standard-player-track-info')).getByRole('link', { name: track.title })).toHaveTextContent(track.title);
   });
 
   it('opens the current track page from the title without interrupting playback', async () => {

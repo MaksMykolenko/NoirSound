@@ -46,10 +46,11 @@ export async function loginApi(ctx, email, password = 'password123') {
 }
 
 /** Run the full upload pipeline via the API; returns { trackId, uploadId }. */
-export async function uploadTrackViaApi(ctx, { title = 'E2E Track' } = {}) {
+export async function uploadTrackViaApi(ctx, { title = 'E2E Track', ...metadata } = {}) {
   const init = await ctx.post(`${API_BASE}/uploads/track/init`, {
     data: {
       title, genre: 'electronic', tags: ['e2e'], copyrightConfirmed: true,
+      ...metadata,
       audio: { filename: 'e2e.wav', mimeType: 'audio/wav', sizeBytes: makeWavBuffer().length },
     },
   });

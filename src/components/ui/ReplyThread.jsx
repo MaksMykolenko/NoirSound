@@ -26,7 +26,7 @@ export default function ReplyThread({ replies, onLikeReply, onDeleteReply }) {
             {/* Content Area */}
             <div className="flex-1 min-w-0 space-y-1">
               <div className="flex flex-col min-[430px]:flex-row min-[430px]:items-center justify-between gap-1">
-                <div className="flex flex-wrap items-baseline gap-x-1.5">
+                <div className="flex min-w-0 flex-wrap items-baseline gap-x-1.5 [overflow-wrap:anywhere]">
                   <span className="text-ns-label font-semibold text-zinc-200">{reply.displayName}</span>
                   <span className="font-sans tabular-nums text-ns-meta text-zinc-500">@{reply.username}</span>
                 </div>
@@ -54,7 +54,7 @@ export default function ReplyThread({ replies, onLikeReply, onDeleteReply }) {
                 {isOwnReply && (
                   <button
                     onClick={() => onDeleteReply(reply.id)}
-                    className="ml-auto flex min-h-10 cursor-pointer items-center space-x-1 rounded px-2 transition-colors hover:text-rose-500 md:opacity-0 md:group-hover/reply:opacity-100"
+                    className="ml-auto flex min-h-10 cursor-pointer items-center space-x-1 rounded px-2 transition-colors hover:text-rose-500 md:opacity-0 md:group-hover/reply:opacity-100 md:group-focus-within/reply:opacity-100"
                     title="Delete reply"
                   >
                     <Trash2 size={10} />

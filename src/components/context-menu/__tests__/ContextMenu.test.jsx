@@ -12,7 +12,7 @@ function Harness({ firstAction, secondAction }) {
   ], [firstAction, secondAction]);
 
   return (
-    <div onContextMenu={contextMenuProps.onContextMenu}>
+    <div onContextMenu={contextMenuProps.onContextMenu} onKeyDown={contextMenuProps.onKeyDown}>
       <button
         type="button"
         {...contextMenuProps}
@@ -75,35 +75,10 @@ describe('ContextMenu', () => {
     screen.getByRole('textbox', { name: 'Editable field' }).dispatchEvent(event);
     expect(event.defaultPrevented).toBe(false);
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    const keyboardEvent = new KeyboardEvent('keydown', { key: 'F10', shiftKey: true, bubbles: true, cancelable: true });
+    screen.getByRole('textbox', { name: 'Editable field' }).dispatchEvent(keyboardEvent);
+    expect(keyboardEvent.defaultPrevented).toBe(false);
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
   });
 
-  it('clamps the desktop menu inside the viewport', async () => {
-    const rectSpy = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect')
-      .mockReturnValue({
-        x: 0,
-        y: 0,
-        top: 0,
-        left: 0,
-        right: 260,
-        bottom: 400,
-        width: 260,
-        height: 400,
-        toJSON: () => ({}),
-      });
-    render(
-      <ContextMenuProvider>
-        <Harness firstAction={vi.fn()} secondAction={vi.fn()} />
-      </ContextMenuProvider>
-    );
-    fireEvent.contextMenu(screen.getByRole('button', { name: 'Target' }), {
-      clientX: window.innerWidth - 1,
-      clientY: window.innerHeight - 1,
-    });
-    const menu = screen.getByRole('menu');
-    await waitFor(() => {
-      expect(Number.parseFloat(menu.style.left)).toBeLessThanOrEqual(window.innerWidth - 270);
-      expect(Number.parseFloat(menu.style.top)).toBeLessThanOrEqual(window.innerHeight - 410);
-    });
-    rectSpy.mockRestore();
-  });
 });

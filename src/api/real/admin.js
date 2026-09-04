@@ -1,4 +1,4 @@
-import { apiFetch } from '../client';
+import { API_BASE_URL, apiFetch } from '../client';
 
 function queryString(params = {}) {
   const search = new URLSearchParams();
@@ -23,6 +23,10 @@ function mutate(path, body = {}) {
 }
 
 export const getAdminOverview = () => get('/admin/overview');
+export const searchAdmin = (query, { signal } = {}) => apiFetch(`/admin/search${queryString({ q: query })}`, {
+  signal,
+  suppressErrorToast: true,
+});
 
 export const getAdminUsers = (params) => get('/admin/users', params);
 export const getAdminUser = (id) => get(`/admin/users/${encodeURIComponent(id)}`);
@@ -57,6 +61,7 @@ export const rejectTrack = (id, reason) => mutate(`/admin/tracks/${encodeURIComp
 export const restoreTrack = (id, reason) => mutate(`/admin/tracks/${encodeURIComponent(id)}/restore`, { reason });
 export const forceReprocessTrack = (id, reason) => mutate(`/admin/tracks/${encodeURIComponent(id)}/force-reprocess`, { reason });
 export const removeTrackLyrics = (id, reason) => mutate(`/admin/tracks/${encodeURIComponent(id)}/lyrics/remove`, { reason });
+export const updateTrackContentType = (id, payload) => mutate(`/admin/tracks/${encodeURIComponent(id)}/content-type`, payload);
 
 export const getAdminArtists = (params) => get('/admin/artists', params);
 export const getAdminArtist = (id) => get(`/admin/artists/${encodeURIComponent(id)}`);
@@ -79,8 +84,10 @@ export const getAdminComment = (id) => get(`/admin/comments/${encodeURIComponent
 export const hideComment = (id, reason) => mutate(`/admin/comments/${encodeURIComponent(id)}/hide`, { reason });
 export const unhideComment = (id, reason) => mutate(`/admin/comments/${encodeURIComponent(id)}/unhide`, { reason });
 
-export const getAuditLogs = (params) => get('/admin/audit-logs', params);
-export const getAuditLog = (id) => get(`/admin/audit-logs/${encodeURIComponent(id)}`);
+export const getAuditLogs = (params, { signal } = {}) => apiFetch(`/admin/audit-logs${queryString(params)}`, { signal, suppressErrorToast: true });
+export const getAuditLog = (id, { signal } = {}) => apiFetch(`/admin/audit-logs/${encodeURIComponent(id)}`, { signal, suppressErrorToast: true });
+export const exportAuditLogs = (params) => apiFetch(`/admin/audit-logs/export${queryString(params)}`, { suppressErrorToast: true });
+export const getAdminTrackPreview = (id) => ({ url: `${API_BASE_URL}/admin/tracks/${encodeURIComponent(id)}/preview` });
 export const getAdminSystem = () => get('/admin/system');
 
 // Stats integrity — see backend/src/lib/statsIntegrity.js and

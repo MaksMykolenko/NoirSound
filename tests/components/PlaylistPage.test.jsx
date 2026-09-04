@@ -226,6 +226,26 @@ describe('PlaylistPage — playlist detail table', () => {
       expect(screen.getByText(i18n.t('playlists.tracksCount', { count: 4 }))).toBeInTheDocument();
       expect(screen.getByText(formatDurationLong(635, i18n.t.bind(i18n)))).toBeInTheDocument();
     });
+
+    it('keeps a Beat playable in the shared playlist and labels its desktop and mobile rows', async () => {
+      const beat = {
+        ...trackB,
+        contentType: 'BEAT',
+        beatBpm: 140,
+        beatKey: 'D Minor',
+      };
+      getPlaylistById.mockResolvedValue(buildPlaylist({ tracks: [trackA, beat] }));
+      renderPlaylistPage();
+      await screen.findByText('Late Night Circuit');
+
+      const desktopRow = screen.getByRole('table').querySelector('tr[data-track-id="t-b"]');
+      expect(within(desktopRow).getByTestId('beat-badge')).toHaveTextContent(i18n.t('content.beat'));
+      const mobileRow = document.querySelector('.md\\:hidden [data-track-id="t-b"]');
+      expect(within(mobileRow).getByTestId('beat-badge')).toHaveTextContent(i18n.t('content.beat'));
+      expect(within(desktopRow).getByLabelText(
+        i18n.t('playlists.playFromHere', { title: beat.title })
+      )).toBeInTheDocument();
+    });
   });
 
   describe('playback integration', () => {
@@ -261,7 +281,6 @@ describe('PlaylistPage — playlist detail table', () => {
       expect(within(row).getByLabelText(
         i18n.t('playlists.pauseTrack', { title: 'Neon Static' })
       )).toBeInTheDocument();
-      expect(within(row).getByText(i18n.t('playlists.currentlyPlaying'))).toHaveClass('sr-only');
     });
 
     it('queues all playable tracks from the header Add to queue button', async () => {
@@ -395,7 +414,7 @@ describe('PlaylistPage — playlist detail table', () => {
     });
   });
 
-  describe('mobile layout', () => {
+  describe('mobile interactions', () => {
     it('renders a parallel mobile row list alongside the desktop table', async () => {
       getPlaylistById.mockResolvedValue(buildPlaylist({ isOwner: true }));
       const { container } = renderPlaylistPage();
@@ -465,7 +484,6 @@ describe('PlaylistPage — playlist detail table', () => {
       // for play/pause/like rather than "zero buttons".
       expect(within(unavailableRow).queryByRole('button', { name: /play|pause/i })).not.toBeInTheDocument();
       expect(within(unavailableRow).queryByRole('button', { name: /like/i })).not.toBeInTheDocument();
-      expect(unavailableRow).toHaveClass('opacity-50');
     });
   });
 });

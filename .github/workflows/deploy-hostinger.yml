@@ -33,7 +33,7 @@ jobs:
           HOSTINGER_DEPLOY_PATH: ${{ secrets.HOSTINGER_DEPLOY_PATH }}
           HOSTINGER_PORT: ${{ secrets.HOSTINGER_PORT || '22' }}
           PRODUCTION_DOMAIN: ${{ secrets.PRODUCTION_DOMAIN }}
-          WORKFLOW_REF: ${{ github.ref_name }}
+          RELEASE_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
           test -n "$HOSTINGER_HOST"
@@ -42,6 +42,7 @@ jobs:
           test -n "$HOSTINGER_KNOWN_HOSTS"
           test -n "$HOSTINGER_DEPLOY_PATH"
           test -n "$PRODUCTION_DOMAIN"
+          [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]]
 
           mkdir -p ~/.ssh
           umask 077
@@ -49,23 +50,30 @@ jobs:
           printf '%s\n' "$HOSTINGER_KNOWN_HOSTS" > ~/.ssh/known_hosts
 
           printf -v REMOTE_APP_DIR '%q' "$HOSTINGER_DEPLOY_PATH"
-          printf -v REMOTE_REF '%q' "$WORKFLOW_REF"
+          printf -v REMOTE_SHA '%q' "$RELEASE_SHA"
           printf -v REMOTE_DOMAIN '%q' "$PRODUCTION_DOMAIN"
 
           ssh -p "$HOSTINGER_PORT" \
             -i ~/.ssh/hostinger_deploy_key \
             -o IdentitiesOnly=yes \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile=~/.ssh/known_hosts \
+            -o ConnectTimeout=15 \
+            -o ConnectionAttempts=1 \
             "$HOSTINGER_USER@$HOSTINGER_HOST" \
-            "APP_DIR=$REMOTE_APP_DIR DEPLOY_REF=$REMOTE_REF PRODUCTION_DOMAIN=$REMOTE_DOMAIN bash -se" <<'REMOTE'
+            "APP_DIR=$REMOTE_APP_DIR RELEASE_SHA=$REMOTE_SHA PRODUCTION_DOMAIN=$REMOTE_DOMAIN bash -se" <<'REMOTE'
           set -euo pipefail
           cd "$APP_DIR"
-          git fetch --tags origin
-          if git rev-parse -q --verify "refs/tags/$DEPLOY_REF" >/dev/null; then
-            git checkout --detach "refs/tags/$DEPLOY_REF"
-          else
-            git checkout "$DEPLOY_REF"
-            git pull --ff-only origin "$DEPLOY_REF"
-          fi
-          chmod +x scripts/*.sh
-          scripts/deploy-hostinger.sh
+          [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          command -v flock >/dev/null
+          exec 9>"$(git rev-parse --path-format=absolute --git-path noirsound-deploy.lock)"
+          flock -n 9 || { printf 'Another deployment holds the checkout lock.\n' >&2; exit 1; }
+          [[ -z "$(git status --porcelain --untracked-files=all)" ]] || { printf 'Dirty VPS checkout; refusing checkout changes.\n' >&2; exit 1; }
+          export PREVIOUS_PRODUCTION_SHA="$(git rev-parse HEAD)"
+          git fetch --no-tags origin "$RELEASE_SHA"
+          [[ "$(git rev-parse "$RELEASE_SHA^{commit}")" == "$RELEASE_SHA" ]]
+          git checkout --detach "$RELEASE_SHA"
+          [[ "$(git rev-parse HEAD)" == "$RELEASE_SHA" ]]
+          ENV_FILE="$APP_DIR/.env.production" COMPOSE_FILE="$APP_DIR/docker-compose.production.yml" bash scripts/deploy-hostinger.sh
           REMOTE

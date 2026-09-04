@@ -10,6 +10,9 @@ import GenrePicker from '../ui/GenrePicker';
 import { getLocalizedGenre } from '../../i18n/genreLabels';
 import LyricsEditor from '../lyrics/LyricsEditor';
 import { lyricsCounts, MAX_LYRICS_LINES } from '../lyrics/lyricsUtils';
+import BeatMetadataFields from './BeatMetadataFields';
+import ContentTypeSelector from './ContentTypeSelector';
+import { beatMetadataPayload, EMPTY_BEAT_METADATA } from './beatMetadata';
 
 export default function UploadForm() {
   const { t } = useTranslation();
@@ -33,6 +36,8 @@ export default function UploadForm() {
   const [genre, setGenre] = useState('');
   const [description, setDescription] = useState('');
   const [tags, setTags] = useState('');
+  const [contentType, setContentType] = useState('MUSIC');
+  const [beatMetadata, setBeatMetadata] = useState(() => ({ ...EMPTY_BEAT_METADATA }));
   const [rightsChecked, setRightsChecked] = useState(false);
   const [lyricsForm, setLyricsForm] = useState({
     lyricsText: '',
@@ -55,11 +60,11 @@ export default function UploadForm() {
     e.preventDefault();
     setErrorMsg('');
 
-    if (!audioFile) return setErrorMsg('Please select an audio file to upload.');
-    if (!coverFile) return setErrorMsg('Please select a cover image.');
-    if (!title.trim()) return setErrorMsg('Please enter a track title.');
-    if (!genre) return setErrorMsg('Please choose a genre for your track.');
-    if (!rightsChecked) return setErrorMsg('You must confirm ownership rights to publish.');
+    if (!audioFile) return setErrorMsg(t('uploadForm.audioRequired'));
+    if (!coverFile) return setErrorMsg(t('uploadForm.artworkRequired'));
+    if (!title.trim()) return setErrorMsg(t('uploadForm.titleRequired'));
+    if (!genre) return setErrorMsg(t('uploadForm.genreRequired'));
+    if (!rightsChecked) return setErrorMsg(t('uploadForm.rightsRequired'));
     if (lyricsCounts(lyricsForm.lyricsText).lines > MAX_LYRICS_LINES) {
       return setErrorMsg(t('lyrics.tooLong'));
     }
@@ -74,6 +79,8 @@ export default function UploadForm() {
       // 1. Execute upload (gets S3 urls and puts them)
       const res = await uploadMutation.mutateAsync({
         title, genre, description, tags: tags.split(',').map(t => t.trim()).filter(Boolean),
+        contentType,
+        ...beatMetadataPayload(contentType, beatMetadata),
         audioFile,
         coverFile,
         copyrightConfirmed: rightsChecked,
@@ -94,7 +101,7 @@ export default function UploadForm() {
         ? t('uploadForm.profileNotReadyMessage', {
           defaultValue: 'Your artist profile is not ready yet. Please contact an admin or complete your artist profile before uploading tracks.',
         })
-        : (err.message || 'Upload failed.'));
+        : (err.message || t('uploadForm.uploadFailed')));
       setUploadStatus('error');
     }
   };
@@ -112,12 +119,12 @@ export default function UploadForm() {
           setUploadStatus('success');
           clearInterval(poller);
         } else if (res.status === 'FAILED') {
-          setErrorMsg(res.error || 'Processing failed.');
+          setErrorMsg(res.error || t('uploadForm.processingFailed'));
           setUploadStatus('error');
           clearInterval(poller);
         }
       } catch (err) {
-        setErrorMsg(err.message || 'Could not verify processing status.');
+        setErrorMsg(err.message || t('uploadForm.statusFailed'));
         setUploadStatus('error');
         clearInterval(poller);
       }
@@ -131,7 +138,7 @@ export default function UploadForm() {
     return () => {
       if (poller) clearInterval(poller);
     };
-  }, [uploadStatus, uploadId]);
+  }, [uploadStatus, uploadId, t]);
 
   useEffect(() => {
     if (!coverFile) {
@@ -148,6 +155,8 @@ export default function UploadForm() {
     setGenre('');
     setDescription('');
     setTags('');
+    setContentType('MUSIC');
+    setBeatMetadata({ ...EMPTY_BEAT_METADATA });
     setRightsChecked(false);
     setLyricsForm({
       lyricsText: '',
@@ -193,11 +202,11 @@ export default function UploadForm() {
   if (!['ARTIST', 'ADMIN'].includes(user.role)) {
     return (
       <div className="mx-auto max-w-lg space-y-4 rounded-md border border-zinc-800 bg-surface-noir/50 p-6 text-center">
-        <AlertCircle size={30} className="mx-auto text-amber-300" />
+        <AlertCircle size={30} className="mx-auto text-[var(--ns-warning)]" />
         <div>
-          <h2 className="text-xl font-bold text-zinc-100">Creator access required</h2>
+          <h2 className="text-xl font-bold text-zinc-100">{t('uploadForm.creatorAccessRequired')}</h2>
           <p className="text-sm leading-relaxed text-zinc-400 mt-2">
-            Listener accounts cannot initialize uploads. Ask an administrator to enable an artist profile.
+            {t('uploadForm.creatorAccessHelp')}
           </p>
         </div>
       </div>
@@ -211,7 +220,7 @@ export default function UploadForm() {
     const canSelfService = user.role === 'ADMIN' && user.uploadAccessReason === 'MISSING_ARTIST_PROFILE';
     return (
       <div className="mx-auto max-w-lg space-y-4 rounded-md border border-zinc-800 bg-surface-noir/50 p-6 text-center" data-testid="artist-profile-not-ready">
-        <AlertCircle size={30} className="mx-auto text-amber-300" />
+        <AlertCircle size={30} className="mx-auto text-[var(--ns-warning)]" />
         <div>
           <h2 className="text-xl font-bold text-zinc-100">
             {t('uploadForm.profileNotReadyTitle', { defaultValue: 'Artist profile not ready' })}
@@ -241,13 +250,13 @@ export default function UploadForm() {
   if (uploadStatus === 'success') {
     return (
       <div className="mx-auto max-w-lg space-y-6 rounded-md border border-zinc-800 bg-surface-noir/50 p-6 text-center animate-fade-in" role="status">
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-md border border-emerald-500/30 bg-emerald-500/10 text-emerald-400">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-md border border-emerald-500/30 bg-emerald-500/10 text-[var(--ns-success)]">
           <CheckCircle size={32} />
         </div>
         <div className="space-y-2">
-          <h3 className="text-xl font-bold text-zinc-100">Ready to Publish</h3>
+          <h3 className="text-xl font-bold text-zinc-100">{t('uploadForm.readyToPublish')}</h3>
           <p className="text-sm text-zinc-400">
-            "{title}" has been successfully uploaded and processed.
+            {t('uploadForm.uploadSuccess', { title })}
           </p>
         </div>
 
@@ -265,8 +274,11 @@ export default function UploadForm() {
             )}
           </div>
           <div className="min-w-0 flex-1">
-            <h4 className="text-sm font-bold text-zinc-200 truncate">{title}</h4>
-            <p className="text-sm text-zinc-500">{getLocalizedGenre(genre)} • {tags || 'No tags'}</p>
+            <h4 title={title} className="text-sm font-bold text-zinc-200 truncate">{title}</h4>
+            <p className="break-words [overflow-wrap:anywhere] text-sm text-zinc-500">{getLocalizedGenre(genre)} • {tags || t('uploadForm.noTags')}</p>
+            <span className="mt-1 inline-flex rounded border border-zinc-700 px-1.5 py-0.5 font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-zinc-400">
+              {contentType === 'BEAT' ? t('content.beats') : t('content.music')}
+            </span>
           </div>
         </div>
 
@@ -287,10 +299,10 @@ export default function UploadForm() {
       <div className="mx-auto max-w-lg select-none space-y-7 rounded-md border border-zinc-800 bg-surface-noir/50 p-6" aria-live="polite">
         <div className="text-center space-y-2">
           <h3 className="text-lg font-bold text-zinc-200">
-            {uploadStatus === 'uploading' && 'Uploading track audio...'}
-            {uploadStatus === 'processing' && 'Processing track on server...'}
+            {uploadStatus === 'uploading' && t('uploadForm.uploadingAudio')}
+            {uploadStatus === 'processing' && t('uploadForm.processingAudio')}
           </h3>
-          <p className="text-sm text-zinc-500">Do not close this page or navigate away.</p>
+          <p className="text-sm text-zinc-500">{t('uploadForm.keepPageOpen')}</p>
         </div>
 
         {/* Progress Display */}
@@ -298,7 +310,7 @@ export default function UploadForm() {
           <div
             className="relative h-1.5 w-full overflow-hidden rounded-sm border border-zinc-800 bg-zinc-900"
             role="progressbar"
-            aria-label="Upload progress"
+            aria-label={t('uploadForm.uploadProgress')}
             aria-valuemin="0"
             aria-valuemax="100"
             aria-valuenow={uploadStatus === 'uploading' ? uploadProgress : 100}
@@ -315,10 +327,9 @@ export default function UploadForm() {
 
           <div className="flex justify-between items-center text-sm text-zinc-400 font-semibold px-1">
             <span>
-              {uploadStatus === 'uploading' && `Progress: ${uploadProgress}%`}
-              {uploadStatus === 'processing' && 'Awaiting worker...'}
+              {uploadStatus === 'uploading' && t('uploadForm.progressPercent', { progress: uploadProgress })}
+              {uploadStatus === 'processing' && t('uploadForm.awaitingWorker')}
             </span>
-            <span className="animate-pulse text-brand-red">●</span>
           </div>
         </div>
 
@@ -328,21 +339,21 @@ export default function UploadForm() {
             uploadStatus === 'uploading' ? 'text-zinc-200 font-bold' : 'text-zinc-500'
           }`}>
             <span className={`w-2 h-2 rounded-full ${
-              uploadProgress === 100 ? 'bg-emerald-400' : uploadStatus === 'uploading' ? 'bg-brand-red animate-ping' : 'bg-zinc-800'
+              uploadProgress === 100 ? 'bg-emerald-400' : uploadStatus === 'uploading' ? 'bg-brand-red' : 'bg-zinc-800'
             }`} />
-            <span>1. Sending files to storage</span>
+            <span>1. {t('uploadForm.sendingFiles')}</span>
           </div>
           <div className={`flex items-center space-x-3 text-sm ${
             uploadStatus === 'processing' ? 'text-zinc-200 font-bold' : 'text-zinc-500'
           }`}>
             <span className={`w-2 h-2 rounded-full ${
-              uploadStatus === 'success' ? 'bg-emerald-400' : uploadStatus === 'processing' ? 'bg-brand-red animate-ping' : 'bg-zinc-800'
+              uploadStatus === 'success' ? 'bg-emerald-400' : uploadStatus === 'processing' ? 'bg-brand-red' : 'bg-zinc-800'
             }`} />
-            <span>2. Audio parsing & validation</span>
+            <span>2. {t('uploadForm.validatingAudio')}</span>
           </div>
           <div className="flex items-center space-x-3 text-sm text-zinc-500">
             <span className="w-2 h-2 rounded-full bg-zinc-800" />
-            <span>3. Publish processed release</span>
+            <span>3. {t('uploadForm.publishRelease')}</span>
           </div>
         </div>
       </div>
@@ -352,28 +363,24 @@ export default function UploadForm() {
   return (
     <form onSubmit={handleSubmit} className="mx-auto grid max-w-6xl gap-7 xl:grid-cols-[minmax(0,1fr)_19rem] xl:items-start" noValidate>
       <div className="min-w-0 space-y-8">
-        <div className="border-b border-zinc-800/80 pb-5">
-          <h2 className="flex items-center gap-2 text-lg font-semibold text-zinc-100">
-            <UploadCloud className="text-brand-red" size={19} />
-            <span>{t('uploadForm.title')}</span>
-          </h2>
-          <p className="mt-1 text-sm text-zinc-400">{t('uploadForm.subtitle')}</p>
-        </div>
-
         {errorMsg && (
-          <div id="upload-error" className="flex items-start gap-2.5 border-l-2 border-rose-400 bg-rose-500/10 p-3.5 text-sm text-rose-200" role="alert">
+          <div id="upload-error" className="flex items-start gap-2.5 border-l-2 border-[var(--ns-danger)] bg-[color-mix(in_srgb,var(--ns-danger)_10%,transparent)] p-3.5 text-sm text-[var(--ns-danger)]" role="alert">
             <AlertCircle size={16} className="mt-0.5 shrink-0" />
             <span className="font-semibold">{errorMsg}</span>
           </div>
         )}
 
+        <section aria-label={t('content.uploadAs')}>
+          <ContentTypeSelector value={contentType} onChange={setContentType} idPrefix="single-upload-content-type" />
+        </section>
+
         <section className="space-y-4" aria-labelledby="upload-assets-title">
           <div>
-            <h3 id="upload-assets-title" className="text-base font-semibold text-zinc-100">{t('uploadForm.assets')}</h3>
+            <h2 id="upload-assets-title" className="text-base font-semibold text-zinc-100">{t('uploadForm.assets')}</h2>
             <p className="mt-1 text-sm text-zinc-500">{t('uploadForm.assetsHelp')}</p>
           </div>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div className={`group relative min-h-44 cursor-pointer rounded-md border border-dashed p-6 text-center transition-colors ${
+            <div className={`group relative min-h-44 cursor-pointer focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--ns-accent)] rounded-md border border-dashed p-6 text-center transition-colors ${
               audioFile ? 'border-brand-red/35 bg-brand-red/5' : 'border-zinc-800 bg-zinc-950/25 hover:border-zinc-700'
             }`}>
               <input
@@ -382,7 +389,7 @@ export default function UploadForm() {
                 accept=".mp3,.wav,.flac,audio/mpeg,audio/wav,audio/flac"
                 onChange={(e) => setAudioFile(e.target.files[0])}
                 className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                aria-label="Select track audio file"
+                aria-label={t('uploadForm.audioFileLabel')}
                 aria-describedby={errorMsg ? 'upload-error' : undefined}
               />
               <div className="flex flex-col items-center justify-center space-y-3.5">
@@ -390,20 +397,20 @@ export default function UploadForm() {
                   <FileAudio size={24} />
                 </div>
                 <div className="min-w-0 max-w-full">
-                  <span className="block truncate text-sm font-bold text-zinc-200">
+                  <span title={audioFile?.name} className="block truncate text-sm font-bold text-zinc-200">
                     {audioFile ? audioFile.name : t('uploadForm.selectAudio')}
                   </span>
                   <span className="mt-1 block text-ns-label text-zinc-400">{t('uploadForm.audioFormats')}</span>
                   {audioFile && (
-                    <span className="mt-2 block text-ns-label text-emerald-400">
-                      {(audioFile.size / (1024 * 1024)).toFixed(1)} MB selected
+                    <span className="mt-2 block text-ns-label text-[var(--ns-success)]">
+                      {t('uploadForm.selectedMegabytes', { size: (audioFile.size / (1024 * 1024)).toFixed(1) })}
                     </span>
                   )}
                 </div>
               </div>
             </div>
 
-            <div className={`group relative min-h-44 cursor-pointer overflow-hidden rounded-md border border-dashed p-5 text-center transition-colors ${
+            <div className={`group relative min-h-44 cursor-pointer focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--ns-accent)] overflow-hidden rounded-md border border-dashed p-5 text-center transition-colors ${
               coverFile ? 'border-brand-red/35 bg-brand-red/5' : 'border-zinc-800 bg-zinc-950/25 hover:border-zinc-700'
             }`}>
               <input
@@ -412,19 +419,19 @@ export default function UploadForm() {
                 accept="image/*"
                 onChange={(e) => setCoverFile(e.target.files[0])}
                 className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                aria-label="Select track artwork"
+                aria-label={t('uploadForm.artworkFileLabel')}
                 aria-describedby={errorMsg ? 'upload-error' : undefined}
               />
               <div className="flex flex-col items-center justify-center space-y-3.5">
                 {coverPreviewUrl ? (
-                  <img src={coverPreviewUrl} alt="Selected artwork preview" className="h-20 w-20 rounded object-cover border border-zinc-700" />
+                  <img src={coverPreviewUrl} alt={t('uploadForm.artworkPreview')} className="h-20 w-20 rounded object-cover border border-zinc-700" />
                 ) : (
                   <div className="rounded border border-zinc-800 bg-zinc-900 p-3 text-zinc-400 transition-colors group-hover:border-brand-red/35 group-hover:text-brand-red">
                     <ImageIcon size={24} />
                   </div>
                 )}
                 <div className="min-w-0 max-w-full">
-                  <span className="block truncate text-sm font-bold text-zinc-200">
+                  <span title={coverFile?.name} className="block truncate text-sm font-bold text-zinc-200">
                     {coverFile ? coverFile.name : t('uploadForm.selectArtwork')}
                   </span>
                   <span className="mt-1 block text-ns-label text-zinc-400">{t('uploadForm.artworkFormats')}</span>
@@ -436,7 +443,7 @@ export default function UploadForm() {
 
         <section className="space-y-5 border-t border-zinc-800/70 pt-6" aria-labelledby="upload-details-title">
           <div>
-            <h3 id="upload-details-title" className="text-base font-semibold text-zinc-100">{t('uploadForm.releaseDetails')}</h3>
+            <h2 id="upload-details-title" className="text-base font-semibold text-zinc-100">{t('uploadForm.releaseDetails')}</h2>
             <p className="mt-1 text-sm text-zinc-500">{t('uploadForm.releaseDetailsHelp')}</p>
           </div>
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
@@ -445,7 +452,7 @@ export default function UploadForm() {
               <input
                 id="track-title"
                 type="text"
-                placeholder="e.g. Midnight Protocol"
+                placeholder={t('uploadForm.titlePlaceholder')}
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 className="ns-field px-4 text-base sm:text-sm"
@@ -492,6 +499,14 @@ export default function UploadForm() {
             <p className="pt-0.5 text-ns-label leading-relaxed text-zinc-500">{t('uploadForm.tagsHelper')}</p>
           </div>
         </section>
+
+        {contentType === 'BEAT' && (
+          <BeatMetadataFields
+            value={beatMetadata}
+            onChange={setBeatMetadata}
+            idPrefix="single-upload-beat"
+          />
+        )}
 
         <details className="border-y border-zinc-800/70 py-4">
           <summary className="cursor-pointer text-sm font-bold text-zinc-200 marker:text-brand-red">

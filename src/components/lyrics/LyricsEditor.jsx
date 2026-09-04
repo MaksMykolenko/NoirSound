@@ -65,7 +65,7 @@ export default function LyricsEditor({
 
       {preview ? (
         <div
-          className="min-h-48 whitespace-pre-wrap rounded-md border border-zinc-800 bg-zinc-950/60 p-4 text-sm leading-7 text-zinc-200"
+          className="min-h-48 whitespace-pre-wrap break-words rounded-md border border-zinc-800 bg-zinc-950/60 p-4 text-sm leading-7 text-zinc-200"
           aria-label={t('lyrics.preview')}
         >
           {text || t('lyrics.noLyrics')}

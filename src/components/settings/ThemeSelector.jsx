@@ -173,7 +173,7 @@ export default function ThemeSelector({ compact = false, className = '' }) {
               }`}
             >
               <ThemePreview theme={previewTheme} isSystem={isSystem} />
-              <div className="mt-3 flex min-h-6 items-center justify-between gap-3">
+              <div className="mt-3 flex min-h-6 flex-wrap items-center justify-between gap-3">
                 <ThemeSwatches theme={previewTheme} />
                 {selected && (
                   <span className="inline-flex items-center gap-1 rounded-full bg-brand-red px-2 py-1 font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-[var(--ns-on-accent)]">
@@ -182,7 +182,7 @@ export default function ThemeSelector({ compact = false, className = '' }) {
                   </span>
                 )}
               </div>
-              <span className="mt-3 flex items-baseline justify-between gap-2">
+              <span className="mt-3 flex flex-wrap items-baseline justify-between gap-2">
                 <span className="text-sm font-semibold text-zinc-100">{t(theme.labelKey)}</span>
                 {isSystem && (
                   <span className="shrink-0 text-ns-meta font-semibold text-brand-red">

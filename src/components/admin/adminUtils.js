@@ -37,3 +37,8 @@ export function formatAdminDate(value, language = 'en') {
     timeStyle: 'short',
   }).format(new Date(value));
 }
+
+export function formatAdminNumber(value, language = 'en') {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? new Intl.NumberFormat(language).format(numeric) : '—';
+}

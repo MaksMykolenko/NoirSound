@@ -15,7 +15,7 @@ test.describe('public beta · moderation', () => {
 
     await page.goto('/admin');
     await expect(page).toHaveURL(/\/admin\/overview$/);
-    await expect(page.getByRole('heading', { name: 'Overview' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Overview' })).toBeVisible();
     await expect(page.getByText('Pending reports', { exact: true })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Audit Logs', exact: true })).toBeVisible();
   });

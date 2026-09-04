@@ -39,7 +39,9 @@ async function main() {
     console.log('=== NoirSound stats integrity check ===');
     console.log(`Started: ${new Date().toISOString()}`);
 
-    const report = await runStatsIntegrityCheck(prisma);
+    // This trusted, local operator command deliberately opts into the contact
+    // field that the permission-gated admin HTTP route excludes by default.
+    const report = await runStatsIntegrityCheck(prisma, new Date(), { includePii: true });
 
     console.log(`\nVerdict: ${report.verdict}`);
     console.log('Issue counts:');

@@ -4,8 +4,10 @@ import { ArrowDown, ArrowUp, MoreHorizontal, X, Play, Trash2, Music } from 'luci
 import FallbackCover from '../ui/FallbackCover';
 import { useTrackContextMenu } from '../../hooks/useEntityContextMenu';
 import useDialogFocusTrap from '../../hooks/useDialogFocusTrap';
+import { useTranslation } from 'react-i18next';
 
 function QueueTrackRow({ track, index, currentTrack, playTrack, removeFromQueue, moveQueueItem, queueLength }) {
+  const { t } = useTranslation();
   const isPlayingThis = currentTrack?.id === track.id;
   const { contextMenuProps, openFromButton } = useTrackContextMenu(track, {
     removeFromQueue: () => removeFromQueue(track.id),
@@ -17,7 +19,8 @@ function QueueTrackRow({ track, index, currentTrack, playTrack, removeFromQueue,
       onContextMenu={contextMenuProps.onContextMenu}
       onKeyDown={contextMenuProps.onKeyDown}
       tabIndex={0}
-      className={`group flex items-center gap-3 border-b border-[var(--ns-border-subtle)] px-2 py-2.5 transition-colors duration-150 ${
+      aria-current={isPlayingThis ? 'true' : undefined}
+      className={`group grid grid-cols-[2.75rem_minmax(0,1fr)_auto] items-center gap-3 border-b border-[var(--ns-border-subtle)] px-2 py-2.5 transition-colors duration-150 ${
         isPlayingThis
           ? 'bg-brand-red/10 shadow-[inset_2px_0_0_var(--ns-accent)]'
           : 'hover:bg-zinc-900/50 focus-within:bg-zinc-900/50'
@@ -35,31 +38,31 @@ function QueueTrackRow({ track, index, currentTrack, playTrack, removeFromQueue,
         <button
           onClick={() => playTrack(track)}
           className="absolute inset-0 flex cursor-pointer items-center justify-center bg-black/60 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100"
-          aria-label={`Play ${track.title}`}
+          aria-label={`${t('contextMenu.play')} ${track.title}`}
         >
           <Play size={14} className="text-white fill-white" />
         </button>
       </div>
       <div className="flex-1 min-w-0">
-        <h5 className={`text-ns-body-sm font-semibold truncate ${isPlayingThis ? 'text-brand-red' : 'text-zinc-200'}`}>
+        <h5 title={track.title} className={`text-ns-body-sm font-semibold truncate ${isPlayingThis ? 'text-brand-red' : 'text-zinc-200'}`}>
           {track.title}
         </h5>
-        <p className="text-ns-meta text-zinc-500 truncate">by {track.artistName}</p>
+        <p title={track.artistName} className="text-ns-meta text-zinc-500 truncate">{track.artistName}</p>
       </div>
       <div className="flex items-center shrink-0">
-        <button type="button" onClick={() => moveQueueItem(track.id, -1)} disabled={index === 0} className="ns-icon-button hidden !min-h-9 !min-w-8 text-zinc-500 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 disabled:opacity-20 sm:inline-flex" aria-label={`Move ${track.title} up`}>
+        <button type="button" onClick={() => moveQueueItem(track.id, -1)} disabled={index === 0} className="ns-media-action !hidden text-zinc-500 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 disabled:opacity-20 lg:!inline-flex" aria-label={`${t('contextMenu.moveUp')}: ${track.title}`}>
           <ArrowUp size={12} />
         </button>
-        <button type="button" onClick={() => moveQueueItem(track.id, 1)} disabled={index === queueLength - 1} className="ns-icon-button hidden !min-h-9 !min-w-8 text-zinc-500 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 disabled:opacity-20 sm:inline-flex" aria-label={`Move ${track.title} down`}>
+        <button type="button" onClick={() => moveQueueItem(track.id, 1)} disabled={index === queueLength - 1} className="ns-media-action !hidden text-zinc-500 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 disabled:opacity-20 lg:!inline-flex" aria-label={`${t('contextMenu.moveDown')}: ${track.title}`}>
           <ArrowDown size={12} />
         </button>
-        <button type="button" onClick={openFromButton} className="ns-icon-button !min-h-9 !min-w-8 text-zinc-500" aria-label={`More actions for ${track.title}`} aria-haspopup="menu">
+        <button type="button" onClick={openFromButton} className="ns-media-action text-zinc-500" aria-label={`${t('contextMenu.actions')}: ${track.title}`} aria-haspopup="menu">
           <MoreHorizontal size={14} />
         </button>
         <button
           onClick={() => removeFromQueue(track.id)}
-          className="ns-icon-button hidden !min-h-9 !min-w-8 cursor-pointer text-zinc-500 opacity-0 transition-opacity hover:text-rose-500 group-hover:opacity-100 group-focus-within:opacity-100 sm:inline-flex"
-          aria-label={`Remove ${track.title} from queue`}
+          className="ns-media-action !hidden cursor-pointer text-zinc-500 opacity-0 transition-opacity hover:text-rose-500 group-hover:opacity-100 group-focus-within:opacity-100 lg:!inline-flex"
+          aria-label={`${t('contextMenu.removeFromQueue')}: ${track.title}`}
         >
           <X size={12} />
         </button>
@@ -69,6 +72,7 @@ function QueueTrackRow({ track, index, currentTrack, playTrack, removeFromQueue,
 }
 
 export default function QueuePanel({ isOpen, onClose, surface = 'standard' }) {
+  const { t } = useTranslation();
   const { queue, currentTrack, playTrack, removeFromQueue, setQueue, moveQueueItem, isPlayerCollapsed } = usePlayerStore();
   const dialogRef = useDialogFocusTrap(isOpen, onClose);
 
@@ -88,16 +92,16 @@ export default function QueuePanel({ isOpen, onClose, surface = 'standard' }) {
     <>
       <button
         type="button"
-        aria-label="Close play queue"
+        aria-label={`${t('actions.close')}: ${t('player.queue')}`}
         onClick={onClose}
-        className={`fixed inset-0 ${backdropClass} bg-black/35`}
+        className={`fixed inset-0 ${backdropClass} bg-[var(--ns-overlay)]`}
       />
       <div ref={dialogRef} className={`fixed ${positionClass} flex w-full animate-slide-in flex-col border-l border-[var(--ns-border-strong)] bg-[var(--ns-player-bg)] shadow-2xl sm:w-[22rem] md:w-96`} role="dialog" aria-modal="true" aria-labelledby="queue-title">
       {/* Queue Header */}
       <div className="flex min-h-[var(--ns-header-height)] items-center justify-between border-b border-[var(--ns-border-subtle)] px-5 py-3">
         <div className="flex items-center space-x-2">
           <Music size={16} className="text-brand-red" />
-          <h2 id="queue-title" className="text-sm font-semibold text-zinc-200">Play Queue</h2>
+          <h2 id="queue-title" className="text-sm font-semibold text-zinc-200">{t('player.queue')}</h2>
           <span className="rounded-full border border-[var(--ns-border-subtle)] bg-zinc-900 px-2 py-0.5 font-sans tabular-nums text-ns-meta text-zinc-400">
             {queue.length}
           </span>
@@ -107,16 +111,16 @@ export default function QueuePanel({ isOpen, onClose, surface = 'standard' }) {
             <button
               onClick={handleClearQueue}
               className="min-h-11 px-2 text-sm text-zinc-400 hover:text-rose-400 transition-colors flex items-center space-x-1 cursor-pointer rounded-lg"
-              aria-label="Clear play queue"
+              aria-label={`${t('actions.clear')}: ${t('player.queue')}`}
             >
               <Trash2 size={12} />
-              <span>Clear</span>
+              <span>{t('actions.clear')}</span>
             </button>
           )}
           <button
             onClick={onClose}
-            className="ns-icon-button !min-h-10 !min-w-10 text-zinc-500 cursor-pointer"
-            aria-label="Close play queue"
+            className="ns-media-action text-zinc-500 cursor-pointer"
+            aria-label={`${t('actions.close')}: ${t('player.queue')}`}
           >
             <X size={16} />
           </button>
@@ -128,8 +132,8 @@ export default function QueuePanel({ isOpen, onClose, surface = 'standard' }) {
         {queue.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center p-6 text-zinc-500 space-y-2">
             <Music size={24} className="opacity-40" />
-            <p className="text-sm font-medium">Queue is empty</p>
-            <p className="text-sm max-w-[200px]">Add tracks to play next.</p>
+            <p className="text-sm font-medium">{t('player.emptyQueue')}</p>
+            <p className="text-sm max-w-[200px]">{t('player.emptyQueueHelp', { defaultValue: 'Add tracks to play next.' })}</p>
           </div>
         ) : (
           queue.map((track, index) => (

@@ -30,7 +30,7 @@ export default function BatchFileDropzone({
   return (
     <section className="space-y-5" data-testid="batch-file-stage">
       <div
-        className={`flex min-h-64 flex-col items-center justify-center rounded-md border border-dashed p-6 text-center transition-colors sm:p-8 ${
+        className={`flex min-h-56 flex-col items-center justify-center rounded-md border border-dashed p-6 text-center transition-colors sm:p-8 ${
           dragging ? 'border-brand-red bg-brand-red/10' : 'border-zinc-700 bg-zinc-950/20 hover:border-zinc-600'
         }`}
         onDragEnter={(event) => { event.preventDefault(); setDragging(true); }}
@@ -68,7 +68,7 @@ export default function BatchFileDropzone({
       </div>
 
       {errors.length > 0 && (
-        <div role="alert" className="rounded border border-rose-500/25 bg-rose-500/10 p-3 text-sm text-rose-300">
+        <div role="alert" className="rounded border ns-status-badge ns-status-danger p-3 text-sm text-[var(--ns-danger)]">
           {errors.map((error) => <p key={error}>{error}</p>)}
         </div>
       )}
@@ -94,13 +94,13 @@ export default function BatchFileDropzone({
               <div key={entry.clientId} className="flex items-center gap-3 py-3 sm:px-2">
                 <FileAudio size={18} className="text-brand-red shrink-0" />
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-zinc-200 truncate">{entry.file.name}</p>
+                  <p title={entry.file.name} className="text-sm font-semibold text-zinc-200 truncate">{entry.file.name}</p>
                   <p className="font-sans tabular-nums text-ns-meta text-zinc-500">
                     {formatBytes(entry.file.size)} · {entry.file.type || 'Unknown MIME'}
                     {duplicateNames.has(entry.file.name) && <span className="text-amber-300"> · {t('batchUpload.duplicateWarning')}</span>}
                   </p>
                 </div>
-                <button type="button" className="ns-icon-button !rounded" aria-label={`${t('actions.remove')} ${entry.file.name}`} onClick={() => onRemove(entry.clientId)}>
+                <button type="button" className="ns-icon-button ns-media-action !rounded" aria-label={`${t('actions.remove')} ${entry.file.name}`} onClick={() => onRemove(entry.clientId)}>
                   <Trash2 size={16} />
                 </button>
               </div>

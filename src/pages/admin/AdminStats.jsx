@@ -25,22 +25,22 @@ const CHECK_KEYS = [
   'orphanFollows',
 ];
 
-function detailLabel(key, row) {
+function detailLabel(t, key, row) {
   switch (key) {
     case 'duplicateFollows':
-      return `user ${row.userId} -> artist ${row.artistId} (${row.count}x)`;
+      return t('admin.statsIntegrity.details.duplicateFollow', row);
     case 'missingArtistProfiles':
       return `${row.username || row.id} <${row.email || '—'}> [${row.role}]`;
     case 'orphanArtistProfiles':
-      return `artistProfile ${row.artistProfileId} -> missing user ${row.userId}`;
+      return t('admin.statsIntegrity.details.orphanArtistProfile', row);
     case 'staleTrackPlayCounts':
-      return `"${row.title}": stored=${row.storedPlays} actual=${row.actualQualifiedPlayEvents}`;
+      return t('admin.statsIntegrity.details.staleTrackPlays', row);
     case 'staleMonthlyListeners':
-      return `${row.username || row.artistId}: stored=${row.storedMonthlyListeners} actual=${row.actualMonthlyListeners}`;
+      return t('admin.statsIntegrity.details.staleMonthlyListeners', { ...row, artist: row.username || row.artistId });
     case 'orphanPlayEvents':
-      return `playEvent ${row.playEventId} (track=${row.trackId}, user=${row.userId})`;
+      return t('admin.statsIntegrity.details.orphanPlayEvent', row);
     case 'orphanFollows':
-      return `user ${row.userId} -> artist ${row.artistId}`;
+      return t('admin.statsIntegrity.details.orphanFollow', row);
     default:
       return JSON.stringify(row);
   }
@@ -106,7 +106,7 @@ export default function AdminStats() {
       />
 
       <AdminPanel className="p-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-sm font-bold">{t('admin.statsIntegrity.verdict')}</h2>
           <StatusBadge status={report?.verdict} />
         </div>
@@ -117,7 +117,7 @@ export default function AdminStats() {
         )}
         <div className="mt-4 grid gap-3 sm:grid-cols-3 lg:grid-cols-4">
           {CHECK_KEYS.map((key) => (
-            <div key={key} className="flex items-center justify-between rounded border border-[var(--ns-border-subtle)] bg-black/10 p-3">
+            <div key={key} className="flex items-center justify-between gap-3 rounded border border-[var(--ns-border-subtle)] bg-black/10 p-3">
               <span className="text-sm font-semibold">{t(`admin.statsIntegrity.checks.${key}`)}</span>
               <span className={`font-sans tabular-nums text-sm font-medium ${counts[key] > 0 ? 'text-[var(--ns-danger)]' : 'text-emerald-400'}`}>{counts[key] ?? 0}</span>
             </div>
@@ -132,7 +132,7 @@ export default function AdminStats() {
       ) : (
         CHECK_KEYS.filter((key) => (counts[key] || 0) > 0).map((key) => (
           <AdminPanel key={key} className="p-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <h2 className="text-sm font-bold">{t(`admin.statsIntegrity.checks.${key}`)} ({counts[key]})</h2>
               {key === 'staleMonthlyListeners' && (
                 <button type="button" onClick={() => setPendingAction({ type: 'monthlyListeners' })} className="ns-button-secondary rounded px-3 py-1.5 text-ns-label">
@@ -147,8 +147,8 @@ export default function AdminStats() {
             </div>
             <div className="mt-3 space-y-1.5">
               {(details[key] || []).slice(0, 25).map((row, index) => (
-                <div key={index} className="flex items-center justify-between gap-3 border-t border-[var(--ns-border-subtle)] py-2 text-sm first:border-0">
-                  <span className="min-w-0 truncate text-[var(--ns-text-secondary)]">{detailLabel(key, row)}</span>
+                <div key={index} className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--ns-border-subtle)] py-2 text-sm first:border-0">
+                  <span className="min-w-0 break-words [overflow-wrap:anywhere] text-[var(--ns-text-secondary)]">{detailLabel(t, key, row)}</span>
                   {key === 'staleMonthlyListeners' && row.artistId && (
                     <button
                       type="button"
@@ -162,7 +162,7 @@ export default function AdminStats() {
               ))}
               {(details[key] || []).length > 25 && (
                 <p className="pt-1 text-ns-label text-[var(--ns-text-muted)]">
-                  +{(details[key] || []).length - 25} more
+                  {t('admin.statsIntegrity.moreItems', { count: (details[key] || []).length - 25 })}
                 </p>
               )}
             </div>

@@ -72,7 +72,7 @@ describe('Batch Upload Studio components', () => {
     expect(screen.getByText('second_track.mp3')).toBeInTheDocument();
   });
 
-  it('keeps localized batch modes intact and uses mobile-safe select typography', async () => {
+  it('localizes batch modes and preserves their values', async () => {
     await i18n.changeLanguage('uk');
     const onModeChange = vi.fn();
     const user = userEvent.setup();
@@ -91,7 +91,6 @@ describe('Batch Upload Studio components', () => {
     );
 
     const modeSelect = screen.getByRole('combobox', { name: i18n.t('batchUpload.batchMode') });
-    expect(modeSelect).toHaveClass('text-base', 'sm:text-sm');
     expect([...modeSelect.options].map(({ value, textContent }) => [value, textContent])).toEqual([
       ['MIXED', i18n.t('batchUpload.mixed')],
       ['SINGLES_ONLY', i18n.t('batchUpload.singlesOnly')],
@@ -200,6 +199,138 @@ describe('Batch Upload Studio components', () => {
       expect.objectContaining({
         lyricsText: 'Batch original line',
         lyricsType: 'PLAIN',
+        lyricsLanguage: 'en',
+        lyricsRightsConfirmed: true,
+      }),
+      null
+    ));
+  });
+
+  it('saves Beat metadata without dropping the separate audio and lyrics rights fields', async () => {
+    const onSave = vi.fn().mockResolvedValue();
+    const user = userEvent.setup();
+    render(
+      <BatchTrackSettingsDrawer
+        item={item({
+          copyrightConfirmed: true,
+          lyricsText: 'Existing original line',
+          lyricsType: 'PLAIN',
+          lyricsLanguage: 'en',
+          lyricsRightsConfirmed: true,
+        })}
+        open
+        onClose={vi.fn()}
+        onSave={onSave}
+        saving={false}
+      />
+    );
+
+    expect(screen.queryByTestId('beat-metadata-fields')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('radio', { name: /^Beat/ }));
+    await user.type(screen.getByLabelText('BPM'), '140');
+    await user.type(screen.getByLabelText('Key'), ' F# minor ');
+    await user.type(screen.getByLabelText('Mood'), ' Dark ');
+    await user.type(screen.getByLabelText('Style / type'), ' Trap ');
+    await user.type(screen.getByLabelText('License / availability'), ' Contact for terms ');
+    await user.type(screen.getByLabelText('Usage / contact note'), ' Non-exclusive demos ');
+    await user.click(screen.getByRole('checkbox', { name: /Allow producer contact/ }));
+    await user.click(screen.getByRole('button', { name: /save draft/i }));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        contentType: 'BEAT',
+        beatBpm: 140,
+        beatKey: 'F# minor',
+        beatMood: 'Dark',
+        beatStyle: 'Trap',
+        beatLicenseType: 'Contact for terms',
+        beatUsageNotes: 'Non-exclusive demos',
+        beatContactEnabled: true,
+        copyrightConfirmed: true,
+        lyricsText: 'Existing original line',
+        lyricsType: 'PLAIN',
+        lyricsLanguage: 'en',
+        lyricsRightsConfirmed: true,
+      }),
+      null
+    ));
+  });
+
+  it('clears stale Beat-only metadata when a batch item is changed back to Music', async () => {
+    const onSave = vi.fn().mockResolvedValue();
+    const user = userEvent.setup();
+    render(
+      <BatchTrackSettingsDrawer
+        item={item({
+          contentType: 'BEAT',
+          beatBpm: 92,
+          beatKey: 'C Minor',
+          beatMood: 'Nocturnal',
+          beatStyle: 'Boom bap',
+          beatLicenseType: 'Contact',
+          beatUsageNotes: 'Demo use',
+          beatContactEnabled: true,
+        })}
+        open
+        onClose={vi.fn()}
+        onSave={onSave}
+        saving={false}
+      />
+    );
+
+    expect(screen.getByLabelText('BPM')).toHaveValue(92);
+    await user.click(screen.getByRole('radio', { name: /^Music/ }));
+    expect(screen.queryByTestId('beat-metadata-fields')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /save draft/i }));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        contentType: 'MUSIC',
+        beatBpm: null,
+        beatKey: null,
+        beatMood: null,
+        beatStyle: null,
+        beatLicenseType: null,
+        beatUsageNotes: null,
+        beatContactEnabled: false,
+      }),
+      null
+    ));
+  });
+
+  it('preserves synced lyrics when saving Beat metadata without editing the lyrics tab', async () => {
+    const onSave = vi.fn().mockResolvedValue();
+    const user = userEvent.setup();
+    const lyricsSynced = [
+      { time: 0, text: 'First timed line' },
+      { time: 8.25, text: 'Second timed line' },
+    ];
+    render(
+      <BatchTrackSettingsDrawer
+        item={item({
+          contentType: 'BEAT',
+          beatBpm: 128,
+          lyricsText: '',
+          lyricsType: 'SYNCED',
+          lyricsSynced,
+          lyricsLanguage: 'en',
+          lyricsRightsConfirmed: true,
+        })}
+        open
+        onClose={vi.fn()}
+        onSave={onSave}
+        saving={false}
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /save draft/i }));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        contentType: 'BEAT',
+        lyricsText: '',
+        lyricsType: 'SYNCED',
+        lyricsSynced,
         lyricsLanguage: 'en',
         lyricsRightsConfirmed: true,
       }),

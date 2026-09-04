@@ -1,13 +1,15 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Search, ListMusic } from 'lucide-react';
 import { useUserStore } from '../../store/userStore';
 import BrandLogo from './BrandLogo';
+import LanguageSwitcher from '../ui/LanguageSwitcher';
 
 export default function MobileHeader({ onOpenDrawer }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, setAuthModalOpen } = useUserStore();
 
   return (
@@ -16,7 +18,8 @@ export default function MobileHeader({ onOpenDrawer }) {
       <BrandLogo size="sm" showSubtitle={false} />
 
       {/* Action Buttons */}
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1.5 sm:gap-2">
+        <LanguageSwitcher variant="select" />
         {!user && (
           <button
             type="button"
@@ -31,10 +34,10 @@ export default function MobileHeader({ onOpenDrawer }) {
             the explicit Sign In action gets enough room in the compact header. */}
         {user && (
           <button
-            onClick={() => navigate('/discover')}
+            onClick={() => navigate(`/discover${location.pathname === '/discover' ? location.search : ''}#discover-search`)}
             className="ns-icon-button cursor-pointer"
-            title="Search"
-            aria-label="Search"
+            title={t('header.searchAction')}
+            aria-label={t('header.searchAction')}
           >
             <Search size={15} />
           </button>

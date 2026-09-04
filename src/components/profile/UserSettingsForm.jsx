@@ -106,7 +106,7 @@ export default function UserSettingsForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       {errorMsg && (
-        <div role="alert" className="flex items-center space-x-2.5 rounded-md border border-rose-500/20 bg-rose-500/10 p-3 text-sm text-rose-400">
+        <div role="alert" className="flex items-center space-x-2.5 rounded-md border ns-status-badge ns-status-danger p-3 text-sm">
           <span className="font-semibold">{errorMsg}</span>
         </div>
       )}
@@ -212,7 +212,7 @@ export default function UserSettingsForm() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-3 border-t border-zinc-900">
         
         {/* Profile Visibility */}
-        <div className="flex items-start space-x-3.5 rounded-md border border-zinc-800/60 bg-zinc-950/40 p-3.5">
+        <label className="flex min-h-14 cursor-pointer items-start gap-3 border-b border-zinc-800/60 py-3.5">
           <Shield size={18} className="text-brand-red shrink-0 mt-0.5" />
           <div className="flex-1 space-y-1">
             <span className="block text-sm font-bold text-zinc-200">{t('profile.privateProfile')}</span>
@@ -224,13 +224,13 @@ export default function UserSettingsForm() {
             type="checkbox"
             checked={isPrivate}
             onChange={updateToggle(setIsPrivate)}
-            className="accent-brand-red w-4 h-4 rounded mt-0.5 cursor-pointer"
+            className="accent-brand-red w-5 h-5 shrink-0 rounded mt-0.5 cursor-pointer"
             aria-label={t('profile.privateProfileAria')}
           />
-        </div>
+        </label>
 
         {/* Email Alerts */}
-        <div className="flex items-start space-x-3.5 rounded-md border border-zinc-800/60 bg-zinc-950/40 p-3.5">
+        <label className="flex min-h-14 cursor-pointer items-start gap-3 border-b border-zinc-800/60 py-3.5">
           <Bell size={18} className="text-brand-red shrink-0 mt-0.5" />
           <div className="flex-1 space-y-1">
             <span className="block text-sm font-bold text-zinc-200">{t('profile.emailNotifications')}</span>
@@ -242,10 +242,10 @@ export default function UserSettingsForm() {
             type="checkbox"
             checked={emailNotify}
             onChange={updateToggle(setEmailNotify)}
-            className="accent-brand-red w-4 h-4 rounded mt-0.5 cursor-pointer"
+            className="accent-brand-red w-5 h-5 shrink-0 rounded mt-0.5 cursor-pointer"
             aria-label={t('profile.emailNotificationsAria')}
           />
-        </div>
+        </label>
 
       </div>
 

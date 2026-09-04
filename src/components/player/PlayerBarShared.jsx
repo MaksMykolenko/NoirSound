@@ -38,7 +38,7 @@ export function PlaybackErrorStatus({ error, className = '' }) {
       role="alert"
       aria-live="polite"
       aria-atomic="true"
-      title={message === error ? undefined : String(error)}
+      title={message}
     >
       {message}
     </p>
@@ -53,6 +53,7 @@ export function PlayerTrackInfo({
   onOpenTrack,
   className = 'w-[clamp(14rem,24vw,21rem)] min-w-0',
 }) {
+  const { t } = useTranslation();
   const { contextMenuProps, openFromButton } = useTrackContextMenu(track);
   return (
     <div
@@ -72,6 +73,7 @@ export function PlayerTrackInfo({
       <div className="min-w-0 flex-1">
         <h4 className="truncate text-ns-card-title font-bold text-zinc-100">
           <Link
+            title={track.title}
             to={`/track/${track.id}`}
             onClick={onOpenTrack}
             className="block truncate hover:underline focus-visible:underline focus-visible:outline-none"
@@ -79,7 +81,7 @@ export function PlayerTrackInfo({
             {track.title}
           </Link>
         </h4>
-        <p className="text-ns-label text-zinc-350 truncate hover:text-zinc-100 cursor-pointer font-medium">
+        <p title={track.artistName} className="text-ns-label text-zinc-350 truncate hover:text-zinc-100 cursor-pointer font-medium">
           {track.artistName}
         </p>
         <PlaybackErrorStatus error={playbackError} />
@@ -90,8 +92,8 @@ export function PlayerTrackInfo({
         className={`p-2 transition-colors cursor-pointer shrink-0 focus:outline-none focus:text-brand-red ${
           isLiked ? 'text-brand-red' : 'text-zinc-500 hover:text-zinc-300'
         }`}
-        title={isLiked ? 'Unlike' : 'Like'}
-        aria-label={isLiked ? `Unlike ${track.title}` : `Like ${track.title}`}
+        title={t(isLiked ? 'trackPage.unlike' : 'trackPage.like')}
+        aria-label={t(isLiked ? 'player.unlikeTrack' : 'player.likeTrack', { title: track.title })}
         aria-pressed={isLiked}
       >
         <Heart size={16} fill={isLiked ? 'currentColor' : 'none'} />
@@ -99,8 +101,8 @@ export function PlayerTrackInfo({
       <button
         type="button"
         onClick={openFromButton}
-        className="ns-icon-button !min-h-10 !min-w-10 shrink-0 text-zinc-500 hover:text-zinc-200"
-        aria-label={`More actions for ${track.title}`}
+        className="ns-media-action shrink-0 text-zinc-500 hover:text-zinc-200"
+        aria-label={t('playlists.moreActionsFor', { title: track.title })}
         aria-haspopup="menu"
       >
         <MoreHorizontal size={16} />
@@ -119,6 +121,7 @@ export function PlayerTransportControls({
   onToggleShuffle,
   onToggleRepeat,
 }) {
+  const { t } = useTranslation();
   return (
     <div
       className="flex items-center space-x-5 mb-1.5 shrink-0"
@@ -130,8 +133,8 @@ export function PlayerTransportControls({
         className={`p-1 transition-colors cursor-pointer focus:outline-none focus:text-brand-red ${
           shuffle ? 'text-brand-red' : 'text-zinc-500 hover:text-zinc-300'
         }`}
-        title="Shuffle"
-        aria-label="Toggle shuffle"
+        title={t('playlists.shuffle')}
+        aria-label={t('player.toggleShuffle')}
         aria-pressed={shuffle}
       >
         <Shuffle size={16} />
@@ -140,8 +143,8 @@ export function PlayerTransportControls({
         type="button"
         onClick={onPrevious}
         className="p-1 text-zinc-400 hover:text-zinc-100 transition-colors cursor-pointer focus:outline-none focus:text-zinc-100"
-        title="Previous"
-        aria-label="Previous track"
+        title={t('player.previousTrack')}
+        aria-label={t('player.previousTrack')}
       >
         <SkipBack size={18} fill="currentColor" />
       </button>
@@ -149,8 +152,8 @@ export function PlayerTransportControls({
         type="button"
         onClick={onTogglePlay}
         className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-[var(--ns-player-control-bg)] text-[var(--ns-player-control-text)] shadow-md transition-colors hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-brand-red"
-        title={isPlaying ? 'Pause' : 'Play'}
-        aria-label={isPlaying ? 'Pause' : 'Play'}
+        title={isPlaying ? t('contextMenu.pause') : t('contextMenu.play')}
+        aria-label={isPlaying ? t('contextMenu.pause') : t('contextMenu.play')}
         data-testid="standard-player-play-button"
       >
         {isPlaying
@@ -161,8 +164,8 @@ export function PlayerTransportControls({
         type="button"
         onClick={onNext}
         className="p-1 text-zinc-400 hover:text-zinc-100 transition-colors cursor-pointer focus:outline-none focus:text-zinc-100"
-        title="Next"
-        aria-label="Next track"
+        title={t('player.nextTrack')}
+        aria-label={t('player.nextTrack')}
       >
         <SkipForward size={18} fill="currentColor" />
       </button>
@@ -172,8 +175,8 @@ export function PlayerTransportControls({
         className={`p-1 transition-colors cursor-pointer focus:outline-none focus:text-brand-red ${
           repeatMode !== 'none' ? 'text-brand-red' : 'text-zinc-500 hover:text-zinc-300'
         }`}
-        title={`Repeat: ${repeatMode}`}
-        aria-label={`Change repeat mode. Current mode: ${repeatMode}`}
+        title={t('player.repeatTitle', { mode: t(`player.repeatModes.${repeatMode}`) })}
+        aria-label={t('player.changeRepeatMode', { mode: t(`player.repeatModes.${repeatMode}`) })}
       >
         <Repeat size={16} />
       </button>
@@ -182,12 +185,13 @@ export function PlayerTransportControls({
 }
 
 export function PlayerProgress({ progress, duration, onSeek }) {
+  const { t } = useTranslation();
   return (
     <div
       className="w-full flex items-center space-x-2 text-ns-label text-zinc-450 font-sans tabular-nums select-none font-medium"
       data-testid="standard-player-progress"
     >
-      <span className="w-8 text-right shrink-0">{formatTime(progress)}</span>
+      <span className="min-w-[4ch] text-right shrink-0">{formatTime(progress)}</span>
       <div className="flex-1 flex items-center relative">
         <input
           type="range"
@@ -197,16 +201,17 @@ export function PlayerProgress({ progress, duration, onSeek }) {
           value={progress}
           onChange={(event) => onSeek(parseFloat(event.target.value))}
           className="premium-slider w-full"
-          aria-label="Track progress"
+          aria-label={t('player.trackProgress')}
           style={{ '--slider-progress': `${(progress / (duration || 100)) * 100}%` }}
         />
       </div>
-      <span className="w-8 text-left shrink-0">{formatTime(duration)}</span>
+      <span className="min-w-[4ch] text-left shrink-0">{formatTime(duration)}</span>
     </div>
   );
 }
 
 export function PlayerVolumeControls({ volume, onSetVolume }) {
+  const { t } = useTranslation();
   const toggleMute = () => onSetVolume(volume > 0 ? 0 : 0.5);
 
   return (
@@ -218,7 +223,7 @@ export function PlayerVolumeControls({ volume, onSetVolume }) {
         type="button"
         onClick={toggleMute}
         className="text-zinc-500 hover:text-zinc-200 transition-colors cursor-pointer shrink-0 focus:outline-none focus:text-zinc-100"
-        aria-label={volume === 0 ? 'Unmute' : 'Mute'}
+        aria-label={volume === 0 ? t('player.unmute') : t('player.mute')}
       >
         {volume === 0 ? <VolumeX size={16} /> : <Volume2 size={16} />}
       </button>
@@ -231,7 +236,7 @@ export function PlayerVolumeControls({ volume, onSetVolume }) {
           value={volume}
           onChange={(event) => onSetVolume(parseFloat(event.target.value))}
           className="premium-slider w-full"
-          aria-label="Volume"
+          aria-label={t('player.volume')}
           style={{ '--slider-progress': `${volume * 100}%` }}
         />
       </div>
@@ -325,8 +330,8 @@ export function DesktopPlayerBarContent({
               ? 'rounded-md border border-[var(--ns-border)] bg-zinc-900 text-brand-red'
               : 'text-zinc-500 hover:text-zinc-200'
           }`}
-          title="Open Queue"
-          aria-label="Open play queue"
+          title={t('player.openQueue')}
+          aria-label={t('player.openQueue')}
           aria-expanded={isQueueOpen}
         >
           <ListMusic size={18} />
@@ -347,6 +352,7 @@ export function DesktopPlayerBarContent({
 }
 
 export function MobilePlayerProgress({ progress, duration, onSeek }) {
+  const { t } = useTranslation();
   return (
     <div className="space-y-2" data-testid="standard-mobile-player-progress">
       <div className="flex items-center relative">
@@ -358,7 +364,7 @@ export function MobilePlayerProgress({ progress, duration, onSeek }) {
           value={progress}
           onChange={(event) => onSeek(parseFloat(event.target.value))}
           className="premium-slider w-full"
-          aria-label="Track progress"
+          aria-label={t('player.trackProgress')}
           style={{ '--slider-progress': `${(progress / (duration || 100)) * 100}%` }}
         />
       </div>
@@ -380,6 +386,7 @@ export function MobilePlayerTransportControls({
   onToggleShuffle,
   onToggleRepeat,
 }) {
+  const { t } = useTranslation();
   return (
     <div
       className="flex items-center justify-between px-4"
@@ -391,7 +398,7 @@ export function MobilePlayerTransportControls({
         className={`p-2 transition-colors cursor-pointer focus:outline-none ${
           shuffle ? 'text-brand-red' : 'text-zinc-500'
         }`}
-        aria-label="Toggle shuffle"
+        aria-label={t('player.toggleShuffle')}
         aria-pressed={shuffle}
       >
         <Shuffle size={18} />
@@ -400,7 +407,7 @@ export function MobilePlayerTransportControls({
         type="button"
         onClick={onPrevious}
         className="p-2 text-zinc-300 active:text-zinc-100 transition-colors cursor-pointer focus:outline-none"
-        aria-label="Previous track"
+        aria-label={t('player.previousTrack')}
       >
         <SkipBack size={22} fill="currentColor" />
       </button>
@@ -408,7 +415,7 @@ export function MobilePlayerTransportControls({
         type="button"
         onClick={onTogglePlay}
         className="flex h-16 w-16 cursor-pointer items-center justify-center rounded-full bg-[var(--ns-player-control-bg)] text-[var(--ns-player-control-text)] shadow-md transition-colors active:opacity-85 focus:outline-none focus:ring-2 focus:ring-brand-red"
-        aria-label={isPlaying ? 'Pause' : 'Play'}
+        aria-label={isPlaying ? t('contextMenu.pause') : t('contextMenu.play')}
         data-testid="standard-mobile-player-play-button"
       >
         {isPlaying
@@ -419,7 +426,7 @@ export function MobilePlayerTransportControls({
         type="button"
         onClick={onNext}
         className="p-2 text-zinc-300 active:text-zinc-100 transition-colors cursor-pointer focus:outline-none"
-        aria-label="Next track"
+        aria-label={t('player.nextTrack')}
       >
         <SkipForward size={22} fill="currentColor" />
       </button>
@@ -429,7 +436,7 @@ export function MobilePlayerTransportControls({
         className={`p-2 transition-colors cursor-pointer focus:outline-none ${
           repeatMode !== 'none' ? 'text-brand-red' : 'text-zinc-500'
         }`}
-        aria-label={`Change repeat mode. Current mode: ${repeatMode}`}
+        aria-label={t('player.changeRepeatMode', { mode: t(`player.repeatModes.${repeatMode}`) })}
       >
         <Repeat size={18} />
       </button>

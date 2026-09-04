@@ -165,7 +165,7 @@ export default function AdminUserDetail() {
           <h2 className="text-sm font-bold">{t('admin.accountInfo')}</h2>
           <dl className="mt-4 grid gap-4 sm:grid-cols-2">
             {[
-              [t('admin.email'), user.email],
+              [t('admin.email'), user.email || '—'],
               [t('admin.role'), <StatusBadge key="role" status={user.role} />],
               [t('admin.status'), <StatusBadge key="status" status={user.status} />],
               [t('admin.joined'), formatAdminDate(user.joinedAt, i18n.language)],
@@ -174,7 +174,7 @@ export default function AdminUserDetail() {
             ].map(([label, value]) => (
               <div key={label}>
                 <dt className="font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-[var(--ns-text-muted)]">{label}</dt>
-                <dd className="mt-1 text-sm text-[var(--ns-text-secondary)]">{value}</dd>
+                <dd className="mt-1 break-words [overflow-wrap:anywhere] text-sm text-[var(--ns-text-secondary)]">{value}</dd>
               </div>
             ))}
           </dl>
@@ -265,8 +265,8 @@ export default function AdminUserDetail() {
         {!user.artistProfile?.tracks?.length ? <AdminEmpty text={t('admin.noTracksFound')} /> : (
           <div className="space-y-2">
             {user.artistProfile.tracks.map((track) => (
-              <Link key={track.id} to={`/admin/tracks/${track.id}`} className="flex items-center justify-between rounded border border-[var(--ns-border-subtle)] bg-black/10 p-3 text-sm hover:bg-white/[0.03]">
-                <span>{track.title}</span><StatusBadge status={track.status} />
+              <Link key={track.id} to={`/admin/tracks/${track.id}`} className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 border-b border-[var(--ns-border-subtle)] py-3 text-sm hover:bg-[var(--ns-hover-bg)]">
+                <span className="min-w-0 break-words [overflow-wrap:anywhere]">{track.title}</span><StatusBadge status={track.status} />
               </Link>
             ))}
           </div>
@@ -279,13 +279,13 @@ export default function AdminUserDetail() {
           {user.status === 'ACTIVE' && (
             <>
               <button type="button" onClick={() => setPendingAction('suspend')} className="ns-button-secondary rounded px-3 py-2 text-sm">{t('admin.suspend')}</button>
-              <button type="button" onClick={() => setPendingAction('ban')} className="rounded bg-[var(--ns-danger)] px-3 py-2 text-sm font-semibold text-white">{t('admin.ban')}</button>
+              <button type="button" onClick={() => setPendingAction('ban')} className="rounded bg-[var(--ns-danger)] px-3 py-2 text-sm font-semibold text-[var(--ns-on-danger)]">{t('admin.ban')}</button>
             </>
           )}
           {user.status === 'SUSPENDED' && <button type="button" onClick={() => setPendingAction('unsuspend')} className="ns-button-secondary rounded px-3 py-2 text-sm">{t('admin.unsuspend')}</button>}
           {user.status === 'BANNED' && <button type="button" onClick={() => setPendingAction('unban')} className="ns-button-secondary rounded px-3 py-2 text-sm">{t('admin.unban')}</button>}
           <button type="button" onClick={() => setPendingAction('revoke')} className="ns-button-secondary rounded px-3 py-2 text-sm">{t('admin.revokeSessions')}</button>
-          <select value={role} onChange={(event) => setRole(event.target.value)} className="ns-field rounded px-3 py-2 text-base sm:text-sm">
+          <select aria-label={t('admin.role')} value={role} onChange={(event) => setRole(event.target.value)} className="ns-field rounded px-3 py-2 text-base sm:text-sm">
             <option value="">{t('admin.selectRole')}</option>
             {['LISTENER', 'ARTIST', 'ADMIN'].map((value) => <option key={value} value={value}>{t(`admin.statusValues.${value}`)}</option>)}
           </select>

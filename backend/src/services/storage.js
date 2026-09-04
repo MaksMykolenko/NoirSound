@@ -102,12 +102,24 @@ async function putObject(key, body, mimeType) {
   return s3Client.send(command);
 }
 
-async function getObjectStream(key) {
+async function getObjectStreamResponse(key, options = {}) {
   const response = await s3Client.send(new GetObjectCommand({
     Bucket: BUCKET,
-    Key: key
+    Key: key,
+    ...(options.range ? { Range: options.range } : {})
   }));
-  return response.Body;
+  return {
+    body: response.Body,
+    contentType: response.ContentType || null,
+    contentLength: response.ContentLength ?? null,
+    contentRange: response.ContentRange || null,
+    acceptRanges: response.AcceptRanges || null,
+    etag: response.ETag || null
+  };
+}
+
+async function getObjectStream(key) {
+  return (await getObjectStreamResponse(key)).body;
 }
 
 async function getObjectPrefix(key, byteLength = 16) {
@@ -185,6 +197,7 @@ module.exports = {
   getObjectMetadata,
   putObject,
   getObjectStream,
+  getObjectStreamResponse,
   getObjectPrefix,
   copyObject,
   listObjectsByPrefix,

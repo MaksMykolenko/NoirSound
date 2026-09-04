@@ -57,7 +57,7 @@ export async function apiFetch(endpoint, options = {}) {
         errorData = { error: response.statusText || 'Unknown error' };
       }
       const apiError = new ApiError(
-        errorData.error || errorData.message || 'API request failed',
+        errorData.message || errorData.error || 'API request failed',
         response.status,
         errorData
       );
@@ -75,6 +75,10 @@ export async function apiFetch(endpoint, options = {}) {
     
     return await response.text();
   } catch (err) {
+    // React Query cancels stale catalogue requests with AbortController.
+    // Cancellation is control flow, not an API failure: preserve the native
+    // AbortError so React Query can ignore it and never emit an error toast.
+    if (err?.name === 'AbortError') throw err;
     // Rethrow ApiErrors directly
     if (err instanceof ApiError) throw err;
     // Network or other fetch errors

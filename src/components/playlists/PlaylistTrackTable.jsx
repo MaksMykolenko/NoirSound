@@ -7,6 +7,7 @@ import { useTrackContextMenu } from '../../hooks/useEntityContextMenu';
 import FallbackCover from '../ui/FallbackCover';
 import { formatDuration } from '../../utils/formatTime';
 import { formatDate } from '../../utils/formatLocale';
+import { TrackTypeBadge } from '../tracks/TrackContentMeta';
 
 // Desktop columns are "# | Title | Artist | Album / Release | Date added |
 // Duration | Actions" -- sorting is exposed as one shared pill row
@@ -117,7 +118,7 @@ function DesktopRow({
     >
       <td className="w-10 py-2 text-center align-middle">
         {isAvailable ? (
-          <span className="relative flex h-6 items-center justify-center">
+          <span className="relative flex h-9 items-center justify-center">
             <span className={`font-sans tabular-nums text-ns-label text-zinc-500 ${canPlay ? 'group-hover:opacity-0 group-focus-within:opacity-0' : ''}`}>
               {isCurrent && player.isPlaying ? (
                 <span aria-hidden="true" className="flex h-3 items-end justify-center gap-[2px]">
@@ -131,7 +132,7 @@ function DesktopRow({
               <button
                 type="button"
                 onClick={handlePlay}
-                className="absolute inset-0 hidden items-center justify-center text-zinc-100 group-hover:flex group-focus-within:flex"
+                className="absolute inset-0 flex items-center justify-center text-zinc-100 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
                 aria-label={isPlayingThis
                   ? t('playlists.pauseTrack', { title: track.title })
                   : t(isCurrent ? 'playlists.playTrack' : 'playlists.playFromHere', { title: track.title })}
@@ -150,7 +151,7 @@ function DesktopRow({
             <Link
               to={`/track/${track.id}`}
               onKeyDown={contextMenuProps.onKeyDown}
-              aria-label={`Open ${track.title} by ${track.artistName}`}
+              aria-label={t('media.openTrack', { title: track.title, artist: track.artistName })}
               className="shrink-0 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-red/60"
             >
               <FallbackCover
@@ -162,15 +163,17 @@ function DesktopRow({
                 imageClassName="object-cover"
               />
             </Link>
-            <div className="min-w-0">
+            <div className="ns-table-track-title flex-1">
               <Link
                 to={`/track/${track.id}`}
+                title={track.title}
                 onKeyDown={contextMenuProps.onKeyDown}
                 className="flex min-w-0 items-center gap-1.5 focus-visible:outline-none focus-visible:underline"
               >
                 <span className={`truncate text-ns-body-sm font-semibold ${isCurrent ? 'text-brand-red' : 'text-zinc-100'}`}>
                   {track.title}
                 </span>
+                <TrackTypeBadge track={track} />
                 {track.explicit && (
                   <span className="shrink-0 rounded border border-zinc-700 bg-zinc-800 px-1 text-ns-meta font-bold uppercase tracking-ns-label text-zinc-400">E</span>
                 )}
@@ -179,7 +182,8 @@ function DesktopRow({
               <button
                 type="button"
                 onClick={(event) => { event.stopPropagation(); navigate(`/artist/${track.artistId}`); }}
-                className="block truncate font-sans tabular-nums text-ns-meta text-zinc-500 hover:text-zinc-300 hover:underline xl:hidden"
+                title={track.artistName}
+                className="block max-w-full truncate font-sans tabular-nums text-ns-meta text-zinc-500 hover:text-zinc-300 hover:underline xl:hidden"
               >
                 {track.artistName}
               </button>
@@ -197,6 +201,7 @@ function DesktopRow({
           <button
             type="button"
             onClick={(event) => { event.stopPropagation(); navigate(`/artist/${track.artistId}`); }}
+            title={track.artistName}
             className="block max-w-full truncate text-left text-ns-label text-zinc-400 hover:text-zinc-200 hover:underline"
           >
             {track.artistName}
@@ -209,12 +214,13 @@ function DesktopRow({
             <button
               type="button"
               onClick={(event) => { event.stopPropagation(); navigate(albumInfo.href); }}
+              title={albumInfo.text}
               className="block max-w-full truncate text-left text-ns-label text-zinc-400 hover:text-zinc-200 hover:underline"
             >
               {albumInfo.text}
             </button>
           ) : (
-            <span className="block max-w-full truncate text-ns-label text-zinc-500">{albumInfo.text}</span>
+            <span title={albumInfo.text} className="block max-w-full truncate text-ns-label text-zinc-400">{albumInfo.text}</span>
           )
         )}
       </td>
@@ -239,7 +245,7 @@ function DesktopRow({
                 disabled={index === 0 || busy}
                 onClick={() => onMoveTrack(index, -1)}
                 aria-label={t('playlists.moveTrackUp', { title: track.title })}
-                className="ns-icon-button !hidden !min-h-8 !min-w-8 text-zinc-500 disabled:opacity-20 lg:!inline-flex"
+                className="ns-media-action !hidden text-zinc-500 disabled:opacity-20 lg:!inline-flex"
               >
                 <ArrowUp size={13} />
               </button>
@@ -248,7 +254,7 @@ function DesktopRow({
                 disabled={index === queueTracks.length - 1 || busy}
                 onClick={() => onMoveTrack(index, 1)}
                 aria-label={t('playlists.moveTrackDown', { title: track.title })}
-                className="ns-icon-button !hidden !min-h-8 !min-w-8 text-zinc-500 disabled:opacity-20 lg:!inline-flex"
+                className="ns-media-action !hidden text-zinc-500 disabled:opacity-20 lg:!inline-flex"
               >
                 <ArrowDown size={13} />
               </button>
@@ -260,7 +266,7 @@ function DesktopRow({
               onClick={(event) => { event.stopPropagation(); player.toggleLikeTrack(track.id); }}
               aria-pressed={isLiked}
               aria-label={`${isLiked ? t('trackPage.unlike') : t('trackPage.like')} ${track.title}`}
-              className={`ns-icon-button !min-h-9 !min-w-9 ${isLiked ? 'text-brand-red' : 'text-zinc-500 hover:text-zinc-200'}`}
+              className={`ns-media-action ${isLiked ? 'text-brand-red' : 'text-zinc-500 hover:text-zinc-200'}`}
             >
               <Heart size={14} fill={isLiked ? 'currentColor' : 'none'} />
             </button>
@@ -270,7 +276,7 @@ function DesktopRow({
             onClick={(event) => { event.stopPropagation(); openFromButton(event); }}
             aria-label={t('playlists.moreActionsFor', { title: track.title })}
             aria-haspopup="menu"
-            className="ns-icon-button !min-h-9 !min-w-9 text-zinc-500 hover:text-zinc-200"
+            className="ns-media-action text-zinc-500 hover:text-zinc-200"
           >
             <MoreHorizontal size={15} />
           </button>
@@ -325,7 +331,7 @@ function MobileRow({
         disabled={!isAvailable}
         aria-label={canPlay
           ? (isPlayingThis ? t('playlists.pauseTrack', { title: track.title }) : t('playlists.playFromHere', { title: track.title }))
-          : `Open ${track.title} by ${track.artistName}`}
+           : t('media.openTrack', { title: track.title, artist: track.artistName })}
         className="flex min-w-0 flex-1 items-center gap-3 rounded text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-red/60 disabled:cursor-default"
       >
         <span className="relative shrink-0">
@@ -346,12 +352,14 @@ function MobileRow({
         <span className="min-w-0 flex-1">
           {isAvailable ? (
           <>
-            <span className={`block truncate text-ns-body-sm font-semibold ${isCurrent ? 'text-brand-red' : 'text-zinc-100'}`}>
+            <span title={track.title} className={`block truncate text-ns-body-sm font-semibold ${isCurrent ? 'text-brand-red' : 'text-zinc-100'}`}>
               {track.title}
               {track.explicit && <span className="ml-1.5 rounded border border-zinc-700 bg-zinc-800 px-1 align-middle text-ns-meta font-bold text-zinc-400">E</span>}
               {isCurrent && <span className="sr-only">{t('playlists.currentlyPlaying')}</span>}
             </span>
-            <span className="block truncate font-sans tabular-nums text-ns-label text-zinc-500">
+            <TrackTypeBadge track={track} className="mt-1" />
+            <span title={track.artistName}
+                className="block max-w-full truncate font-sans tabular-nums text-ns-label text-zinc-500">
               {track.artistName}
               <span className="text-zinc-600"> • </span>
               {albumInfo.text}
@@ -367,7 +375,7 @@ function MobileRow({
         onClick={(event) => { event.stopPropagation(); openFromButton(event); }}
         aria-label={t('playlists.moreActionsFor', { title: track.title })}
         aria-haspopup="menu"
-        className="ns-icon-button !min-h-10 !min-w-10 shrink-0 text-zinc-500"
+        className="ns-media-action shrink-0 text-zinc-500"
       >
         <MoreHorizontal size={16} />
       </button>
@@ -401,7 +409,7 @@ export default function PlaylistTrackTable({
 
   return (
     <div>
-      <div className="flex items-center justify-between gap-2 px-1 pb-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-1 pb-3">
         <div className="flex min-w-0 flex-1 items-center gap-2 sm:hidden">
           <label className="min-w-0 flex-1">
             <span className="sr-only">{t('playlists.customOrder')}</span>
@@ -424,7 +432,7 @@ export default function PlaylistTrackTable({
             <button
               type="button"
               onClick={() => setSortDir((current) => (current === 'asc' ? 'desc' : 'asc'))}
-              className="ns-icon-button !min-h-10 !min-w-10 shrink-0"
+              className="ns-media-action shrink-0"
               aria-label={`${t(SORT_OPTIONS.find((option) => option.key === sortKey)?.labelKey)}: ${sortDir}`}
             >
               {sortDir === 'desc' ? <ArrowDown size={14} /> : <ArrowUp size={14} />}
@@ -460,16 +468,16 @@ export default function PlaylistTrackTable({
         )}
       </div>
 
-      <table className="hidden w-full border-collapse md:table" role="table">
+      <table className="ns-playlist-table hidden w-full border-collapse md:table" role="table" data-reorder={owner && isCustomOrder ? 'true' : 'false'}>
         <thead>
           <tr className="border-b border-zinc-800/60 font-sans tabular-nums text-ns-label uppercase tracking-ns-label text-zinc-500">
-            <th scope="col" className="w-10 py-2 text-center font-bold">#</th>
+            <th scope="col" className="ns-table-number py-2 text-center">#</th>
             <th scope="col" className="py-2 text-left font-bold">{t('playlists.columnTitle')}</th>
-            <th scope="col" className="hidden py-2 pr-4 text-left font-bold xl:table-cell">{t('playlists.columnArtist')}</th>
-            <th scope="col" className="hidden py-2 pr-4 text-left font-bold xl:table-cell">{t('playlists.columnAlbum')}</th>
-            <th scope="col" className="hidden py-2 text-left font-bold sm:table-cell">{t('playlists.columnDateAdded')}</th>
-            <th scope="col" className="py-2 pr-2 text-right font-bold">{t('playlists.columnDuration')}</th>
-            <th scope="col" className="py-2 font-bold">
+            <th scope="col" className="ns-table-person hidden py-2 pr-4 text-left xl:table-cell">{t('playlists.columnArtist')}</th>
+            <th scope="col" className="ns-table-person hidden py-2 pr-4 text-left xl:table-cell">{t('playlists.columnAlbum')}</th>
+            <th scope="col" className="ns-table-date hidden py-2 text-left sm:table-cell">{t('playlists.columnDateAdded')}</th>
+            <th scope="col" className="ns-table-duration py-2 pr-2 text-right">{t('playlists.columnDuration')}</th>
+            <th scope="col" className="ns-table-actions py-2">
               <span className="sr-only">{t('playlists.columnActions')}</span>
             </th>
           </tr>

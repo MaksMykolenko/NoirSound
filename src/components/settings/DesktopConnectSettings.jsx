@@ -71,152 +71,88 @@ export default function DesktopConnectSettings({ className = '' }) {
     }
   };
 
+  const toggles = [
+    ['enabled', ShieldCheck, 'showPresenceInDiscord', 'showPresenceInDiscordDesc'],
+    ['showCover', Image, 'showCoverInDiscord', 'showCoverInDiscordDesc'],
+    ['showTimer', Clock, 'showTimerInDiscord', 'showTimerInDiscordDesc'],
+  ];
+
   return (
-    <div className={`space-y-4 ${className}`}>
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-red/10 border border-brand-red/20 text-brand-red">
-            <Radio size={16} />
-          </div>
-          <div>
-            <h3 className="text-sm font-bold text-zinc-200">
+    <section className={`space-y-4 ${className}`} aria-labelledby="desktop-connect-settings-title">
+      <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
+        <div className="flex min-w-0 flex-1 basis-64 items-start gap-3">
+          <Radio size={18} className="mt-0.5 shrink-0 text-brand-red" aria-hidden="true" />
+          <div className="min-w-0">
+            <h3 id="desktop-connect-settings-title" className="text-sm font-semibold text-zinc-200">
               {t('settings.desktopConnectTitle', 'NoirSound Connect & Discord Rich Presence')}
             </h3>
-            <p className="text-ns-meta text-zinc-500">
+            <p className="mt-1 text-ns-label leading-relaxed text-zinc-500">
               {t('settings.desktopConnectDesc', 'Broadcast current playing tracks to Discord via NoirSound Connect companion app.')}
             </p>
           </div>
         </div>
-
-        <a
-          href="/connect/desktop"
-          className="ns-button-secondary inline-flex items-center space-x-1.5 px-3 py-1.5 text-xs font-semibold rounded-md shrink-0"
-        >
-          <Plus size={13} />
+        <a href="/connect/desktop" className="ns-button-secondary inline-flex min-h-11 items-center justify-center gap-2 rounded-md px-3 text-sm font-semibold">
+          <Plus size={15} aria-hidden="true" />
           <span>{t('connect.pairNewDevice', 'Pair Device')}</span>
         </a>
       </div>
 
-      {/* Main Settings Toggles */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        {/* Main Discord Toggle */}
-        <div className="flex items-start space-x-3 rounded-lg border border-zinc-800/60 bg-zinc-950/40 p-3.5">
-          <ShieldCheck size={16} className="text-brand-red shrink-0 mt-0.5" />
-          <div className="flex-1 space-y-0.5">
-            <span className="block text-xs font-bold text-zinc-200">
-              {t('settings.showPresenceInDiscord', 'Show in Discord')}
+      <div className="divide-y divide-zinc-800/60 border-y border-zinc-800/60">
+        {toggles.map(([key, Icon, labelKey, descriptionKey]) => (
+          <label key={key} className="flex min-h-14 cursor-pointer items-start gap-3 py-3">
+            <Icon size={16} className="mt-0.5 shrink-0 text-brand-red" aria-hidden="true" />
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-semibold text-zinc-200">{t(`settings.${labelKey}`)}</span>
+              <span className="mt-1 block text-ns-label text-zinc-500">{t(`settings.${descriptionKey}`)}</span>
             </span>
-            <span className="block text-ns-meta text-zinc-500 leading-normal">
-              {t('settings.showPresenceInDiscordDesc', 'Listening status')}
-            </span>
-          </div>
-          <input
-            type="checkbox"
-            checked={settings.enabled}
-            onChange={(e) => handleToggleSetting('enabled', e.target.checked)}
-            className="accent-brand-red h-4 w-4 rounded mt-0.5 cursor-pointer"
-            aria-label={t('settings.showPresenceInDiscord', 'Show in Discord')}
-          />
-        </div>
-
-        {/* Show Cover Toggle */}
-        <div className="flex items-start space-x-3 rounded-lg border border-zinc-800/60 bg-zinc-950/40 p-3.5">
-          <Image size={16} className="text-brand-red shrink-0 mt-0.5" />
-          <div className="flex-1 space-y-0.5">
-            <span className="block text-xs font-bold text-zinc-200">
-              {t('settings.showCoverInDiscord', 'Show Cover Art')}
-            </span>
-            <span className="block text-ns-meta text-zinc-500 leading-normal">
-              {t('settings.showCoverInDiscordDesc', 'Album artwork in Discord')}
-            </span>
-          </div>
-          <input
-            type="checkbox"
-            checked={settings.showCover}
-            onChange={(e) => handleToggleSetting('showCover', e.target.checked)}
-            className="accent-brand-red h-4 w-4 rounded mt-0.5 cursor-pointer"
-            aria-label={t('settings.showCoverInDiscord', 'Show Cover Art')}
-          />
-        </div>
-
-        {/* Show Timer / Progress Toggle */}
-        <div className="flex items-start space-x-3 rounded-lg border border-zinc-800/60 bg-zinc-950/40 p-3.5">
-          <Clock size={16} className="text-brand-red shrink-0 mt-0.5" />
-          <div className="flex-1 space-y-0.5">
-            <span className="block text-xs font-bold text-zinc-200">
-              {t('settings.showTimerInDiscord', 'Show Timestamps')}
-            </span>
-            <span className="block text-ns-meta text-zinc-500 leading-normal">
-              {t('settings.showTimerInDiscordDesc', 'Remaining / elapsed timer')}
-            </span>
-          </div>
-          <input
-            type="checkbox"
-            checked={settings.showTimer}
-            onChange={(e) => handleToggleSetting('showTimer', e.target.checked)}
-            className="accent-brand-red h-4 w-4 rounded mt-0.5 cursor-pointer"
-            aria-label={t('settings.showTimerInDiscord', 'Show Timestamps')}
-          />
-        </div>
+            <input
+              type="checkbox"
+              checked={settings[key]}
+              onChange={(event) => handleToggleSetting(key, event.target.checked)}
+              className="mt-0.5 h-5 w-5 shrink-0 cursor-pointer accent-brand-red"
+              aria-label={t(`settings.${labelKey}`)}
+            />
+          </label>
+        ))}
       </div>
 
-      {/* Connected Devices List */}
-      <div className="space-y-2 pt-2">
-        <h4 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
-          {t('settings.connectedDevicesList', 'Connected Devices')}
-        </h4>
-
+      <div className="space-y-3">
+        <h4 className="text-sm font-semibold text-zinc-300">{t('settings.connectedDevicesList', 'Connected Devices')}</h4>
         {loading ? (
-          <div className="h-12 w-full animate-pulse rounded-lg bg-zinc-900/60 border border-zinc-800/40" />
+          <div className="h-12 w-full animate-pulse rounded bg-zinc-900/60" />
         ) : devices.length === 0 ? (
-          <div className="flex items-center justify-between rounded-lg border border-zinc-800/60 bg-zinc-950/30 p-3.5 text-xs text-zinc-400">
+          <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-zinc-400">
             <span>{t('settings.noConnectedDevices', 'No desktop devices paired yet.')}</span>
-            <a href="/connect/desktop" className="text-brand-red hover:underline flex items-center gap-1">
-              <span>{t('connect.pairNow', 'Pair NoirSound Connect')}</span>
-              <ExternalLink size={12} />
+            <a href="/connect/desktop" className="flex min-h-11 items-center gap-2 text-brand-red hover:underline">
+              <span>{t('connect.pairNow', 'Pair NoirSound Connect')}</span><ExternalLink size={14} aria-hidden="true" />
             </a>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="divide-y divide-zinc-800/60 border-y border-zinc-800/60">
             {devices.map((device) => (
-              <div
-                key={device.id}
-                className="flex items-center justify-between rounded-lg border border-zinc-800/60 bg-zinc-950/50 p-3"
-              >
-                <div className="flex items-center space-x-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-md bg-zinc-900 border border-zinc-800 text-zinc-300">
-                    <Laptop size={15} />
-                  </div>
-                  <div>
-                    <div className="flex items-center space-x-2">
-                      <span className="text-xs font-semibold text-zinc-200">
-                        {device.deviceName || 'MacBook Pro'}
-                      </span>
-                      <span className="rounded bg-zinc-800/80 px-1.5 py-0.5 text-[10px] font-mono text-zinc-400">
-                        {device.platform || 'macOS'}
-                      </span>
-                    </div>
-                    <span className="text-[11px] text-zinc-500 block">
-                      {t('settings.lastSeen', 'Last active')}: {device.lastSeenAt ? new Date(device.lastSeenAt).toLocaleDateString() : t('settings.justNow', 'Just now')}
-                    </span>
+              <div key={device.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 py-3">
+                <div className="flex min-w-0 items-start gap-3">
+                  <Laptop size={18} className="mt-0.5 shrink-0 text-zinc-400" aria-hidden="true" />
+                  <div className="min-w-0">
+                    <p className="break-words [overflow-wrap:anywhere] text-sm font-semibold text-zinc-200">{device.deviceName || 'MacBook Pro'}</p>
+                    <p className="mt-1 break-words text-ns-meta text-zinc-500">
+                      {device.platform || 'macOS'} · {t('settings.lastSeen', 'Last active')}: {device.lastSeenAt ? new Date(device.lastSeenAt).toLocaleDateString() : t('settings.justNow', 'Just now')}
+                    </p>
                   </div>
                 </div>
-
                 <button
                   type="button"
                   disabled={revokingId === device.id}
                   onClick={() => handleRevoke(device.id)}
-                  className="flex items-center space-x-1 text-xs text-rose-400 hover:text-rose-300 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 px-2.5 py-1.5 rounded-md transition-colors disabled:opacity-50"
-                  aria-label={t('settings.revokeDevice', 'Revoke Device')}
-                >
-                  <Trash2 size={12} />
-                  <span>{t('settings.revokeAccess', 'Revoke')}</span>
-                </button>
+                  className="ns-icon-button ns-media-action text-[var(--ns-danger)] disabled:opacity-50"
+                  aria-label={`${t('settings.revokeDevice', 'Revoke Device')}: ${device.deviceName || device.platform || 'MacBook Pro'}`}
+                  title={t('settings.revokeAccess', 'Revoke')}
+                ><Trash2 size={16} aria-hidden="true" /></button>
               </div>
             ))}
           </div>
         )}
       </div>
-    </div>
+    </section>
   );
 }

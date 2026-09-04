@@ -2,6 +2,7 @@
 
 const { normalizeGenre } = require('../constants/musicGenres');
 const { hasLyrics } = require('./lyrics');
+const { publicBeatMetadata } = require('./beatMetadata');
 
 const REQUIRED_ITEM_FIELDS = Object.freeze([
   'title',
@@ -118,6 +119,7 @@ function serializeBatch(batch) {
       genre: item.genre,
       tags: item.tags || [],
       description: item.description || '',
+      ...publicBeatMetadata(item),
       explicit: item.explicit,
       visibility: item.isPublic ? 'PUBLIC' : 'PRIVATE',
       copyrightConfirmed: item.copyrightConfirmed,
@@ -166,7 +168,8 @@ async function loadBatch(prisma, batchId) {
               status: true,
               durationSeconds: true,
               processedAudioKey: true,
-              coverImageKey: true
+              coverImageKey: true,
+              contentType: true
             }
           }
         },

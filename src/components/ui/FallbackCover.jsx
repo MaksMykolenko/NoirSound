@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { deterministicVisual, initialsFor } from '../../utils/presentation';
 
 export default function FallbackCover({
@@ -10,6 +11,7 @@ export default function FallbackCover({
   imageClassName = '',
   loading,
 }) {
+  const { t } = useTranslation();
   const [imageFailed, setImageFailed] = useState(false);
 
   useEffect(() => {
@@ -36,25 +38,12 @@ export default function FallbackCover({
   return (
     <div
       role="img"
-      aria-label={`Generated fallback cover for ${title || 'untitled track'}`}
+      aria-label={t('media.noArtwork', { title: title || t('media.untitled') })}
       data-visual-key={visual.key}
-      className={`relative isolate overflow-hidden bg-zinc-900 ${className}`}
+      className={`ns-cover-fallback relative overflow-hidden ${className}`}
     >
-      <span
-        className="absolute aspect-square w-[58%] rounded-full border border-white/8"
-        style={{ left: `${visual.x - 28}%`, top: `${visual.y - 28}%` }}
-      />
-      <span
-        className="absolute h-1.5 w-1.5 rounded-full bg-brand-red"
-        style={{ left: `${visual.x}%`, top: `${visual.y}%` }}
-      />
-      <span className="absolute inset-x-3 bottom-3 flex items-end justify-between gap-2">
-        <span className="font-sans text-lg font-bold tracking-tight text-white/95 sm:text-xl">
-          {initialsFor(title)}
-        </span>
-        <span className="font-sans tabular-nums text-ns-micro font-medium text-white/55">
-          No artwork
-        </span>
+      <span aria-hidden="true" className="ns-cover-fallback__initials">
+        {initialsFor(title)}
       </span>
     </div>
   );

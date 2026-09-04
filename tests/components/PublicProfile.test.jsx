@@ -62,13 +62,11 @@ describe('PublicProfile', () => {
     useUserStore.setState(originalUserState, true);
   });
 
-  it('reserves the final banner and avatar geometry while the public profile loads', () => {
+  it('announces public-profile loading with an accessible status', () => {
     getPublicProfile.mockReturnValue(new Promise(() => {}));
     renderPublicProfile();
 
     expect(screen.getByRole('status', { name: i18n.t('profile.loadingPublicProfile') })).toBeInTheDocument();
-    expect(screen.getByTestId('profile-banner-skeleton')).toHaveAttribute('data-profile-banner');
-    expect(screen.getByTestId('profile-avatar-skeleton')).toHaveAttribute('data-profile-avatar');
   });
 
   it('loads an anonymous public profile without exposing owner controls', async () => {

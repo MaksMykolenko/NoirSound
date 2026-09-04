@@ -5,6 +5,7 @@ const { scaledRateLimitMax } = require('../lib/rateLimit');
 const { isQualifiedPlay, recalculateArtistMonthlyListeners } = require('../lib/statsAccess');
 const { hasLyrics } = require('../lib/lyrics');
 const { serializeUserMedia } = require('../lib/profileMedia');
+const { parseTrackContentType } = require('../lib/trackContentType');
 
 async function statsRoutes(fastify, _options) {
   // POST /api/tracks/:id/play-event
@@ -300,6 +301,14 @@ async function statsRoutes(fastify, _options) {
           likes: true,
           coverUrl: true,
           genre: true,
+          contentType: true,
+          beatKey: true,
+          beatBpm: true,
+          beatMood: true,
+          beatStyle: true,
+          beatLicenseType: true,
+          beatUsageNotes: true,
+          beatContactEnabled: true,
           lyricsText: true,
           lyricsType: true,
           lyricsSynced: true,
@@ -327,12 +336,18 @@ async function statsRoutes(fastify, _options) {
       });
       const publishedTracks = safeTracks.filter((track) => track.status === 'PUBLISHED');
       const topTracks = [...publishedTracks].sort((a, b) => b.plays - a.plays).slice(0, 10);
+      const publishedMusic = publishedTracks.filter((track) => track.contentType !== 'BEAT');
+      const publishedBeats = publishedTracks.filter((track) => track.contentType === 'BEAT');
+      const topMusicTracks = [...publishedMusic].sort((a, b) => b.plays - a.plays).slice(0, 10);
+      const topBeats = [...publishedBeats].sort((a, b) => b.plays - a.plays).slice(0, 10);
       // FAILED = processing/transcoding failed; REJECTED = failed moderation
       // review. Both belong in "failed", kept out of the published list.
       const failedUploads = safeTracks.filter((track) => track.status === 'FAILED' || track.status === 'REJECTED');
       const recentUploads = safeTracks.slice(0, 10); // already ordered by updatedAt desc
       const totalPlays = publishedTracks.reduce((sum, track) => sum + (track.plays || 0), 0);
       const totalLikes = publishedTracks.reduce((sum, track) => sum + (track.likes || 0), 0);
+      const musicPlays = publishedMusic.reduce((sum, track) => sum + (track.plays || 0), 0);
+      const beatPlays = publishedBeats.reduce((sum, track) => sum + (track.plays || 0), 0);
 
       return {
         followers: artistProfile._count.followers,
@@ -341,6 +356,10 @@ async function statsRoutes(fastify, _options) {
         totalPlays,
         totalLikes,
         publishedTrackCount: publishedTracks.length,
+        musicTrackCount: publishedMusic.length,
+        beatTrackCount: publishedBeats.length,
+        musicPlays,
+        beatPlays,
         // Every one of the artist's own tracks, any status, uncapped -- the
         // public GET /tracks feed is capped at 20 and is a *global* feed
         // ordered by publish date, so filtering it down to "my tracks" can
@@ -350,6 +369,8 @@ async function statsRoutes(fastify, _options) {
         // match the database" to hold.
         tracks: safeTracks,
         topTracks,
+        topMusicTracks,
+        topBeats,
         recentUploads,
         failedUploads,
         // Explicit, honest markers for genuinely unimplemented breakdowns --
@@ -367,12 +388,22 @@ async function statsRoutes(fastify, _options) {
   // GET /api/me/liked-tracks
   fastify.get('/me/liked-tracks', { preValidation: [fastify.authenticate] }, async (request, reply) => {
     try {
+      const contentTypeResult = parseTrackContentType(request.query.contentType, {
+        defaultValue: null
+      });
+      if (!contentTypeResult.ok) {
+        return reply.status(400).send({
+          error: contentTypeResult.error,
+          message: contentTypeResult.message
+        });
+      }
       const likes = await fastify.prisma.trackLike.findMany({
         where: {
           userId: request.user.id,
           track: {
             status: 'PUBLISHED',
             isPublic: true,
+            ...(contentTypeResult.value ? { contentType: contentTypeResult.value } : {}),
             artist: { isHidden: false, user: { status: 'ACTIVE' } }
           }
         },

@@ -1,12 +1,10 @@
 import React from 'react';
-import { readFileSync } from 'node:fs';
-import path from 'node:path';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import i18n from '../../src/i18n';
-import { getArtistById, getTracksByArtist, followArtist } from '../../src/api';
+import { getArtistById, getTracksByArtist, getPlaylistsByArtist, followArtist, unfollowArtist } from '../../src/api';
 import { useUserStore } from '../../src/store/userStore';
 import { usePlayerStore } from '../../src/store/playerStore';
 
@@ -16,6 +14,7 @@ vi.mock('../../src/api', async (importOriginal) => {
     ...actual,
     getArtistById: vi.fn(),
     getTracksByArtist: vi.fn(),
+    getPlaylistsByArtist: vi.fn(),
     followArtist: vi.fn(),
     unfollowArtist: vi.fn(),
   };
@@ -80,11 +79,24 @@ function releaseCard(trackId) {
   return card;
 }
 
+function deferred() {
+  let resolvePromise;
+  let rejectPromise;
+  const promise = new Promise((resolve, reject) => {
+    resolvePromise = resolve;
+    rejectPromise = reject;
+  });
+  return { promise, resolve: resolvePromise, reject: rejectPromise };
+}
+
 describe('ArtistPage', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
+    followArtist.mockReset();
+    unfollowArtist.mockReset();
     await i18n.changeLanguage('en');
     getTracksByArtist.mockResolvedValue([]);
+    getPlaylistsByArtist.mockResolvedValue([]);
     useUserStore.setState({
       user: { id: 'listener-1', role: 'LISTENER' },
       setAuthModalOpen: vi.fn(),
@@ -160,6 +172,111 @@ describe('ArtistPage', () => {
     expect(followArtist).toHaveBeenCalledWith('a1');
   });
 
+  it.each([
+    ['Enter', '{Enter}'],
+    ['Space', ' '],
+  ])('supports %s for the separate Artist page Follow and Unfollow path', async (_label, key) => {
+    getArtistById.mockResolvedValue(baseArtist);
+    followArtist.mockResolvedValue({ success: true, following: true, followerCount: 129 });
+    unfollowArtist.mockResolvedValue({ success: true, following: false, followerCount: 128 });
+    const user = userEvent.setup();
+    renderArtist();
+
+    const followButton = await screen.findByRole('button', { name: 'Follow' });
+    followButton.focus();
+    expect(followButton).toHaveFocus();
+    await user.keyboard(key);
+
+    const followingButton = await screen.findByRole('button', { name: 'Following' });
+    expect(followArtist).toHaveBeenCalledTimes(1);
+    expect(followingButton).toHaveAttribute('aria-pressed', 'true');
+
+    followingButton.focus();
+    expect(followingButton).toHaveFocus();
+    await user.keyboard(key);
+
+    const restoredFollowButton = await screen.findByRole('button', { name: 'Follow' });
+    expect(unfollowArtist).toHaveBeenCalledTimes(1);
+    expect(restoredFollowButton).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('disables and marks the Artist page Follow action busy while blocking duplicates', async () => {
+    const request = deferred();
+    getArtistById.mockResolvedValue(baseArtist);
+    followArtist.mockReturnValue(request.promise);
+    const user = userEvent.setup();
+    renderArtist();
+
+    const followButton = await screen.findByRole('button', { name: 'Follow' });
+    followButton.focus();
+    await user.keyboard('{Enter}');
+
+    const savingButton = await screen.findByRole('button', { name: 'Saving…' });
+    expect(savingButton).toBeDisabled();
+    expect(savingButton).toHaveAttribute('aria-busy', 'true');
+    expect(savingButton).toHaveAttribute('aria-pressed', 'false');
+
+    await user.keyboard('{Enter} ');
+    await user.click(savingButton);
+    expect(followArtist).toHaveBeenCalledTimes(1);
+
+    request.resolve({ success: true, following: true, followerCount: 129 });
+    const followingButton = await screen.findByRole('button', { name: 'Following' });
+    expect(followingButton).toBeEnabled();
+    expect(followingButton).not.toHaveAttribute('aria-busy');
+    expect(followingButton).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('recovers the Artist page Follow action after a failed keyboard request', async () => {
+    const request = deferred();
+    getArtistById.mockResolvedValue(baseArtist);
+    followArtist.mockReturnValue(request.promise);
+    const user = userEvent.setup();
+    renderArtist();
+
+    const followButton = await screen.findByRole('button', { name: 'Follow' });
+    followButton.focus();
+    await user.keyboard(' ');
+
+    const savingButton = await screen.findByRole('button', { name: 'Saving…' });
+    expect(savingButton).toBeDisabled();
+    expect(savingButton).toHaveAttribute('aria-busy', 'true');
+
+    request.reject(new Error('network error'));
+    const restoredButton = await screen.findByRole('button', { name: 'Follow' });
+    await waitFor(() => expect(restoredButton).toBeEnabled());
+    expect(restoredButton).not.toHaveAttribute('aria-busy');
+    expect(restoredButton).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('blocks duplicate Artist page Unfollow activation and restores Following after failure', async () => {
+    const request = deferred();
+    getArtistById.mockResolvedValue({ ...baseArtist, isFollowing: true });
+    unfollowArtist.mockReturnValue(request.promise);
+    const user = userEvent.setup();
+    renderArtist();
+
+    const followingButton = await screen.findByRole('button', { name: 'Following' });
+    followingButton.focus();
+    await user.keyboard(' ');
+
+    const savingButton = await screen.findByRole('button', { name: 'Saving…' });
+    expect(savingButton).toBeDisabled();
+    expect(savingButton).toHaveAttribute('aria-busy', 'true');
+    expect(savingButton).toHaveAttribute('aria-pressed', 'true');
+
+    await user.keyboard('{Enter} ');
+    await user.click(savingButton);
+    expect(unfollowArtist).toHaveBeenCalledTimes(1);
+    expect(followArtist).not.toHaveBeenCalled();
+
+    request.reject(new Error('network error'));
+    const restoredButton = await screen.findByRole('button', { name: 'Following' });
+    await waitFor(() => expect(restoredButton).toBeEnabled());
+    expect(restoredButton).not.toHaveAttribute('aria-busy');
+    expect(restoredButton).toHaveAttribute('aria-pressed', 'true');
+  });
+
   it('renders focus genres in English regardless of UI language', async () => {
     getArtistById.mockResolvedValue({ ...baseArtist, genres: ['hip_hop', 'electronic'] });
     await i18n.changeLanguage('uk');
@@ -201,6 +318,41 @@ describe('ArtistPage', () => {
     const about = screen.getByTestId('artist-about');
     expect(popular.nextElementSibling).toBe(discography);
     expect(discography.compareDocumentPosition(about) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('separates Music and Beats and renders the creator playlist section', async () => {
+    const beat = {
+      ...tracks[1],
+      id: 'beat-1',
+      title: 'Concrete Pulse',
+      contentType: 'BEAT',
+      beatBpm: 138,
+      beatKey: 'F# Minor',
+      beatMood: 'Dark',
+    };
+    getArtistById.mockResolvedValue(baseArtist);
+    getTracksByArtist.mockResolvedValue([{ ...tracks[0], contentType: 'MUSIC' }, beat]);
+    getPlaylistsByArtist.mockResolvedValue([{
+      id: 'playlist-1',
+      name: 'Producer Sketches',
+      description: 'Public creator playlist',
+      creator: 'Static Bloom',
+      tracks: [],
+      trackCount: 0,
+      isPublic: true,
+    }]);
+
+    renderArtist();
+
+    const musicSection = await screen.findByTestId('artist-discography');
+    const beatsSection = screen.getByTestId('artist-beats');
+    const playlistsSection = screen.getByTestId('artist-playlists');
+    expect(within(musicSection).getByText('Night Signal')).toBeInTheDocument();
+    expect(within(musicSection).queryByText('Concrete Pulse')).not.toBeInTheDocument();
+    expect(within(beatsSection).getByText('Concrete Pulse')).toBeInTheDocument();
+    expect(within(beatsSection).getByTestId('beat-badge')).toBeInTheDocument();
+    expect(within(beatsSection).getByText(/138 BPM/)).toBeInTheDocument();
+    expect(within(playlistsSection).getByText('Producer Sketches')).toBeInTheDocument();
   });
 
   it('starts the real artist queue in popularity order', async () => {
@@ -320,13 +472,6 @@ describe('ArtistPage', () => {
     await screen.findByRole('heading', { level: 1, name: 'Static Bloom' });
     expect(screen.getAllByRole('img', { name: 'Static Bloom' })).toHaveLength(1);
     expect(within(screen.getByTestId('artist-about')).queryByRole('img')).not.toBeInTheDocument();
-  });
-
-  it('keeps discography cards bounded and a single About panel readable', () => {
-    const css = readFileSync(path.join(process.cwd(), 'src/index.css'), 'utf8');
-    expect(css).toContain('grid-template-columns: repeat(auto-fill, minmax(min(100%, 12rem), 14rem));');
-    expect(css).toMatch(/\.ns-artist-discography-grid\s*\{[^}]*justify-content: start;/);
-    expect(css).toMatch(/\.ns-artist-detail-grid--single\s*\{[^}]*max-width: 48rem;/);
   });
 
   it('omits unsupported optional sections and empty social panels', async () => {

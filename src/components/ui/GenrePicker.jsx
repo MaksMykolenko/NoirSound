@@ -1,8 +1,10 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { Search, ChevronDown, Check, X } from 'lucide-react';
 import { GENRE_GROUPS } from '../../constants/musicGenres';
 import { getGenreLabel, getGenreGroupLabel, searchGenres } from '../../utils/genreLabels';
+import useDialogFocusTrap, { getOverlayLayer, isTopmostOverlay } from '../../hooks/useDialogFocusTrap';
 
 /**
  * Searchable, grouped, single-select genre picker.
@@ -28,9 +30,36 @@ export default function GenrePicker({
   const { t, i18n } = useTranslation();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
+  const [position, setPosition] = useState({});
   const rootRef = useRef(null);
-  const panelRef = useRef(null);
   const searchRef = useRef(null);
+  const isMobile = typeof window !== 'undefined' && window.matchMedia?.('(max-width: 639px)').matches;
+  const close = useCallback(() => setOpen(false), []);
+  const panelRef = useDialogFocusTrap(open, close, { lockScroll: isMobile });
+
+  useLayoutEffect(() => {
+    if (!open || !rootRef.current) return;
+    const rect = rootRef.current.getBoundingClientRect();
+    const layer = Math.max(
+      Number.parseInt(getComputedStyle(document.documentElement).getPropertyValue('--ns-z-context-menu'), 10) || 230,
+      getOverlayLayer(rootRef.current) + 1
+    );
+    if (isMobile) {
+      setPosition({ zIndex: layer });
+      return;
+    }
+    const width = Math.min(Math.max(rect.width, 260), window.innerWidth - 20);
+    const below = window.innerHeight - rect.bottom - 18;
+    const above = rect.top - 18;
+    const opensAbove = below < 300 && above > below;
+    setPosition({
+      left: Math.max(10, Math.min(rect.left, window.innerWidth - width - 10)),
+      width,
+      maxHeight: Math.max(120, opensAbove ? above : below),
+      ...(opensAbove ? { bottom: window.innerHeight - rect.top + 8 } : { top: rect.bottom + 8 }),
+      zIndex: layer,
+    });
+  }, [open, isMobile]);
 
   const language = i18n.language;
   const label = ariaLabel || t('uploadForm.primaryGenre');
@@ -56,22 +85,45 @@ export default function GenrePicker({
   // Close on outside pointer + Escape (Escape also returns focus to the trigger).
   useEffect(() => {
     if (!open) return undefined;
+    // Playwright and real browsers may finish scrolling a low trigger into view
+    // just after the click opens the portaled panel. Treat that opening scroll as
+    // part of the activation; later scrolling still dismisses the anchored UI.
+    let viewportChangesArmed = false;
+    let settleFrame;
+    const armFrame = window.requestAnimationFrame(() => {
+      settleFrame = window.requestAnimationFrame(() => {
+        viewportChangesArmed = true;
+      });
+    });
     const onPointer = (e) => {
-      if (rootRef.current && !rootRef.current.contains(e.target)) setOpen(false);
+      if (!rootRef.current?.contains(e.target) && !panelRef.current?.contains(e.target)) setOpen(false);
     };
     const onKey = (e) => {
-      if (e.key === 'Escape') {
+      if (e.key === 'Escape' && !e.defaultPrevented && isTopmostOverlay(panelRef.current)) {
+        e.preventDefault();
+        e.stopPropagation();
         setOpen(false);
         rootRef.current?.querySelector('[data-testid="genre-picker-trigger"]')?.focus();
       }
     };
+    const onViewportChange = (event) => {
+      if (!viewportChangesArmed) return;
+      if (event.type === 'scroll' && panelRef.current?.contains(event.target)) return;
+      setOpen(false);
+    };
     document.addEventListener('mousedown', onPointer);
     document.addEventListener('keydown', onKey);
+    window.addEventListener('resize', onViewportChange);
+    window.addEventListener('scroll', onViewportChange, true);
     return () => {
       document.removeEventListener('mousedown', onPointer);
       document.removeEventListener('keydown', onKey);
+      window.removeEventListener('resize', onViewportChange);
+      window.removeEventListener('scroll', onViewportChange, true);
+      window.cancelAnimationFrame(armFrame);
+      if (settleFrame) window.cancelAnimationFrame(settleFrame);
     };
-  }, [open]);
+  }, [open, panelRef]);
 
   // Autofocus the search on desktop only — on mobile this would pop the keyboard
   // over the bottom sheet before the user can scroll the list.
@@ -80,7 +132,7 @@ export default function GenrePicker({
     const isDesktop = typeof window !== 'undefined'
       && window.matchMedia
       && window.matchMedia('(min-width: 640px)').matches;
-    if (isDesktop) searchRef.current.focus();
+    if (isDesktop) searchRef.current.focus({ preventScroll: true });
   }, [open]);
 
   const handleSelect = (key) => {
@@ -132,21 +184,26 @@ export default function GenrePicker({
         <ChevronDown size={16} className={`shrink-0 text-zinc-500 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
 
-      {open && (
+      {open && createPortal(
         <>
           {/* Mobile backdrop (sits below the sheet, above app chrome). */}
           <div
             className="fixed inset-0 z-[var(--ns-z-overlay)] bg-black/75 sm:hidden"
+            style={{ zIndex: (position.zIndex || 230) - 1 }}
             aria-hidden="true"
             onClick={() => setOpen(false)}
           />
 
           <div
             ref={panelRef}
+            role={isMobile ? 'dialog' : undefined}
+            aria-modal={isMobile || undefined}
+            aria-label={isMobile ? label : undefined}
+            data-ns-overlay="genre-picker"
+            style={position}
             data-testid="genre-picker-panel"
             onKeyDown={onPanelKeyDown}
-            className="fixed inset-x-0 bottom-0 z-[var(--ns-z-player-sheet)] flex max-h-[80vh] flex-col overflow-hidden rounded-t-lg border border-zinc-700/70 bg-zinc-950 p-0 shadow-xl
-                       sm:absolute sm:inset-x-0 sm:bottom-auto sm:z-[var(--ns-z-dropdown)] sm:mt-2 sm:max-h-none sm:rounded-lg"
+            className="fixed inset-x-0 bottom-0 flex max-h-[80dvh] flex-col overflow-hidden rounded-t-lg border border-[var(--ns-border)] bg-[var(--ns-card-solid)] p-0 shadow-lg sm:inset-x-auto sm:bottom-auto sm:rounded-lg"
           >
             {/* Mobile sheet header (title + close) */}
             <div className="sm:hidden flex items-center justify-between px-4 pt-3 pb-2 border-b border-zinc-800/70 shrink-0">
@@ -182,7 +239,7 @@ export default function GenrePicker({
             <div
               role="listbox"
               aria-label={label}
-              className="flex-1 max-h-[56vh] sm:max-h-72 overflow-y-auto overscroll-contain py-1 ns-tabs-scroll pb-[env(safe-area-inset-bottom)]"
+              className="min-h-0 flex-1 max-h-[56dvh] sm:max-h-72 overflow-y-auto overscroll-contain py-1 ns-tabs-scroll pb-[env(safe-area-inset-bottom)]"
             >
               {totalResults === 0 ? (
                 <p className="px-4 py-6 text-center text-sm text-zinc-500">
@@ -213,7 +270,7 @@ export default function GenrePicker({
                               : 'text-zinc-300 hover:bg-zinc-800/60 hover:text-zinc-100'
                           }`}
                         >
-                          <span className="truncate">{item.label}</span>
+                          <span className="min-w-0 break-words">{item.label}</span>
                           {active && <Check size={15} className="shrink-0 text-brand-red" />}
                         </button>
                       );
@@ -234,7 +291,8 @@ export default function GenrePicker({
               </button>
             )}
           </div>
-        </>
+        </>,
+        document.body
       )}
     </div>
   );

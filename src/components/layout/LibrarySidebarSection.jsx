@@ -105,7 +105,7 @@ export default function LibrarySidebarSection({ onItemClick }) {
           <ListMusic size={16} className="text-brand-red" />
           <span className="font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label">{t('nav.yourLibrary')}</span>
         </button>
-        <button onClick={openCreatePlaylist} className="ns-icon-button !min-h-9 !min-w-9 cursor-pointer" aria-label="Create playlist">
+        <button onClick={openCreatePlaylist} className="ns-media-action cursor-pointer" aria-label="Create playlist">
           <Plus size={15} />
         </button>
       </div>
@@ -113,6 +113,7 @@ export default function LibrarySidebarSection({ onItemClick }) {
       <div className="relative px-2 mb-3">
         <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-600" size={13} />
         <input
+          aria-label={t('nav.filterLibrary')}
           value={search}
           onChange={(event) => setSearch(event.target.value)}
           placeholder={t('nav.filterLibrary')}

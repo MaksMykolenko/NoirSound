@@ -1,4 +1,22 @@
 import { API_BASE_URL } from '../client';
+import { normalizeTrackContentType, TRACK_CONTENT_TYPES } from '../../utils/trackContent';
+
+function mapContentMetadata(track) {
+  const contentType = normalizeTrackContentType(track?.contentType);
+  if (contentType !== TRACK_CONTENT_TYPES.BEAT) return { contentType };
+
+  const bpm = Number(track?.beatBpm);
+  return {
+    contentType,
+    beatBpm: Number.isFinite(bpm) && bpm > 0 ? bpm : null,
+    beatKey: track?.beatKey?.trim() || null,
+    beatMood: track?.beatMood?.trim() || null,
+    beatStyle: track?.beatStyle?.trim() || null,
+    beatLicenseType: track?.beatLicenseType?.trim() || null,
+    beatUsageNotes: track?.beatUsageNotes?.trim() || null,
+    beatContactEnabled: Boolean(track?.beatContactEnabled),
+  };
+}
 
 export function mapTrackResponse(backendTrack) {
   if (!backendTrack) return null;
@@ -6,12 +24,14 @@ export function mapTrackResponse(backendTrack) {
   if (backendTrack.artistName && !backendTrack.artist) {
     return {
       ...backendTrack,
+      ...mapContentMetadata(backendTrack),
       title: backendTrack.title?.trim() || 'Untitled track',
       artistName: backendTrack.artistName?.trim() || 'Unknown artist',
       coverUrl: backendTrack.coverUrl || null,
       genre: backendTrack.genre?.trim() || 'No genre',
       duration: Number(backendTrack.duration) > 0 ? Number(backendTrack.duration) : null,
       plays: Number(backendTrack.plays || 0),
+      rankingScore: backendTrack.rankingScore == null ? null : Number(backendTrack.rankingScore),
       likes: Number(backendTrack.likes || 0),
       isStreamable: backendTrack.isStreamable ?? Boolean(backendTrack.audioUrl),
       hasLyrics: Boolean(backendTrack.hasLyrics),
@@ -51,6 +71,7 @@ export function mapTrackResponse(backendTrack) {
 
   return {
     id: backendTrack.id,
+    ...mapContentMetadata(backendTrack),
     title: backendTrack.title?.trim() || 'Untitled track',
     artistId: backendTrack.artistId,
     artistName,
@@ -59,6 +80,7 @@ export function mapTrackResponse(backendTrack) {
       : backendTrack.coverUrl || null,
     genre: backendTrack.genre?.trim() || 'No genre',
     plays: Number(backendTrack.plays || 0),
+    rankingScore: backendTrack.rankingScore == null ? null : Number(backendTrack.rankingScore),
     likes: Number(backendTrack.likes || 0),
     duration: duration > 0 ? duration : null,
     durationSeconds: duration > 0 ? duration : null,

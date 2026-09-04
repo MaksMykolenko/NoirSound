@@ -1,9 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { FileAudio, ImagePlus, Save, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import GenrePicker from '../../ui/GenrePicker';
 import LyricsEditor from '../../lyrics/LyricsEditor';
 import { formatBytes } from './batchUploadUtils';
+import BeatMetadataFields from '../BeatMetadataFields';
+import ContentTypeSelector from '../ContentTypeSelector';
+import { beatMetadataFromTrack, beatMetadataPayload } from '../beatMetadata';
+import useDialogFocusTrap from '../../../hooks/useDialogFocusTrap';
 
 const TABS = ['details', 'artwork', 'lyrics', 'rights'];
 
@@ -12,6 +17,7 @@ export default function BatchTrackSettingsDrawer({ item, open, onClose, onSave, 
   const [form, setForm] = useState(null);
   const [coverFile, setCoverFile] = useState(null);
   const [activeTab, setActiveTab] = useState('details');
+  const dialogRef = useDialogFocusTrap(open && Boolean(item && form), onClose);
 
   useEffect(() => {
     if (!item) return;
@@ -22,12 +28,15 @@ export default function BatchTrackSettingsDrawer({ item, open, onClose, onSave, 
       genre: item.genre || '',
       tags: (item.tags || []).join(', '),
       description: item.description || '',
+      contentType: item.contentType === 'BEAT' ? 'BEAT' : 'MUSIC',
+      ...beatMetadataFromTrack(item),
       explicit: Boolean(item.explicit),
       visibility: item.visibility || 'PUBLIC',
       copyrightConfirmed: Boolean(item.copyrightConfirmed),
       lyricsText: item.lyricsText || '',
       lyricsType: item.lyricsType || 'NONE',
       lyricsLanguage: item.lyricsLanguage || '',
+      lyricsSynced: Array.isArray(item.lyricsSynced) ? item.lyricsSynced : null,
       lyricsRightsConfirmed: Boolean(item.lyricsRightsConfirmed),
       target: item.target || 'SINGLE',
       playlistOrder: item.playlistOrder || 1,
@@ -48,6 +57,11 @@ export default function BatchTrackSettingsDrawer({ item, open, onClose, onSave, 
   const set = (field, value) => setForm((current) => ({ ...current, [field]: value }));
 
   const save = async () => {
+    const hasSyncedLyrics = form.lyricsType === 'SYNCED'
+      && Array.isArray(form.lyricsSynced)
+      && form.lyricsSynced.length > 0;
+    const hasPlainLyrics = Boolean(form.lyricsText.trim());
+    const hasLyrics = hasSyncedLyrics || hasPlainLyrics;
     await onSave({
       title: form.title,
       primaryArtistName: form.primaryArtistName,
@@ -55,46 +69,50 @@ export default function BatchTrackSettingsDrawer({ item, open, onClose, onSave, 
       genre: form.genre || null,
       tags: form.tags.split(',').map((value) => value.trim()).filter(Boolean),
       description: form.description,
+      contentType: form.contentType,
+      ...beatMetadataPayload(form.contentType, form),
       explicit: form.explicit,
       visibility: form.visibility,
       copyrightConfirmed: form.copyrightConfirmed,
       lyricsText: form.lyricsText,
-      lyricsType: form.lyricsText.trim() ? 'PLAIN' : 'NONE',
-      lyricsLanguage: form.lyricsText.trim() ? form.lyricsLanguage || null : null,
-      lyricsRightsConfirmed: form.lyricsText.trim() ? form.lyricsRightsConfirmed : false,
+      lyricsType: hasSyncedLyrics ? 'SYNCED' : hasPlainLyrics ? 'PLAIN' : 'NONE',
+      lyricsLanguage: hasLyrics ? form.lyricsLanguage || null : null,
+      lyricsSynced: hasSyncedLyrics ? form.lyricsSynced : null,
+      lyricsRightsConfirmed: hasLyrics ? form.lyricsRightsConfirmed : false,
       target: form.target,
       playlistOrder: form.target === 'PLAYLIST' ? Number(form.playlistOrder) || 1 : null,
     }, coverFile);
   };
 
-  return (
-    <div className="fixed inset-0 z-[var(--ns-z-overlay)]" role="presentation">
-      <button type="button" className="absolute inset-0 bg-black/75" aria-label={t('actions.close')} onClick={onClose} />
+  return createPortal(
+    <div className="fixed inset-0 z-[var(--ns-z-dialog)]" role="presentation">
+      <button type="button" className="absolute inset-0 bg-[var(--ns-overlay)]" aria-label={t('actions.close')} onClick={onClose} />
       <section
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="batch-track-settings-title"
-        className="absolute inset-x-0 bottom-0 flex max-h-[94dvh] flex-col overflow-hidden rounded-t-lg border border-zinc-800 bg-bg-noir shadow-xl sm:inset-y-0 sm:left-auto sm:h-auto sm:max-h-none sm:w-[min(44rem,92vw)] sm:rounded-none sm:border-y-0 sm:border-r-0"
+        className="absolute inset-x-0 bottom-0 flex max-h-[94dvh] flex-col overflow-hidden rounded-t-lg border border-zinc-800 bg-bg-noir shadow-[var(--ns-shadow-modal)] sm:inset-y-0 sm:left-auto sm:h-auto sm:max-h-none sm:w-[min(44rem,92vw)] sm:rounded-none sm:border-y-0 sm:border-r-0"
       >
         <header className="flex shrink-0 items-start justify-between gap-4 border-b border-zinc-800 px-4 py-4 sm:px-6">
           <div className="min-w-0">
             <span className="ns-eyebrow text-brand-red">{t('batchUpload.trackSettings')}</span>
-            <h2 id="batch-track-settings-title" className="mt-1 truncate text-xl font-bold text-zinc-100">{form.title || t('batchUpload.untitledTrack')}</h2>
+            <h2 id="batch-track-settings-title" title={form.title} className="mt-1 break-words [overflow-wrap:anywhere] text-xl font-bold text-zinc-100">{form.title || t('batchUpload.untitledTrack')}</h2>
           </div>
           <button type="button" className="ns-icon-button !rounded" aria-label={t('actions.close')} onClick={onClose}><X size={20} /></button>
         </header>
 
         <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-4 py-5 sm:px-6">
-          <div className="flex items-center gap-3 border-y border-zinc-800 py-3">
-            <FileAudio className="text-brand-red" size={20} />
+          <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3 border-y border-zinc-800 py-3">
+            <FileAudio className="shrink-0 text-brand-red" size={20} />
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-zinc-200 truncate">{item.fileName}</p>
-              <p className="font-sans tabular-nums text-ns-meta text-zinc-500">{formatBytes(item.fileSize)} · {item.mimeType} · {item.durationSeconds ? `${item.durationSeconds}s` : t('batchUpload.durationPending')}</p>
+              <p title={item.fileName} className="text-sm font-semibold text-zinc-200 truncate">{item.fileName}</p>
+              <p className="break-words [overflow-wrap:anywhere] font-sans tabular-nums text-ns-meta text-zinc-500">{formatBytes(item.fileSize)} · {item.mimeType} · {item.durationSeconds ? `${item.durationSeconds}s` : t('batchUpload.durationPending')}</p>
             </div>
-            <span className="ml-auto shrink-0 font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-zinc-400">{item.status}</span>
+            <span className="col-start-2 text-ns-meta text-zinc-400">{t(`admin.statusValues.${item.status}`, { defaultValue: item.status })}</span>
           </div>
 
-          <nav className="flex gap-1 overflow-x-auto border-b border-zinc-800" aria-label={t('batchUpload.trackSettings')}>
+          <nav className="ns-tabs-scroll flex gap-1 overflow-x-auto border-b border-zinc-800" aria-label={t('batchUpload.trackSettings')}>
             {TABS.map((tab) => (
               <button
                 key={tab}
@@ -102,6 +120,7 @@ export default function BatchTrackSettingsDrawer({ item, open, onClose, onSave, 
                 className={`min-h-11 flex-1 shrink-0 border-b-2 px-3 font-sans text-ns-meta font-medium ${
                   activeTab === tab ? 'border-brand-red text-zinc-100' : 'border-transparent text-zinc-500 hover:text-zinc-200'
                 }`}
+                aria-current={activeTab === tab ? 'page' : undefined}
                 onClick={() => setActiveTab(tab)}
               >
                 {t(`batchUpload.tabs.${tab}`)}
@@ -111,6 +130,11 @@ export default function BatchTrackSettingsDrawer({ item, open, onClose, onSave, 
 
           {activeTab === 'details' && (
             <div className="space-y-5" data-testid="batch-details-tab">
+              <ContentTypeSelector
+                value={form.contentType}
+                onChange={(value) => set('contentType', value)}
+                idPrefix={`batch-content-type-${item.id}`}
+              />
               <div className="grid sm:grid-cols-2 gap-4">
                 <label className="space-y-1.5">
                   <span className="font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-zinc-400">{t('batchUpload.trackTitle')}</span>
@@ -127,7 +151,7 @@ export default function BatchTrackSettingsDrawer({ item, open, onClose, onSave, 
               </label>
               <div className="grid sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <span className="font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-zinc-400">{t('batchUpload.genre')}</span>
+                  <label htmlFor={`batch-genre-${item.id}`} className="font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-zinc-400">{t('batchUpload.genre')}</label>
                   <GenrePicker value={form.genre} onChange={(value) => set('genre', value)} id={`batch-genre-${item.id}`} />
                 </div>
                 <label className="space-y-1.5">
@@ -162,16 +186,23 @@ export default function BatchTrackSettingsDrawer({ item, open, onClose, onSave, 
                   <input type="number" min="1" className="ns-field !rounded px-4" value={form.playlistOrder} onChange={(event) => set('playlistOrder', event.target.value)} />
                 </label>
               )}
+              {form.contentType === 'BEAT' && (
+                <BeatMetadataFields
+                  value={form}
+                  onChange={setForm}
+                  idPrefix={`batch-beat-${item.id}`}
+                />
+              )}
             </div>
           )}
 
           {activeTab === 'artwork' && (
-            <label className="flex cursor-pointer items-center gap-4 rounded border border-dashed border-zinc-700 p-5" data-testid="batch-artwork-tab">
+            <label className="flex cursor-pointer flex-wrap items-center gap-4 rounded border border-dashed border-zinc-700 p-5 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--ns-accent)]" data-testid="batch-artwork-tab">
               <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(event) => setCoverFile(event.target.files?.[0] || null)} />
               {coverPreview ? <img src={coverPreview} alt="" className="h-24 w-24 rounded object-cover" /> : <div className="grid h-24 w-24 place-items-center rounded bg-zinc-900"><ImagePlus className="text-zinc-500" /></div>}
-              <div>
+              <div className="min-w-0 flex-1 basis-40">
                 <p className="text-sm font-bold text-zinc-200">{t('batchUpload.cover')}</p>
-                <p className="text-sm text-zinc-500">{coverFile?.name || (item.hasCover ? t('batchUpload.coverReady') : t('batchUpload.coverOptional'))}</p>
+                <p className="break-words [overflow-wrap:anywhere] text-sm text-zinc-500">{coverFile?.name || (item.hasCover ? t('batchUpload.coverReady') : t('batchUpload.coverOptional'))}</p>
               </div>
             </label>
           )}
@@ -201,6 +232,7 @@ export default function BatchTrackSettingsDrawer({ item, open, onClose, onSave, 
           </button>
         </footer>
       </section>
-    </div>
+    </div>,
+    document.body
   );
 }

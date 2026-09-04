@@ -37,13 +37,13 @@ test.describe('public beta · settings save (CSRF enabled)', () => {
     await expect(rawCsrf).toHaveCount(0);
 
     // 2) Language preference change (another authenticated PUT /auth/me).
-    const uk = page.getByRole('button', { name: 'Українська' });
-    if (await uk.count()) {
-      await uk.click();
-      // UI switches to Ukrainian; still no CSRF code surfaced.
-      await expect(page.getByText('Головна').first()).toBeVisible({ timeout: 8000 });
-      await expect(rawCsrf).toHaveCount(0);
-    }
+    const uk = page.getByTestId('language-switcher-full')
+      .getByRole('button', { name: 'Українська UA', exact: true });
+    await expect(uk).toBeVisible();
+    await uk.click();
+    // UI switches to Ukrainian; still no CSRF code surfaced.
+    await expect(page.getByText('Головна').first()).toBeVisible({ timeout: 8000 });
+    await expect(rawCsrf).toHaveCount(0);
 
     // 3) Persistence: reload and confirm the saved values round-tripped.
     await page.goto('/profile?tab=settings');

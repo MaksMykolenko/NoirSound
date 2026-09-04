@@ -94,13 +94,13 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
   // Keyboard shortcut: Escape key collapses player
   useEffect(() => {
     const handleGlobalKeyDown = (e) => {
-      if (e.key === 'Escape' && !lyricsFullscreenOpen && !isPlayerCollapsed) {
+      if (e.key === 'Escape' && !e.defaultPrevented && !isQueueOpen && !mobileSheetOpen && !lyricsFullscreenOpen && !isPlayerCollapsed) {
         collapsePlayer();
       }
     };
     window.addEventListener('keydown', handleGlobalKeyDown);
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, [isPlayerCollapsed, collapsePlayer, lyricsFullscreenOpen]);
+  }, [isPlayerCollapsed, collapsePlayer, lyricsFullscreenOpen, isQueueOpen, mobileSheetOpen]);
 
   return (
     <>
@@ -116,7 +116,7 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
               onClick={() => expandPlayer()}
               role="group"
               className="fixed bottom-6 right-8 z-[var(--ns-z-dropdown)] flex h-14 max-w-[320px] animate-fade-in cursor-pointer items-center gap-3.5 rounded-lg border border-[var(--ns-border)] bg-[var(--ns-card-solid)] p-2 text-xs shadow-2xl transition-colors hover:bg-surface-hover focus:outline-none focus:ring-1 focus:ring-brand-red"
-              aria-label="Collapsed player"
+              aria-label={t('player.collapsedPlayer')}
             >
               <FallbackCover
                 src={currentTrack.coverUrl}
@@ -129,6 +129,7 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
               <div className="min-w-0 flex-1">
                 <h5 className="truncate text-ns-body-sm font-bold leading-snug text-zinc-200">
                   <Link
+                    title={currentTrack.title}
                     to={`/track/${currentTrack.id}`}
                     onClick={(event) => event.stopPropagation()}
                     className="block truncate hover:underline focus-visible:underline focus-visible:outline-none"
@@ -136,7 +137,7 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
                     {currentTrack.title}
                   </Link>
                 </h5>
-                <p className="text-ns-label text-zinc-400 truncate mt-0.5 font-medium">{currentTrack.artistName}</p>
+                <p title={currentTrack.artistName} className="text-ns-label text-zinc-400 truncate mt-0.5 font-medium">{currentTrack.artistName}</p>
               </div>
               <div className="flex items-center space-x-2 shrink-0">
                 {lyricsAvailable && (
@@ -158,7 +159,7 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
                     togglePlay();
                   }}
                   className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-brand-red/20 bg-brand-red/10 text-brand-red transition-colors hover:bg-brand-red hover:text-[var(--ns-on-accent)] focus:outline-none focus:ring-1 focus:ring-brand-red"
-                  aria-label={isPlaying ? "Pause" : "Play"}
+                  aria-label={isPlaying ? t('contextMenu.pause') : t('contextMenu.play')}
                 >
                   {isPlaying ? <Pause size={12} fill="currentColor" strokeWidth={0} /> : <Play size={12} fill="currentColor" strokeWidth={0} className="translate-x-[0.5px]" />}
                 </button>
@@ -168,7 +169,7 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
                     expandPlayer();
                   }}
                   className="px-2.5 py-1.5 bg-zinc-900 hover:bg-zinc-850 hover:text-zinc-100 border border-zinc-800 text-ns-meta font-bold text-zinc-400 rounded-lg transition-colors cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-red"
-                  aria-label="Expand player"
+                  aria-label={t('player.expandPlayer')}
                 >
                   {t('player.expand')}
                 </button>
@@ -178,7 +179,7 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
             <button
               onClick={() => expandPlayer()}
               className="fixed bottom-6 right-8 z-[var(--ns-z-dropdown)] flex animate-fade-in cursor-pointer items-center gap-2 rounded-lg border border-[var(--ns-border)] bg-[var(--ns-card-solid)] px-4 py-3 font-sans text-ns-meta font-medium text-zinc-400 shadow-2xl transition-colors hover:border-brand-red/40 hover:bg-surface-hover hover:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-brand-red"
-              aria-label="Expand player"
+              aria-label={t('player.expandPlayer')}
             >
               <Music size={14} className="text-brand-red animate-pulse" />
               <span>{t('player.openPlayer')}</span>
@@ -212,8 +213,8 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
             <button
               onClick={() => collapsePlayer()}
               className="p-1 text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer rounded-md hover:bg-zinc-900/60"
-              title="Collapse Player"
-              aria-label="Collapse player"
+              title={t('player.collapsePlayer')}
+              aria-label={t('player.collapsePlayer')}
             >
               <X size={15} />
             </button>
@@ -243,7 +244,7 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
             onLyrics={openLyricsFullscreen}
             onToggleQueue={onToggleQueue}
             onClose={collapsePlayer}
-            closeLabel="Collapse player"
+            closeLabel={t('player.collapsePlayer')}
           />
         )}
       </div>
@@ -270,7 +271,7 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
               onContextMenu={trackContextMenuProps.onContextMenu}
               role="group"
               tabIndex={0}
-              aria-label="Collapsed player"
+              aria-label={t('player.collapsedPlayer')}
               data-testid="mobile-collapsed-player"
               className="fixed inset-x-0 bottom-[var(--ns-mobile-nav-height)] z-[var(--ns-z-player)] flex h-[var(--ns-mobile-player-height)] cursor-pointer items-center justify-between border-t border-[var(--ns-border-subtle)] bg-[var(--ns-player-bg)] px-3 focus:outline-none focus:ring-1 focus:ring-brand-red"
             >
@@ -294,7 +295,8 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
                 <div className="min-w-0 flex-1">
                   <h5 className="truncate text-ns-body-sm font-bold leading-snug text-zinc-200">
                     <Link
-                      to={`/track/${currentTrack.id}`}
+                      title={currentTrack.title}
+                    to={`/track/${currentTrack.id}`}
                       onClick={(event) => event.stopPropagation()}
                       onKeyDown={trackContextMenuProps.onKeyDown}
                       className="block truncate focus-visible:underline focus-visible:outline-none"
@@ -305,7 +307,7 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
                   {playbackError ? (
                     <PlaybackErrorStatus error={playbackError} className="mt-0.5" />
                   ) : (
-                    <p className="text-ns-label text-zinc-400 truncate mt-0.5 font-medium">{currentTrack.artistName}</p>
+                    <p title={currentTrack.artistName} className="text-ns-label text-zinc-400 truncate mt-0.5 font-medium">{currentTrack.artistName}</p>
                   )}
                 </div>
               </div>
@@ -317,7 +319,7 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
                     togglePlay();
                   }}
                   className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-[var(--ns-player-control-bg)] text-[var(--ns-player-control-text)] focus:outline-none"
-                  aria-label={isPlaying ? "Pause" : "Play"}
+                  aria-label={isPlaying ? t('contextMenu.pause') : t('contextMenu.play')}
                 >
                   {isPlaying ? <Pause size={13} fill="currentColor" strokeWidth={0} /> : <Play size={13} fill="currentColor" strokeWidth={0} className="translate-x-[0.5px]" />}
                 </button>
@@ -328,7 +330,7 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
                     expandPlayer();
                   }}
                   className="flex h-10 w-10 items-center justify-center rounded-md text-zinc-500"
-                  aria-label="Expand player"
+                  aria-label={t('player.expandPlayer')}
                 >
                   <ChevronDown size={18} className="rotate-180" />
                 </button>
@@ -338,7 +340,7 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
             <button
               onClick={() => expandPlayer()}
               className="fixed bottom-[calc(var(--ns-mobile-nav-height)+1rem)] right-4 z-[var(--ns-z-player)] flex animate-fade-in cursor-pointer items-center gap-2 rounded-lg border border-[var(--ns-border)] bg-[var(--ns-card-solid)] px-4 py-2.5 font-sans text-ns-meta font-medium text-zinc-400 shadow-2xl transition-colors hover:border-brand-red/40 hover:bg-surface-hover hover:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-brand-red"
-              aria-label="Expand player"
+              aria-label={t('player.expandPlayer')}
             >
               <Music size={13} className="text-brand-red animate-pulse" />
               <span>{t('player.openPlayer')}</span>
@@ -362,8 +364,8 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
           <div className="ns-mobile-player-sheet__header flex shrink-0 items-center justify-between">
             <button
               onClick={() => collapsePlayer()}
-              className="ns-icon-button !bg-zinc-900/80 text-zinc-400 cursor-pointer"
-              aria-label="Collapse player"
+              className="ns-icon-button text-zinc-400 cursor-pointer"
+              aria-label={t('player.collapsePlayer')}
             >
               <ChevronDown size={20} />
             </button>
@@ -372,8 +374,8 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
               <button
                 type="button"
                 onClick={openTrackActions}
-                className="ns-icon-button !bg-zinc-900/80 text-zinc-500"
-                aria-label={`More actions for ${currentTrack.title}`}
+                className="ns-icon-button text-zinc-500"
+                aria-label={t('playlists.moreActionsFor', { title: currentTrack.title })}
                 aria-haspopup="menu"
               >
                 <MoreHorizontal size={18} />
@@ -381,9 +383,9 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
               <button
                 onClick={() => lyricsAvailable && openLyricsFullscreen()}
                 disabled={!lyricsAvailable}
-                className={`ns-icon-button !bg-zinc-900/80 ${
+                className={`ns-icon-button ${
                   lyricsAvailable ? 'cursor-pointer' : 'cursor-not-allowed opacity-35'
-                } ${lyricsFullscreenOpen ? 'text-brand-red !border-brand-red/30' : 'text-zinc-500'}`}
+                } ${lyricsFullscreenOpen ? 'text-brand-red border-brand-red/30' : 'text-zinc-500'}`}
                 title={lyricsAvailable ? t('player.lyrics') : t('player.lyricsUnavailable')}
                 aria-label={lyricsAvailable ? t('player.openLyrics') : t('player.lyricsUnavailable')}
                 aria-pressed={lyricsFullscreenOpen}
@@ -392,11 +394,11 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
               </button>
               <button
                 onClick={onToggleQueue}
-                className={`ns-icon-button !bg-zinc-900/80 cursor-pointer ${
-                  isQueueOpen ? 'text-brand-red !border-brand-red/30' : 'text-zinc-500'
+                className={`ns-icon-button cursor-pointer ${
+                  isQueueOpen ? 'text-brand-red border-brand-red/30' : 'text-zinc-500'
                 }`}
-                title="Queue"
-                aria-label="Open play queue"
+                title={t('player.queue')}
+                aria-label={t('player.openQueue')}
                 aria-expanded={isQueueOpen}
               >
                 <ListMusic size={18} />
@@ -423,6 +425,7 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
               <div className="min-w-0 flex-1 pr-4">
                 <h2 className="ns-fullscreen-compact-title truncate text-2xl font-bold text-zinc-100">
                   <Link
+                    title={currentTrack.title}
                     to={`/track/${currentTrack.id}`}
                     onClick={handleExpandedTrackLinkClick}
                     className="block truncate focus-visible:underline focus-visible:outline-none"
@@ -430,7 +433,7 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
                     {currentTrack.title}
                   </Link>
                 </h2>
-                <p className="mt-1 truncate text-sm font-medium text-zinc-400">{currentTrack.artistName}</p>
+                <p title={currentTrack.artistName} className="mt-1 truncate text-sm font-medium text-zinc-400">{currentTrack.artistName}</p>
                 <PlaybackErrorStatus error={playbackError} className="mt-1" />
               </div>
               <button
@@ -440,8 +443,8 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
                     ? 'bg-rose-500/10 text-brand-red border-brand-red/35'
                     : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-zinc-200'
                 }`}
-                title="Like"
-                aria-label={isLiked ? `Unlike ${currentTrack.title}` : `Like ${currentTrack.title}`}
+                title={t(isLiked ? 'trackPage.unlike' : 'trackPage.like')}
+                aria-label={t(isLiked ? 'player.unlikeTrack' : 'player.likeTrack', { title: currentTrack.title })}
                 aria-pressed={isLiked}
               >
                 <Heart size={18} fill={isLiked ? 'currentColor' : 'none'} />
@@ -462,7 +465,7 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
 
             {/* volume bar */}
             <div className="ns-mobile-player-sheet__volume flex items-center space-x-3 pb-3 pt-1">
-              <button onClick={toggleMute} className="min-w-11 min-h-11 flex items-center justify-center text-zinc-500 focus:outline-none" aria-label={volume === 0 ? 'Unmute' : 'Mute'}>
+              <button onClick={toggleMute} className="min-w-11 min-h-11 flex items-center justify-center text-zinc-500 focus:outline-none" aria-label={volume === 0 ? t('player.unmute') : t('player.mute')}>
                 {volume === 0 ? <VolumeX size={16} /> : <Volume2 size={16} />}
               </button>
               <input
@@ -473,7 +476,7 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
                 value={volume}
                 onChange={handleVolumeChange}
                 className="premium-slider flex-1"
-                aria-label="Volume"
+                aria-label={t('player.volume')}
                 style={{
                   '--slider-progress': `${volume * 100}%`
                 }}

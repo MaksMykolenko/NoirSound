@@ -162,6 +162,7 @@ function buildServer(options = {}) {
     googleOAuthClientFactory: options.googleOAuthClientFactory
   });
   fastify.register(require('./routes/tracks'), { prefix: '/api/tracks' });
+  fastify.register(require('./routes/discover'), { prefix: '/api/discover' });
   fastify.register(require('./routes/artists'), { prefix: '/api/artists' });
   fastify.register(require('./routes/profiles'), { prefix: '/api/profiles' });
   fastify.register(require('./routes/playlists'), { prefix: '/api/playlists' });

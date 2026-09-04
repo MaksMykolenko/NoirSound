@@ -9,8 +9,12 @@ export async function getArtists() {
 }
 
 /** Returns only artists that have at least one PUBLISHED track. */
-export async function getArtistsWithTracks() {
-  const response = await apiFetch('/artists?hasPublishedTracks=true');
+export async function getArtistsWithTracks(options = {}, requestOptions = {}) {
+  const search = new URLSearchParams({ hasPublishedTracks: 'true' });
+  if (options.contentType && options.contentType !== 'ALL') search.set('contentType', options.contentType);
+  if (options.sort) search.set('sort', options.sort);
+  if (options.limit) search.set('limit', String(options.limit));
+  const response = await apiFetch(`/artists?${search.toString()}`, requestOptions);
   const data = response?.data ?? response;
   if (!Array.isArray(data)) return [];
   return data.map(mapArtistResponse).filter(Boolean);
@@ -35,4 +39,3 @@ export async function getFollowedArtists() {
   if (!Array.isArray(data)) return [];
   return data.map(mapArtistResponse).filter(Boolean);
 }
-

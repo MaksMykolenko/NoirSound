@@ -133,7 +133,7 @@ export default function Sidebar() {
                 className={({ isActive }) =>
                   `relative flex min-h-11 items-center gap-3 px-3 py-2.5 rounded-lg border text-sm font-medium transition-colors duration-150 cursor-pointer ${
                     isActive
-                      ? 'border-transparent bg-zinc-900/85 text-white shadow-[inset_2.5px_0_0_var(--ns-accent)]'
+                      ? 'border-transparent bg-zinc-900/85 text-[var(--ns-text-primary)] shadow-[inset_2.5px_0_0_var(--ns-accent)]'
                       : 'border-transparent text-zinc-400 hover:bg-zinc-900/40 hover:text-zinc-200'
                   }`
                 }

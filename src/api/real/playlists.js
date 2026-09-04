@@ -8,6 +8,13 @@ export async function getPlaylists() {
   return data.map(mapPlaylistResponse).filter(Boolean);
 }
 
+export async function getPlaylistsByArtist(artistId) {
+  const response = await apiFetch(`/playlists?artistId=${encodeURIComponent(artistId)}`);
+  const data = response?.data ?? response;
+  if (!Array.isArray(data)) return [];
+  return data.map(mapPlaylistResponse).filter(Boolean);
+}
+
 export async function getPlaylistById(id) {
   const response = await apiFetch(`/playlists/${id}`);
   return mapPlaylistResponse(response.playlist ?? response);

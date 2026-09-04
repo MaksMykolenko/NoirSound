@@ -169,8 +169,17 @@ async function playlistsRoutes(fastify) {
   fastify.get('/', async (request, reply) => {
     try {
       const viewer = await optionalViewer(fastify, request);
+      const artistProfileId = typeof request.query.artistId === 'string'
+        ? request.query.artistId.trim()
+        : '';
+      if (artistProfileId.length > 100) {
+        return apiError(reply, 400, 'PLAYLIST_ARTIST_FILTER_INVALID', 'Artist filter is invalid.');
+      }
       const playlists = await fastify.prisma.playlist.findMany({
-        where: { isPublic: true },
+        where: {
+          isPublic: true,
+          ...(artistProfileId ? { artistProfileId } : {})
+        },
         orderBy: { updatedAt: 'desc' },
         include: playlistInclude(viewer?.id)
       });
@@ -380,19 +389,20 @@ async function playlistsRoutes(fastify) {
     const entry = access.playlist.tracks.find((item) => item.trackId === request.params.trackId);
     if (!entry) return apiError(reply, 404, 'PLAYLIST_TRACK_NOT_FOUND', 'Track is not in this playlist.');
     try {
-      await fastify.prisma.$transaction([
-        fastify.prisma.playlistTrack.delete({
+      await fastify.prisma.$transaction(async (transaction) => {
+        await transaction.playlistTrack.delete({
           where: {
             playlistId_trackId: {
               playlistId: access.playlist.id,
               trackId: request.params.trackId
             }
           }
-        }),
-        ...access.playlist.tracks
+        });
+        const remainingTracks = access.playlist.tracks
           .filter((item) => item.trackId !== request.params.trackId)
-          .sort((a, b) => a.order - b.order)
-          .map((item, index) => fastify.prisma.playlistTrack.update({
+          .sort((a, b) => a.order - b.order);
+        for (const [index, item] of remainingTracks.entries()) {
+          await transaction.playlistTrack.update({
             where: {
               playlistId_trackId: {
                 playlistId: access.playlist.id,
@@ -400,8 +410,9 @@ async function playlistsRoutes(fastify) {
               }
             },
             data: { order: index + 1 }
-          }))
-      ]);
+          });
+        }
+      });
       return reply.status(204).send();
     } catch (error) {
       fastify.log.error(error);
@@ -423,17 +434,19 @@ async function playlistsRoutes(fastify) {
       return apiError(reply, 400, 'PLAYLIST_REORDER_INVALID', 'Reorder payload must contain every playlist track exactly once.');
     }
     try {
-      await fastify.prisma.$transaction(trackIds.map((trackId, index) =>
-        fastify.prisma.playlistTrack.update({
-          where: {
-            playlistId_trackId: {
-              playlistId: access.playlist.id,
-              trackId
-            }
-          },
-          data: { order: index + 1 }
-        })
-      ));
+      await fastify.prisma.$transaction(async (transaction) => {
+        for (const [index, trackId] of trackIds.entries()) {
+          await transaction.playlistTrack.update({
+            where: {
+              playlistId_trackId: {
+                playlistId: access.playlist.id,
+                trackId
+              }
+            },
+            data: { order: index + 1 }
+          });
+        }
+      });
       return { success: true, trackIds };
     } catch (error) {
       fastify.log.error(error);
@@ -448,15 +461,15 @@ async function playlistsRoutes(fastify) {
       return apiError(reply, 403, 'PLAYLIST_PRIVATE', 'This playlist is private.');
     }
     try {
-      await fastify.prisma.$transaction([
-        fastify.prisma.playlistLike.create({
+      await fastify.prisma.$transaction(async (transaction) => {
+        await transaction.playlistLike.create({
           data: { userId: request.user.id, playlistId: playlist.id }
-        }),
-        fastify.prisma.playlist.update({
+        });
+        await transaction.playlist.update({
           where: { id: playlist.id },
           data: { likes: { increment: 1 } }
-        })
-      ]);
+        });
+      });
     } catch (error) {
       if (error.code !== 'P2002') {
         fastify.log.error(error);

@@ -21,6 +21,8 @@ import {
   ArrowDown,
   Globe2,
   Lock,
+  MessageCircle,
+  Flag,
 } from 'lucide-react';
 
 export const menuSeparator = (id) => ({ id, type: 'separator' });
@@ -54,6 +56,7 @@ export function buildTrackContextActions({
   navigate,
   addToast,
   openAddToPlaylist,
+  openReport,
   removeFromQueue,
   removeFromPlaylist,
   moveUp,
@@ -62,6 +65,7 @@ export function buildTrackContextActions({
 }) {
   if (!track) return [];
   const canPlay = track.isStreamable ?? Boolean(track.audioUrl);
+  const isBeat = track.contentType === 'BEAT';
   const isCurrent = player.currentTrack?.id === track.id;
   const isLiked = (player.likedTracks || []).includes(track.id);
   const inQueue = (player.queue || []).some((item) => item.id === track.id);
@@ -70,7 +74,9 @@ export function buildTrackContextActions({
       id: 'track-play',
       label: isCurrent && player.isPlaying
         ? text(t, 'contextMenu.pause', 'Pause')
-        : text(t, 'contextMenu.play', 'Play'),
+        : isBeat
+          ? text(t, 'beats.playBeat', 'Play beat')
+          : text(t, 'contextMenu.play', 'Play'),
       icon: isCurrent && player.isPlaying ? Pause : Play,
       disabled: !canPlay || typeof player.playNext !== 'function',
       onSelect: () => (isCurrent ? player.togglePlay() : player.playTrack(track)),
@@ -115,7 +121,9 @@ export function buildTrackContextActions({
     menuSeparator('track-library-separator'),
     {
       id: 'track-playlist',
-      label: text(t, 'contextMenu.addToPlaylist', 'Add to playlist'),
+      label: isBeat
+        ? text(t, 'beats.addBeatToPlaylist', 'Add beat to playlist')
+        : text(t, 'contextMenu.addToPlaylist', 'Add to playlist'),
       icon: ListMusic,
       onSelect: () => openAddToPlaylist(track),
     },
@@ -138,17 +146,21 @@ export function buildTrackContextActions({
     menuSeparator('track-navigation-separator'),
     {
       id: 'track-open',
-      label: text(t, 'contextMenu.goToTrack', 'Go to track'),
+      label: isBeat
+        ? text(t, 'beats.goToBeat', 'Go to beat')
+        : text(t, 'contextMenu.goToTrack', 'Go to track'),
       icon: Radio,
       onSelect: () => navigate(`/track/${track.id}`),
     },
     track.artistId && {
       id: 'track-artist',
-      label: text(t, 'contextMenu.goToArtist', 'Go to artist'),
+      label: isBeat
+        ? text(t, 'beats.goToProducer', 'Go to producer')
+        : text(t, 'contextMenu.goToArtist', 'Go to artist'),
       icon: CircleUserRound,
       onSelect: () => navigate(`/artist/${track.artistId}`),
     },
-    {
+    (!isBeat || track.hasLyrics || track.lyrics) && {
       id: 'track-lyrics',
       label: text(t, 'contextMenu.openLyrics', 'Open lyrics'),
       icon: FileText,
@@ -157,6 +169,18 @@ export function buildTrackContextActions({
         if (!isCurrent) player.playTrack(track);
         player.openLyricsFullscreen();
       },
+    },
+    isBeat && track.beatContactEnabled && track.artistId && {
+      id: 'track-contact-producer',
+      label: text(t, 'beats.contactProducer', 'Contact producer'),
+      icon: MessageCircle,
+      onSelect: () => navigate(`/artist/${track.artistId}#contact`),
+    },
+    openReport && {
+      id: 'track-report',
+      label: text(t, 'contextMenu.report', 'Report'),
+      icon: Flag,
+      onSelect: () => openReport({ targetType: 'TRACK', targetId: track.id }),
     },
     menuSeparator('track-share-separator'),
     {

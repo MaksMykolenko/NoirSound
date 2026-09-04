@@ -22,18 +22,21 @@ test.describe('Batch Upload Studio', () => {
       }))
     );
     await page.getByRole('button', { name: 'Create batch draft' }).click();
-    const firstTrackButton = page.getByRole('button', { name: /^batch one batch_one\.wav/ });
+    const firstTrackButton = page.getByRole('button', { name: /^batch one\b.*\bbatch_one\.wav/ });
     await expect(firstTrackButton).toBeVisible();
 
-    const names = ['batch one', 'batch two', 'batch three', 'batch four'];
+    const runToken = `batch-${Date.now()}`;
+    const baseNames = ['batch one', 'batch two', 'batch three', 'batch four'];
+    const names = baseNames.map(name => `${name} ${runToken}`);
     for (let index = 0; index < names.length; index += 1) {
       await page.getByRole('button', {
-        name: new RegExp(`^${names[index]} batch_${['one', 'two', 'three', 'four'][index]}\\.wav`),
+        name: new RegExp(`^${baseNames[index]}\\b.*\\bbatch_${['one', 'two', 'three', 'four'][index]}\\.wav`),
       }).click();
       const drawer = page.getByRole('dialog');
       await expect(drawer).toBeVisible();
+      await drawer.getByLabel('Title', { exact: true }).fill(names[index]);
       await drawer.getByTestId('genre-picker-trigger').click();
-      await drawer.locator('[data-genre-option="electronic"]').click();
+      await page.locator('[data-genre-option="electronic"]').click();
       if (index >= 2) {
         await drawer.getByRole('combobox', { name: 'Release target', exact: true }).selectOption('PLAYLIST');
       }
@@ -70,7 +73,7 @@ test.describe('Batch Upload Studio', () => {
     await publish.click();
     await expect(page.getByText('The batch has been published.')).toBeVisible({ timeout: 20_000 });
 
-    const tracksResponse = await page.request.get(`${API_BASE}/tracks`);
+    const tracksResponse = await page.request.get(`${API_BASE}/tracks`, { params: { q: runToken } });
     const tracks = (await tracksResponse.json()).data;
     for (const name of names) {
       expect(tracks.some((track) => track.title === name)).toBeTruthy();
@@ -86,12 +89,12 @@ test.describe('Batch Upload Studio', () => {
     const href = await playlistLink.getAttribute('href');
     const playlistResponse = await page.request.get(`${API_BASE}${href.replace('/playlist/', '/playlists/')}`);
     const playlist = (await playlistResponse.json()).playlist;
-    expect(playlist.tracks.map((entry) => entry.track.title)).toEqual(['batch four', 'batch three']);
+    expect(playlist.tracks.map((entry) => entry.track.title)).toEqual([names[3], names[2]]);
 
     await page.goto(href);
-    await expect(page.getByRole('heading', { name: playlistTitle })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Open batch four by Velvet Circuit' })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Open batch three by Velvet Circuit' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: playlistTitle, level: 1 })).toBeVisible();
+    await expect(page.getByRole('link', { name: `Open ${names[3]} by Velvet Circuit` })).toBeVisible();
+    await expect(page.getByRole('link', { name: `Open ${names[2]} by Velvet Circuit` })).toBeVisible();
 
     const afterRecent = await page.request.get(`${API_BASE}/me/recently-played`);
     const afterRecentBody = afterRecent.ok() ? await afterRecent.json() : { data: [] };
@@ -213,7 +216,7 @@ test.describe('Batch Upload Studio', () => {
     expect(failedTrack.status).toBe('FAILED');
     expect(privateTrack.status).toBe('PUBLISHED');
 
-    const catalog = (await (await page.request.get(`${API_BASE}/tracks`)).json()).data;
+    const catalog = (await (await page.request.get(`${API_BASE}/tracks`, { params: { q: String(suffix) } })).json()).data;
     expect(catalog.some((track) => track.id === publicTrack.trackId)).toBeTruthy();
     expect(catalog.some((track) => track.id === privateTrack.trackId)).toBeFalsy();
     const publicLyrics = await page.request.get(`${API_BASE}/tracks/${publicTrack.trackId}/lyrics`);

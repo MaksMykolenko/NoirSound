@@ -27,6 +27,9 @@ describe('artist access admin API', () => {
     app = buildServer();
     await app.ready();
     await seedDemo(app.prisma);
+    // Keep one server listener for the suite so successive real HTTP requests
+    // cannot reuse a socket whose temporary Supertest listener was closed.
+    await app.listen({ host: '127.0.0.1', port: 0 });
 
     const adminLogin = await supertest(app.server)
       .post('/api/auth/login')
@@ -85,6 +88,7 @@ describe('artist access admin API', () => {
     expect(response.body.user.canUploadTracks).toBe(true);
     expect(response.body.user.uploadAccessReason).toBeNull();
     expect(response.body.user.artistProfileId).toBeTruthy();
+    expect(response.body.user).not.toHaveProperty('email');
 
     const profile = await app.prisma.artistProfile.findUnique({ where: { userId: target.id } });
     expect(profile).toBeTruthy();
@@ -368,7 +372,7 @@ describe('artist access admin API', () => {
       .post('/api/uploads/track/init')
       .set('Cookie', target.cookie)
       .send(validUploadBody({ title: 'Allowed Track' }));
-    expect(allowed.statusCode).toBe(200);
+    expect(allowed.statusCode, allowed.text).toBe(200);
     expect(allowed.body.trackId).toBeTruthy();
   });
 

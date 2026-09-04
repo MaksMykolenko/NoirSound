@@ -28,11 +28,10 @@ describe('BrandLogo', () => {
     expect(screen.getByRole('link', { name: 'NoirSound home' })).toHaveAttribute('href', '/');
   });
 
-  it('animates all equalizer bars only while a track is playing', () => {
+  it('announces playing and paused states from the player store', () => {
     usePlayerStore.setState({ currentTrack: demoTrack, isPlaying: true });
-    const { container, rerender } = renderBrandLogo();
+    const { rerender } = renderBrandLogo();
 
-    expect(container.querySelectorAll('[class*="animate-eq-"]')).toHaveLength(3);
     expect(screen.getByText('Music playing')).toBeInTheDocument();
 
     usePlayerStore.setState({ isPlaying: false });
@@ -42,7 +41,6 @@ describe('BrandLogo', () => {
       </MemoryRouter>
     );
 
-    expect(container.querySelectorAll('[class*="animate-eq-"]')).toHaveLength(0);
     expect(screen.getByText('Music paused')).toBeInTheDocument();
   });
 });

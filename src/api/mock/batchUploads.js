@@ -2,13 +2,30 @@ const batches = new Map();
 
 const inferTitle = (name) => name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim();
 
+function itemHasLyricsContent(item) {
+  return Boolean(
+    item.lyricsText?.trim()
+    || (item.lyricsType === 'SYNCED' && Array.isArray(item.lyricsSynced) && item.lyricsSynced.length > 0)
+  );
+}
+
+function itemMissingFields(item) {
+  if (item.target === 'EXCLUDED') return [];
+  const missing = [];
+  if (!item.title) missing.push('title');
+  if (!item.genre) missing.push('genre');
+  if (!item.copyrightConfirmed) missing.push('copyrightConfirmed');
+  if (itemHasLyricsContent(item) && !item.lyricsRightsConfirmed) missing.push('lyricsRightsConfirmed');
+  return missing;
+}
+
 function validation(batch) {
   const missingFields = [];
   const active = batch.items.filter((item) => item.target !== 'EXCLUDED');
   active.forEach((item) => {
-    if (!item.title) missingFields.push({ scope: 'item', itemId: item.id, field: 'title' });
-    if (!item.genre) missingFields.push({ scope: 'item', itemId: item.id, field: 'genre' });
-    if (!item.copyrightConfirmed) missingFields.push({ scope: 'item', itemId: item.id, field: 'copyrightConfirmed' });
+    itemMissingFields(item).forEach((field) => {
+      missingFields.push({ scope: 'item', itemId: item.id, field });
+    });
   });
   if (active.some((item) => item.target === 'PLAYLIST') && !batch.playlist.title) {
     missingFields.push({ scope: 'playlist', field: 'title' });
@@ -21,7 +38,13 @@ function validation(batch) {
 }
 
 function snapshot(batch) {
-  return { ...structuredClone(batch), ...validation(batch) };
+  const cloned = structuredClone(batch);
+  cloned.items = cloned.items.map((item) => ({
+    ...item,
+    hasLyrics: itemHasLyricsContent(item) && item.lyricsRightsConfirmed === true,
+    missingFields: itemMissingFields(item),
+  }));
+  return { ...cloned, ...validation(cloned) };
 }
 
 export async function createBatchUpload(files, mode = 'MIXED') {
@@ -50,6 +73,19 @@ export async function createBatchUpload(files, mode = 'MIXED') {
       genre: null,
       tags: [],
       description: '',
+      contentType: 'MUSIC',
+      beatBpm: null,
+      beatKey: null,
+      beatMood: null,
+      beatStyle: null,
+      beatLicenseType: null,
+      beatUsageNotes: null,
+      beatContactEnabled: false,
+      lyricsText: '',
+      lyricsType: 'NONE',
+      lyricsLanguage: null,
+      lyricsSynced: null,
+      lyricsRightsConfirmed: false,
       explicit: false,
       visibility: 'PUBLIC',
       copyrightConfirmed: false,
@@ -94,6 +130,20 @@ export async function getBatchUpload(batchId) {
 export async function updateBatchItem(batchId, itemId, updates) {
   const batch = batches.get(batchId);
   const item = batch.items.find((entry) => entry.id === itemId);
+  const nextItem = { ...item, ...updates };
+  const updatesLyrics = [
+    'lyricsText',
+    'lyricsType',
+    'lyricsLanguage',
+    'lyricsSynced',
+    'lyricsRightsConfirmed',
+  ].some((field) => field in updates);
+  if (updatesLyrics && itemHasLyricsContent(nextItem) && nextItem.lyricsRightsConfirmed !== true) {
+    const error = new Error('Confirm that you own these lyrics or have permission to publish them.');
+    error.status = 400;
+    error.code = 'LYRICS_RIGHTS_REQUIRED';
+    throw error;
+  }
   Object.assign(item, updates);
   if (updates.target === 'EXCLUDED') item.status = 'EXCLUDED';
   else if (item.status === 'EXCLUDED') item.status = 'DRAFT';
@@ -166,12 +216,27 @@ export async function retryBatchItem(batchId, itemId) {
 
 export async function publishBatchUpload(batchId, allowPartial = false) {
   const batch = batches.get(batchId);
+  const publishedTracks = [];
   batch.items.forEach((item) => {
-    if (item.status === 'READY') item.status = 'PUBLISHED';
+    if (item.status === 'READY') {
+      item.status = 'PUBLISHED';
+      publishedTracks.push({
+        id: item.trackId,
+        title: item.title,
+        contentType: item.contentType === 'BEAT' ? 'BEAT' : 'MUSIC',
+        beatBpm: item.contentType === 'BEAT' ? item.beatBpm ?? null : null,
+        beatKey: item.contentType === 'BEAT' ? item.beatKey ?? null : null,
+        beatMood: item.contentType === 'BEAT' ? item.beatMood ?? null : null,
+        beatStyle: item.contentType === 'BEAT' ? item.beatStyle ?? null : null,
+        beatLicenseType: item.contentType === 'BEAT' ? item.beatLicenseType ?? null : null,
+        beatUsageNotes: item.contentType === 'BEAT' ? item.beatUsageNotes ?? null : null,
+        beatContactEnabled: item.contentType === 'BEAT' && item.beatContactEnabled === true,
+      });
+    }
   });
   batch.status = batch.items.some((item) => item.status === 'FAILED') && allowPartial ? 'PARTIAL_READY' : 'PUBLISHED';
   if (batch.items.some((item) => item.target === 'PLAYLIST')) batch.playlist.id = `demo-playlist-${Date.now()}`;
-  return { batch: snapshot(batch), tracks: [], playlistId: batch.playlist.id, partial: batch.status === 'PARTIAL_READY' };
+  return { batch: snapshot(batch), tracks: publishedTracks, playlistId: batch.playlist.id, partial: batch.status === 'PARTIAL_READY' };
 }
 
 export async function cancelBatchUpload(batchId) {

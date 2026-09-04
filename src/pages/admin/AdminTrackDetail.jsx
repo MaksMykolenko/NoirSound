@@ -9,6 +9,8 @@ import {
   removeTrackLyrics,
   restoreTrack,
   unhideTrack,
+  updateTrackContentType,
+  getAdminTrackPreview,
 } from '../../api/admin';
 import { useToastStore } from '../../store/toastStore';
 import {
@@ -22,13 +24,16 @@ import {
 } from '../../components/admin/AdminUI';
 import { formatAdminDate, useAdminData } from '../../components/admin/adminUtils';
 import { getGenreLabel } from '../../utils/genreLabels';
+import AdminMediaPreview from '../../components/admin/AdminMediaPreview';
 
 export default function AdminTrackDetail() {
   const { id } = useParams();
   const { t, i18n } = useTranslation();
   const addToast = useToastStore((state) => state.addToast);
   const { data, loading, error, reload } = useAdminData(() => getAdminTrack(id), [id]);
+  const preview = useAdminData(() => getAdminTrackPreview(id), [id]);
   const [pendingAction, setPendingAction] = useState(null);
+  const [selectedContentType, setSelectedContentType] = useState('');
 
   if (loading) return <AdminLoading />;
   if (error) return <AdminError error={error} onRetry={reload} />;
@@ -42,6 +47,10 @@ export default function AdminTrackDetail() {
     restore: (reason) => restoreTrack(id, reason),
     reprocess: (reason) => forceReprocessTrack(id, reason),
     removeLyrics: (reason) => removeTrackLyrics(id, reason),
+    contentType: (reason) => updateTrackContentType(id, {
+      contentType: selectedContentType || track.contentType || 'MUSIC',
+      reason,
+    }),
   };
 
   async function confirm(reason) {
@@ -68,6 +77,7 @@ export default function AdminTrackDetail() {
           <dl className="mt-4 grid gap-4 sm:grid-cols-2">
             {[
               [t('admin.status'), <StatusBadge key="status" status={track.status} />],
+              [t('admin.contentType'), track.contentType === 'BEAT' ? t('content.beat') : t('content.music')],
               [t('admin.genre'), track.genre ? getGenreLabel(track.genre) : '—'],
               [t('admin.tags'), track.tags?.join(', ') || '—'],
               [t('admin.plays'), track.plays],
@@ -78,7 +88,7 @@ export default function AdminTrackDetail() {
             ].map(([label, value]) => (
               <div key={label}>
                 <dt className="font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-[var(--ns-text-muted)]">{label}</dt>
-                <dd className="mt-1 text-sm text-[var(--ns-text-secondary)]">{value}</dd>
+                <dd className="mt-1 break-words [overflow-wrap:anywhere] text-sm text-[var(--ns-text-secondary)]">{value}</dd>
               </div>
             ))}
           </dl>
@@ -86,17 +96,64 @@ export default function AdminTrackDetail() {
         <AdminPanel className="p-4">
           <h2 className="text-sm font-bold">{t('admin.actions')}</h2>
           <div className="mt-4 flex flex-col gap-2">
+            <label className="space-y-1.5">
+              <span className="ns-eyebrow">{t('admin.contentType')}</span>
+              <select
+                className="ns-field px-3"
+                value={selectedContentType || track.contentType || 'MUSIC'}
+                onChange={(event) => setSelectedContentType(event.target.value)}
+              >
+                <option value="MUSIC">{t('content.music')}</option>
+                <option value="BEAT">{t('content.beats')}</option>
+              </select>
+            </label>
+            <button
+              type="button"
+              disabled={(selectedContentType || track.contentType || 'MUSIC') === (track.contentType || 'MUSIC')}
+              onClick={() => setPendingAction('contentType')}
+              className="ns-button-secondary rounded px-3 py-2 text-sm disabled:opacity-40"
+            >
+              {t('admin.updateContentType')}
+            </button>
             {track.status === 'PUBLISHED' && <button type="button" onClick={() => setPendingAction('hide')} className="ns-button-secondary rounded px-3 py-2 text-sm">{t('admin.hide')}</button>}
             {track.status === 'HIDDEN' && <button type="button" onClick={() => setPendingAction('unhide')} className="ns-button-secondary rounded px-3 py-2 text-sm">{t('admin.unhide')}</button>}
-            {['PUBLISHED', 'PENDING_REVIEW', 'HIDDEN'].includes(track.status) && <button type="button" onClick={() => setPendingAction('reject')} className="rounded bg-[var(--ns-danger)] px-3 py-2 text-sm font-semibold text-white">{t('admin.reject')}</button>}
+            {['PUBLISHED', 'PENDING_REVIEW', 'HIDDEN'].includes(track.status) && <button type="button" onClick={() => setPendingAction('reject')} className="rounded bg-[var(--ns-danger)] px-3 py-2 text-sm font-semibold text-[var(--ns-on-danger)]">{t('admin.reject')}</button>}
             {track.status === 'REJECTED' && <button type="button" onClick={() => setPendingAction('restore')} className="ns-button-secondary rounded px-3 py-2 text-sm">{t('admin.restore')}</button>}
             {['FAILED', 'REJECTED'].includes(track.status) && <button type="button" onClick={() => setPendingAction('reprocess')} className="ns-button-secondary rounded px-3 py-2 text-sm">{t('admin.forceReprocess')}</button>}
-            {track.hasLyrics && <button type="button" onClick={() => setPendingAction('removeLyrics')} className="rounded bg-[var(--ns-danger)] px-3 py-2 text-sm font-semibold text-white">{t('lyrics.remove')}</button>}
+            {track.hasLyrics && <button type="button" onClick={() => setPendingAction('removeLyrics')} className="rounded bg-[var(--ns-danger)] px-3 py-2 text-sm font-semibold text-[var(--ns-on-danger)]">{t('lyrics.remove')}</button>}
             {track.status === 'PUBLISHED' && <Link to={`/track/${track.id}`} className="ns-button-secondary rounded px-3 py-2 text-center text-sm">{t('admin.openPublicPage')}</Link>}
             {track.artist?.id && <Link to={`/admin/artists/${track.artist.id}`} className="ns-button-secondary rounded px-3 py-2 text-center text-sm">{t('admin.viewArtist')}</Link>}
           </div>
         </AdminPanel>
       </div>
+      <AdminMediaPreview
+        title={t('admin.moderationPreview')}
+        description={t('admin.securePreviewDescription')}
+        url={preview.data?.url}
+        mediaLabel={t('admin.previewTrack', { title: track.title })}
+        unavailableLabel={preview.loading ? t('admin.loadingPreview') : t('admin.previewUnavailable')}
+      />
+      {track.contentType === 'BEAT' && (
+        <AdminPanel className="p-4" data-testid="admin-beat-metadata">
+          <h2 className="text-sm font-bold">{t('beats.beatMetadata')}</h2>
+          <dl className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              [t('beats.bpm'), track.beatBpm ?? '—'],
+              [t('beats.key'), track.beatKey || '—'],
+              [t('beats.mood'), track.beatMood || '—'],
+              [t('beats.style'), track.beatStyle || '—'],
+              [t('beats.licenseType'), track.beatLicenseType || '—'],
+              [t('beats.usageNotes'), track.beatUsageNotes || '—'],
+              [t('beats.contactEnabled'), track.beatContactEnabled ? t('admin.yes') : t('admin.no')],
+            ].map(([label, value]) => (
+              <div key={label}>
+                <dt className="font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-[var(--ns-text-muted)]">{label}</dt>
+                <dd className="mt-1 whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-sm text-[var(--ns-text-secondary)]">{value}</dd>
+              </div>
+            ))}
+          </dl>
+        </AdminPanel>
+      )}
       <AdminPanel className="p-4">
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-sm font-bold">{t('admin.lyricsModeration')}</h2>
@@ -105,18 +162,18 @@ export default function AdminTrackDetail() {
         <dl className="mt-4 grid gap-4 sm:grid-cols-3">
           <div>
             <dt className="font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-[var(--ns-text-muted)]">{t('lyrics.type')}</dt>
-            <dd className="mt-1 text-sm text-[var(--ns-text-secondary)]">{track.lyricsType || 'NONE'}</dd>
+            <dd className="mt-1 break-words [overflow-wrap:anywhere] text-sm text-[var(--ns-text-secondary)]">{track.lyricsType || 'NONE'}</dd>
           </div>
           <div>
             <dt className="font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-[var(--ns-text-muted)]">{t('lyrics.language')}</dt>
-            <dd className="mt-1 text-sm text-[var(--ns-text-secondary)]">{track.lyricsLanguage || '—'}</dd>
+            <dd className="mt-1 break-words [overflow-wrap:anywhere] text-sm text-[var(--ns-text-secondary)]">{track.lyricsLanguage || '—'}</dd>
           </div>
           <div>
             <dt className="font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-[var(--ns-text-muted)]">{t('lyrics.rightsConfirm')}</dt>
-            <dd className="mt-1 text-sm text-[var(--ns-text-secondary)]">{track.lyricsRightsConfirmed ? t('admin.confirmed') : t('admin.unavailable')}</dd>
+            <dd className="mt-1 break-words [overflow-wrap:anywhere] text-sm text-[var(--ns-text-secondary)]">{track.lyricsRightsConfirmed ? t('admin.confirmed') : t('admin.unavailable')}</dd>
           </div>
         </dl>
-        <div className="mt-4 max-h-80 overflow-y-auto rounded border border-[var(--ns-border-subtle)] bg-black/20 p-4">
+        <div className="mt-4 max-h-80 overflow-y-auto rounded border border-[var(--ns-border-subtle)] bg-[var(--ns-input-bg)] p-4">
           {track.hasLyrics
             ? <p className="whitespace-pre-wrap text-sm leading-7 text-[var(--ns-text-secondary)]">{track.lyricsText}</p>
             : <p className="text-sm text-[var(--ns-text-muted)]">{t('lyrics.noLyrics')}</p>}
@@ -130,7 +187,7 @@ export default function AdminTrackDetail() {
       <AdminPanel className="p-4">
         <h2 className="mb-3 text-sm font-bold">{t('admin.reports')}</h2>
         {!data.reports?.length ? <AdminEmpty text={t('admin.noReportsYet')} /> : data.reports.map((report) => (
-          <Link key={report.id} to={`/admin/reports/${report.id}`} className="flex items-center justify-between border-t border-[var(--ns-border-subtle)] py-3 text-sm first:border-0">
+          <Link key={report.id} to={`/admin/reports/${report.id}`} className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 border-t border-[var(--ns-border-subtle)] py-3 text-sm first:border-0">
             <span>{t(`admin.statusValues.${report.reason}`, { defaultValue: report.reason })}</span>
             <StatusBadge status={report.status} />
           </Link>

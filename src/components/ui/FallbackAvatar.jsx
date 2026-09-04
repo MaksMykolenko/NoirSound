@@ -18,19 +18,16 @@ export default function FallbackAvatar({
   const fallbackSurfaceClass = semanticFallback
     ? 'bg-[var(--ns-card-soft)]'
     : 'bg-zinc-900';
-  const fallbackRingClass = semanticFallback
-    ? 'border-[var(--ns-border)]'
-    : 'border-white/8';
   const fallbackTextClass = semanticFallback
     ? 'text-[var(--ns-text)]'
-    : 'text-white/95';
+    : 'text-[var(--ns-text-primary)]';
 
   if (src && !imageFailed) {
     return (
       <img
         src={src}
         alt={name || 'Artist'}
-        className={`${className} ${imageClassName}`}
+        className={`ns-avatar ${className} ${imageClassName}`}
         onError={() => setImageFailed(true)}
       />
     );
@@ -41,13 +38,10 @@ export default function FallbackAvatar({
       role="img"
       aria-label={`Generated avatar for ${name || 'unknown artist'}`}
       data-visual-key={visual.key}
-      className={`relative flex items-center justify-center overflow-hidden ${fallbackSurfaceClass} ${className}`}
+      style={{ containerType: 'inline-size' }}
+      className={`ns-avatar relative flex items-center justify-center ${fallbackSurfaceClass} ${className}`}
     >
-      <span
-        className={`absolute aspect-square w-3/4 rounded-full border ${fallbackRingClass}`}
-        style={{ transform: `translate(${visual.x - 44}%, ${visual.y - 44}%)` }}
-      />
-      <span className={`relative font-sans text-[0.34em] font-bold tracking-tight ${fallbackTextClass}`}>
+      <span className={`font-sans text-[clamp(.625rem,30cqw,3rem)] font-semibold tracking-tight ${fallbackTextClass}`}>
         {initialsFor(name, '?')}
       </span>
     </div>

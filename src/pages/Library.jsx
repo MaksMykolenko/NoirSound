@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Heart, History, ListMusic, Plus, Users } from 'lucide-react';
+import { Heart, History, ListMusic, Plus, Radio, Users } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   getArtists,
@@ -23,6 +23,7 @@ import LoadingState from '../components/ui/LoadingState';
 import CreatePlaylistModal from '../components/playlists/CreatePlaylistModal';
 import PageMeta from '../components/meta/PageMeta';
 import useScrollableTabs from '../hooks/useScrollableTabs';
+import { isBeatTrack } from '../utils/trackContent';
 
 export default function Library() {
   const { t } = useTranslation();
@@ -31,13 +32,15 @@ export default function Library() {
   const requestedTab = searchParams.get('tab');
 
   const tabs = [
-    { id: 'liked', label: t('nav.likedSongs'), icon: Heart },
+    { id: 'music', label: t('beats.likedMusic'), icon: Heart },
+    { id: 'beats', label: t('beats.likedBeats'), icon: Radio },
     { id: 'playlists', label: t('nav.playlists'), icon: ListMusic },
     { id: 'recently', label: t('nav.recentlyPlayed'), icon: History },
     { id: 'artists', label: t('nav.followedArtists'), icon: Users },
   ];
 
-  const activeTab = tabs.some((tab) => tab.id === requestedTab) ? requestedTab : 'liked';
+  const normalizedRequestedTab = requestedTab === 'liked' ? 'music' : requestedTab;
+  const activeTab = tabs.some((tab) => tab.id === normalizedRequestedTab) ? normalizedRequestedTab : 'music';
   const tabsRef = useScrollableTabs(activeTab);
   const demoMode = isMockMode();
 
@@ -120,6 +123,8 @@ export default function Library() {
     }
     return tracks;
   }, [demoMode, likedTracks, tracks]);
+  const likedMusic = useMemo(() => likedSongs.filter((track) => !isBeatTrack(track)), [likedSongs]);
+  const likedBeats = useMemo(() => likedSongs.filter(isBeatTrack), [likedSongs]);
 
   const pageMeta = (
     <PageMeta
@@ -167,6 +172,19 @@ export default function Library() {
               key={tab.id}
               onClick={() => setSearchParams({ tab: tab.id })}
               role="tab"
+              id={`library-tab-${tab.id}`}
+              aria-controls="library-tab-panel"
+              tabIndex={active ? 0 : -1}
+              onKeyDown={(event) => {
+                const index = tabs.findIndex((item) => item.id === tab.id);
+                const next = event.key === 'ArrowRight' ? (index + 1) % tabs.length
+                  : event.key === 'ArrowLeft' ? (index - 1 + tabs.length) % tabs.length
+                    : event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : null;
+                if (next === null) return;
+                event.preventDefault();
+                tabsRef.current?.querySelectorAll('[role="tab"]')[next]?.focus();
+                setSearchParams({ tab: tabs[next].id });
+              }}
               aria-selected={active}
               aria-current={active ? 'page' : undefined}
               className={`ns-tab flex shrink-0 cursor-pointer items-center gap-2 whitespace-nowrap border-b-2 px-4 py-3 font-sans text-ns-label font-medium transition-colors sm:px-5 ${
@@ -180,10 +198,10 @@ export default function Library() {
         })}
       </div>
 
-      <div className="pt-2">
+      <div id="library-tab-panel" role="tabpanel" aria-labelledby={`library-tab-${activeTab}`} className="pt-2">
         {error ? (
           <ErrorState
-            title="Library unavailable"
+            title={t('media.libraryUnavailable')}
             message={error}
             onRetry={() => setPlaylistRevision((current) => current + 1)}
           />
@@ -192,7 +210,7 @@ export default function Library() {
         ) : activeTab === 'recently' ? (
           recentlyPlayedError ? (
             <ErrorState
-              title="Listening history unavailable"
+              title={t('media.historyUnavailable')}
               message={recentlyPlayedError}
               onRetry={() => loadRecentlyPlayed()}
             />
@@ -211,19 +229,19 @@ export default function Library() {
               ))}
             </div>
           )
-        ) : activeTab === 'liked' ? (
-          likedSongs.length === 0 ? (
+        ) : activeTab === 'music' || activeTab === 'beats' ? (
+          (activeTab === 'beats' ? likedBeats : likedMusic).length === 0 ? (
             <EmptyState
               iconName="Heart"
-              title={t('empty.noLikedSongs')}
-              description={t('profile.likeTracksDesc')}
+              title={activeTab === 'beats' ? t('beats.noLikedBeats') : t('empty.noLikedSongs')}
+              description={activeTab === 'beats' ? t('beats.likeBeatsDesc') : t('profile.likeTracksDesc')}
               actionText={t('actions.discoverMusic')}
-              onAction={() => navigate('/discover')}
+              onAction={() => navigate(activeTab === 'beats' ? '/discover?content=BEAT' : '/discover?content=MUSIC')}
             />
           ) : (
             <div className="space-y-1">
-              {likedSongs.map((track, index) => (
-                <TrackListItem key={track.id} track={track} index={index} tracksContext={likedSongs} />
+              {(activeTab === 'beats' ? likedBeats : likedMusic).map((track, index, collection) => (
+                <TrackListItem key={track.id} track={track} index={index} tracksContext={collection} />
               ))}
             </div>
           )

@@ -4,10 +4,19 @@ import { MemoryRouter } from 'react-router-dom';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import i18n from '../../src/i18n';
 import Discover from '../../src/pages/Discover';
-import { useDiscoverTracks } from '../../src/hooks/queries/useTracks';
+import { getGroupOf, normalizeGenre } from '../../src/constants/musicGenres';
+import {
+  useDiscoverPersonalization,
+  useCatalogTracks,
+  useCatalogSelection,
+} from '../../src/hooks/queries/useTracks';
 import { useArtistsWithTracks } from '../../src/hooks/queries/useArtists';
 
-vi.mock('../../src/hooks/queries/useTracks', () => ({ useDiscoverTracks: vi.fn() }));
+vi.mock('../../src/hooks/queries/useTracks', () => ({
+  useCatalogTracks: vi.fn(),
+  useCatalogSelection: vi.fn(),
+  useDiscoverPersonalization: vi.fn(),
+}));
 vi.mock('../../src/hooks/queries/useArtists', () => ({ useArtistsWithTracks: vi.fn() }));
 
 const track = (over) => ({
@@ -26,7 +35,13 @@ const track = (over) => ({
 });
 
 function setup(tracks) {
-  useDiscoverTracks.mockReturnValue({ data: tracks, isLoading: false, error: null });
+  const response = (options) => {
+    const items = tracks.filter((item) => (!options.group || getGroupOf(item.genre) === options.group) && (!options.genre || normalizeGenre(item.genre) === options.genre));
+    return { items, total: items.length, pageInfo: { hasNextPage: false, nextCursor: null, pageSize: 30 }, facets: { genres: [], styles: [], moods: [], keys: [] }, meta: { trendingWindowDays: 7 } };
+  };
+  useCatalogTracks.mockImplementation((options) => ({ data: { pages: [response(options)] }, isLoading: false, error: null, hasNextPage: false }));
+  useCatalogSelection.mockImplementation((options) => ({ data: response(options), isLoading: false, error: null }));
+  useDiscoverPersonalization.mockReturnValue({ data: undefined });
   useArtistsWithTracks.mockReturnValue({ data: [], isLoading: false, error: null });
   return render(
     <MemoryRouter>
@@ -41,32 +56,34 @@ describe('Discover genre filters', () => {
     vi.clearAllMocks();
   });
 
-  it('renders a bounded quick-filter row (not a giant genre row) with a More control', () => {
+  it('renders a bounded quick-filter row plus a separate editorial genre surface', () => {
     setup([track({ id: '1' })]);
     const tabs = screen.getByTestId('genre-quick-tabs');
-    // Bounded: a handful of quick groups + All + More, never the full taxonomy.
+    // Bounded: a handful of quick groups + All + View all, never the full taxonomy.
     expect(within(tabs).getAllByRole('button').length).toBeLessThanOrEqual(9);
-    expect(within(tabs).getByText(i18n.t('discover.tabs.more'))).toBeInTheDocument();
+    expect(within(tabs).getByText(i18n.t('discover.viewAll'))).toBeInTheDocument();
+    expect(screen.getByTestId('discover-genre-tiles')).toBeInTheDocument();
   });
 
   it('opens the full grouped genre picker from More', () => {
     setup([track({ id: '1' })]);
-    fireEvent.click(screen.getByText(i18n.t('discover.tabs.more')));
+    fireEvent.click(within(screen.getByTestId('genre-quick-tabs')).getByText(i18n.t('discover.viewAll')));
     fireEvent.click(screen.getByTestId('genre-picker-trigger'));
     const panel = screen.getByTestId('genre-picker-panel');
     expect(panel.querySelector('[data-genre-option="bachata"]')).toBeTruthy();
   });
 
-  it('filters tracks by the selected group', () => {
+  it('passes the selected group to the server and displays its returned tracks', () => {
     setup([
       track({ id: '1', title: 'HouseSong', genre: 'house' }),
       track({ id: '2', title: 'RockSong', genre: 'rock' }),
     ]);
     // Quick-tab text is an English genre-group name, never an i18n lookup —
     // see NOIRSOUND_GENRE_ENGLISH_ONLY_REPORT.md.
-    fireEvent.click(screen.getByText('Electronic'));
+    fireEvent.click(within(screen.getByTestId('genre-quick-tabs')).getByText('Electronic'));
     expect(screen.getAllByText('HouseSong').length).toBeGreaterThan(0);
     expect(screen.queryByText('RockSong')).not.toBeInTheDocument();
+    expect(useCatalogTracks).toHaveBeenLastCalledWith(expect.objectContaining({ group: 'electronic' }));
   });
 
   it('normalizes a legacy genre value safely and labels it in English', () => {
@@ -74,7 +91,7 @@ describe('Discover genre filters', () => {
     // Legacy "Dark Synth" displays as its canonical English label.
     expect(screen.getAllByText('Synthwave').length).toBeGreaterThan(0);
     // ...and is grouped under Electronic.
-    fireEvent.click(screen.getByText('Electronic'));
+    fireEvent.click(within(screen.getByTestId('genre-quick-tabs')).getByText('Electronic'));
     expect(screen.getAllByText('LegacyTrack').length).toBeGreaterThan(0);
   });
 
@@ -102,7 +119,7 @@ describe('Discover genre filters', () => {
     expect(within(tabs).getByText('World')).toBeInTheDocument();
 
     // The full picker's grouped labels and option labels stay English.
-    fireEvent.click(within(tabs).getByText(i18n.t('discover.tabs.more')));
+    fireEvent.click(within(tabs).getByText(i18n.t('discover.viewAll')));
     fireEvent.click(screen.getByTestId('genre-picker-trigger'));
     const panel = screen.getByTestId('genre-picker-panel');
     expect(within(panel).getByText('Hip-Hop & Urban')).toBeInTheDocument();

@@ -4,34 +4,154 @@ const { scaledRateLimitMax } = require('../lib/rateLimit');
 const { optionalAuthenticatedUserId } = require('../lib/optionalAuth');
 const { auditData, createAudit } = require('../lib/auditLog');
 const { hasLyrics, serializeLyrics, validateLyricsPayload } = require('../lib/lyrics');
+const { parseTrackContentType } = require('../lib/trackContentType');
+const { parseDiscoverQuery } = require('../lib/discoverQuery');
+const { publicTrackWhere: publicVisibilityWhere } = require('../lib/publicVisibility');
+const { getGenreFilterValues } = require('../constants/musicGenres');
+
+const PUBLIC_TRACK_ARTIST_INCLUDE = {
+  artist: {
+    include: {
+      user: {
+        select: {
+          displayName: true,
+          username: true,
+          avatarUrl: true
+        }
+      }
+    }
+  }
+};
+
+function publicTrackWhere({ contentType, query, filters }) {
+  return {
+    ...publicVisibilityWhere(),
+    ...(contentType ? { contentType } : {}),
+    ...(filters.genre || filters.groupGenres
+      ? { genre: { in: getGenreFilterValues(filters.genre ? [filters.genre] : filters.groupGenres), mode: 'insensitive' } }
+      : {}),
+    ...(filters.style ? { beatStyle: { contains: filters.style, mode: 'insensitive' } } : {}),
+    ...(filters.mood ? { beatMood: { contains: filters.mood, mode: 'insensitive' } } : {}),
+    ...(filters.key ? { beatKey: { equals: filters.key, mode: 'insensitive' } } : {}),
+    ...(filters.bpmWhere ? { beatBpm: filters.bpmWhere } : {}),
+    ...(query ? {
+      OR: [
+        { title: { contains: query, mode: 'insensitive' } },
+        { genre: { contains: query, mode: 'insensitive' } },
+        { description: { contains: query, mode: 'insensitive' } },
+        { beatKey: { contains: query, mode: 'insensitive' } },
+        { beatMood: { contains: query, mode: 'insensitive' } },
+        { beatStyle: { contains: query, mode: 'insensitive' } },
+        {
+          artist: {
+            user: {
+              OR: [
+                { displayName: { contains: query, mode: 'insensitive' } },
+                { username: { contains: query, mode: 'insensitive' } }
+              ]
+            }
+          }
+        }
+      ]
+    } : {}),
+  };
+}
 
 async function tracksRoutes(fastify, _options) {
   // GET /api/tracks
   fastify.get('/', async (request, reply) => {
     try {
-      const tracks = await fastify.prisma.track.findMany({
-        where: {
-          status: 'PUBLISHED',
-          isPublic: true,
-          artist: { isHidden: false, user: { status: 'ACTIVE' } }
-        },
-        include: {
-          artist: {
-            include: {
-              user: {
-                select: {
-                  displayName: true,
-                  username: true,
-                  avatarUrl: true
-                }
-              }
-            }
-          }
-        },
-        orderBy: { publishedAt: 'desc' },
-        take: 20
+      const contentTypeResult = parseTrackContentType(request.query.contentType, {
+        defaultValue: null
       });
-      return { data: tracks.map(serializePublicTrack) };
+      if (!contentTypeResult.ok) {
+        return reply.status(400).send({
+          error: contentTypeResult.error,
+          message: contentTypeResult.message
+        });
+      }
+      const discoverQueryResult = parseDiscoverQuery(request.query);
+      if (!discoverQueryResult.ok) {
+        return reply.status(400).send({
+          error: discoverQueryResult.error,
+          message: discoverQueryResult.message
+        });
+      }
+      const filters = discoverQueryResult.value;
+      const hasBeatFilter = Boolean(filters.style || filters.mood || filters.key || filters.bpm);
+      if (hasBeatFilter && contentTypeResult.value !== 'BEAT') {
+        return reply.status(400).send({
+          error: 'BEAT_FILTER_REQUIRES_BEAT_CONTENT',
+          message: 'Beat filters require contentType=BEAT.'
+        });
+      }
+      const rawQuery = request.query.q;
+      if (rawQuery !== undefined && (typeof rawQuery !== 'string' || rawQuery.trim().length > 120)) {
+        return reply.status(400).send({
+          error: 'SEARCH_QUERY_INVALID',
+          message: 'Search query must be a string no longer than 120 characters.'
+        });
+      }
+      const query = rawQuery?.trim();
+      const where = publicTrackWhere({
+        contentType: contentTypeResult.value,
+        query,
+        filters
+      });
+
+      if (filters.sort === 'trending') {
+        const cutoff = new Date(Date.now() - (7 * 24 * 60 * 60 * 1000));
+        const rankedPlayEvents = await fastify.prisma.playEvent.groupBy({
+          by: ['trackId'],
+          where: {
+            qualified: true,
+            createdAt: { gte: cutoff },
+            track: where
+          },
+          _count: { trackId: true },
+          orderBy: [
+            { _count: { trackId: 'desc' } },
+            { trackId: 'asc' }
+          ],
+          skip: filters.skip,
+          take: filters.limit
+        });
+        const rankedIds = rankedPlayEvents.map((entry) => entry.trackId);
+        if (rankedIds.length > 0) {
+          const tracks = await fastify.prisma.track.findMany({
+            where: { ...where, id: { in: rankedIds } },
+            include: PUBLIC_TRACK_ARTIST_INCLUDE
+          });
+          const tracksById = new Map(tracks.map((track) => [track.id, track]));
+          return {
+            data: rankedIds.map((id) => tracksById.get(id)).filter(Boolean).map(serializePublicTrack),
+            meta: { page: filters.page, limit: filters.limit, sort: filters.sort, windowDays: 7 }
+          };
+        }
+        return {
+          data: [],
+          meta: { page: filters.page, limit: filters.limit, sort: filters.sort, windowDays: 7 }
+        };
+      }
+
+      const orderBy = filters.sort === 'played'
+        ? [{ plays: 'desc' }, { publishedAt: { sort: 'desc', nulls: 'last' } }, { id: 'asc' }]
+        : [{ publishedAt: { sort: 'desc', nulls: 'last' } }, { id: 'asc' }];
+      const tracks = await fastify.prisma.track.findMany({
+        where,
+        include: PUBLIC_TRACK_ARTIST_INCLUDE,
+        orderBy,
+        skip: filters.skip,
+        take: filters.limit
+      });
+      return {
+        data: tracks.map(serializePublicTrack),
+        meta: {
+          page: filters.page,
+          limit: filters.limit,
+          sort: filters.sort
+        }
+      };
     } catch (error) {
       fastify.log.error(error);
       return reply.status(500).send({ error: 'Internal Server Error' });
@@ -82,9 +202,7 @@ async function tracksRoutes(fastify, _options) {
       const track = await fastify.prisma.track.findFirst({
         where: {
           id: request.params.id,
-          status: 'PUBLISHED',
-          isPublic: true,
-          artist: { isHidden: false, user: { status: 'ACTIVE' } }
+          ...publicVisibilityWhere()
         }
       });
       if (!track) {
@@ -279,7 +397,11 @@ async function tracksRoutes(fastify, _options) {
             data: { likes: { increment: 1 } }
           });
         }
-        return tx.track.count({ where: { id: request.params.id } });
+        // Resolve the final query before the interactive transaction callback
+        // returns. Handing Prisma's thenable straight back lets the pg adapter
+        // begin transaction cleanup while the query is still in flight.
+        const trackCount = await tx.track.count({ where: { id: request.params.id } });
+        return trackCount;
       });
       if (trackExists === 0) {
         return reply.status(404).send({ error: 'Track not found' });
@@ -321,9 +443,7 @@ async function tracksRoutes(fastify, _options) {
       const track = await fastify.prisma.track.findFirst({
         where: {
           id: request.params.id,
-          status: 'PUBLISHED',
-          isPublic: true,
-          artist: { isHidden: false, user: { status: 'ACTIVE' } }
+          ...publicVisibilityWhere()
         }
       });
       if (!track) {
@@ -365,9 +485,7 @@ async function tracksRoutes(fastify, _options) {
       const track = await fastify.prisma.track.findFirst({
         where: {
           id: request.params.id,
-          status: 'PUBLISHED',
-          isPublic: true,
-          artist: { isHidden: false, user: { status: 'ACTIVE' } }
+          ...publicVisibilityWhere()
         }
       });
       if (!track) {

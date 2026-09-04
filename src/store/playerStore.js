@@ -8,20 +8,32 @@ import connectPresenceService from '../services/noirsoundConnect';
 function reportPlaybackError(message) {
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent('noirsound:api-error', {
-      detail: { message, status: 0 },
+      detail: { message, status: 0, source: 'listener-player' },
     }));
   }
 }
 
 let audio = null;
+let configureAudio = () => {};
+
+function ensureAudio() {
+  if (!audio && typeof window !== 'undefined') {
+    audio = new Audio();
+    audio.crossOrigin = 'anonymous';
+    configureAudio();
+  }
+  return audio;
+}
 
 function canStreamTrack(track) {
   return track?.isStreamable ?? (useMockApi && Boolean(track?.audioUrl));
 }
 
 if (typeof window !== 'undefined') {
-  audio = new Audio();
-  audio.crossOrigin = 'anonymous';
+  // Admin routes dispatch this event without importing the listener player.
+  // A direct admin load therefore creates no listener audio engine, while an
+  // in-app transition safely pauses an engine that was already active.
+  window.addEventListener('noirsound:admin-enter', () => audio?.pause());
 }
 
 // --- Qualified-play tracking -------------------------------------------
@@ -82,7 +94,7 @@ async function reportQualifyingPlay(track, listenedSeconds, completed) {
 // separately from what production code actually runs. Not part of the
 // app-facing player API.
 export function __getAudioElementForTests() {
-  return audio;
+  return ensureAudio();
 }
 
 export const usePlayerStore = create((set, get) => {
@@ -168,9 +180,7 @@ export const usePlayerStore = create((set, get) => {
     };
   };
 
-  if (typeof window !== 'undefined') {
-    setupEventListeners();
-  }
+  configureAudio = setupEventListeners;
 
   return {
     currentTrack: null,
@@ -271,6 +281,7 @@ export const usePlayerStore = create((set, get) => {
     },
 
     playTrack: async (track, newQueue = null, queueSource = null) => {
+      ensureAudio();
       if (!audio) return;
       const canPlay = canStreamTrack(track);
       if (!canPlay) {

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { X, Mail, Lock, User, AtSign, Loader2 } from 'lucide-react';
 import { useLogin, useRegister } from '../../hooks/mutations/useAuth';
 import { getGoogleAuthorizationUrl } from '../../api/client';
+import useDialogFocusTrap from '../../hooks/useDialogFocusTrap';
 
 function GoogleIcon() {
   return (
@@ -25,7 +26,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }) {
     displayName: ''
   });
   const [errorMsg, setErrorMsg] = useState('');
-  const modalRef = useRef(null);
+  const modalRef = useDialogFocusTrap(isOpen, onClose);
   const emailRef = useRef(null);
 
   const loginMutation = useLogin();
@@ -33,53 +34,10 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }) {
   const isLoading = loginMutation.isPending || registerMutation.isPending;
 
   useEffect(() => {
-    if (!isOpen) return undefined;
-
-    const previouslyFocused = document.activeElement;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    if (!isOpen) return;
     setMode(initialMode);
     setErrorMsg('');
-
-    const focusTimer = window.setTimeout(() => {
-      const firstField = modalRef.current?.querySelector('input');
-      firstField?.focus();
-    }, 0);
-
-    const handleKeyDown = (event) => {
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        onClose();
-        return;
-      }
-      if (event.key !== 'Tab' || !modalRef.current) return;
-
-      const focusable = Array.from(
-        modalRef.current.querySelectorAll(
-          'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href]'
-        )
-      );
-      if (focusable.length === 0) return;
-
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => {
-      window.clearTimeout(focusTimer);
-      document.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = previousOverflow;
-      previouslyFocused?.focus?.();
-    };
-  }, [initialMode, isOpen, onClose]);
+  }, [initialMode, isOpen]);
 
   if (!isOpen) return null;
 
@@ -122,20 +80,20 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }) {
         <button 
           onClick={onClose}
           className="ns-icon-button absolute right-4 top-4 cursor-pointer"
-          aria-label="Close authentication dialog"
+          aria-label={t('auth.closeDialog')}
         >
           <X size={16} />
         </button>
 
         <div className="p-6 sm:p-8">
-          <div className="mb-7 text-center">
-            <h2 id="auth-modal-title" className="mb-2 font-sans text-2xl font-bold tracking-tight text-white">
-              {mode === 'login' ? t('header.signIn') : 'Join NoirSound'}
+          <div className="mb-7 pr-8 text-left">
+            <h2 id="auth-modal-title" className="mb-2 font-sans text-2xl font-bold tracking-tight text-[var(--ns-text)]">
+              {mode === 'login' ? t('header.signIn') : t('auth.join')}
             </h2>
             <p className="text-sm text-zinc-400">
               {mode === 'login' 
                 ? t('empty.signInDesc') 
-                : 'Create an account to start sharing and discovering.'}
+                : t('auth.registerDescription')}
             </p>
           </div>
 
@@ -146,12 +104,12 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }) {
             className="flex h-11 w-full cursor-pointer items-center justify-center gap-3 rounded-md border border-[var(--ns-border)] bg-zinc-900 font-medium text-zinc-100 transition-colors hover:bg-zinc-800 disabled:opacity-50"
           >
             <GoogleIcon />
-            <span>Continue with Google</span>
+            <span>{t('auth.continueGoogle')}</span>
           </button>
 
           <div className="flex items-center gap-3 my-5" aria-hidden="true">
             <span className="h-px flex-1 bg-zinc-800" />
-            <span className="font-sans tabular-nums text-ns-meta uppercase text-zinc-500">or</span>
+            <span className="font-sans tabular-nums text-ns-meta uppercase text-zinc-500">{t('auth.or')}</span>
             <span className="h-px flex-1 bg-zinc-800" />
           </div>
 
@@ -159,14 +117,14 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }) {
             {mode === 'register' && (
               <>
                 <div className="relative">
-                  <label htmlFor="auth-username" className="sr-only">Username</label>
+                  <label htmlFor="auth-username" className="sr-only">{t('auth.username')}</label>
                   <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={16} />
                   <input
                     id="auth-username"
                     type="text"
                     name="username"
                     required
-                    placeholder="Username"
+                    placeholder={t('auth.username')}
                     value={formData.username}
                     onChange={handleChange}
                     className="ns-field w-full pl-10 pr-4"
@@ -175,14 +133,14 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }) {
                   />
                 </div>
                 <div className="relative">
-                  <label htmlFor="auth-display-name" className="sr-only">Display name</label>
+                  <label htmlFor="auth-display-name" className="sr-only">{t('auth.displayname')}</label>
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={16} />
                   <input
                     id="auth-display-name"
                     type="text"
                     name="displayName"
                     required
-                    placeholder="Display Name"
+                    placeholder={t('auth.displaynamePlaceholder')}
                     value={formData.displayName}
                     onChange={handleChange}
                     className="ns-field w-full pl-10 pr-4"
@@ -194,15 +152,16 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }) {
             )}
 
             <div className="relative">
-              <label htmlFor="auth-email" className="sr-only">Email address</label>
+              <label htmlFor="auth-email" className="sr-only">{t('auth.email')}</label>
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={16} />
               <input
                 id="auth-email"
                 ref={emailRef}
+                autoFocus
                 type="email"
                 name="email"
                 required
-                placeholder="Email Address"
+                placeholder={t('auth.emailPlaceholder')}
                 value={formData.email}
                 onChange={handleChange}
                 className="ns-field w-full pl-10 pr-4"
@@ -213,14 +172,14 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }) {
             </div>
 
             <div className="relative">
-              <label htmlFor="auth-password" className="sr-only">Password</label>
+              <label htmlFor="auth-password" className="sr-only">{t('auth.password')}</label>
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={16} />
               <input
                 id="auth-password"
                 type="password"
                 name="password"
                 required
-                placeholder="Password"
+                placeholder={t('auth.password')}
                 value={formData.password}
                 onChange={handleChange}
                 className="ns-field w-full pl-10 pr-4"
@@ -231,7 +190,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }) {
             </div>
 
             {errorMsg && (
-              <div id="auth-error" className="rounded-md border border-red-500/25 bg-red-500/10 p-3 text-center text-sm text-red-300" role="alert">
+              <div id="auth-error" className="rounded-md border ns-status-badge ns-status-danger p-3 text-center text-sm" role="alert">
                 {errorMsg}
               </div>
             )}
@@ -249,15 +208,15 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }) {
           <div className="mt-6 text-center text-sm text-zinc-500">
             {mode === 'login' ? (
               <p>
-                Don't have an account?{' '}
-                <button onClick={() => setMode('register')} className="text-brand-red hover:text-white transition-colors font-medium cursor-pointer">
-                  Sign up
+                {t('auth.noAccount')}{' '}
+                <button onClick={() => setMode('register')} className="text-brand-red hover:text-[var(--ns-text-primary)] transition-colors font-medium cursor-pointer">
+                  {t('auth.signUp')}
                 </button>
               </p>
             ) : (
               <p>
-                Already have an account?{' '}
-                <button onClick={() => setMode('login')} className="text-brand-red hover:text-white transition-colors font-medium cursor-pointer">
+                {t('auth.haveAccount')}{' '}
+                <button onClick={() => setMode('login')} className="text-brand-red hover:text-[var(--ns-text-primary)] transition-colors font-medium cursor-pointer">
                   {t('header.signIn')}
                 </button>
               </p>

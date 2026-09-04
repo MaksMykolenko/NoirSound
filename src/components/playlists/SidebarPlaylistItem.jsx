@@ -81,7 +81,7 @@ export default function SidebarPlaylistItem({ playlist, onToggleSaved, onEdit, o
         {/* Text Metadata */}
         <div className="min-w-0 flex-1">
           <h5 className={`truncate text-ns-body-sm font-semibold leading-snug ${
-            isActive ? 'text-brand-red' : 'text-zinc-300 group-hover:text-white'
+            isActive ? 'text-brand-red' : 'text-zinc-300 group-hover:text-[var(--ns-text-primary)]'
           }`}>
             {playlist.name}
           </h5>

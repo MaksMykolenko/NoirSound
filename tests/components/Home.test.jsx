@@ -5,10 +5,10 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import i18n from '../../src/i18n';
 import Home from '../../src/pages/Home';
-import { getArtistsWithTracks, getTracks } from '../../src/api';
+import { getArtistsWithTracks, getCatalogTracks } from '../../src/api';
 
 vi.mock('../../src/api', () => ({
-  getTracks: vi.fn(),
+  getCatalogTracks: vi.fn(),
   getArtistsWithTracks: vi.fn(),
 }));
 
@@ -69,11 +69,19 @@ function makeTrack(index) {
   };
 }
 
+function mockCatalog(music = [], beats = []) {
+  getCatalogTracks.mockImplementation(({ contentType }) => Promise.resolve({
+    items: contentType === 'BEAT' ? beats : music,
+    total: contentType === 'BEAT' ? beats.length : music.length,
+    pageInfo: { hasNextPage: false, nextCursor: null, pageSize: 8 },
+  }));
+}
+
 describe('Home real API states', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     await i18n.changeLanguage('en');
-    getTracks.mockResolvedValue([]);
+    mockCatalog();
     getArtistsWithTracks.mockResolvedValue([]);
   });
 
@@ -95,7 +103,7 @@ describe('Home real API states', () => {
   });
 
   it('renders real releases returned by the API', async () => {
-    getTracks.mockResolvedValue([realTrack]);
+    mockCatalog([realTrack]);
 
     renderHome();
 
@@ -103,9 +111,33 @@ describe('Home real API states', () => {
     expect(screen.queryByText(i18n.t('empty.noReleasesYet'))).not.toBeInTheDocument();
   });
 
-  it.each([1, 2, 8])('keeps %i real release cards bounded in the responsive Home grid', async (count) => {
+  it('keeps Music and Beats in separate Home sections while sharing normal track cards', async () => {
+    const music = { ...realTrack, id: 'music-1', title: 'Finished Song', contentType: 'MUSIC' };
+    const beat = {
+      ...realTrack,
+      id: 'beat-1',
+      title: 'Midnight Beat',
+      contentType: 'BEAT',
+      beatBpm: 138,
+      beatKey: 'D Minor',
+    };
+    mockCatalog([music], [beat]);
+
+    renderHome();
+
+    const musicSection = await screen.findByTestId('home-releases');
+    const beatSection = screen.getByTestId('home-fresh-beats');
+    expect(within(musicSection).getByText('Finished Song')).toBeInTheDocument();
+    expect(within(musicSection).queryByText('Midnight Beat')).not.toBeInTheDocument();
+    expect(within(beatSection).getByText('Midnight Beat')).toBeInTheDocument();
+    expect(within(beatSection).queryByText('Finished Song')).not.toBeInTheDocument();
+    expect(within(beatSection).getByTestId('beat-badge')).toBeInTheDocument();
+    expect(within(beatSection).getByText(/138 BPM/)).toBeInTheDocument();
+  });
+
+  it.each([1, 2, 8])('renders all %i returned releases without placeholders', async (count) => {
     const tracks = Array.from({ length: count }, (_, index) => makeTrack(index + 1));
-    getTracks.mockResolvedValue(tracks);
+    mockCatalog(tracks);
 
     renderHome();
 
@@ -114,21 +146,32 @@ describe('Home real API states', () => {
     const cards = grid.querySelectorAll('[data-track-id]');
 
     expect(cards).toHaveLength(count);
-    expect(grid.className).toContain(
-      'sm:[grid-template-columns:repeat(auto-fill,minmax(min(240px,100%),1fr))]'
-    );
-    expect(cards[0].parentElement.className).toContain('sm:max-w-[17.5rem]');
-    expect(cards[0].parentElement.className).toContain('sm:justify-self-start');
   });
 
-  it('shows at most eight real releases from a larger catalogue', async () => {
-    const tracks = Array.from({ length: 9 }, (_, index) => makeTrack(index + 1));
-    getTracks.mockResolvedValue(tracks);
-
+  it('requests independently bounded Music and Beat selections and preserves server order', async () => {
+    const tracks = [makeTrack(3), makeTrack(1), makeTrack(2)];
+    mockCatalog(tracks);
     renderHome();
-
     await screen.findByText(tracks.at(-1).title);
-    expect(screen.getByTestId('home-release-grid').querySelectorAll('[data-track-id]')).toHaveLength(8);
+    expect(getCatalogTracks).toHaveBeenCalledWith(
+      { contentType: 'MUSIC', sort: 'recent', limit: 8 }, { signal: expect.any(AbortSignal) },
+    );
+    expect(getCatalogTracks).toHaveBeenCalledWith(
+      { contentType: 'BEAT', sort: 'recent', limit: 8 }, { signal: expect.any(AbortSignal) },
+    );
+    const cards = [...screen.getByTestId('home-release-grid').querySelectorAll('[data-track-id]')];
+    expect(cards.map((card) => card.getAttribute('data-track-id'))).toEqual(tracks.map((track) => track.id));
+  });
+
+  it.each([
+    ['home-releases', 'MUSIC'],
+    ['home-fresh-beats', 'BEAT'],
+  ])('routes %s View All to the matching complete catalog selection', async (sectionId, contentType) => {
+    const user = userEvent.setup();
+    renderHome();
+    const section = screen.getByTestId(sectionId);
+    await user.click(within(section).getByRole('button', { name: i18n.t('home.exploreAll') }));
+    expect(screen.getByTestId('location-probe')).toHaveTextContent(`/discover?content=${contentType}&sort=recent`);
   });
 
   it('routes a genre chip to Discover with a taxonomy filter', async () => {
@@ -165,5 +208,28 @@ describe('Home real API states', () => {
     expect(within(genreBrowser).queryByText('Світова')).not.toBeInTheDocument();
 
     await i18n.changeLanguage('en');
+  });
+
+  it('renders the Beats info showcase card and routes discover action', async () => {
+    const user = userEvent.setup();
+    renderHome();
+
+    const card = screen.getByTestId('home-beats-info-card');
+    expect(card).toBeInTheDocument();
+    expect(within(card).getByText(i18n.t('beats.homeInfoTitle'))).toBeInTheDocument();
+    expect(within(card).getByText(i18n.t('beats.homeInfoFeat1Title'))).toBeInTheDocument();
+
+    const discoverBtn = screen.getByTestId('home-beats-info-discover');
+    await user.click(discoverBtn);
+    expect(screen.getByTestId('location-probe')).toHaveTextContent('/discover?content=BEAT');
+  });
+
+  it('routes upload action from Beats info card', async () => {
+    const user = userEvent.setup();
+    renderHome();
+
+    const uploadBtn = screen.getByTestId('home-beats-info-upload');
+    await user.click(uploadBtn);
+    expect(screen.getByTestId('location-probe')).toHaveTextContent('/upload');
   });
 });

@@ -28,14 +28,30 @@ export default function AccountDropdown({ isOpen, onClose, anchorRef }) {
     }
 
     function handleKeyDown(e) {
-      if (e.key === 'Escape' && isOpen) {
+      if (!isOpen || e.defaultPrevented || !dropdownRef.current?.contains(e.target)) return;
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
         onClose();
+        anchorRef.current?.querySelector('button')?.focus();
+        return;
       }
+      if (e.target.matches('select, input')) return;
+      const items = [...dropdownRef.current.querySelectorAll('[role="menuitem"]')];
+      const current = items.indexOf(document.activeElement);
+      const next = e.key === 'ArrowDown' ? (current + 1) % items.length
+        : e.key === 'ArrowUp' ? (current - 1 + items.length) % items.length
+          : e.key === 'Home' ? 0 : e.key === 'End' ? items.length - 1 : null;
+      if (next === null) return;
+      e.preventDefault();
+      items[next]?.focus();
     }
 
+    const focusTimer = isOpen ? window.requestAnimationFrame(() => dropdownRef.current?.querySelector('[role=menuitem]')?.focus()) : null;
     document.addEventListener('mousedown', handleOutsideClick);
     document.addEventListener('keydown', handleKeyDown);
     return () => {
+      if (focusTimer !== null) window.cancelAnimationFrame(focusTimer);
       document.removeEventListener('mousedown', handleOutsideClick);
       document.removeEventListener('keydown', handleKeyDown);
     };
@@ -62,12 +78,12 @@ export default function AccountDropdown({ isOpen, onClose, anchorRef }) {
   return (
     <div
       ref={dropdownRef}
-      className="absolute right-0 z-[var(--ns-z-dropdown)] mt-2 w-64 rounded-lg border border-zinc-700/70 bg-zinc-950 py-1.5 shadow-xl"
+      className="absolute right-0 z-[var(--ns-z-dropdown)] mt-2 max-h-[calc(100dvh-6rem)] w-64 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-lg border border-zinc-700/70 bg-zinc-950 py-1.5 shadow-[var(--ns-shadow-modal)]"
       role="menu"
     >
       <button
         onClick={() => handleNavigate('/profile')}
-        className="flex w-full cursor-pointer items-center space-x-3 px-4 py-2.5 text-left text-sm font-medium text-zinc-300 transition-colors hover:bg-zinc-900 hover:text-zinc-100"
+        className="flex min-h-11 w-full cursor-pointer items-center space-x-3 px-4 py-2.5 text-left text-sm font-medium text-zinc-300 transition-colors hover:bg-zinc-900 hover:text-zinc-100"
         role="menuitem"
       >
         <User size={14} className="text-zinc-500" />
@@ -76,7 +92,7 @@ export default function AccountDropdown({ isOpen, onClose, anchorRef }) {
 
       <button
         onClick={() => handleNavigate('/profile?tab=settings')}
-        className="flex w-full cursor-pointer items-center space-x-3 px-4 py-2.5 text-left text-sm font-medium text-zinc-300 transition-colors hover:bg-zinc-900 hover:text-zinc-100"
+        className="flex min-h-11 w-full cursor-pointer items-center space-x-3 px-4 py-2.5 text-left text-sm font-medium text-zinc-300 transition-colors hover:bg-zinc-900 hover:text-zinc-100"
         role="menuitem"
       >
         <Settings size={14} className="text-zinc-500" />
@@ -85,7 +101,7 @@ export default function AccountDropdown({ isOpen, onClose, anchorRef }) {
 
       <button
         onClick={() => handleNavigate('/dashboard')}
-        className="flex w-full cursor-pointer items-center space-x-3 px-4 py-2.5 text-left text-sm font-medium text-zinc-300 transition-colors hover:bg-zinc-900 hover:text-zinc-100"
+        className="flex min-h-11 w-full cursor-pointer items-center space-x-3 px-4 py-2.5 text-left text-sm font-medium text-zinc-300 transition-colors hover:bg-zinc-900 hover:text-zinc-100"
         role="menuitem"
       >
         <LayoutDashboard size={14} className="text-zinc-500" />
@@ -108,7 +124,7 @@ export default function AccountDropdown({ isOpen, onClose, anchorRef }) {
 
       <button
         onClick={handleLogout}
-        className="flex w-full cursor-pointer items-center space-x-3 px-4 py-2.5 text-left text-sm font-medium text-rose-400 transition-colors hover:bg-rose-950/20 hover:text-rose-300"
+        className="flex min-h-11 w-full cursor-pointer items-center space-x-3 px-4 py-2.5 text-left text-sm font-medium text-rose-400 transition-colors hover:bg-rose-950/20 hover:text-rose-300"
         role="menuitem"
       >
         <LogOut size={14} />

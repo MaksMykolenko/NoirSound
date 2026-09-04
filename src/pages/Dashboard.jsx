@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Eye, FileText, PlusCircle, UploadCloud } from 'lucide-react';
+import { FileText, PlusCircle, UploadCloud } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getArtistDashboard } from '../api';
 import { useUserStore } from '../store/userStore';
@@ -12,21 +12,22 @@ import FallbackCover from '../components/ui/FallbackCover';
 import { formatNumber } from '../utils/formatLocale';
 import { getLocalizedGenre } from '../i18n/genreLabels';
 import LyricsEditModal from '../components/lyrics/LyricsEditModal';
+import { TrackTypeBadge } from '../components/tracks/TrackContentMeta';
+import { isBeatTrack } from '../utils/trackContent';
 
-const FAILED_STATUS_TONE = 'text-rose-300 bg-rose-500/10 border-rose-500/25';
 const STATUS_TONES = {
-  PUBLISHED: 'text-emerald-300 bg-emerald-500/10 border-emerald-500/25',
-  PROCESSING: 'text-sky-300 bg-sky-500/10 border-sky-500/25',
-  PENDING_REVIEW: 'text-amber-300 bg-amber-500/10 border-amber-500/25',
-  DRAFT: 'text-zinc-400 bg-zinc-500/10 border-zinc-500/25',
-  HIDDEN: 'text-zinc-400 bg-zinc-500/10 border-zinc-500/25',
-  FAILED: FAILED_STATUS_TONE,
-  REJECTED: FAILED_STATUS_TONE,
+  PUBLISHED: 'ns-status-success',
+  PROCESSING: 'ns-status-info',
+  PENDING_REVIEW: 'ns-status-warning',
+  DRAFT: 'ns-status-neutral',
+  HIDDEN: 'ns-status-neutral',
+  FAILED: 'ns-status-danger',
+  REJECTED: 'ns-status-danger',
 };
 
 function TrackStatusBadge({ status, label }) {
   return (
-    <span className={`inline-flex rounded border px-2 py-0.5 font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label ${STATUS_TONES[status] || 'text-zinc-400 bg-zinc-500/10 border-zinc-500/25'}`}>
+    <span className={`ns-status-badge inline-flex rounded border px-2 py-0.5 text-ns-meta font-medium ${STATUS_TONES[status] || 'ns-status-neutral'}`}>
       {label}
     </span>
   );
@@ -34,34 +35,35 @@ function TrackStatusBadge({ status, label }) {
 
 function TrackRow({ track, onOpen, onEditLyrics, editLyricsLabel, genreFallback, trailing }) {
   return (
-    <div className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-2 py-1.5 transition-colors hover:bg-zinc-900/35 sm:px-2">
-      <button type="button" onClick={onOpen} className="flex min-w-0 items-center gap-3 text-left cursor-pointer">
+    <div className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 py-3 transition-colors hover:bg-zinc-900/35 sm:px-2">
+      <button type="button" title={track.title} onClick={onOpen} className="flex min-w-0 items-center gap-3 text-left cursor-pointer">
           <FallbackCover
             src={track.coverUrl}
             title={track.title}
             genre={track.genre}
-            className="h-10 w-10 rounded"
+            className="h-10 w-10 shrink-0 rounded"
             imageClassName="object-cover"
           />
           <div className="min-w-0 flex-1">
             <h3 className="flex min-w-0 items-center gap-1.5 text-ns-body-sm font-semibold text-zinc-200">
-              <span className="truncate">{track.title}</span>
+              <span className="min-w-0 truncate">{track.title}</span>
               {track.hasLyrics && <FileText size={12} className="shrink-0 text-brand-red" aria-hidden="true" />}
             </h3>
-            <p className="font-sans tabular-nums text-ns-meta text-zinc-500">{getLocalizedGenre(track.genre) || genreFallback}</p>
+            <p className="mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-ns-meta text-zinc-500"><TrackTypeBadge track={track} /><span className="min-w-0 break-words [overflow-wrap:anywhere]">{getLocalizedGenre(track.genre) || genreFallback}</span></p>
           </div>
       </button>
       <div className="flex min-w-0 shrink-0 items-center gap-1.5">
         <button
           type="button"
           onClick={() => onEditLyrics(track)}
-          className="ns-icon-button"
+          className="ns-icon-button ns-media-action"
           aria-label={editLyricsLabel}
         >
           <FileText size={14} aria-hidden="true" />
         </button>
-        <div className="max-w-28 truncate sm:max-w-none">{trailing}</div>
+
       </div>
+      {trailing && <div className="col-span-2 pl-[3.25rem] text-ns-meta text-zinc-500">{trailing}</div>}
     </div>
   );
 }
@@ -124,6 +126,18 @@ export default function Dashboard() {
   const followers = dashboardStats?.followers || 0;
   const monthlyListeners = dashboardStats?.monthlyListeners || 0;
   const topTracks = dashboardStats?.topTracks || [];
+  const topMusicTracks = dashboardStats?.topMusicTracks
+    ?? topTracks.filter((track) => !isBeatTrack(track));
+  const topBeats = dashboardStats?.topBeats
+    ?? topTracks.filter(isBeatTrack);
+  const musicTrackCount = dashboardStats?.musicTrackCount
+    ?? publishedTracks.filter((track) => !isBeatTrack(track)).length;
+  const beatTrackCount = dashboardStats?.beatTrackCount
+    ?? publishedTracks.filter(isBeatTrack).length;
+  const musicPlays = dashboardStats?.musicPlays
+    ?? publishedTracks.filter((track) => !isBeatTrack(track)).reduce((sum, track) => sum + (track.plays || 0), 0);
+  const beatPlays = dashboardStats?.beatPlays
+    ?? publishedTracks.filter(isBeatTrack).reduce((sum, track) => sum + (track.plays || 0), 0);
   const recentUploads = dashboardStats?.recentUploads || [];
   const failedUploads = dashboardStats?.failedUploads || [];
   const hasUnavailableAnalytics = dashboardStats?.geography == null && dashboardStats?.trends == null;
@@ -136,6 +150,14 @@ export default function Dashboard() {
       ...current,
       tracks: (current.tracks || []).map(updateTrack),
       topTracks: (current.topTracks || []).map(updateTrack),
+      topMusicTracks: (
+        current.topMusicTracks
+        ?? (current.topTracks || []).filter((track) => !isBeatTrack(track))
+      ).map(updateTrack),
+      topBeats: (
+        current.topBeats
+        ?? (current.topTracks || []).filter(isBeatTrack)
+      ).map(updateTrack),
       recentUploads: (current.recentUploads || []).map(updateTrack),
       failedUploads: (current.failedUploads || []).map(updateTrack),
     } : current);
@@ -173,29 +195,99 @@ export default function Dashboard() {
             <StatsCard title={t('dashboard.monthlyListeners')} value={formatNumber(monthlyListeners)} iconName="Radio" />
           </section>
 
+          <section
+            aria-label={t('dashboard.contentBreakdown', { defaultValue: 'Content breakdown' })}
+            data-testid="dashboard-content-breakdown"
+            className="space-y-3"
+          >
+            <h2 className="ns-section-title">
+              {t('dashboard.contentBreakdown', { defaultValue: 'Content breakdown' })}
+            </h2>
+            <div className="ns-metrics-strip">
+              <StatsCard
+                title={t('dashboard.musicReleases', { defaultValue: 'Music releases' })}
+                value={formatNumber(musicTrackCount)}
+                iconName="Radio"
+              />
+              <StatsCard
+                title={t('dashboard.musicStreams', { defaultValue: 'Music streams' })}
+                value={formatNumber(musicPlays)}
+                iconName="Play"
+              />
+              <StatsCard
+                title={t('dashboard.beatReleases', { defaultValue: 'Beat releases' })}
+                value={formatNumber(beatTrackCount)}
+                iconName="Radio"
+              />
+              <StatsCard
+                title={t('dashboard.beatStreams', { defaultValue: 'Beat streams' })}
+                value={formatNumber(beatPlays)}
+                iconName="Play"
+              />
+            </div>
+          </section>
+
           <div data-testid="dashboard-content-grid" className="grid grid-cols-1 gap-x-8 gap-y-7 xl:grid-cols-12">
           <section className="space-y-3 xl:col-span-7">
             <h2 className="ns-section-title">{t('dashboard.topTracks')}</h2>
-            <div className="divide-y divide-zinc-800/60 border-y border-zinc-800/70">
-              {topTracks.length === 0 ? (
-                <p className="text-sm text-zinc-500 p-2">{t('dashboard.noTopTracksYet')}</p>
-              ) : (
-                topTracks.map((track) => (
-                  <TrackRow
-                    key={track.id}
-                    track={track}
-                    onOpen={() => navigate(`/track/${track.id}`)}
-                    onEditLyrics={setLyricsTrack}
-                    editLyricsLabel={t('dashboard.editLyricsFor', { title: track.title })}
-                    genreFallback={t('dashboard.uncategorized')}
-                    trailing={
-                      <span className="text-ns-meta text-zinc-500 font-semibold shrink-0">
-                        {formatNumber(track.plays)} {t('trackPage.plays')}
-                      </span>
-                    }
-                  />
-                ))
-              )}
+            <div className="grid gap-5 min-[1600px]:grid-cols-2">
+              <div className="min-w-0">
+                <h3 className="ns-eyebrow mb-2">
+                  {t('dashboard.topMusic', { defaultValue: 'Top music' })}
+                </h3>
+                <div className="divide-y divide-zinc-800/60 border-y border-zinc-800/70">
+                  {topMusicTracks.length === 0 ? (
+                    <p className="p-2 text-sm text-zinc-500">
+                      {t('dashboard.noTopMusicYet', { defaultValue: 'No qualified music plays yet' })}
+                    </p>
+                  ) : (
+                    topMusicTracks.map((track) => (
+                      <TrackRow
+                        key={track.id}
+                        track={track}
+                        onOpen={() => navigate(`/track/${track.id}`)}
+                        onEditLyrics={setLyricsTrack}
+                        editLyricsLabel={t('dashboard.editLyricsFor', { title: track.title })}
+                        genreFallback={t('dashboard.uncategorized')}
+                        trailing={
+                          <span className="text-ns-meta text-zinc-500 font-semibold shrink-0">
+                            {formatNumber(track.plays)} {t('trackPage.plays')}
+                          </span>
+                        }
+                      />
+                    ))
+                  )}
+                </div>
+              </div>
+
+              <div className="min-w-0">
+                <h3 className="ns-eyebrow mb-2">
+                  {t('dashboard.topBeats', { defaultValue: 'Top beats' })}
+                </h3>
+                <div className="divide-y divide-zinc-800/60 border-y border-zinc-800/70">
+                  {topBeats.length === 0 ? (
+                    <p className="p-2 text-sm text-zinc-500">
+                      {t('dashboard.noTopBeatsYet', { defaultValue: 'No qualified beat plays yet' })}
+                    </p>
+                  ) : (
+                    topBeats.map((track) => (
+                      <TrackRow
+                        key={track.id}
+                        track={track}
+                        onOpen={() => navigate(`/track/${track.id}`)}
+                        onEditLyrics={setLyricsTrack}
+                        editLyricsLabel={t('dashboard.editLyricsFor', { title: track.title })}
+                        genreFallback={t('dashboard.uncategorized')}
+                        trailing={
+                          <span className="text-ns-meta text-zinc-500 font-semibold shrink-0">
+                            {formatNumber(track.plays)} {t('trackPage.plays')}
+                          </span>
+                        }
+                      />
+                    ))
+                  )}
+                </div>
+              </div>
             </div>
           </section>
 
@@ -213,7 +305,6 @@ export default function Dashboard() {
                     onEditLyrics={setLyricsTrack}
                     editLyricsLabel={t('dashboard.editLyricsFor', { title: track.title })}
                     genreFallback={t('dashboard.uncategorized')}
-                    trailing={<Eye size={15} className="text-zinc-500 shrink-0" aria-hidden="true" />}
                   />
                 ))
               )}

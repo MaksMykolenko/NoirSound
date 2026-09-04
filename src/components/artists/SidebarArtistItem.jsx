@@ -1,10 +1,12 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import FallbackAvatar from '../ui/FallbackAvatar';
+import { useTranslation } from 'react-i18next';
 import { MoreHorizontal } from 'lucide-react';
 import { useArtistContextMenu } from '../../hooks/useEntityContextMenu';
 
 export default function SidebarArtistItem({ artist }) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -46,17 +48,17 @@ export default function SidebarArtistItem({ artist }) {
       {/* Name Details */}
       <div className="min-w-0 flex-1">
         <h5 className={`text-ns-body-sm font-bold truncate tracking-tight leading-snug ${
-          isActive ? 'text-brand-red' : 'text-zinc-300 group-hover:text-white'
+          isActive ? 'text-brand-red' : 'text-zinc-300 group-hover:text-[var(--ns-text-primary)]'
         }`}>
           {artist.name}
         </h5>
-        <p className="text-ns-label text-zinc-400 truncate mt-0.5 font-medium">Artist</p>
+        <p className="text-ns-label text-zinc-400 truncate mt-0.5 font-medium">{t('profile.artist')}</p>
       </div>
       <button
         type="button"
         onClick={openFromButton}
-        className="ns-icon-button !min-h-9 !min-w-9 shrink-0 text-zinc-500 opacity-0 group-hover:opacity-100 focus:opacity-100"
-        aria-label={`More actions for ${artist.name}`}
+        className="ns-media-action shrink-0 text-zinc-500 lg:opacity-0 lg:group-hover:opacity-100 group-focus-within:opacity-100 focus:opacity-100"
+        aria-label={t('profile.moreArtistActions', { name: artist.name })}
         aria-haspopup="menu"
       >
         <MoreHorizontal size={14} />

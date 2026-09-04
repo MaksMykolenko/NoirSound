@@ -50,14 +50,14 @@ export default function AdminArtistDetail() {
           <h2 className="text-sm font-bold">{t('admin.artistProfile')}</h2>
           <dl className="mt-4 grid gap-4 sm:grid-cols-2">
             <div><dt className="font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-[var(--ns-text-muted)]">{t('admin.status')}</dt><dd className="mt-1"><StatusBadge status={artist.isHidden ? 'HIDDEN' : artist.user?.status} /></dd></div>
-            <div><dt className="font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-[var(--ns-text-muted)]">{t('admin.email')}</dt><dd className="mt-1 text-sm">{artist.user?.email}</dd></div>
+            <div><dt className="font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-[var(--ns-text-muted)]">{t('admin.email')}</dt><dd className="mt-1 text-sm">{artist.user?.email || '—'}</dd></div>
             <div><dt className="font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-[var(--ns-text-muted)]">{t('admin.followers')}</dt><dd className="mt-1 text-sm">{artist._count?.followers ?? 0}</dd></div>
             <div><dt className="font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-[var(--ns-text-muted)]">{t('admin.genres')}</dt><dd className="mt-1 text-sm">{artist.genres?.length ? artist.genres.map(getGenreLabel).join(', ') : '—'}</dd></div>
           </dl>
         </AdminPanel>
         <AdminPanel className="p-4">
           <h2 className="text-sm font-bold">{t('admin.actions')}</h2>
-          <button type="button" onClick={() => setConfirming(true)} className={`mt-4 w-full rounded px-3 py-2 text-sm font-semibold ${artist.isHidden ? 'ns-button-secondary' : 'bg-[var(--ns-danger)] text-white'}`}>
+          <button type="button" onClick={() => setConfirming(true)} className={`mt-4 w-full rounded px-3 py-2 text-sm font-semibold ${artist.isHidden ? 'ns-button-secondary' : 'bg-[var(--ns-danger)] text-[var(--ns-on-danger)]'}`}>
             {artist.isHidden ? t('admin.unhide') : t('admin.hide')}
           </button>
           {!artist.isHidden && <Link to={`/artist/${artist.id}`} className="ns-button-secondary mt-2 block rounded px-3 py-2 text-center text-sm">{t('admin.openPublicPage')}</Link>}
@@ -67,8 +67,8 @@ export default function AdminArtistDetail() {
       <AdminPanel className="p-4">
         <h2 className="mb-3 text-sm font-bold">{t('admin.tracks')}</h2>
         {!artist.tracks?.length ? <AdminEmpty text={t('admin.noTracksFound')} /> : artist.tracks.map((track) => (
-          <Link key={track.id} to={`/admin/tracks/${track.id}`} className="flex items-center justify-between border-t border-[var(--ns-border-subtle)] py-3 text-sm first:border-0">
-            <span>{track.title}</span><StatusBadge status={track.status} />
+          <Link key={track.id} to={`/admin/tracks/${track.id}`} className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 border-t border-[var(--ns-border-subtle)] py-3 text-sm first:border-0">
+            <span className="min-w-0 break-words [overflow-wrap:anywhere]">{track.title}</span><StatusBadge status={track.status} />
           </Link>
         ))}
       </AdminPanel>

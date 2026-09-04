@@ -35,14 +35,20 @@ async function findDuplicateFollows(prisma) {
  * every profile-less admin as a FAIL would be a false positive that no
  * "repair" could legitimately fix, since auto-granting artist profiles to
  * admins is not correct behavior either. */
-async function findMissingArtistProfiles(prisma) {
+async function findMissingArtistProfiles(prisma, options = {}) {
+  const includePii = options.includePii === true;
   return prisma.user.findMany({
     where: {
       role: 'ARTIST',
       status: { not: 'DELETED' },
       artistProfile: null
     },
-    select: { id: true, username: true, email: true, role: true }
+    select: {
+      id: true,
+      username: true,
+      ...(includePii ? { email: true } : {}),
+      role: true
+    }
   });
 }
 
@@ -149,7 +155,7 @@ async function findOrphanFollows(prisma) {
 
 /** Runs every check and returns a single structured report plus a verdict.
  * Pure/read-only -- safe to call as often as desired. */
-async function runStatsIntegrityCheck(prisma, now = new Date()) {
+async function runStatsIntegrityCheck(prisma, now = new Date(), options = {}) {
   const [
     duplicateFollows,
     missingArtistProfiles,
@@ -160,7 +166,7 @@ async function runStatsIntegrityCheck(prisma, now = new Date()) {
     orphanFollows
   ] = await Promise.all([
     findDuplicateFollows(prisma),
-    findMissingArtistProfiles(prisma),
+    findMissingArtistProfiles(prisma, options),
     findOrphanArtistProfiles(prisma),
     findStaleTrackPlayCounts(prisma),
     findStaleMonthlyListeners(prisma, now),

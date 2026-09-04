@@ -93,6 +93,13 @@ function getGroupKeys() {
   return GENRE_GROUPS.slice();
 }
 
+/** Stored canonical values and known legacy labels/aliases for public filters. */
+function getGenreFilterValues(keys) {
+  return [...new Set(MUSIC_GENRES.filter(item => keys.includes(item.key))
+    .flatMap(item => [item.key, item.label, ...item.aliases])
+    .map(value => value.toLowerCase()))];
+}
+
 /** English display label for an already-canonical genre key. Undefined if unknown. */
 function getLabelOfKey(key) {
   return LABEL_OF[key];
@@ -115,6 +122,7 @@ module.exports = {
   getGroupOf,
   getAllGenreKeys,
   getGroupKeys,
+  getGenreFilterValues,
   getLabelOfKey,
   getLabelOfGroup,
 };

@@ -16,7 +16,7 @@ export default function EditPlaylistModal({ playlist, isOpen, onClose, onSaved }
   const [cover, setCover] = useState(null);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
-  const dialogRef = useDialogFocusTrap(isOpen && !saving, onClose);
+  const dialogRef = useDialogFocusTrap(isOpen, () => { if (!saving) onClose(); });
 
   useEffect(() => {
     if (!isOpen || !playlist) return;
@@ -80,15 +80,15 @@ export default function EditPlaylistModal({ playlist, isOpen, onClose, onSaved }
         role="dialog"
         aria-modal="true"
         aria-labelledby="edit-playlist-title"
-        className="w-full max-w-lg rounded-lg border border-zinc-700/70 bg-zinc-950 p-5 shadow-xl"
+        className="max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto overscroll-contain rounded-lg border border-zinc-700/70 bg-zinc-950 p-5 shadow-xl"
         onMouseDown={(event) => event.stopPropagation()}
       >
-        <header className="mb-5 flex items-center justify-between">
-          <div>
+        <header className="mb-5 flex items-center justify-between gap-3">
+          <div className="min-w-0">
             <h2 id="edit-playlist-title" className="text-lg font-semibold tracking-tight text-zinc-100">{t('playlists.edit')}</h2>
             <p className="font-sans tabular-nums text-ns-meta text-zinc-500">{t('playlists.editHelp')}</p>
           </div>
-          <button type="button" onClick={onClose} disabled={saving} className="ns-icon-button !min-h-10 !min-w-10" aria-label="Close">
+          <button type="button" onClick={onClose} disabled={saving} className="ns-media-action shrink-0" aria-label={t('actions.close')}>
             <X size={18} />
           </button>
         </header>
@@ -111,7 +111,7 @@ export default function EditPlaylistModal({ playlist, isOpen, onClose, onSaved }
           </label>
           <label className="flex min-h-12 cursor-pointer items-center gap-3 rounded-md border border-dashed border-zinc-700 px-4 text-sm text-zinc-300 hover:border-zinc-500">
             <ImagePlus size={17} className="text-brand-red" />
-            <span className="min-w-0 flex-1 truncate">{cover?.name || t('playlists.coverHelp')}</span>
+            <span title={cover?.name} className="min-w-0 flex-1 break-words">{cover?.name || t('playlists.coverHelp')}</span>
             <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleCover} className="sr-only" />
           </label>
           {error && <p role="alert" className="text-sm font-semibold text-rose-300">{error}</p>}

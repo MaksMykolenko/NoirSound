@@ -94,7 +94,7 @@ export default function ListeningStats() {
                 <button
                   key={track.id}
                   onClick={() => navigate(`/track/${track.id}`)}
-                  className="flex w-full cursor-pointer items-center justify-between rounded-md border border-transparent p-2 text-left transition-colors hover:border-zinc-800/60 hover:bg-zinc-900/40"
+                  className="grid w-full grid-cols-[minmax(0,1fr)_auto] cursor-pointer items-center gap-3 rounded-md border border-transparent p-2 text-left transition-colors hover:border-zinc-800/60 hover:bg-zinc-900/40"
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <FallbackCover
@@ -105,7 +105,7 @@ export default function ListeningStats() {
                       imageClassName="object-cover"
                     />
                     <div className="min-w-0">
-                      <h4 className="truncate text-ns-body-sm font-semibold text-zinc-200">{track.title}</h4>
+                      <h4 title={track.title} className="truncate text-ns-body-sm font-semibold text-zinc-200">{track.title}</h4>
                       <p className="truncate font-sans tabular-nums text-ns-meta text-zinc-500">{getLocalizedGenre(track.genre) || 'Uncategorized'}</p>
                     </div>
                   </div>
@@ -128,7 +128,7 @@ export default function ListeningStats() {
                 <button
                   key={artist.id}
                   onClick={() => navigate(`/artist/${artist.id}`)}
-                  className="flex w-full cursor-pointer items-center justify-between rounded-md border border-transparent p-2 text-left transition-colors hover:border-zinc-800/60 hover:bg-zinc-900/40"
+                  className="grid w-full grid-cols-[minmax(0,1fr)_auto] cursor-pointer items-center gap-3 rounded-md border border-transparent p-2 text-left transition-colors hover:border-zinc-800/60 hover:bg-zinc-900/40"
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <FallbackAvatar
@@ -137,7 +137,7 @@ export default function ListeningStats() {
                       className="w-9 h-9 rounded-full shrink-0"
                       imageClassName="object-cover"
                     />
-                    <h4 className="truncate text-ns-body-sm font-semibold text-zinc-200">{artist.name}</h4>
+                    <h4 title={artist.name} className="truncate text-ns-body-sm font-semibold text-zinc-200">{artist.name}</h4>
                   </div>
                   <span className="text-ns-meta text-zinc-500 font-semibold shrink-0">
                     {formatNumber(artist.playCount)} {t('trackPage.plays')}

@@ -1,120 +1,154 @@
 #!/usr/bin/env bash
-# Run this on the Hostinger VPS from the checked-out NoirSound repository.
+# Deploy only an already verified, exact commit to the existing production stack.
 set -euo pipefail
+umask 077
+fail() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
+APP_DIR="${APP_DIR:-/opt/noirsound/NoirSound}"
+cd "$APP_DIR" || fail 'Production checkout is unavailable.'
+APP_DIR="$(pwd -P)"
+[[ "${RELEASE_SHA:-}" =~ ^[0-9a-f]{40}$ ]] || fail 'RELEASE_SHA must be the verified 40-character commit SHA.'
+[[ "$(git rev-parse HEAD)" == "$RELEASE_SHA" ]] || fail 'HEAD does not match RELEASE_SHA.'
+LOCK_PATH="$(git rev-parse --path-format=absolute --git-path noirsound-deploy.lock)"
+command -v flock >/dev/null || fail 'flock is required for the deployment lock.'
+# The SSH workflow holds this same descriptor across fetch, checkout and deploy.
+if [[ "$(readlink /proc/self/fd/9 2>/dev/null || true)" != "$LOCK_PATH" ]]; then exec 9>"$LOCK_PATH"; fi
+flock -n 9 || fail 'Another deployment holds the checkout lock.'
+[[ -z "$(git status --porcelain --untracked-files=all)" ]] || fail 'Refusing a dirty production checkout.'
+[[ "$(git rev-parse HEAD)" == "$RELEASE_SHA" ]] || fail 'Checkout changed while acquiring deployment lock.'
 
-APP_DIR="${APP_DIR:-/opt/noirsound}"
-ENV_FILE="${ENV_FILE:-.env.production}"
-COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.production.yml}"
+ENV_FILE="${ENV_FILE:-$APP_DIR/.env.production}"
+COMPOSE_FILE="${COMPOSE_FILE:-$APP_DIR/docker-compose.production.yml}"
+[[ "$ENV_FILE" = /* && -f "$ENV_FILE" ]] || fail 'ENV_FILE must be an existing absolute path.'
+[[ "$COMPOSE_FILE" = /* && -f "$COMPOSE_FILE" ]] || fail 'COMPOSE_FILE must be an existing absolute path.'
+# Read only literal deployment settings; never source the production environment
+# here or expand its values as shell code. Existing backup helpers load that file.
+setting() {
+  local key="$1" value="${!1:-}"
+  if [[ -z "$value" ]]; then value="$(sed -n "s/^${key}=//p" "$ENV_FILE" | tail -1)"; fi
+  if [[ "$value" == \"*\" || "$value" == \'*\' ]]; then value="${value:1:${#value}-2}"; fi
+  printf '%s' "$value"
+}
+COMPOSE_PROJECT_NAME="$(setting COMPOSE_PROJECT_NAME)"
+OFFSITE_BACKUP_VERIFY_SCRIPT="$(setting OFFSITE_BACKUP_VERIFY_SCRIPT)"
+DRILL_DATABASE_URL="$(setting DRILL_DATABASE_URL)"
+DRILL_S3_BUCKET="$(setting DRILL_S3_BUCKET)"
+[[ "$COMPOSE_PROJECT_NAME" =~ ^[a-z0-9][a-z0-9_-]*$ ]] || fail 'Set the verified existing COMPOSE_PROJECT_NAME explicitly.'
+[[ "$OFFSITE_BACKUP_VERIFY_SCRIPT" = /* && -f "$OFFSITE_BACKUP_VERIFY_SCRIPT" && -x "$OFFSITE_BACKUP_VERIFY_SCRIPT" ]] || fail 'A configured trusted private offsite verifier is required; no default provider is supplied.'
+[[ -n "$DRILL_DATABASE_URL" && -n "$DRILL_S3_BUCKET" ]] || fail 'Explicit isolated DRILL_DATABASE_URL and DRILL_S3_BUCKET are required.'
+for required in DOMAIN FRONTEND_ORIGIN DATABASE_URL POSTGRES_USER POSTGRES_PASSWORD POSTGRES_DB REDIS_URL S3_ENDPOINT S3_BUCKET S3_ACCESS_KEY_ID S3_SECRET_ACCESS_KEY JWT_SECRET COOKIE_SECRET; do
+  grep -Eq "^${required}=.+" "$ENV_FILE" || fail "Production environment is missing required key: $required"
+done
+if grep -Ev '^[[:space:]]*(#|$)' "$ENV_FILE" | grep -Eq 'CHANGE_ME|example\.com|__[^[:space:]]*__'; then fail 'Production environment contains placeholders.'; fi
+if [[ -n "${PRODUCTION_DOMAIN:-}" ]]; then [[ "$(setting DOMAIN)" == "$PRODUCTION_DOMAIN" ]] || fail 'Production domain does not match the environment.'; fi
+for command_name in docker curl sha256sum gzip tar; do command -v "$command_name" >/dev/null || fail "Required command unavailable: $command_name"; done
+export COMPOSE_PROJECT_NAME APP_ENV_FILE="$ENV_FILE" NOIRSOUND_ENV_FILE="$ENV_FILE" COMPOSE_FILE DRILL_DATABASE_URL DRILL_S3_BUCKET RELEASE_SHA
+compose=(docker compose --project-name "$COMPOSE_PROJECT_NAME" -f "$COMPOSE_FILE" --env-file "$ENV_FILE")
+"${compose[@]}" config --quiet
+# This is an update of an existing stack. Missing/unhealthy dependencies never
+# turn into an automatic first-install or stateful-service recreation path.
+for service in postgres redis minio backend worker web; do
+  cid="$("${compose[@]}" ps -q "$service")"
+  [[ -n "$cid" && "$cid" != *$'\n'* ]] || fail "Expected exactly one existing $service container."
+  [[ "$(docker inspect -f '{{index .Config.Labels "com.docker.compose.project"}}' "$cid")" == "$COMPOSE_PROJECT_NAME" ]] || fail "Compose project mismatch for $service."
+  [[ "$(docker inspect -f '{{.State.Status}}' "$cid")" == running ]] || fail "$service is not running."
+  case "$service" in postgres|redis|minio) [[ "$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{end}}' "$cid")" == healthy ]] || fail "$service is not healthy." ;; esac
+done
+
+RECORD_ROOT="${DEPLOY_RECORD_DIR:-$(dirname "$APP_DIR")/release-records}"
+[[ "$RECORD_ROOT" = /* ]] || fail 'DEPLOY_RECORD_DIR must be absolute.'
+mkdir -p "$RECORD_ROOT"
+RECORD_DIR="$(mktemp -d "$RECORD_ROOT/${RELEASE_SHA}-$(date -u +%Y%m%dT%H%M%SZ)-XXXXXX")"
+BACKUP_RUN_DIR="$RECORD_DIR/backup"
+mkdir "$BACKUP_RUN_DIR"
+export NOIRSOUND_BACKUP_DIR="$BACKUP_RUN_DIR"
+printf 'release_sha=%s\nprevious_checkout_sha=%s\ncompose_project=%s\n' "$RELEASE_SHA" "${PREVIOUS_PRODUCTION_SHA:-unknown}" "$COMPOSE_PROJECT_NAME" > "$RECORD_DIR/release.txt"
+for service in backend worker web; do
+  cid="$("${compose[@]}" ps -q "$service")"
+  image_id="$(docker inspect -f '{{.Image}}' "$cid")"
+  [[ "$image_id" =~ ^sha256:[0-9a-f]{64}$ ]] || fail "Cannot preserve previous $service image identity."
+  printf '%s %s\n' "$service" "$image_id" >> "$RECORD_DIR/previous-images.txt"
+done
+
+# Keep raw operational output private on the VPS: it can contain object names
+# or addresses. Never stream these logs to GitHub Actions or the public report.
+bash scripts/backup-all.sh > "$RECORD_DIR/backup.log" 2>&1 || fail 'Backup failed; application images and services were not changed.'
+shopt -s nullglob
+pg_archives=("$BACKUP_RUN_DIR"/postgres_*.dump.gz)
+storage_archives=("$BACKUP_RUN_DIR"/storage_*.tar.gz)
+manifests=("$BACKUP_RUN_DIR"/manifest_*.txt)
+[[ ${#pg_archives[@]} == 1 && ${#storage_archives[@]} == 1 && ${#manifests[@]} == 1 ]] || fail 'Backup must produce one fresh archive pair and manifest in this run directory.'
+for file in "${pg_archives[@]}" "${storage_archives[@]}" "${manifests[@]}"; do [[ -s "$file" ]] || fail 'Backup artifact is empty.'; done
+gzip -t "${pg_archives[0]}" || fail 'PostgreSQL archive is unreadable.'
+tar -tzf "${storage_archives[0]}" >/dev/null || fail 'Storage archive is unreadable.'
+(cd "$BACKUP_RUN_DIR" && sha256sum "$(basename "${pg_archives[0]}")" "$(basename "${storage_archives[0]}")" "$(basename "${manifests[0]}")" > SHA256SUMS)
+DRILL_POSTGRES_BACKUP="${pg_archives[0]}" DRILL_STORAGE_BACKUP="${storage_archives[0]}" bash scripts/restore-drill.sh > "$RECORD_DIR/restore-drill.log" 2>&1 || fail 'Isolated restore drill failed; deployment stopped.'
+CHECKSUM_SHA256="$(sha256sum "$BACKUP_RUN_DIR/SHA256SUMS" | awk '{print $1}')"
+RECEIPT="$RECORD_DIR/offsite-receipt.txt"
+# Trusted operator-installed adapter: copy these exact files to the existing
+# private offsite system, independently read/hash the remote copies, then attest.
+"$OFFSITE_BACKUP_VERIFY_SCRIPT" "$BACKUP_RUN_DIR" "$BACKUP_RUN_DIR/SHA256SUMS" "$RECEIPT" > "$RECORD_DIR/offsite.log" 2>&1 || fail 'Private offsite verification failed; deployment stopped.'
+[[ -s "$RECEIPT" ]] || fail 'Offsite verifier did not produce a receipt.'
+[[ "$(wc -l < "$RECEIPT" | tr -d '[:space:]')" == 6 ]] || fail 'Offsite receipt must contain exactly six contract fields.'
+for expected in 'version=1' "release_sha=$RELEASE_SHA" "checksum_sha256=$CHECKSUM_SHA256" 'offsite_verified=true' 'private_storage_verified=true'; do
+  [[ "$(grep -Fxc "$expected" "$RECEIPT" || true)" == 1 ]] || fail 'Offsite receipt is missing or does not match this backup and release.'
+done
+[[ "$(grep -Ec '^backup_reference=[A-Za-z0-9][A-Za-z0-9._-]{0,127}$' "$RECEIPT" || true)" == 1 ]] || fail 'Offsite receipt needs one non-sensitive backup reference.'
+(cd "$BACKUP_RUN_DIR" && sha256sum -c SHA256SUMS >/dev/null) || fail 'Local backup changed during verification.'
+[[ "$(sha256sum "$BACKUP_RUN_DIR/SHA256SUMS" | awk '{print $1}')" == "$CHECKSUM_SHA256" ]] || fail 'Checksum manifest changed during verification.'
+[[ -z "$(git status --porcelain --untracked-files=all)" && "$(git rev-parse HEAD)" == "$RELEASE_SHA" ]] || fail 'Release source changed during prerequisite checks.'
+
+OVERRIDE="$RECORD_DIR/release-images.yml"
+printf 'services:\n' > "$OVERRIDE"
+for service in backend worker web; do
+  cat >> "$OVERRIDE" <<IMAGE
+  $service:
+    image: ${COMPOSE_PROJECT_NAME}-${service}:${RELEASE_SHA}
+    build:
+      labels:
+        org.opencontainers.image.revision: "$RELEASE_SHA"
+IMAGE
+done
+release_compose=("${compose[@]}" -f "$OVERRIDE")
+DEPLOY_STARTED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+printf 'deploy_started_at=%s\n' "$DEPLOY_STARTED_AT" >> "$RECORD_DIR/release.txt"
+record_failure() {
+  local result=$?
+  trap - EXIT
+  if [[ "$result" != 0 ]]; then
+    "${compose[@]}" logs --no-color --since "$DEPLOY_STARTED_AT" --tail=2000 backend worker web > "$RECORD_DIR/failure-services.log" 2>&1 || true
+  fi
+  exit "$result"
+}
+trap record_failure EXIT
+"${release_compose[@]}" build backend worker web
+for service in backend worker web; do
+  image="${COMPOSE_PROJECT_NAME}-${service}:${RELEASE_SHA}"
+  [[ "$(docker image inspect -f '{{index .Config.Labels "org.opencontainers.image.revision"}}' "$image")" == "$RELEASE_SHA" ]] || fail "New $service image has the wrong release identity."
+  image_id="$(docker image inspect -f '{{.Id}}' "$image")"
+  printf '%s %s\n' "$service" "$image_id" >> "$RECORD_DIR/new-images.txt"
+done
+# Verify packaged inputs using the new image without connecting to the database.
+"${release_compose[@]}" run --rm --no-deps --pull never backend node -e '
+  const fs = require("fs");
+  for (const file of ["prisma/schema.prisma", "prisma/migrations/20260827120000_add_track_content_type_and_beats/migration.sql", "prisma/migrations/20260829120000_add_discover_trending_index/migration.sql", "src/shared/musicGenres.json"]) {
+    if (!fs.statSync(file).isFile()) throw new Error("Required release input missing: " + file);
+  }
+' > "$RECORD_DIR/image-inputs.log" 2>&1 || fail 'New backend image lacks required schema, migrations, or shared taxonomy.'
+# The override pins this one-off migration container to the NEW backend image.
+"${release_compose[@]}" run --rm --no-deps --pull never backend npx prisma migrate deploy > "$RECORD_DIR/migrate.log" 2>&1 || fail 'Migration failed; application services were not updated. Inspect private migration evidence.'
+"${release_compose[@]}" up -d --no-deps --no-build backend worker web
 HEALTH_URL="${HEALTH_URL:-http://localhost/api/ready}"
 READINESS_ATTEMPTS="${READINESS_ATTEMPTS:-60}"
 READINESS_SLEEP_SECONDS="${READINESS_SLEEP_SECONDS:-3}"
-
-fail() {
-  printf 'ERROR: %s\n' "$*" >&2
-  exit 1
-}
-
-sanitize_logs() {
-  sed -E \
-    -e 's#(postgres(ql)?://)[^@[:space:]]+@#\1***:***@#g' \
-    -e 's#((password|secret|token|key|signature|credential)=)[^[:space:]&]+#\1REDACTED#gi' \
-    -e 's#((password|secret|token|key|signature|credential)["'\'']?[[:space:]]*:[[:space:]]*["'\''])[^"'\'']+#\1REDACTED#gi'
-}
-
-cd "$APP_DIR" || fail "Cannot cd to APP_DIR=$APP_DIR"
-
-[[ -f "$ENV_FILE" ]] || fail "Missing $ENV_FILE. Create it on the VPS from .env.production.example and fill real values first."
-[[ -f "$COMPOSE_FILE" ]] || fail "Missing $COMPOSE_FILE."
-
-if grep -Ev '^[[:space:]]*(#|$)' "$ENV_FILE" | grep -Eq 'CHANGE_ME|example\.com|__[^[:space:]]*__'; then
-  fail "$ENV_FILE still contains placeholder values. Replace them before deploying."
-fi
-
-for required in DOMAIN FRONTEND_ORIGIN GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET GOOGLE_REDIRECT_URI DATABASE_URL POSTGRES_USER POSTGRES_PASSWORD POSTGRES_DB REDIS_URL S3_ENDPOINT S3_PUBLIC_ENDPOINT S3_BUCKET S3_ACCESS_KEY_ID S3_SECRET_ACCESS_KEY JWT_SECRET COOKIE_SECRET; do
-  if ! grep -Eq "^${required}=" "$ENV_FILE"; then
-    fail "$ENV_FILE is missing required key: $required"
-  fi
-done
-
-if [[ -n "${PRODUCTION_DOMAIN:-}" ]]; then
-  configured_domain="$(sed -n 's/^DOMAIN=//p' "$ENV_FILE" | tail -1)"
-  [[ "$configured_domain" == "$PRODUCTION_DOMAIN" ]] || fail "PRODUCTION_DOMAIN does not match DOMAIN in $ENV_FILE."
-fi
-
-command -v docker >/dev/null 2>&1 || fail "Docker is not installed."
-docker compose version >/dev/null 2>&1 || fail "Docker Compose plugin is not installed."
-command -v curl >/dev/null 2>&1 || fail "curl is not installed."
-export APP_ENV_FILE="$ENV_FILE"
-
-if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-  current_branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || true)"
-  current_commit="$(git rev-parse --short HEAD 2>/dev/null || true)"
-  printf 'Deploying branch=%s commit=%s\n' "${current_branch:-unknown}" "${current_commit:-unknown}"
-fi
-
-compose=(docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE")
-
-printf 'Validating Docker Compose production config...\n'
-"${compose[@]}" config --quiet
-
-running_services="$("${compose[@]}" ps --services --status running 2>/dev/null || true)"
-if grep -Eq '^(backend|postgres|minio|worker|web)$' <<<"$running_services"; then
-  printf 'Existing services detected; creating pre-deploy backup.\n'
-  NOIRSOUND_ENV_FILE="${APP_DIR}/${ENV_FILE}" COMPOSE_FILE="${COMPOSE_FILE}" bash scripts/backup-all.sh || {
-    printf 'Backup failed. Refusing to deploy.\n' >&2
-    exit 1
-  }
-else
-  printf 'No running NoirSound production services detected; first deployment has no live data to back up.\n'
-fi
-
-printf 'Building production images...\n'
-"${compose[@]}" build
-
-wait_for_service() {
-  local service="$1"
-  local cid status
-  printf 'Waiting for %s health...\n' "$service"
-  for _ in $(seq 1 60); do
-    cid="$("${compose[@]}" ps -q "$service" 2>/dev/null || true)"
-    if [[ -n "$cid" ]]; then
-      status="$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$cid" 2>/dev/null || true)"
-      if [[ "$status" == "healthy" || "$status" == "running" ]]; then
-        printf '%s is %s.\n' "$service" "$status"
-        return 0
-      fi
-    fi
-    sleep 2
-  done
-  return 1
-}
-
-printf 'Starting stateful dependencies...\n'
-"${compose[@]}" up -d postgres redis minio
-wait_for_service postgres || fail "PostgreSQL did not become healthy."
-wait_for_service redis || fail "Redis did not become healthy."
-wait_for_service minio || fail "MinIO did not become healthy."
-
-printf 'Ensuring private MinIO bucket exists...\n'
-"${compose[@]}" run --rm --no-deps minio-create-bucket >/dev/null
-
-printf 'Running Prisma migrations...\n'
-"${compose[@]}" run --rm --no-deps backend npx prisma migrate deploy
-
-printf 'Starting application services...\n'
-"${compose[@]}" up -d backend worker web
-
-printf 'Waiting for readiness at %s...\n' "$HEALTH_URL"
-for _ in $(seq 1 "$READINESS_ATTEMPTS"); do
-  if curl -fsS "$HEALTH_URL" >/dev/null; then
-    printf 'Ready.\n'
-    "${compose[@]}" ps
-    exit 0
-  fi
+[[ "$READINESS_ATTEMPTS" =~ ^[1-9][0-9]*$ && "$READINESS_SLEEP_SECONDS" =~ ^[0-9]+$ ]] || fail 'Invalid readiness retry settings.'
+ready=false
+for ((attempt=0; attempt<READINESS_ATTEMPTS; attempt++)); do
+  if curl --connect-timeout 5 --max-time 10 -fsS "$HEALTH_URL" >/dev/null 2>&1; then ready=true; break; fi
   sleep "$READINESS_SLEEP_SECONDS"
 done
-
-printf 'Deployment failed readiness check. Recent redacted logs follow.\n' >&2
-"${compose[@]}" ps >&2 || true
-"${compose[@]}" logs --no-color --tail=120 backend worker web 2>&1 | sanitize_logs >&2 || true
-exit 1
+[[ "$ready" == true ]] || fail 'Readiness failed after application update; preserve evidence and assess compatible application rollback.'
+while read -r service expected_image; do
+  cid="$("${release_compose[@]}" ps -q "$service")"
+  [[ "$(docker inspect -f '{{.Image}}' "$cid")" == "$expected_image" ]] || fail "$service is not running the verified release image."
+done < "$RECORD_DIR/new-images.txt"
+printf 'Release %s is running; backup, drill and trusted offsite receipts are in the private release record. Live functional smoke remains required.\n' "$RELEASE_SHA"
