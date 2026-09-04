@@ -21,7 +21,9 @@ async function createFixture(page, { withTrack = false } = {}) {
   const playlist = (await created.json()).playlist;
 
   if (withTrack) {
-    const tracksResponse = await page.request.get(`${API_BASE}/tracks`);
+    // Preserve the incoming server-side Music filter as well as the defensive
+    // streamability/type checks: another case can publish a Beat first.
+    const tracksResponse = await page.request.get(`${API_BASE}/tracks`, { params: { contentType: 'MUSIC' } });
     expect(tracksResponse.ok()).toBeTruthy();
     const body = await tracksResponse.json();
     const track = (body.data || body.tracks || body)

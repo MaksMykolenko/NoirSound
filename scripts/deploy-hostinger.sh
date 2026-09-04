@@ -22,12 +22,20 @@ COMPOSE_FILE="${COMPOSE_FILE:-$APP_DIR/docker-compose.production.yml}"
 [[ "$COMPOSE_FILE" = /* && -f "$COMPOSE_FILE" ]] || fail 'COMPOSE_FILE must be an existing absolute path.'
 # Read only literal deployment settings; never source the production environment
 # here or expand its values as shell code. Existing backup helpers load that file.
-setting() {
-  local key="$1" value="${!1:-}"
-  if [[ -z "$value" ]]; then value="$(sed -n "s/^${key}=//p" "$ENV_FILE" | tail -1)"; fi
+file_setting() {
+  local value
+  value="$(sed -n "s/^${1}=//p" "$ENV_FILE" | tail -1)"
   if [[ "$value" == \"*\" || "$value" == \'*\' ]]; then value="${value:1:${#value}-2}"; fi
   printf '%s' "$value"
 }
+setting() {
+  local value="${!1:-}"
+  if [[ -n "$value" ]]; then printf '%s' "$value"; else file_setting "$1"; fi
+}
+configured_project="$(file_setting COMPOSE_PROJECT_NAME)"
+if [[ -n "$configured_project" && -n "${COMPOSE_PROJECT_NAME:-}" && "$configured_project" != "$COMPOSE_PROJECT_NAME" ]]; then
+  fail 'Caller and production environment specify conflicting Compose projects; backup and application must use the same project.'
+fi
 COMPOSE_PROJECT_NAME="$(setting COMPOSE_PROJECT_NAME)"
 OFFSITE_BACKUP_VERIFY_SCRIPT="$(setting OFFSITE_BACKUP_VERIFY_SCRIPT)"
 DRILL_DATABASE_URL="$(setting DRILL_DATABASE_URL)"

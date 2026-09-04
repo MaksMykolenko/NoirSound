@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { beforeEach, afterEach, describe, it, expect } from 'vitest';
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, copyFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, copyFileSync, rmSync, appendFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { spawnSync } from 'node:child_process';
@@ -81,6 +81,13 @@ describe('exact release deployment guards (no real infrastructure)', () => {
     const result = run({ [key]: '1' });
     expect(result.status, result.stderr).not.toBe(0);
     expect(result.calls).not.toMatch(/ build | up -d |migrate deploy/);
+  });
+  it('refuses a conflicting environment-file project before Docker or backup operations', () => {
+    appendFileSync(join(dir, 'app/.env.production'), 'COMPOSE_PROJECT_NAME=another-project\n');
+    const result = run();
+    expect(result.status, result.stderr).not.toBe(0);
+    expect(result.stderr).toContain('conflicting Compose projects');
+    expect(result.calls).toBe('');
   });
   it('does not update application services after a migration failure', () => {
     const result = run({ TEST_MIGRATE_FAIL: '1' });

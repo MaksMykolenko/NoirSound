@@ -15,6 +15,11 @@ function run(command, args, env) {
   }
 }
 
+function resetAndSeed(prismaBin, env) {
+  run(prismaBin, ['migrate', 'reset', '--force'], env);
+  run(process.execPath, ['prisma/seed.js', 'demo'], env);
+}
+
 const DATABASE_TEST_FILES = [
   'tests/artistAccess.test.js',
   'tests/catalogSearch.test.js',
@@ -75,12 +80,15 @@ async function main() {
   const unitTestFiles = allTestFiles.filter((file) => !DATABASE_TEST_FILES.includes(file));
 
   // Unit/mocked suites do not touch the shared PostgreSQL fixture and can run
-  // together. Each real integration file gets its own reset + demo seed so a
+  // together, but the cleanup-script safety contracts still inspect the
+  // database in dry-run mode. Establish the schema and fixture before that
+  // group so a brand-new CI service database behaves like a warmed local one.
+  // Each real integration file then gets its own reset + demo seed so a
   // destructive fixture or leaked role/status can never affect another file.
+  resetAndSeed(prismaBin, env);
   run(vitestBin, ['run', ...unitTestFiles], env);
   for (const testFile of DATABASE_TEST_FILES) {
-    run(prismaBin, ['migrate', 'reset', '--force'], env);
-    run(process.execPath, ['prisma/seed.js', 'demo'], env);
+    resetAndSeed(prismaBin, env);
     run(vitestBin, ['run', testFile], env);
   }
 }
