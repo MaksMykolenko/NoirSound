@@ -1,10 +1,42 @@
 import { expect, test } from '@playwright/test';
 import { makeWavBuffer } from './_helpers.js';
 
+const demoAudio = makeWavBuffer(90);
+
 async function requireDemoMode(page) {
-  await page.route('https://www.soundhelix.com/**', route => route.fulfill({
-    status: 200, contentType: 'audio/wav', body: makeWavBuffer(90),
-  }));
+  await page.route('https://www.soundhelix.com/**', route => {
+    const rangeHeader = route.request().headers().range;
+    const range = rangeHeader?.match(/^bytes=(\d*)-(\d*)$/);
+    let start = 0;
+    let end = demoAudio.length - 1;
+    if (rangeHeader) {
+      if (range?.[1]) {
+        start = Number(range[1]);
+        if (range[2]) end = Math.min(Number(range[2]), end);
+      } else if (range?.[2]) {
+        start = Math.max(0, demoAudio.length - Number(range[2]));
+      }
+      if (!range || (!range[1] && !range[2]) || !Number.isSafeInteger(start)
+          || !Number.isSafeInteger(end) || start > end || start >= demoAudio.length) {
+        return route.fulfill({
+          status: 416,
+          headers: { 'accept-ranges': 'bytes', 'content-range': `bytes */${demoAudio.length}`, 'content-length': '0' },
+          body: '',
+        });
+      }
+    }
+    const body = demoAudio.subarray(start, end + 1);
+    return route.fulfill({
+      status: rangeHeader ? 206 : 200,
+      contentType: 'audio/wav',
+      headers: {
+        'accept-ranges': 'bytes',
+        'content-length': String(body.length),
+        ...(rangeHeader ? { 'content-range': `bytes ${start}-${end}/${demoAudio.length}` } : {}),
+      },
+      body,
+    });
+  });
   await page.goto('/track/1');
   const demoBadge = page.getByTestId('demo-mode-indicator').filter({ visible: true }).first();
   await expect(demoBadge).toBeVisible();
@@ -40,10 +72,18 @@ test.describe('Fullscreen lyrics player — mock smoke', { tag: '@demo' }, () =>
     ).toHaveCount(1);
     await expect(page.locator('[inert]')).toHaveCount(1);
 
-    await standardBar.getByRole('slider', { name: 'Track progress' }).fill('20');
-    await expect(standardBar.getByRole('slider', { name: 'Track progress' })).toHaveValue('20');
+    const progress = standardBar.getByRole('slider', { name: 'Track progress' });
+    await expect.poll(async () => Number(await progress.inputValue())).toBeGreaterThan(0);
+    await expect(fullscreenPlayButton).toHaveAttribute('aria-label', 'Pause');
+    await fullscreenPlayButton.click();
+    await expect(fullscreenPlayButton).toHaveAttribute('aria-label', 'Play');
+    await progress.fill('20');
+    await expect(progress).toHaveValue('20');
     await standardBar.getByRole('slider', { name: 'Volume' }).fill('0.25');
     await expect(standardBar.getByRole('slider', { name: 'Volume' })).toHaveValue('0.25');
+    await fullscreenPlayButton.click();
+    await expect(fullscreenPlayButton).toHaveAttribute('aria-label', 'Pause');
+    await expect.poll(async () => Number(await progress.inputValue())).toBeGreaterThan(20);
     await standardBar.getByRole('button', { name: 'Open play queue' }).click();
     await expect(fullscreen.getByRole('dialog', { name: 'Play Queue' })).toBeVisible();
     await page.keyboard.press('Escape');
@@ -55,12 +95,16 @@ test.describe('Fullscreen lyrics player — mock smoke', { tag: '@demo' }, () =>
     await expect(fullscreen).toBeHidden();
     await expect(page).toHaveURL(/\/track\/1$/);
     await expect(openLyrics).toBeFocused();
+    await expect(standardPlayButton).toHaveAttribute('aria-label', 'Pause');
+    await expect.poll(async () => Number(await player.getByRole('slider', { name: 'Track progress' }).inputValue())).toBeGreaterThan(20);
 
     await openLyrics.click();
     await expect(fullscreen).toBeVisible();
     await page.goBack();
     await expect(fullscreen).toBeHidden();
     await expect(page).toHaveURL(/\/track\/1$/);
+    await expect(standardPlayButton).toHaveAttribute('aria-label', 'Pause');
+    await expect.poll(async () => Number(await player.getByRole('slider', { name: 'Track progress' }).inputValue())).toBeGreaterThan(20);
   });
 
   test('keeps controls reachable on mobile and disables unavailable lyrics', async ({ page }) => {
