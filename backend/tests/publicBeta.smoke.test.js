@@ -8,6 +8,9 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import buildServer from '../src/index.js';
 
+const frontendOrigin = (process.env.FRONTEND_ORIGIN || 'http://localhost:5173')
+  .split(',').map((origin) => origin.trim()).find(Boolean);
+
 describe('server wiring (no DB)', () => {
   let app;
 
@@ -60,7 +63,7 @@ describe('server wiring (no DB)', () => {
     const res = await app.inject({
       method: 'POST',
       url: '/api/auth/logout',
-      headers: { cookie: 'token=forged', origin: 'http://localhost:5173' }
+      headers: { cookie: 'token=forged', origin: frontendOrigin }
     });
     // CSRF passed; authentication then fails on the forged token.
     expect(res.statusCode).toBe(401);
@@ -78,7 +81,7 @@ describe('server wiring (no DB)', () => {
     });
     expect(res.statusCode).toBe(302);
     expect(res.headers.location).toBe(
-      'http://localhost:5173/library?auth=google_error&reason=not_configured'
+      `${frontendOrigin}/library?auth=google_error&reason=not_configured`
     );
   });
 
@@ -216,7 +219,7 @@ describe('Google OAuth callback', () => {
 
       expect(callback.statusCode).toBe(302);
       expect(callback.headers.location).toBe(
-        'http://localhost:5173/library?auth=google_success'
+        `${frontendOrigin}/library?auth=google_success`
       );
       expect(googleClient.getToken).toHaveBeenCalledWith(expect.objectContaining({
         code: 'test-code',

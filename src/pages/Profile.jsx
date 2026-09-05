@@ -147,6 +147,19 @@ export default function Profile() {
               key={tab.id}
               onClick={() => setSearchParams({ tab: tab.id })}
               role="tab"
+              id={`profile-tab-${tab.id}`}
+              aria-controls="profile-tab-panel"
+              tabIndex={active ? 0 : -1}
+              onKeyDown={(event) => {
+                const index = tabs.findIndex((item) => item.id === tab.id);
+                const next = event.key === 'ArrowRight' ? (index + 1) % tabs.length
+                  : event.key === 'ArrowLeft' ? (index - 1 + tabs.length) % tabs.length
+                    : event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : null;
+                if (next === null) return;
+                event.preventDefault();
+                setSearchParams({ tab: tabs[next].id });
+                document.getElementById(`profile-tab-${tabs[next].id}`)?.focus();
+              }}
               aria-selected={active}
               aria-current={active ? 'page' : undefined}
               className={`ns-tab flex shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2.5 font-sans text-ns-label font-medium transition-colors sm:gap-2 sm:px-5 sm:py-3 ${tab.id === 'settings' ? 'ml-2' : ''} ${
@@ -163,6 +176,9 @@ export default function Profile() {
 
       <div
         data-testid="profile-tab-content"
+        id="profile-tab-panel"
+        role="tabpanel"
+        aria-labelledby={`profile-tab-${activeTab}`}
         className={activeTab === 'settings' ? 'pt-6 xl:pt-4' : 'pt-4 xl:pt-3'}
       >
         {activeTab === 'overview' && (

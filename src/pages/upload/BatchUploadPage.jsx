@@ -338,6 +338,8 @@ export default function BatchUploadPage() {
               type="file"
               multiple
               accept=".mp3,.wav,.flac,.aac,.ogg"
+              tabIndex={-1}
+              aria-label={t('batchUpload.reselectFiles')}
               className="sr-only"
               onChange={(event) => attachReselectedFiles(event.target.files)}
             />
@@ -345,7 +347,7 @@ export default function BatchUploadPage() {
               <RotateCcw size={14} /> {t('batchUpload.reselectFiles')}
             </button>
             {!batch.items.some((item) => item.status === 'PUBLISHED') && (
-              <button type="button" className="ns-button-secondary inline-flex !rounded items-center justify-center gap-2 px-4 text-rose-300" disabled={busy === 'cancel'} onClick={cancel}>
+              <button type="button" className="ns-button-secondary inline-flex !rounded items-center justify-center gap-2 px-4 text-[var(--ns-danger)]" disabled={busy === 'cancel'} onClick={cancel}>
                 <Trash2 size={14} /> {t('batchUpload.cancelBatch')}
               </button>
             )}
@@ -363,7 +365,7 @@ export default function BatchUploadPage() {
                 onClick={() => setStep(index)}
                 aria-current={step === index ? 'step' : undefined}
                 className={`flex min-h-12 shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-3 font-sans text-ns-meta font-medium sm:px-4 ${
-                  step === index ? 'border-brand-red text-zinc-100' : index < step ? 'border-transparent text-emerald-300' : 'border-transparent text-zinc-500'
+                  step === index ? 'border-brand-red text-zinc-100' : index < step ? 'border-transparent text-[var(--ns-success)]' : 'border-transparent text-zinc-500'
                 } disabled:opacity-35`}
               >
                 <span>{index < step ? '✓' : index + 1}</span>
@@ -390,9 +392,9 @@ export default function BatchUploadPage() {
               <h2 className="ns-eyebrow">{t('batchUpload.resumeDraft')}</h2>
               <div className="divide-y divide-zinc-800/70 border-y border-zinc-800/70 sm:grid sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-3">
                 {drafts.filter((draft) => draft.status !== 'PUBLISHED').map((draft) => (
-                  <button key={draft.id} type="button" className="p-4 text-left transition-colors hover:bg-zinc-900/40" onClick={() => setSearchParams({ batch: draft.id })}>
-                    <p className="truncate font-semibold text-zinc-200">{draft.playlistTitle || `${draft.itemCount} ${t('batchUpload.trackDrafts')}`}</p>
-                    <p className="mt-1 font-sans tabular-nums text-ns-meta text-zinc-500">{draft.status} · {draft.readyCount} {t('batchUpload.ready')} · {draft.failedCount} {t('batchUpload.failed')}</p>
+                  <button key={draft.id} type="button" className="block min-w-0 w-full p-4 text-left transition-colors hover:bg-zinc-900/40" onClick={() => setSearchParams({ batch: draft.id })}>
+                    <p title={draft.playlistTitle} className="truncate font-semibold text-zinc-200">{draft.playlistTitle || `${draft.itemCount} ${t('batchUpload.trackDrafts')}`}</p>
+                    <p className="mt-1 font-sans tabular-nums text-ns-meta text-zinc-500">{t(`admin.statusValues.${draft.status}`, { defaultValue: draft.status })} · {draft.readyCount} {t('batchUpload.ready')} · {draft.failedCount} {t('batchUpload.failed')}</p>
                   </button>
                 ))}
               </div>
@@ -402,8 +404,8 @@ export default function BatchUploadPage() {
       )}
 
       {batch && (
-        <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_19rem]">
-          <main className="min-w-0">
+        <div className="grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1fr)_19rem]">
+          <div className="min-w-0">
             {(step === 1 || step === 2) && (
               <section className="space-y-4">
                 <div>
@@ -461,7 +463,7 @@ export default function BatchUploadPage() {
                     <p className="font-bold">{t('batchUpload.fixBlockingErrors')}</p>
                     <ul className="mt-2 space-y-1 list-disc pl-5">
                       {batch.missingFields.map((missing, index) => (
-                        <li key={`${missing.itemId || 'playlist'}-${missing.field}-${index}`}>
+                        <li className="break-words [overflow-wrap:anywhere]" key={`${missing.itemId || 'playlist'}-${missing.field}-${index}`}>
                           {missing.scope === 'playlist' ? t('batchUpload.playlistSettings') : batch.items.find((item) => item.id === missing.itemId)?.title}: {missing.field}
                         </li>
                       ))}
@@ -519,28 +521,28 @@ export default function BatchUploadPage() {
                 )}
               </section>
             )}
-          </main>
+          </div>
 
-          <aside className="self-start space-y-5 border-t border-zinc-800/80 pt-5 xl:sticky xl:top-6 xl:border-l xl:border-t-0 xl:pl-6 xl:pt-0">
+          <aside className="min-w-0 self-start space-y-5 border-t border-zinc-800/80 pt-5 xl:sticky xl:top-6 xl:border-l xl:border-t-0 xl:pl-6 xl:pt-0">
             <div>
               <div className="flex items-center justify-between gap-2">
                 <h2 className="font-semibold text-zinc-100">{t('batchUpload.batchStatus')}</h2>
-                <span className="font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-brand-red">{batch.status}</span>
+                <span className="font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-brand-red">{t(`admin.statusValues.${batch.status}`, { defaultValue: batch.status })}</span>
               </div>
               <div className="mt-4 space-y-2 text-sm text-zinc-400">
-                <p className="flex justify-between"><span>{t('batchUpload.singles')}</span><strong className="text-zinc-200">{counts.singles}</strong></p>
-                <p className="flex justify-between"><span>{t('batchUpload.playlistTracks')}</span><strong className="text-zinc-200">{counts.playlist}</strong></p>
-                <p className="flex justify-between"><span>{t('content.music')}</span><strong className="text-zinc-200">{counts.music}</strong></p>
-                <p className="flex justify-between"><span>{t('content.beats')}</span><strong className="text-zinc-200">{counts.beats}</strong></p>
-                <p className="flex justify-between"><span>{t('batchUpload.ready')}</span><strong className="text-emerald-300">{counts.ready}</strong></p>
-                <p className="flex justify-between"><span>{t('batchUpload.failed')}</span><strong className="text-rose-300">{counts.failed}</strong></p>
+                <p className="flex justify-between gap-3"><span>{t('batchUpload.singles')}</span><strong className="text-zinc-200">{counts.singles}</strong></p>
+                <p className="flex justify-between gap-3"><span>{t('batchUpload.playlistTracks')}</span><strong className="text-zinc-200">{counts.playlist}</strong></p>
+                <p className="flex justify-between gap-3"><span>{t('content.music')}</span><strong className="text-zinc-200">{counts.music}</strong></p>
+                <p className="flex justify-between gap-3"><span>{t('content.beats')}</span><strong className="text-zinc-200">{counts.beats}</strong></p>
+                <p className="flex justify-between gap-3"><span>{t('batchUpload.ready')}</span><strong className="text-[var(--ns-success)]">{counts.ready}</strong></p>
+                <p className="flex justify-between gap-3"><span>{t('batchUpload.failed')}</span><strong className="text-[var(--ns-danger)]">{counts.failed}</strong></p>
               </div>
             </div>
             <div className="max-h-[28rem] divide-y divide-zinc-800/60 overflow-y-auto border-y border-zinc-800/70 py-1">
               {batch.items.map((item) => (
                 <button key={item.id} type="button" onClick={() => setSelectedItem(item)} className="flex w-full items-center gap-3 p-2.5 text-left hover:bg-zinc-900/50">
-                  {item.status === 'PROCESSING' ? <LoaderCircle size={15} className="text-amber-300 animate-spin" /> : item.status === 'READY' || item.status === 'PUBLISHED' ? <CheckCircle2 size={15} className="text-emerald-400" /> : item.status === 'FAILED' ? <AlertCircle size={15} className="text-rose-400" /> : <FileAudio size={15} className="text-zinc-500" />}
-                  <span className="min-w-0 flex-1"><span className="block truncate text-ns-body-sm font-semibold text-zinc-300">{item.title}</span><span className="block font-sans tabular-nums text-ns-meta text-zinc-600">{item.target} · {item.contentType === 'BEAT' ? t('content.beats') : t('content.music')}</span></span>
+                  {item.status === 'PROCESSING' ? <LoaderCircle size={15} className="text-amber-300 animate-spin" /> : item.status === 'READY' || item.status === 'PUBLISHED' ? <CheckCircle2 size={15} className="text-[var(--ns-success)]" /> : item.status === 'FAILED' ? <AlertCircle size={15} className="text-[var(--ns-danger)]" /> : <FileAudio size={15} className="text-zinc-500" />}
+                  <span className="min-w-0 flex-1"><span title={item.title} className="block truncate text-ns-body-sm font-semibold text-zinc-300">{item.title}</span><span className="block font-sans tabular-nums text-ns-meta text-zinc-600">{item.target} · {item.contentType === 'BEAT' ? t('content.beats') : t('content.music')}</span></span>
                   {item.missingFields?.length > 0 && <span className="w-2 h-2 rounded-full bg-amber-400" />}
                 </button>
               ))}

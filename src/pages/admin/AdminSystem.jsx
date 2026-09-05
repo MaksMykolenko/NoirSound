@@ -37,8 +37,8 @@ export default function AdminSystem() {
         <AdminPanel className="p-4">
           <h2 className="text-sm font-bold">{t('admin.runtime')}</h2>
           <dl className="mt-4 divide-y divide-[var(--ns-border-subtle)] border-y border-[var(--ns-border-subtle)] text-sm">
-            <div className="flex justify-between gap-4 py-2.5"><dt className="text-[var(--ns-text-muted)]">{t('admin.version')}</dt><dd className="min-w-0 truncate text-right">{data?.version || t('admin.unavailable')}</dd></div>
-            <div className="flex justify-between gap-4 py-2.5"><dt className="text-[var(--ns-text-muted)]">{t('admin.commit')}</dt><dd className="min-w-0 truncate text-right">{data?.commit || t('admin.unavailable')}</dd></div>
+            <div className="flex justify-between gap-4 py-2.5"><dt className="text-[var(--ns-text-muted)]">{t('admin.version')}</dt><dd title={data?.version} className="min-w-0 break-all text-right">{data?.version || t('admin.unavailable')}</dd></div>
+            <div className="flex justify-between gap-4 py-2.5"><dt className="text-[var(--ns-text-muted)]">{t('admin.commit')}</dt><dd title={data?.commit} className="min-w-0 break-all text-right">{data?.commit || t('admin.unavailable')}</dd></div>
             <div className="flex justify-between gap-4 py-2.5"><dt className="text-[var(--ns-text-muted)]">{t('admin.uptime')}</dt><dd>{data?.uptimeSeconds ?? t('admin.unavailable')}</dd></div>
           </dl>
         </AdminPanel>

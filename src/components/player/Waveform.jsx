@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { AudioLines } from 'lucide-react';
 
 export default function Waveform({
@@ -8,8 +9,10 @@ export default function Waveform({
   onSeek,
   barCount = 80,
   height = 60,
-  unavailableLabel = 'Waveform data is not available for this release.',
+  unavailableLabel,
 }) {
+  const { t } = useTranslation();
+  const resolvedUnavailableLabel = unavailableLabel ?? t('trackPage.waveformUnavailable');
   const bars = useMemo(() => {
     if (!Array.isArray(samples) || samples.length === 0) return [];
     const step = Math.max(1, Math.floor(samples.length / barCount));
@@ -25,10 +28,10 @@ export default function Waveform({
         className="flex items-center justify-center gap-2 rounded-md border border-dashed border-[var(--ns-border)] bg-zinc-950/30 px-4 font-sans tabular-nums text-ns-meta text-zinc-500"
         style={{ minHeight: height }}
         role="img"
-        aria-label={unavailableLabel}
+        aria-label={resolvedUnavailableLabel}
       >
         <AudioLines size={15} className="opacity-70" aria-hidden="true" />
-        <span>{unavailableLabel}</span>
+        <span>{resolvedUnavailableLabel}</span>
       </div>
     );
   }
@@ -56,7 +59,7 @@ export default function Waveform({
       }}
       role={onSeek ? 'slider' : 'img'}
       tabIndex={onSeek ? 0 : -1}
-      aria-label="Track waveform"
+      aria-label={t('player.waveform')}
       aria-valuemin={onSeek ? 0 : undefined}
       aria-valuemax={onSeek ? duration : undefined}
       aria-valuenow={onSeek ? progress : undefined}

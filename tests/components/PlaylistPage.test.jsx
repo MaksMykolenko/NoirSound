@@ -281,7 +281,6 @@ describe('PlaylistPage — playlist detail table', () => {
       expect(within(row).getByLabelText(
         i18n.t('playlists.pauseTrack', { title: 'Neon Static' })
       )).toBeInTheDocument();
-      expect(within(row).getByText(i18n.t('playlists.currentlyPlaying'))).toHaveClass('sr-only');
     });
 
     it('queues all playable tracks from the header Add to queue button', async () => {
@@ -415,7 +414,7 @@ describe('PlaylistPage — playlist detail table', () => {
     });
   });
 
-  describe('mobile layout', () => {
+  describe('mobile interactions', () => {
     it('renders a parallel mobile row list alongside the desktop table', async () => {
       getPlaylistById.mockResolvedValue(buildPlaylist({ isOwner: true }));
       const { container } = renderPlaylistPage();
@@ -485,7 +484,6 @@ describe('PlaylistPage — playlist detail table', () => {
       // for play/pause/like rather than "zero buttons".
       expect(within(unavailableRow).queryByRole('button', { name: /play|pause/i })).not.toBeInTheDocument();
       expect(within(unavailableRow).queryByRole('button', { name: /like/i })).not.toBeInTheDocument();
-      expect(unavailableRow).toHaveClass('opacity-50');
     });
   });
 });

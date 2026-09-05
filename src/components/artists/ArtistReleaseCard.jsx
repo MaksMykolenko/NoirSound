@@ -65,7 +65,7 @@ export default function ArtistReleaseCard({ track, tracksContext, queueSource })
             type="button"
             onClick={handlePlay}
             disabled={!canPlay}
-            className={`pointer-events-auto absolute bottom-2 right-2 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-brand-red text-[var(--ns-on-accent)] shadow-md transition-opacity disabled:cursor-not-allowed disabled:opacity-0 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 ${isCurrent ? 'sm:opacity-100' : ''}`}
+            className={`pointer-events-auto absolute bottom-2 right-2 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-brand-red text-[var(--ns-on-accent)] shadow-md transition-opacity disabled:cursor-not-allowed disabled:opacity-0 lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100 ${isCurrent ? 'lg:opacity-100' : ''}`}
             aria-label={isPlayingThis
               ? t('playlists.pauseTrack', { title: track.title })
               : t('playlists.playTrack', { title: track.title })}
@@ -78,7 +78,7 @@ export default function ArtistReleaseCard({ track, tracksContext, queueSource })
           <button
             type="button"
             onClick={openFromButton}
-            className="pointer-events-auto absolute right-2 top-2 z-10 ns-icon-button !min-h-10 !min-w-10 bg-zinc-950/85 text-zinc-300 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 focus:opacity-100"
+            className="pointer-events-auto absolute right-2 top-2 z-10 ns-media-action ns-media-action--card bg-zinc-950/85 text-zinc-300 lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100 focus:opacity-100"
             aria-label={t('playlists.moreActionsFor', { title: track.title })}
             aria-haspopup="menu"
           >
@@ -88,9 +88,10 @@ export default function ArtistReleaseCard({ track, tracksContext, queueSource })
 
         <div className="mt-3 min-w-0 px-0.5">
           <h3 className={`ns-artist-release-card__title flex min-w-0 items-center gap-1.5 text-ns-body-sm font-semibold ${isCurrent ? 'text-brand-red' : 'text-zinc-200'}`}>
-            <span className="truncate">{track.title}</span>
-            <TrackTypeBadge track={track} />
+            <span className="truncate" title={track.title}>{track.title}</span>
+
           </h3>
+          <TrackTypeBadge track={track} className="mt-1" />
           <BeatMetadataInline track={track} className="mt-1 flex" />
           {year !== null && (
             <p className="mt-1 truncate font-sans tabular-nums text-ns-meta text-zinc-500">

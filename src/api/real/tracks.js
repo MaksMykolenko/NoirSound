@@ -13,12 +13,20 @@ function trackQuery(options = {}) {
   const search = new URLSearchParams();
   if (contentType) search.set('contentType', contentType);
   if (query) search.set('q', query);
+  if (typeof options === 'object') {
+    for (const key of ['style', 'mood', 'key', 'bpm', 'genre', 'group', 'sort', 'limit', 'page']) {
+      const value = options?.[key];
+      if (value !== undefined && value !== null && value !== '') {
+        search.set(key, String(value));
+      }
+    }
+  }
   const encoded = search.toString();
   return encoded ? `?${encoded}` : '';
 }
 
-export async function getTracks(options = {}) {
-  return mapTrackList(await apiFetch(`/tracks${trackQuery(options)}`));
+export async function getTracks(options = {}, requestOptions = {}) {
+  return mapTrackList(await apiFetch(`/tracks${trackQuery(options)}`, requestOptions));
 }
 
 export async function getTrackById(id) {
@@ -30,26 +38,41 @@ export async function getTracksByArtist(artistId, options = {}) {
   return mapTrackList(await apiFetch(`/artists/${artistId}/tracks${trackQuery(options)}`));
 }
 
-export async function getDiscoverTracks(options = {}) {
-  return getTracks(options);
+export async function getDiscoverTracks(options = {}, requestOptions = {}) {
+  return getTracks(options, requestOptions);
 }
 
-export async function searchTracks(query, options = {}) {
-  const tracks = await getTracks(options);
-  const normalizedQuery = query.trim().toLowerCase();
-  if (!normalizedQuery) return tracks;
-  return tracks.filter((track) =>
-    [
-      track.title,
-      track.artistName,
-      track.genre,
-      track.beatMood,
-      track.beatStyle,
-      track.beatKey,
-      ...(track.tags || []),
-    ]
-      .some((value) => String(value || '').toLowerCase().includes(normalizedQuery))
-  );
+export async function getTrendingTracks(options = {}, requestOptions = {}) {
+  const response = await apiFetch(`/tracks${trackQuery({ ...options, sort: 'trending' })}`, requestOptions);
+  return {
+    tracks: mapTrackList(response),
+    meta: response?.meta || {},
+  };
+}
+
+export async function getCatalogTracks(options = {}, requestOptions = {}) {
+  const search = new URLSearchParams();
+  const q = String(options.q ?? options.query ?? '').trim();
+  if (q) search.set('q', q);
+  for (const key of ['contentType', 'genre', 'group', 'style', 'mood', 'bpm', 'bpmMin', 'bpmMax', 'key', 'sort', 'cursor', 'limit']) {
+    const value = options[key];
+    if (value !== undefined && value !== null && value !== '' && !(key === 'contentType' && value === 'ALL')) search.set(key, String(value));
+  }
+  const response = await apiFetch(`/discover/catalog?${search}`, requestOptions);
+  if (!Array.isArray(response?.items) || !Number.isFinite(response.total) || response.total < 0
+    || typeof response.pageInfo?.hasNextPage !== 'boolean'
+    || (response.pageInfo.hasNextPage && typeof response.pageInfo.nextCursor !== 'string')
+    || !['genres', 'groups', 'styles', 'moods', 'keys', 'bpmRanges'].every((key) => Array.isArray(response.facets?.[key]))) {
+    throw new Error('Invalid catalog response');
+  }
+  return { ...response, items: response.items.map(mapTrackResponse).filter(Boolean) };
+}
+
+// Compatibility: search consumers still receive mapped Track[], but the
+// search itself is applied by the catalog endpoint before its bounded page.
+export async function searchTracks(query, options = {}, requestOptions = {}) {
+  const response = await getCatalogTracks({ ...options, q: query }, requestOptions);
+  return response.items;
 }
 
 export async function setTrackLiked(trackId, liked) {

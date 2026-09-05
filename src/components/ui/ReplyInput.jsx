@@ -33,8 +33,8 @@ export default function ReplyInput({ username, onSubmit, onCancel }) {
       onSubmit={handleSubmit}
       className="space-y-2.5 rounded-md border border-zinc-800 bg-zinc-950/80 p-3"
     >
-      <div className="flex justify-between items-center text-sm text-zinc-400 font-semibold px-0.5">
-        <span className="flex items-center space-x-1">
+      <div className="flex flex-wrap justify-between items-center gap-2 text-sm text-zinc-400 font-semibold px-0.5">
+        <span className="flex min-w-0 items-center gap-1 [overflow-wrap:anywhere]">
           <CornerDownRight size={10} className="text-brand-red" />
           <span>Replying to <span className="text-brand-red">@{username}</span></span>
         </span>

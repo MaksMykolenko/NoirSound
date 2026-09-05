@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import React from 'react';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Eye } from 'lucide-react';
 import { getAdminReports } from '../../api/admin';
@@ -17,14 +17,14 @@ import {
   StatusBadge,
 } from '../../components/admin/AdminUI';
 import { formatAdminDate, useAdminData } from '../../components/admin/adminUtils';
+import useAdminListUrlState from './useAdminListUrlState';
 
 export default function AdminReports() {
   const { t, i18n } = useTranslation();
-  const [searchParams] = useSearchParams();
-  const [status, setStatus] = useState(searchParams.get('status') || 'OPEN');
-  const [targetType, setTargetType] = useState(searchParams.get('targetType') || '');
-  const [reason, setReason] = useState('');
-  const [page, setPage] = useState(1);
+  const { value, page, setFilter, setPage } = useAdminListUrlState({ status: 'OPEN' });
+  const status = value('status');
+  const targetType = value('targetType');
+  const reason = value('reason');
   const { data, loading, error, reload } = useAdminData(
     () => getAdminReports({ status, targetType, reason, page }),
     [status, targetType, reason, page]
@@ -34,11 +34,11 @@ export default function AdminReports() {
     <>
       <AdminPageHeader title={t('admin.reports')} description={t('admin.reportsDescription')} />
       <AdminPanel>
-        <AdminSearch value={reason} onChange={(value) => { setReason(value); setPage(1); }} placeholder={t('admin.filterReason')}>
+        <AdminSearch value={reason} onChange={(nextValue) => setFilter('reason', nextValue)} placeholder={t('admin.filterReason')}>
           <AdminSelect
             label={t('admin.status')}
             value={status}
-            onChange={(value) => { setStatus(value); setPage(1); }}
+            onChange={(nextValue) => setFilter('status', nextValue)}
             options={[
               ['', t('admin.allStatuses')],
               ...['OPEN', 'ESCALATED', 'REVIEWED', 'ACTION_TAKEN', 'DISMISSED'].map((value) => [value, t(`admin.statusValues.${value}`)]),
@@ -47,7 +47,7 @@ export default function AdminReports() {
           <AdminSelect
             label={t('admin.targetType')}
             value={targetType}
-            onChange={(value) => { setTargetType(value); setPage(1); }}
+            onChange={(nextValue) => setFilter('targetType', nextValue)}
             options={[
               ['', t('admin.allTargetTypes')],
               ...['TRACK', 'COMMENT', 'USER', 'ARTIST', 'PLAYLIST'].map((value) => [value, t(`admin.statusValues.${value}`)]),
@@ -71,8 +71,8 @@ export default function AdminReports() {
                 <td className="px-4 py-3"><StatusBadge status={report.status} /></td>
                 <td className="px-4 py-3 text-sm text-[var(--ns-text-muted)]">{formatAdminDate(report.createdAt, i18n.language)}</td>
                 <td className="px-4 py-3">
-                  <Link to={`/admin/reports/${report.id}`} className="ns-button-secondary inline-flex items-center gap-1 rounded px-3 py-2 text-sm">
-                    <Eye className="h-3.5 w-3.5" /> {t('admin.review')}
+                  <Link to={`/admin/reports/${report.id}`} aria-label={`${t('admin.review')}: ${report.id}`} className="ns-button-secondary inline-flex items-center gap-1 rounded px-3 py-2 text-sm">
+                    <Eye className="h-3.5 w-3.5" aria-hidden="true" /> <span aria-hidden="true">{t('admin.review')}</span>
                   </Link>
                 </td>
               </tr>

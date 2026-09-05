@@ -15,7 +15,7 @@ export default function AddToPlaylistModal({ track, onClose }) {
   const [loading, setLoading] = useState(true);
   const [pendingId, setPendingId] = useState(null);
   const [error, setError] = useState('');
-  const dialogRef = useDialogFocusTrap(Boolean(track) && !pendingId, onClose);
+  const dialogRef = useDialogFocusTrap(Boolean(track), () => { if (!pendingId) onClose(); });
 
   useEffect(() => {
     let active = true;
@@ -80,21 +80,21 @@ export default function AddToPlaylistModal({ track, onClose }) {
   const filtered = playlists.filter((playlist) => playlist.name.toLowerCase().includes(query));
 
   return createPortal(
-    <div className="fixed inset-0 z-[var(--ns-z-dialog)] flex items-center justify-center bg-black/75 p-4" onMouseDown={onClose}>
+    <div className="fixed inset-0 z-[var(--ns-z-confirmation)] flex items-center justify-center bg-black/75 p-4" onMouseDown={pendingId ? undefined : onClose}>
       <section
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="add-to-playlist-title"
-        className="w-full max-w-md overflow-hidden rounded-lg border border-zinc-700/70 bg-zinc-950 shadow-xl"
+        className="max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto overscroll-contain rounded-lg border border-zinc-700/70 bg-zinc-950 shadow-xl"
         onMouseDown={(event) => event.stopPropagation()}
       >
-        <header className="flex items-center justify-between border-b border-zinc-800 px-5 py-4">
-          <div>
+        <header className="flex items-center justify-between gap-3 border-b border-zinc-800 px-5 py-4">
+          <div className="min-w-0">
             <h2 id="add-to-playlist-title" className="text-lg font-semibold tracking-tight text-zinc-100">{t('playlists.addToPlaylist')}</h2>
-            <p className="max-w-[32ch] truncate font-sans tabular-nums text-ns-meta text-zinc-500">{track.title}</p>
+            <p title={track.title} className="max-w-[32ch] truncate font-sans tabular-nums text-ns-meta text-zinc-500">{track.title}</p>
           </div>
-          <button type="button" onClick={onClose} className="ns-icon-button !min-h-10 !min-w-10" aria-label="Close">
+          <button type="button" onClick={onClose} disabled={Boolean(pendingId)} className="ns-media-action shrink-0" aria-label={t('actions.close')}>
             <X size={17} />
           </button>
         </header>
@@ -106,7 +106,7 @@ export default function AddToPlaylistModal({ track, onClose }) {
             <input autoFocus value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t('playlists.search')} className="ns-field w-full pl-9 pr-3 text-base sm:text-sm" />
           </label>
 
-          <form onSubmit={createAndAdd} className="flex gap-2">
+          <form onSubmit={createAndAdd} className="flex flex-wrap gap-2">
             <label className="min-w-0 flex-1">
               <span className="sr-only">{t('playlists.new')}</span>
               <input value={newName} maxLength={120} onChange={(event) => setNewName(event.target.value)} placeholder={t('playlists.newPrivate')} className="ns-field w-full px-3 text-base sm:text-sm" />
@@ -131,10 +131,10 @@ export default function AddToPlaylistModal({ track, onClose }) {
                 <button key={playlist.id} type="button" disabled={alreadyAdded || Boolean(pendingId)} onClick={() => addTrack(playlist)} className="flex min-h-12 w-full items-center gap-3 rounded-md border border-transparent px-3 text-left transition-colors hover:border-zinc-800 hover:bg-zinc-900 disabled:opacity-50">
                   <ListMusic size={17} className="text-brand-red shrink-0" />
                   <span className="min-w-0 flex-1">
-                    <strong className="block truncate text-sm text-zinc-200">{playlist.name}</strong>
+                    <strong title={playlist.name} className="block truncate text-sm text-zinc-200">{playlist.name}</strong>
                     <small className="block text-ns-meta text-zinc-500">{t('playlists.tracksCount', { count: playlist.trackCount || playlist.trackIds?.length || 0 })}</small>
                   </span>
-                  <span className="text-ns-meta text-zinc-500">
+                  <span className="max-w-24 shrink-0 break-words text-right text-ns-meta text-zinc-500">
                     {pendingId === playlist.id
                       ? t('playlists.adding')
                       : alreadyAdded

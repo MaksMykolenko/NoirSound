@@ -2,10 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ArrowRight } from 'lucide-react';
-import { getTracks, getArtistsWithTracks } from '../api';
+import { getCatalogTracks, getArtistsWithTracks } from '../api';
 import HomeHero from '../components/home/HomeHero';
 import BrowseByGenre from '../components/home/BrowseByGenre';
 import CreatorCallout from '../components/home/CreatorCallout';
+import BeatsInfoCard from '../components/home/BeatsInfoCard';
 import PageMeta from '../components/meta/PageMeta';
 import TrackCard from '../components/tracks/TrackCard';
 import ArtistCard from '../components/artists/ArtistCard';
@@ -14,16 +15,11 @@ import ErrorState from '../components/ui/ErrorState';
 import LoadingState from '../components/ui/LoadingState';
 import { usePlayerStore } from '../store/playerStore';
 import { useUserStore } from '../store/userStore';
-import {
-  rankRecommendedArtists,
-  sortTracksNewest,
-} from '../utils/presentation';
-import { isBeatTrack } from '../utils/trackContent';
 
 export default function Home() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const [trendingTracks, setTrendingTracks] = useState([]);
+  const [newMusicTracks, setNewMusicTracks] = useState([]);
   const [freshBeats, setFreshBeats] = useState([]);
   const [featuredArtists, setFeaturedArtists] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -34,25 +30,33 @@ export default function Home() {
   const { user, authHydrated } = useUserStore();
 
   useEffect(() => {
+    const controller = new AbortController();
     const fetchData = async () => {
       setLoading(true);
       setError(null);
       try {
-        const [tracksData, artistsData] = await Promise.all([getTracks(), getArtistsWithTracks()]);
-        const uniqueTracks = sortTracksNewest(tracksData);
-        setAllTracksContext(uniqueTracks);
-        setTrendingTracks(uniqueTracks.filter((track) => !isBeatTrack(track)).slice(0, 8));
-        setFreshBeats(uniqueTracks.filter(isBeatTrack).slice(0, 8));
-        setFeaturedArtists(rankRecommendedArtists(artistsData, uniqueTracks).slice(0, 8));
+        const [musicPage, beatPage, artistsData] = await Promise.all([
+          getCatalogTracks({ contentType: 'MUSIC', sort: 'recent', limit: 8 }, { signal: controller.signal }),
+          getCatalogTracks({ contentType: 'BEAT', sort: 'recent', limit: 8 }, { signal: controller.signal }),
+          getArtistsWithTracks({ sort: 'trending', limit: 8 }, { signal: controller.signal }),
+        ]);
+        if (controller.signal.aborted) return;
+        // These are bounded editorial selections; the server determines type and order.
+        setAllTracksContext(musicPage.items);
+        setNewMusicTracks(musicPage.items);
+        setFreshBeats(beatPage.items);
+        setFeaturedArtists(artistsData);
       } catch (err) {
+        if (controller.signal.aborted) return;
         console.error('Failed to fetch home data:', err);
         setError(err);
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       }
     };
     fetchData();
-  }, [homeRevision]);
+    return () => controller.abort();
+  }, [homeRevision, user?.id]);
 
   useEffect(() => {
     if (!authHydrated || !user) return;
@@ -108,7 +112,7 @@ export default function Home() {
           </div>
           <button
             type="button"
-            onClick={() => navigate('/discover')}
+            onClick={() => navigate('/discover?content=MUSIC&sort=recent#discover-catalog')}
             className="flex shrink-0 cursor-pointer items-center space-x-1 whitespace-nowrap font-sans text-ns-meta font-medium text-brand-red hover:underline"
           >
             <span>{t('home.exploreAll')}</span>
@@ -128,7 +132,7 @@ export default function Home() {
             </div>
           ) : loading ? (
             <div className="w-full min-w-full shrink-0 sm:col-span-full sm:min-w-0"><LoadingState count={4} /></div>
-          ) : trendingTracks.length === 0 ? (
+          ) : newMusicTracks.length === 0 ? (
             <div className="w-full min-w-full shrink-0 sm:col-span-full sm:min-w-0">
               <EmptyState
                 iconName="Music2"
@@ -142,7 +146,7 @@ export default function Home() {
               />
             </div>
           ) : (
-            trendingTracks.map((track) => (
+            newMusicTracks.map((track) => (
               <div key={track.id} className="w-[min(74vw,18rem)] shrink-0 sm:w-full sm:max-w-[17.5rem] sm:justify-self-start">
                 <TrackCard track={track} tracksContext={allTracksContext} />
               </div>
@@ -159,7 +163,7 @@ export default function Home() {
           </div>
           <button
             type="button"
-            onClick={() => navigate('/discover?content=BEAT')}
+            onClick={() => navigate('/discover?content=BEAT&sort=recent#discover-catalog')}
             className="flex shrink-0 cursor-pointer items-center space-x-1 whitespace-nowrap font-sans text-ns-meta font-medium text-brand-red hover:underline"
           >
             <span>{t('home.exploreAll')}</span>
@@ -194,7 +198,9 @@ export default function Home() {
         </div>
       </section>
 
-      {!loading && !error && trendingTracks.length > 0 && featuredArtists.length > 0 && (
+      <BeatsInfoCard />
+
+      {!loading && !error && newMusicTracks.length > 0 && featuredArtists.length > 0 && (
         <section className="space-y-4">
           <div>
             <h2 className="ns-section-title">{t('home.featuredArtists')}</h2>
@@ -206,7 +212,7 @@ export default function Home() {
           >
             {featuredArtists.map((artist) => (
               <div key={artist.id} className="w-[min(66vw,15rem)] shrink-0 sm:w-full sm:max-w-[15rem] sm:justify-self-start">
-                <ArtistCard artist={artist} />
+                <ArtistCard artist={artist} metric="followers" />
               </div>
             ))}
           </div>

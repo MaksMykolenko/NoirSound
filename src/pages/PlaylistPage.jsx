@@ -36,6 +36,7 @@ import FallbackCover from '../components/ui/FallbackCover';
 import { dedupeById } from '../utils/presentation';
 import { formatDurationLong } from '../utils/formatTime';
 import PageMeta from '../components/meta/PageMeta';
+import useDialogFocusTrap from '../hooks/useDialogFocusTrap';
 
 function formatPlaylistDuration(seconds, t) {
   return formatDurationLong(seconds, t) || t('playlists.durationUnavailable');
@@ -59,9 +60,9 @@ function PlaylistCoverArt({ playlist, tracks }) {
   }
   // Frontend-only collage fallback (no server-side image generation): a
   // simple 2x2 grid built from up to the first four tracks that have a
-  // cover, padded with the NoirSound gradient tile when there are fewer
+  // cover, padded with the NoirSound tonal tile when there are fewer
   // than four. Only used once a playlist has at least two real covers to
-  // arrange -- otherwise the single gradient FallbackCover above is used.
+  // arrange -- otherwise the single FallbackCover above is used.
   const tiles = [0, 1, 2, 3].map((slot) => coverTracks[slot] || null);
   return (
     <div className="grid h-full w-full grid-cols-2 grid-rows-2 gap-0.5 overflow-hidden" aria-hidden="true">
@@ -77,18 +78,19 @@ function PlaylistCoverArt({ playlist, tracks }) {
 }
 
 function DeletePlaylistDialog({ playlist, busy, onCancel, onConfirm, t }) {
+  const dialogRef = useDialogFocusTrap(Boolean(playlist), () => { if (!busy) onCancel(); });
   if (!playlist) return null;
   return (
     <div className="fixed inset-0 z-[var(--ns-z-confirmation)] flex items-center justify-center bg-black/75 p-4" onMouseDown={busy ? undefined : onCancel}>
-      <section role="alertdialog" aria-modal="true" aria-labelledby="delete-playlist-title" className="w-full max-w-sm rounded-lg border border-rose-500/30 bg-zinc-950 p-5 shadow-xl" onMouseDown={(event) => event.stopPropagation()}>
-        <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-md bg-rose-500/10 text-rose-300">
+      <section ref={dialogRef} role="alertdialog" aria-modal="true" aria-labelledby="delete-playlist-title" className="ns-dialog-surface w-full max-w-sm break-words p-5" onMouseDown={(event) => event.stopPropagation()}>
+        <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-md bg-[color-mix(in_srgb,var(--ns-danger)_10%,transparent)] text-[var(--ns-danger)]">
           <Trash2 size={19} />
         </div>
         <h2 id="delete-playlist-title" className="font-sans text-lg font-semibold tracking-tight text-zinc-100">{t('playlists.deleteQuestion', { name: playlist.name })}</h2>
         <p className="mt-2 text-sm leading-6 text-zinc-400">{t('playlists.deleteWarning')}</p>
         <div className="mt-6 flex gap-3">
           <button type="button" onClick={onCancel} disabled={busy} className="ns-button-secondary min-h-11 flex-1">{t('playlists.cancel')}</button>
-          <button type="button" onClick={onConfirm} disabled={busy} className="min-h-11 flex-1 rounded-md bg-rose-600 px-4 text-sm font-semibold text-white hover:bg-rose-500 disabled:opacity-50">
+          <button type="button" onClick={onConfirm} disabled={busy} className="min-h-11 flex-1 rounded-md bg-[var(--ns-danger)] px-4 text-sm font-semibold text-[var(--ns-on-danger)] disabled:opacity-50">
             {busy ? t('playlists.deleting') : t('playlists.delete')}
           </button>
         </div>
@@ -98,17 +100,18 @@ function DeletePlaylistDialog({ playlist, busy, onCancel, onConfirm, t }) {
 }
 
 function RemoveTrackDialog({ track, busy, onCancel, onConfirm, t }) {
+  const dialogRef = useDialogFocusTrap(Boolean(track), () => { if (!busy) onCancel(); });
   if (!track) return null;
   return (
     <div className="fixed inset-0 z-[var(--ns-z-confirmation)] flex items-center justify-center bg-black/75 p-4" onMouseDown={busy ? undefined : onCancel}>
-      <section role="alertdialog" aria-modal="true" aria-labelledby="remove-track-title" className="w-full max-w-sm rounded-lg border border-rose-500/30 bg-zinc-950 p-5 shadow-xl" onMouseDown={(event) => event.stopPropagation()}>
-        <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-md bg-rose-500/10 text-rose-300">
+      <section ref={dialogRef} role="alertdialog" aria-modal="true" aria-labelledby="remove-track-title" className="ns-dialog-surface w-full max-w-sm break-words p-5" onMouseDown={(event) => event.stopPropagation()}>
+        <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-md bg-[color-mix(in_srgb,var(--ns-danger)_10%,transparent)] text-[var(--ns-danger)]">
           <Trash2 size={19} />
         </div>
         <h2 id="remove-track-title" className="font-sans text-lg font-semibold tracking-tight text-zinc-100">{t('playlists.removeTrackConfirm', { title: track.title })}</h2>
         <div className="mt-6 flex gap-3">
           <button type="button" onClick={onCancel} disabled={busy} className="ns-button-secondary min-h-11 flex-1">{t('playlists.cancel')}</button>
-          <button type="button" onClick={onConfirm} disabled={busy} className="min-h-11 flex-1 rounded-md bg-rose-600 px-4 text-sm font-semibold text-white hover:bg-rose-500 disabled:opacity-50">
+          <button type="button" onClick={onConfirm} disabled={busy} className="min-h-11 flex-1 rounded-md bg-[var(--ns-danger)] px-4 text-sm font-semibold text-[var(--ns-on-danger)] disabled:opacity-50">
             {t('playlists.removeTrack')}
           </button>
         </div>
@@ -316,7 +319,7 @@ export default function PlaylistPage() {
         description={`${tracks.length === 1 ? '1 track' : `${tracks.length} tracks`}${playlist.description ? ` · ${playlist.description}` : ` · Listen to ${playlist.name}, a playlist by ${playlist.creator} on NoirSound.`}`}
         canonical={`https://noirsound.co/playlist/${playlist.id}`}
       />
-      <button onClick={() => navigate(-1)} className="flex min-h-11 w-fit items-center gap-2 px-1 text-sm font-semibold text-zinc-400 transition-colors hover:text-white">
+      <button onClick={() => navigate(-1)} className="flex min-h-11 w-fit items-center gap-2 px-1 text-sm font-semibold text-zinc-400 transition-colors hover:text-[var(--ns-text-primary)]">
         <ArrowLeft size={14} />
         <span>Back</span>
       </button>

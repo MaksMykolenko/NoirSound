@@ -59,7 +59,7 @@ export default function CommentItem({ comment, trackId }) {
         {/* Text Area */}
         <div className="flex-1 min-w-0 space-y-1">
           <div className="flex flex-col min-[430px]:flex-row min-[430px]:items-center justify-between gap-1">
-            <div className="flex flex-wrap items-baseline gap-x-2">
+            <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 [overflow-wrap:anywhere]">
               <span className="text-ns-body-sm font-semibold text-zinc-200">{comment.displayName}</span>
               <span className="font-sans tabular-nums text-ns-meta text-zinc-500">@{comment.username}</span>
             </div>

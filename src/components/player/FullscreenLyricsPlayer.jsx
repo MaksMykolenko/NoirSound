@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -24,6 +24,7 @@ import {
   getCachedFullscreenLyrics,
 } from './fullscreenLyricsCache';
 import { isUnmodifiedPrimaryActivation } from '../../utils/linkActivation';
+import useDialogFocusTrap from '../../hooks/useDialogFocusTrap';
 
 const HISTORY_STATE_KEY = '__noirsoundLyricsFullscreen';
 const noop = () => {};
@@ -35,9 +36,6 @@ export default function FullscreenLyricsPlayer({
 }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const dialogRef = useRef(null);
-  const closeRef = useRef(null);
-  const previousFocusRef = useRef(null);
   const [lyrics, setLyrics] = useState(null);
   const [loading, setLoading] = useState(false);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -71,6 +69,8 @@ export default function FullscreenLyricsPlayer({
       window.setTimeout(() => window.history.back(), 0);
     }
   }, [closeLyricsFullscreen]);
+
+  const dialogRef = useDialogFocusTrap(Boolean(currentTrack), closeWithHistory);
 
   const closeForNavigation = useCallback((event) => {
     if (!isUnmodifiedPrimaryActivation(event)) return;
@@ -133,13 +133,6 @@ export default function FullscreenLyricsPlayer({
   }, [currentTrack?.id, retryVersion]);
 
   useEffect(() => {
-    previousFocusRef.current = document.activeElement;
-    const previousBodyOverflow = document.body.style.overflow;
-    const previousBodyOverscrollBehavior = document.body.style.overscrollBehavior;
-
-    document.body.style.overflow = 'hidden';
-    document.body.style.overscrollBehavior = 'none';
-
     if (!window.history.state?.[HISTORY_STATE_KEY]) {
       window.history.pushState(
         { ...window.history.state, [HISTORY_STATE_KEY]: true },
@@ -152,53 +145,17 @@ export default function FullscreenLyricsPlayer({
       closeLyricsFullscreen();
     };
 
-    const handleKeyDown = (event) => {
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        event.stopPropagation();
-        if (isQueueOpen) {
-          onCloseQueue();
-        } else {
-          closeWithHistory();
-        }
-        return;
-      }
-
-      if (event.key !== 'Tab') return;
-      const focusable = [...(dialogRef.current?.querySelectorAll(
-        'button:not([disabled]), [href], input:not([disabled]), [tabindex]:not([tabindex="-1"])'
-      ) || [])].filter((element) => (
-        typeof element.checkVisibility !== 'function' || element.checkVisibility()
-      ));
-      if (!focusable.length) return;
-
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-
     window.addEventListener('popstate', handlePopState);
-    document.addEventListener('keydown', handleKeyDown, true);
-    closeRef.current?.focus();
 
     return () => {
       window.removeEventListener('popstate', handlePopState);
-      document.removeEventListener('keydown', handleKeyDown, true);
-      document.body.style.overflow = previousBodyOverflow;
-      document.body.style.overscrollBehavior = previousBodyOverscrollBehavior;
-      previousFocusRef.current?.focus?.();
     };
-  }, [closeLyricsFullscreen, closeWithHistory, isQueueOpen, onCloseQueue]);
+  }, [closeLyricsFullscreen]);
 
   if (!currentTrack) return null;
 
   const isLiked = likedTracks.includes(currentTrack.id);
+  const longTitleClass = (currentTrack.title || '').length > 60 ? '!text-2xl !leading-snug' : '';
   const retry = () => {
     deleteCachedFullscreenLyrics(currentTrack.id);
     setRetryVersion((version) => version + 1);
@@ -215,7 +172,6 @@ export default function FullscreenLyricsPlayer({
     >
       <header className="relative z-10 flex min-h-[var(--ns-header-height)] shrink-0 items-center gap-3 border-b border-[var(--ns-border-subtle)] px-4 pb-3 pt-[calc(.75rem+env(safe-area-inset-top))] sm:px-6 lg:px-8 lg:py-3">
         <button
-          ref={closeRef}
           type="button"
           onClick={closeWithHistory}
           className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md border border-[var(--ns-border)] bg-zinc-900 text-zinc-200 transition-colors hover:bg-surface-hover hover:text-zinc-100"
@@ -234,26 +190,28 @@ export default function FullscreenLyricsPlayer({
           imageClassName="object-cover"
         />
         <div className="min-w-0">
-          <h1 className="ns-fullscreen-compact-title truncate font-sans text-sm font-bold text-zinc-100 sm:text-base">{currentTrack.title}</h1>
-          <p className="truncate font-sans tabular-nums text-ns-meta text-zinc-500 sm:text-xs">{currentTrack.artistName}</p>
+          <h1 title={currentTrack.title} className="ns-fullscreen-compact-title truncate font-sans text-sm font-bold text-zinc-100 sm:text-base">{currentTrack.title}</h1>
+          <p title={currentTrack.artistName} className="truncate font-sans tabular-nums text-ns-meta text-zinc-500 sm:text-xs">{currentTrack.artistName}</p>
           <PlaybackErrorStatus error={playbackError} />
         </div>
       </header>
 
       <main className="relative z-10 flex min-h-0 flex-1 overflow-hidden">
-        <aside className="hidden w-[min(31vw,28rem)] shrink-0 flex-col justify-center border-r border-[var(--ns-border-subtle)] p-8 lg:flex xl:p-12">
+        <aside className="hidden min-h-0 w-[min(31vw,28rem)] shrink-0 flex-col overflow-y-auto border-r border-[var(--ns-border-subtle)] p-8 lg:flex xl:p-12">
+          <div className="my-auto w-full shrink-0">
           <FallbackCover
             src={currentTrack.coverUrl}
             title={currentTrack.title}
             artistName={currentTrack.artistName}
             genre={currentTrack.genre}
-            className="aspect-square w-full max-w-sm rounded-sm border border-[var(--ns-border)] shadow-2xl"
+            className="mx-auto aspect-square w-full max-w-[min(100%,30vh)] shrink-0 rounded-sm border border-[var(--ns-border)] shadow-lg"
             imageClassName="object-cover"
           />
           <div className="mt-6">
             <p className="font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-brand-red">{t('player.nowPlaying')}</p>
-            <h2 className="ns-display-title ns-display-title--fullscreen mt-2 text-zinc-100">{currentTrack.title}</h2>
+            <h2 className={`break-words ns-display-title ns-display-title--fullscreen mt-2 text-zinc-100 ${longTitleClass}`}>{currentTrack.title}</h2>
             <p className="mt-1 font-sans tabular-nums text-sm text-zinc-500">{currentTrack.artistName}</p>
+          </div>
           </div>
         </aside>
 
@@ -263,7 +221,7 @@ export default function FullscreenLyricsPlayer({
         >
           <div className="ns-fullscreen-mobile-display mb-8 lg:hidden">
             <p className="font-sans text-ns-meta font-medium uppercase tracking-ns-label text-brand-red">{t('player.nowPlaying')}</p>
-            <h2 className="ns-display-title ns-display-title--fullscreen mt-1 text-zinc-100">{currentTrack.title}</h2>
+            <h2 className={`break-words ns-display-title ns-display-title--fullscreen mt-1 text-zinc-100 ${longTitleClass}`}>{currentTrack.title}</h2>
             <p className="mt-1 font-sans text-sm text-zinc-500">{currentTrack.artistName}</p>
           </div>
           {loading ? (
@@ -356,7 +314,7 @@ export default function FullscreenLyricsPlayer({
             <button
               type="button"
               onClick={closeWithHistory}
-              className="ns-icon-button !min-h-10 !min-w-10 !bg-zinc-900/80 text-brand-red !border-brand-red/30"
+              className="ns-icon-button text-brand-red border-brand-red/30"
               aria-label={t('player.closeLyrics')}
               aria-pressed={true}
             >
@@ -365,10 +323,10 @@ export default function FullscreenLyricsPlayer({
             <button
               type="button"
               onClick={onToggleQueue}
-              className={`ns-icon-button !min-h-10 !min-w-10 !bg-zinc-900/80 ${
-                isQueueOpen ? 'text-brand-red !border-brand-red/30' : 'text-zinc-500'
+              className={`ns-icon-button ${
+                isQueueOpen ? 'text-brand-red border-brand-red/30' : 'text-zinc-500'
               }`}
-              aria-label="Open play queue"
+              aria-label={t('player.openQueue')}
               aria-expanded={isQueueOpen}
             >
               <ListMusic size={17} />

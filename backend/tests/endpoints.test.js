@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import supertest from 'supertest';
+import { Readable } from 'node:stream';
 import buildServer from '../src/index';
 import { markProcessingFailed } from '../src/workers/audioProcessor';
 import seedModule from '../prisma/seed';
@@ -29,6 +30,18 @@ describe('NoirSound backend integration', () => {
       `http://storage.test/read/${encodeURIComponent(key)}`),
     getPublicOrSignedUrl: vi.fn(async (key) =>
       `http://storage.test/read/${encodeURIComponent(key)}`),
+    getObjectStreamResponse: vi.fn(async (_key, { range } = {}) => {
+      const audio = Buffer.from('moderation-preview-audio');
+      const body = range ? audio.subarray(0, 4) : audio;
+      return {
+        body: Readable.from(body),
+        contentType: 'audio/mpeg',
+        contentLength: body.length,
+        contentRange: range ? `bytes 0-3/${audio.length}` : null,
+        acceptRanges: 'bytes',
+        etag: '"preview-etag"',
+      };
+    }),
     getObjectMetadata: vi.fn(async (key) =>
       objectMetadata.get(key) || { exists: false })
   };
@@ -43,6 +56,8 @@ describe('NoirSound backend integration', () => {
     await app.ready();
 
     await seedDemo(app.prisma);
+    // Exercise real HTTP against one stable ephemeral listener for this suite.
+    await app.listen({ host: '127.0.0.1', port: 0 });
 
     const listenerLogin = await supertest(app.server)
       .post('/api/auth/login')
@@ -1272,6 +1287,8 @@ describe('NoirSound backend integration', () => {
 
   describe('admin console API', () => {
     it('rejects non-admins and allows admins to read the overview', async () => {
+      const unauthenticated = await supertest(app.server)
+        .get('/api/admin/overview');
       const forbidden = await supertest(app.server)
         .get('/api/admin/overview')
         .set('Cookie', listenerCookie);
@@ -1279,22 +1296,146 @@ describe('NoirSound backend integration', () => {
         .get('/api/admin/overview')
         .set('Cookie', adminCookie);
 
+      expect(unauthenticated.statusCode).toBe(401);
       expect(forbidden.statusCode).toBe(403);
+      expect(forbidden.body.error).toBe('ADMIN_PERMISSION_DENIED');
       expect(allowed.statusCode).toBe(200);
       expect(allowed.body.users.total).toBeGreaterThan(0);
       expect(allowed.body.tracks).toHaveProperty('published');
       expect(allowed.body.system).toHaveProperty('checks');
     });
 
-    it('paginates, searches, and filters users without returning password hashes', async () => {
+    it('paginates, searches, and filters users without exposing PII or password hashes', async () => {
       const response = await supertest(app.server)
-        .get('/api/admin/users?search=listener&role=LISTENER&status=ACTIVE&page=1&pageSize=5')
+        .get('/api/admin/users?search=music_fan&role=LISTENER&status=ACTIVE&page=1&pageSize=5')
+        .set('Cookie', adminCookie);
+      const emailOnly = await supertest(app.server)
+        .get(`/api/admin/users?search=${encodeURIComponent('listener@noirsound.com')}&page=1&pageSize=5`)
         .set('Cookie', adminCookie);
 
       expect(response.statusCode).toBe(200);
       expect(response.body.pagination.pageSize).toBe(5);
-      expect(response.body.data.some((user) => user.email === 'listener@noirsound.com')).toBe(true);
+      expect(response.body.data.some((user) => user.username === 'music_fan')).toBe(true);
+      expect(response.body.data.every((user) => !Object.hasOwn(user, 'email'))).toBe(true);
       expect(JSON.stringify(response.body)).not.toContain('passwordHash');
+      expect(JSON.stringify(response.body)).not.toContain('listener@noirsound.com');
+      expect(emailOnly.statusCode).toBe(200);
+      expect(emailOnly.body.data).toHaveLength(0);
+    });
+
+    it('withholds email from every admin resource payload without pii.read', async () => {
+      const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const cookieHeader = (cookies) => cookies.map((cookie) => cookie.split(';', 1)[0]).join('; ');
+      const injectJson = async (options) => {
+        const response = await app.inject(options);
+        return { statusCode: response.statusCode, body: response.json() };
+      };
+      const initialized = await injectJson({
+        method: 'POST',
+        url: '/api/uploads/track/init',
+        headers: { cookie: cookieHeader(artistCookie) },
+        payload: validUploadBody({
+          title: `Admin PII boundary ${suffix}`,
+          audio: {
+            filename: `admin-pii-${suffix}.wav`,
+            mimeType: 'audio/wav',
+            sizeBytes: 2048,
+          },
+        }),
+      });
+      expect(initialized.statusCode).toBe(200);
+      const createdReport = await injectJson({
+        method: 'POST',
+        url: '/api/reports',
+        headers: { cookie: cookieHeader(listenerCookie) },
+        payload: {
+          targetType: 'TRACK',
+          targetId: initialized.body.trackId,
+          reason: 'OTHER',
+          details: 'Admin PII boundary fixture',
+        },
+      });
+      expect(createdReport.statusCode).toBe(200);
+
+      const [user, upload, artist, comment, report] = await Promise.all([
+        app.prisma.user.findUnique({ where: { email: 'listener@noirsound.com' } }),
+        app.prisma.upload.findUnique({ where: { id: initialized.body.uploadId }, include: { user: true } }),
+        app.prisma.artistProfile.findFirst({ include: { user: true } }),
+        app.prisma.comment.findFirst({ include: { user: true } }),
+        app.prisma.report.findUnique({ where: { id: createdReport.body.report.id }, include: { reporter: true } }),
+      ]);
+      expect(user && upload && artist && comment && report).toBeTruthy();
+
+      const paths = [
+        `/api/admin/users/${user.id}`,
+        '/api/admin/uploads?page=1&pageSize=5',
+        `/api/admin/uploads/${upload.id}`,
+        '/api/admin/artists?page=1&pageSize=5',
+        `/api/admin/artists/${artist.id}`,
+        `/api/admin/comments/${comment.id}`,
+        `/api/admin/reports/${report.id}`,
+      ];
+      const responses = [];
+      for (const path of paths) {
+        // Keep resource checks sequential so the failing path is deterministic
+        // and use Fastify injection so this regression never opens a socket.
+        // eslint-disable-next-line no-await-in-loop
+        responses.push(await injectJson({
+          method: 'GET',
+          url: path,
+          headers: { cookie: cookieHeader(adminCookie) },
+        }));
+      }
+      expect(responses.every((response) => response.statusCode === 200)).toBe(true);
+
+      const payloads = JSON.stringify(responses.map((response) => response.body));
+      const privateEmails = [user.email, upload.user.email, artist.user.email, comment.user.email, report.reporter.email];
+      for (const email of privateEmails) {
+        expect(payloads).not.toContain(email);
+      }
+
+      const originalRole = user.role;
+      await app.prisma.user.update({ where: { id: user.id }, data: { role: 'ARTIST' } });
+      try {
+        const integrity = await injectJson({
+          method: 'GET',
+          url: '/api/admin/stats/integrity',
+          headers: { cookie: cookieHeader(adminCookie) },
+        });
+        expect(integrity.statusCode).toBe(200);
+        expect(integrity.body.details.missingArtistProfiles).toContainEqual(
+          expect.objectContaining({ id: user.id, username: user.username, role: 'ARTIST' }),
+        );
+        expect(JSON.stringify(integrity.body)).not.toContain(user.email);
+      } finally {
+        await app.prisma.user.update({ where: { id: user.id }, data: { role: originalRole } });
+      }
+    });
+
+    it('returns bounded grouped global search results and rejects unsafe bounds', async () => {
+      const tooShort = await supertest(app.server)
+        .get('/api/admin/search?q=x')
+        .set('Cookie', adminCookie);
+      const tooLarge = await supertest(app.server)
+        .get('/api/admin/search?q=listener&limit=11')
+        .set('Cookie', adminCookie);
+      const response = await supertest(app.server)
+        .get('/api/admin/search?q=music_fan&limit=1')
+        .set('Cookie', adminCookie);
+      const emailOnly = await supertest(app.server)
+        .get(`/api/admin/search?q=${encodeURIComponent('listener@noirsound.com')}&limit=1`)
+        .set('Cookie', adminCookie);
+
+      expect(tooShort.statusCode).toBe(400);
+      expect(tooLarge.statusCode).toBe(400);
+      expect(response.statusCode).toBe(200);
+      expect(response.body.limitPerGroup).toBe(1);
+      expect(response.body.groups.some((group) => group.type === 'users')).toBe(true);
+      expect(response.body.groups.every((group) => group.items.length <= 1)).toBe(true);
+      expect(JSON.stringify(response.body)).not.toMatch(/passwordHash|storageKey|processedAudioKey|listener@noirsound\.com/);
+      expect(emailOnly.statusCode).toBe(200);
+      expect(emailOnly.body.groups.find((group) => group.type === 'users')).toBeUndefined();
+      expect(JSON.stringify(emailOnly.body.groups)).not.toContain('listener@noirsound.com');
     });
 
     it('suspends a user, revokes sessions, and writes an audit entry', async () => {
@@ -1360,6 +1501,49 @@ describe('NoirSound backend integration', () => {
       })).toBe(2);
     });
 
+    it('proxies moderation-state audio without redirects or play/stat side effects', async () => {
+      const track = await app.prisma.track.findFirst({ where: { status: 'PUBLISHED' } });
+      const original = { status: track.status, processedAudioKey: track.processedAudioKey, mimeType: track.mimeType };
+      const previewKey = `processed/test/${track.id}-moderation.mp3`;
+      objectMetadata.set(previewKey, { exists: true, size: 24, mimeType: 'audio/mpeg' });
+      await app.prisma.track.update({
+        where: { id: track.id },
+        data: { status: 'HIDDEN', processedAudioKey: previewKey, mimeType: 'audio/mpeg' },
+      });
+      const beforeEvents = await app.prisma.playEvent.count({ where: { trackId: track.id } });
+      const beforePlays = (await app.prisma.track.findUnique({ where: { id: track.id } })).plays;
+
+      try {
+        const unauthenticated = await supertest(app.server)
+          .get(`/api/admin/tracks/${track.id}/preview`);
+        const forbidden = await supertest(app.server)
+          .get(`/api/admin/tracks/${track.id}/preview`)
+          .set('Cookie', listenerCookie);
+        const preview = await supertest(app.server)
+          .get(`/api/admin/tracks/${track.id}/preview`)
+          .set('Cookie', adminCookie)
+          .set('Range', 'bytes=0-3');
+
+        expect(unauthenticated.statusCode).toBe(401);
+        expect(forbidden.statusCode).toBe(403);
+        expect(preview.statusCode).toBe(206);
+        expect(preview.headers['content-type']).toContain('audio/mpeg');
+        expect(preview.headers['content-range']).toBe('bytes 0-3/24');
+        expect(preview.headers.location).toBeUndefined();
+        expect(await app.prisma.playEvent.count({ where: { trackId: track.id } })).toBe(beforeEvents);
+        expect((await app.prisma.track.findUnique({ where: { id: track.id } })).plays).toBe(beforePlays);
+        const previewAudits = await app.prisma.auditLog.findMany({
+          where: { action: 'TRACK_PREVIEW', targetId: track.id },
+        });
+        expect(previewAudits).toHaveLength(1);
+        expect(JSON.stringify(previewAudits[0].metadata)).not.toContain(previewKey);
+        expect(JSON.stringify(previewAudits[0].metadata)).not.toMatch(/storageKey|signedUrl/i);
+      } finally {
+        await app.prisma.track.update({ where: { id: track.id }, data: original });
+        objectMetadata.delete(previewKey);
+      }
+    });
+
     it('resolves a report with notes and records the decision and audit log', async () => {
       const track = await app.prisma.track.findFirst({ where: { status: 'PUBLISHED' } });
       const created = await supertest(app.server)
@@ -1382,6 +1566,97 @@ describe('NoirSound backend integration', () => {
       expect(await app.prisma.auditLog.count({
         where: { action: 'REPORT_RESOLVE', targetId: created.body.report.id }
       })).toBe(1);
+    });
+
+    it('strictly filters immutable audit reads and exports sanitized formula-safe CSV', async () => {
+      const admin = await app.prisma.user.findUnique({ where: { email: 'admin@noirsound.com' } });
+      const marker = `CSV_FORMULA_TEST_${Date.now()}`;
+      const audit = await app.prisma.auditLog.create({
+        data: {
+          actorId: admin.id,
+          action: 'TRACK_EXPORT_TEST',
+          targetType: 'TRACK',
+          targetId: 'csv-formula-target',
+          reason: '=HYPERLINK("https://example.invalid","safe")',
+          metadata: {
+            password: 'export-secret-must-not-leak',
+            email: 'private-audit@example.invalid',
+            ip: '203.0.113.10',
+            userAgent: 'Private Browser Agent',
+            callback: 'https://example.invalid/?token=export-secret-must-not-leak',
+            context: {
+              source: 'ADMIN_API',
+              environment: 'TEST',
+              request: { id: marker, method: 'POST', route: '/test' },
+              result: 'SUCCESS',
+            },
+          },
+        },
+      });
+
+      const filtered = await supertest(app.server)
+        .get(`/api/admin/audit-logs?q=${encodeURIComponent(marker)}&action=track_export_test&resource=track&actor=admin&pageSize=50&environment=test&result=success`)
+        .set('Cookie', adminCookie);
+      expect(filtered.statusCode).toBe(200);
+      expect(filtered.body.pagination.pageSize).toBe(50);
+      expect(filtered.body.data).toHaveLength(1);
+      expect(filtered.body.data[0]).toMatchObject({
+        id: audit.id,
+        environment: 'TEST',
+        result: 'SUCCESS',
+        requestId: marker,
+      });
+      expect(filtered.body.data[0].actor.role).toBe('ADMIN');
+      expect(filtered.body.data[0].actor).not.toHaveProperty('email');
+      expect(JSON.stringify(filtered.body.data[0].metadata)).not.toContain('private-audit@example.invalid');
+      expect(JSON.stringify(filtered.body.data[0].metadata)).not.toContain('203.0.113.10');
+      expect(JSON.stringify(filtered.body.data[0].metadata)).not.toContain('Private Browser Agent');
+
+      const actorEmailSearch = await supertest(app.server)
+        .get(`/api/admin/audit-logs?actor=${encodeURIComponent(admin.email)}&pageSize=25`)
+        .set('Cookie', adminCookie);
+      const qEmailSearch = await supertest(app.server)
+        .get(`/api/admin/audit-logs?q=${encodeURIComponent(admin.email)}&pageSize=25`)
+        .set('Cookie', adminCookie);
+      expect(actorEmailSearch.statusCode).toBe(200);
+      expect(actorEmailSearch.body.data.some((entry) => entry.id === audit.id)).toBe(false);
+      expect(qEmailSearch.statusCode).toBe(200);
+      expect(qEmailSearch.body.data.some((entry) => entry.id === audit.id)).toBe(false);
+
+      for (const query of [
+        'pageSize=30',
+        'from=2026-02-30',
+        'environment=sandbox',
+        'unexpected=true',
+      ]) {
+        const invalid = await supertest(app.server)
+          .get(`/api/admin/audit-logs?${query}`)
+          .set('Cookie', adminCookie);
+        expect(invalid.statusCode).toBe(400);
+        expect(invalid.body.error).toBe('ADMIN_INVALID_FILTER');
+      }
+
+      const exported = await supertest(app.server)
+        .get(`/api/admin/audit-logs/export?q=${encodeURIComponent(marker)}&limit=100`)
+        .set('Cookie', adminCookie);
+      expect(exported.statusCode).toBe(200);
+      expect(exported.headers['content-type']).toContain('text/csv');
+      expect(exported.headers['content-disposition']).toContain('attachment;');
+      expect(exported.text).toContain(`'=${'HYPERLINK'}`);
+      expect(exported.text).toContain('[REDACTED]');
+      expect(exported.text).not.toContain('export-secret-must-not-leak');
+      expect(exported.text).not.toContain(admin.email);
+      expect(exported.text).not.toContain('private-audit@example.invalid');
+      expect(exported.text).not.toContain('203.0.113.10');
+      expect(exported.text).not.toContain('Private Browser Agent');
+
+      for (const method of ['post', 'patch', 'delete']) {
+        const mutation = await supertest(app.server)[method](`/api/admin/audit-logs/${audit.id}`)
+          .set('Cookie', adminCookie)
+          .send({ reason: 'must remain immutable' });
+        expect(mutation.statusCode).toBe(404);
+      }
+      expect(await app.prisma.auditLog.findUnique({ where: { id: audit.id } })).not.toBeNull();
     });
 
     it('caps pagination and returns a redaction-safe system summary', async () => {

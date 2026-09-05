@@ -69,7 +69,7 @@ export default function TrackLyricsCard({ track, canEdit = false, onLyricsChange
         ) : error ? (
           <p className="text-sm text-zinc-500">{t('lyrics.unavailable')}</p>
         ) : lyrics?.hasLyrics ? (
-          <p className="max-w-2xl whitespace-pre-wrap text-base leading-8 text-zinc-300">{lyrics.lyricsText}</p>
+          <p className="max-w-2xl whitespace-pre-wrap break-words text-base leading-8 text-zinc-300">{lyrics.lyricsText}</p>
         ) : (
           <p className="text-sm text-zinc-500">{t('lyrics.noLyrics')}</p>
         )}

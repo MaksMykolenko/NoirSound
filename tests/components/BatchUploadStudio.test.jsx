@@ -72,7 +72,7 @@ describe('Batch Upload Studio components', () => {
     expect(screen.getByText('second_track.mp3')).toBeInTheDocument();
   });
 
-  it('keeps localized batch modes intact and uses mobile-safe select typography', async () => {
+  it('localizes batch modes and preserves their values', async () => {
     await i18n.changeLanguage('uk');
     const onModeChange = vi.fn();
     const user = userEvent.setup();
@@ -91,7 +91,6 @@ describe('Batch Upload Studio components', () => {
     );
 
     const modeSelect = screen.getByRole('combobox', { name: i18n.t('batchUpload.batchMode') });
-    expect(modeSelect).toHaveClass('text-base', 'sm:text-sm');
     expect([...modeSelect.options].map(({ value, textContent }) => [value, textContent])).toEqual([
       ['MIXED', i18n.t('batchUpload.mixed')],
       ['SINGLES_ONLY', i18n.t('batchUpload.singlesOnly')],

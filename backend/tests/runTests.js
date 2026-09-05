@@ -22,6 +22,7 @@ function resetAndSeed(prismaBin, env) {
 
 const DATABASE_TEST_FILES = [
   'tests/artistAccess.test.js',
+  'tests/catalogSearch.test.js',
   'tests/endpoints.test.js',
   'tests/seedStrategy.test.js',
   'tests/statsQA.test.js',

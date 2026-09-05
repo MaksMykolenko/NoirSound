@@ -30,6 +30,7 @@ export default defineConfig(({ mode }) => {
     include: [
       'src/**/*.test.{js,jsx}',
       'tests/components/**/*.test.{js,jsx}',
+      'tests/scripts/**/*.test.{js,jsx}',
     ],
     exclude: [
       'backend/**',

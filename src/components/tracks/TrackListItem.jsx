@@ -1,5 +1,6 @@
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Play, Pause, Heart, Plus, Check, MoreHorizontal } from 'lucide-react';
 import { usePlayerStore } from '../../store/playerStore';
 import { formatDuration } from '../../utils/formatTime';
@@ -9,199 +10,79 @@ import { getLocalizedGenre } from '../../i18n/genreLabels';
 import { useTrackContextMenu } from '../../hooks/useEntityContextMenu';
 import { BeatMetadataInline, TrackTypeBadge } from './TrackContentMeta';
 
-export default function TrackListItem({
-  track,
-  index,
-  tracksContext = [],
-  onRemoveFromPlaylist,
-  queueSource = null,
-}) {
-  const navigate = useNavigate();
-  const {
-    currentTrack,
-    isPlaying,
-    playTrack,
-    togglePlay,
-    likedTracks,
-    toggleLikeTrack,
-    queue,
-    addToQueue,
-    removeFromQueue
-  } = usePlayerStore();
-
+export default function TrackListItem({ track, index, tracksContext = [], onRemoveFromPlaylist,
+  queueSource = null, compact = false, showMobileLike = false }) {
+  const { t } = useTranslation();
+  const { currentTrack, isPlaying, playTrack, togglePlay, likedTracks, toggleLikeTrack,
+    queue, addToQueue, removeFromQueue } = usePlayerStore();
   const isCurrent = currentTrack?.id === track.id;
   const isPlayingThis = isCurrent && isPlaying;
   const isLiked = likedTracks.includes(track.id);
-  const inQueue = queue.some(t => t.id === track.id);
+  const inQueue = queue.some((item) => item.id === track.id);
   const canPlay = track.isStreamable ?? Boolean(track.audioUrl);
   const { contextMenuProps, openFromButton } = useTrackContextMenu(track, {
-    removeFromPlaylist: onRemoveFromPlaylist
-      ? () => onRemoveFromPlaylist(track)
-      : undefined,
+    removeFromPlaylist: onRemoveFromPlaylist ? () => onRemoveFromPlaylist(track) : undefined,
   });
-
-  const handlePlay = (e) => {
-    e.stopPropagation();
+  const handlePlay = () => {
     if (!canPlay) return;
-    if (isCurrent) {
-      togglePlay();
-    } else {
-      const queueList = tracksContext.length > 0 ? tracksContext : [track];
-      playTrack(track, queueList, queueSource);
-    }
+    if (isCurrent) togglePlay();
+    else playTrack(track, tracksContext.length ? tracksContext : [track], queueSource);
   };
-
-  const handleLike = (e) => {
-    e.stopPropagation();
-    toggleLikeTrack(track.id);
-  };
-
-  const handleQueue = (e) => {
-    e.stopPropagation();
-    if (inQueue) {
-      removeFromQueue(track.id);
-    } else {
-      addToQueue(track);
-    }
-  };
-
+  const genre = getLocalizedGenre(track.genre);
   return (
-    <div
-      onContextMenu={contextMenuProps.onContextMenu}
-      data-track-id={track.id}
+    <div onContextMenu={contextMenuProps.onContextMenu} data-track-id={track.id}
       aria-current={isCurrent ? 'true' : undefined}
-      className={`group flex min-h-14 items-center justify-between border-b border-zinc-900/70 p-2 transition-colors duration-150 last:border-b-0 focus-within:bg-zinc-900/50 ${
-        isCurrent
-          ? 'bg-brand-red/5'
-          : 'bg-transparent hover:bg-zinc-900/45'
-      }`}
-    >
-      {/* Left section: Number, Cover, Title */}
-      <div className="flex items-center space-x-2.5 sm:space-x-4 flex-1 min-w-0">
-        {/* Play/Index toggle */}
-        <div className="flex w-11 shrink-0 items-center justify-center lg:w-6">
-          <span className={`select-none items-center justify-center font-sans tabular-nums text-sm font-medium text-zinc-500 ${canPlay ? 'hidden md:flex md:group-hover:hidden md:group-focus-within:hidden' : 'flex'}`}>
-            {isCurrent && isPlaying ? (
-              <span className="flex items-end justify-center space-x-[2px] h-3 w-3 pb-[1px]">
-                <span className="w-[2px] h-full bg-brand-red animate-bounce" style={{ animationDelay: '0.1s' }}></span>
-                <span className="w-[2px] h-[75%] bg-brand-red animate-bounce" style={{ animationDelay: '0.3s' }}></span>
-                <span className="w-[2px] h-[50%] bg-brand-red animate-bounce" style={{ animationDelay: '0.5s' }}></span>
-              </span>
-            ) : (
-              index + 1
-            )}
-          </span>
-          {canPlay && (
-          <button
-            onClick={handlePlay}
-            className="flex h-11 w-11 items-center justify-center text-zinc-300 transition-colors hover:text-zinc-100 md:hidden md:group-hover:flex md:group-focus-within:flex lg:h-auto lg:w-auto"
-            aria-label={isPlayingThis ? `Pause ${track.title}` : `Play ${track.title}`}
-          >
-            {isPlayingThis ? <Pause size={14} fill="currentColor" /> : <Play size={14} fill="currentColor" />}
-          </button>
-          )}
-        </div>
-
-        {/* Cover image thumb */}
-        <Link
-          to={`/track/${track.id}`}
-          onKeyDown={contextMenuProps.onKeyDown}
-          aria-label={`Open ${track.title} by ${track.artistName}`}
-          className="shrink-0 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-red/60"
-        >
-          <FallbackCover
-            src={track.coverUrl}
-            title={track.title}
-            artistName={track.artistName}
-            genre={track.genre}
-            className="h-10 w-10 rounded border border-zinc-800/60"
-            imageClassName="object-cover"
-          />
-        </Link>
-
-        {/* Metadata */}
-        <div className="min-w-0 flex-1">
-          <Link
-            to={`/track/${track.id}`}
-            onKeyDown={contextMenuProps.onKeyDown}
-            className={`flex min-w-0 items-center gap-1.5 text-ns-body-sm font-semibold focus-visible:outline-none focus-visible:underline ${
-              isCurrent ? 'text-brand-red' : 'text-zinc-200'
-            }`}
-          >
-            <span className="truncate">{track.title}</span>
-            <TrackTypeBadge track={track} />
-          </Link>
-          <button
-            type="button"
-            onClick={() => navigate(`/artist/${track.artistId}`)}
-            className="mt-0.5 block max-w-full truncate text-left font-sans tabular-nums text-ns-label text-zinc-500 transition-colors hover:text-zinc-300 hover:underline"
-          >
-            {track.artistName}
-          </button>
-          <BeatMetadataInline track={track} className="mt-0.5 flex" />
-          {!canPlay && (
-            <span className="inline-block mt-1 text-ns-meta font-bold uppercase tracking-ns-label text-amber-300/80">
-              Audio unavailable
-            </span>
-          )}
-        </div>
-      </div>
-
-      {/* Middle section: Genre, Plays count */}
-      <div className="hidden min-[430px]:flex items-center space-x-3 sm:space-x-6 px-2 sm:px-4 shrink-0">
-        <span className="hidden max-w-[14ch] truncate font-sans tabular-nums text-ns-label font-medium text-zinc-500 select-none md:inline-block">
-          {track.contentType === 'BEAT' ? <TrackTypeBadge track={track} /> : getLocalizedGenre(track.genre)}
-        </span>
-        <span className="hidden font-sans tabular-nums text-ns-label text-zinc-500 select-none sm:inline">
-          {formatNumber(track.plays || 0)} plays
-        </span>
-        <span className="w-10 text-right font-sans tabular-nums text-ns-label text-zinc-500 select-none">
-          {formatDuration(track.duration)}
-        </span>
-      </div>
-
-      {/* Right section: Hover Action buttons */}
-      <div className="flex items-center space-x-1.5 ml-4 shrink-0">
-        <button
-          type="button"
-          onClick={openFromButton}
-          className="ns-icon-button !min-h-10 !min-w-10 text-zinc-500 hover:text-zinc-200 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100"
-          aria-label={`More actions for ${track.title}`}
-          aria-haspopup="menu"
-        >
-          <MoreHorizontal size={15} />
-        </button>
-        {/* Like */}
-        <button
-          onClick={handleLike}
-          className={`ns-icon-button !min-h-10 !min-w-10 !hidden cursor-pointer transition-colors md:!inline-flex ${
-            isLiked
-              ? 'text-brand-red bg-rose-500/10 border border-rose-500/20'
-              : 'text-zinc-500 hover:text-zinc-200 hover:bg-zinc-900 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100'
-          }`}
-          title={isLiked ? "Unlike Track" : "Like Track"}
-          aria-label={isLiked ? `Unlike ${track.title}` : `Like ${track.title}`}
-          aria-pressed={isLiked}
-        >
-          <Heart size={12} fill={isLiked ? 'currentColor' : 'none'} />
-        </button>
-
-        {/* Queue */}
-        {canPlay && (
-        <button
-          onClick={handleQueue}
-          className={`ns-icon-button !min-h-10 !min-w-10 !hidden cursor-pointer transition-colors md:!inline-flex ${
-            inQueue
-              ? 'text-brand-red bg-zinc-900 border border-zinc-800'
-              : 'text-zinc-500 hover:text-zinc-200 hover:bg-zinc-900 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100'
-          }`}
-          title={inQueue ? "Remove from Queue" : "Add to Queue"}
-          aria-label={inQueue ? `Remove ${track.title} from queue` : `Add ${track.title} to queue`}
-          aria-pressed={inQueue}
-        >
-          {inQueue ? <Check size={12} /> : <Plus size={12} />}
-        </button>
+      className={`ns-track-row group ${compact ? 'ns-track-row--compact' : ''}`}>
+      <div className="ns-track-row__leading">
+        {compact ? <span className="ns-track-row__rank" aria-hidden="true">{index + 1}</span> : (
+          <FallbackCover src={track.coverUrl} title={track.title} artistName={track.artistName}
+            genre={track.genre} className="h-11 w-11 rounded" imageClassName="object-cover" />
         )}
+        <button type="button" onClick={handlePlay} disabled={!canPlay}
+          className={`ns-track-row__play ${isPlayingThis ? 'is-playing' : ''}`}
+          aria-label={canPlay ? t(isPlayingThis ? 'playlists.pauseTrack' : 'playlists.playTrack', { title: track.title }) : t('trackPage.audioUnavailable')}>
+          {isPlayingThis ? <Pause size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" />}
+        </button>
+      </div>
+      <div className="ns-track-row__identity">
+        <Link to={`/track/${track.id}`} title={track.title} onKeyDown={contextMenuProps.onKeyDown}
+          className={`ns-track-row__title block truncate font-semibold ${isCurrent ? 'text-brand-red' : ''}`}>
+          {track.title}
+          {isCurrent && <span className="sr-only"> — {t('playlists.currentlyPlaying')}</span>}
+        </Link>
+        <div className="ns-media-byline">
+          <TrackTypeBadge track={track} />
+          {track.explicit && <span className="ns-explicit-badge" title={t('media.explicit')}>E</span>}
+          <Link to={`/artist/${track.artistId}`} className="min-w-0 truncate hover:underline" title={track.artistName}>
+            {track.artistName}
+          </Link>
+        </div>
+        <BeatMetadataInline track={track} limit={4} />
+        {!canPlay && <span className="ns-media-meta">{t('trackPage.audioUnavailable')}</span>}
+      </div>
+      {!compact && <div className="ns-track-row__secondary ns-media-meta">
+        <span className="block truncate" title={genre}>{genre}</span>
+        <span className="block tabular-nums">{formatNumber(track.plays || 0)} {t('trackPage.plays')}</span>
+      </div>}
+      <span className="ns-track-row__duration ns-media-duration" title={t('trackPage.duration')}>
+        {formatDuration(track.duration)}
+      </span>
+      <div className="ns-track-row__actions">
+        <button type="button" onClick={() => toggleLikeTrack(track.id)}
+          className={`ns-media-action ${showMobileLike ? '' : 'ns-track-row__desktop-action'}`}
+          aria-label={`${t(isLiked ? 'trackPage.unlike' : 'trackPage.like')} ${track.title}`} aria-pressed={isLiked}>
+          <Heart size={16} fill={isLiked ? 'currentColor' : 'none'} />
+        </button>
+        {canPlay && !compact && <button type="button"
+          onClick={() => inQueue ? removeFromQueue(track.id) : addToQueue(track)}
+          className="ns-media-action ns-track-row__desktop-action" aria-pressed={inQueue}
+          aria-label={t(inQueue ? 'media.removeFromQueue' : 'media.addToQueue', { title: track.title })}>
+          {inQueue ? <Check size={16} /> : <Plus size={16} />}
+        </button>}
+        <button type="button" onClick={openFromButton} className="ns-media-action"
+          aria-label={t('playlists.moreActionsFor', { title: track.title })} aria-haspopup="menu">
+          <MoreHorizontal size={16} />
+        </button>
       </div>
     </div>
   );

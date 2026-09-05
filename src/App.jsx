@@ -1,16 +1,13 @@
 import React, { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter as Router, Navigate, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import AppLayout from './components/layout/AppLayout';
+import { useTranslation } from 'react-i18next';
 import ToastContainer from './components/ui/ToastContainer';
 import AuthModal from './components/auth/AuthModal';
 import { useUserStore } from './store/userStore';
 import { useToastStore } from './store/toastStore';
-import { usePlayerStore } from './store/playerStore';
 import { useThemeStore } from './store/themeStore';
-import { isMockMode } from './api/mode';
 import { getApiErrorMessage } from './utils/apiErrorMessage';
-import ContextMenuProvider from './components/context-menu/ContextMenuProvider';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -37,8 +34,10 @@ const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Profile = lazy(() => import('./pages/Profile'));
 const PublicProfile = lazy(() => import('./pages/PublicProfile'));
 const PlaylistPage = lazy(() => import('./pages/PlaylistPage'));
+const ConnectDesktop = lazy(() => import('./pages/ConnectDesktop'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 const LegalPage = lazy(() => import('./pages/LegalPage'));
+const PublicAppShell = lazy(() => import('./components/layout/PublicAppShell'));
 const AdminLayout = lazy(() => import('./pages/admin/AdminLayout'));
 const AdminOverview = lazy(() => import('./pages/admin/AdminOverview'));
 const AdminUsers = lazy(() => import('./pages/admin/AdminUsers'));
@@ -57,11 +56,14 @@ const AdminStats = lazy(() => import('./pages/admin/AdminStats'));
 const AdminSettings = lazy(() => import('./pages/admin/AdminSettings'));
 
 // Fallback skeleton while loading routes
-const RouteSkeleton = () => (
-  <div className="flex h-[50vh] w-full items-center justify-center" role="status" aria-label="Loading page">
-    <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-800 border-t-brand-red" />
-  </div>
-);
+const RouteSkeleton = () => {
+  const { t } = useTranslation();
+  return (
+    <div className="flex h-[50vh] w-full items-center justify-center" role="status" aria-label={t('loadingPage')}>
+      <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-800 border-t-brand-red" />
+    </div>
+  );
+};
 
 export default function App() {
   const fetchCurrentUser = useUserStore((state) => state.fetchCurrentUser);
@@ -111,18 +113,14 @@ export default function App() {
 
   useEffect(() => {
     const handleApiError = (event) => {
+      // Listener playback already renders its own actionable error beside the
+      // controls. The source marker preserves that behavior without importing
+      // the listener store into the admin entry path.
+      if (event.detail?.source === 'listener-player') return;
       // Keep the raw code/status in the developer console for triage, but show
       // users a friendly, localized message (never the raw backend code).
       if (event.detail?.code || event.detail?.status) {
         console.debug('[api-error]', event.detail);
-      }
-      const activePlaybackError = usePlayerStore.getState().playbackError;
-      if (
-        event.detail?.status === 0
-        && activePlaybackError
-        && event.detail?.message === activePlaybackError
-      ) {
-        return;
       }
       addToast(getApiErrorMessage(event.detail), 'error');
     };
@@ -133,16 +131,10 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <Router>
-        <ContextMenuProvider>
-        {isMockMode() && (
-          <div className="fixed left-1/2 top-2 z-[var(--ns-z-banner)] -translate-x-1/2 rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1 font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-amber-300">
-            Demo mode
-          </div>
-        )}
-        <AppLayout>
-          <Suspense fallback={<RouteSkeleton />}>
-            <Routes>
-              <Route path="/" element={<Home />} />
+        <Suspense fallback={<RouteSkeleton />}>
+          <Routes>
+            <Route element={<PublicAppShell />}>
+              <Route index element={<Home />} />
               <Route path="/discover" element={<Discover />} />
               <Route path="/track/:id" element={<TrackPage />} />
               <Route path="/artist/:id" element={<ArtistPage />} />
@@ -153,25 +145,7 @@ export default function App() {
               <Route path="/profile" element={<Profile />} />
               <Route path="/profile/:username" element={<PublicProfile />} />
               <Route path="/playlist/:id" element={<PlaylistPage />} />
-              <Route path="/admin" element={<AdminLayout />}>
-                <Route index element={<Navigate to="/admin/overview" replace />} />
-                <Route path="overview" element={<AdminOverview />} />
-                <Route path="reports" element={<AdminReports />} />
-                <Route path="reports/:id" element={<AdminReportDetail />} />
-                <Route path="users" element={<AdminUsers />} />
-                <Route path="users/:id" element={<AdminUserDetail />} />
-                <Route path="tracks" element={<AdminTracks />} />
-                <Route path="tracks/:id" element={<AdminTrackDetail />} />
-                <Route path="artists" element={<AdminArtists />} />
-                <Route path="artists/:id" element={<AdminArtistDetail />} />
-                <Route path="comments" element={<AdminComments />} />
-                <Route path="uploads" element={<AdminUploads />} />
-                <Route path="moderation" element={<Navigate to="/admin/reports" replace />} />
-                <Route path="audit-logs" element={<AdminAuditLogs />} />
-                <Route path="system" element={<AdminSystem />} />
-                <Route path="system/stats" element={<AdminStats />} />
-                <Route path="settings" element={<AdminSettings />} />
-              </Route>
+              <Route path="/connect/desktop" element={<ConnectDesktop />} />
               <Route path="/terms" element={<LegalPage slug="terms" />} />
               <Route path="/privacy" element={<LegalPage slug="privacy" />} />
               <Route path="/guidelines" element={<LegalPage slug="guidelines" />} />
@@ -180,15 +154,34 @@ export default function App() {
               <Route path="/abuse" element={<LegalPage slug="abuse" />} />
               <Route path="/creator-rules" element={<LegalPage slug="creator-rules" />} />
               <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Suspense>
-        </AppLayout>
+            </Route>
+            <Route path="/admin" element={<AdminLayout />}>
+              <Route index element={<Navigate to="overview" replace />} />
+              <Route path="overview" element={<AdminOverview />} />
+              <Route path="reports" element={<AdminReports />} />
+              <Route path="reports/:id" element={<AdminReportDetail />} />
+              <Route path="users" element={<AdminUsers />} />
+              <Route path="users/:id" element={<AdminUserDetail />} />
+              <Route path="tracks" element={<AdminTracks />} />
+              <Route path="tracks/:id" element={<AdminTrackDetail />} />
+              <Route path="artists" element={<AdminArtists />} />
+              <Route path="artists/:id" element={<AdminArtistDetail />} />
+              <Route path="comments" element={<AdminComments />} />
+              <Route path="uploads" element={<AdminUploads />} />
+              <Route path="moderation" element={<Navigate to="../reports" replace />} />
+              <Route path="audit-logs" element={<AdminAuditLogs />} />
+              <Route path="system" element={<AdminSystem />} />
+              <Route path="system/stats" element={<AdminStats />} />
+              <Route path="settings" element={<AdminSettings />} />
+              <Route path="*" element={<Navigate to="/admin/overview" replace />} />
+            </Route>
+          </Routes>
+        </Suspense>
         <ToastContainer />
         <AuthModal 
           isOpen={isAuthModalOpen} 
           onClose={() => setAuthModalOpen(false)} 
         />
-        </ContextMenuProvider>
       </Router>
     </QueryClientProvider>
   );

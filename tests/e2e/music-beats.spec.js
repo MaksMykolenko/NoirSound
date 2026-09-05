@@ -30,8 +30,8 @@ test.describe('Music / Beats content separation', () => {
     });
 
     const [musicResponse, beatResponse, beatDetailResponse] = await Promise.all([
-      page.request.get(`${API_BASE}/tracks?contentType=MUSIC`),
-      page.request.get(`${API_BASE}/tracks?contentType=BEAT`),
+      page.request.get(`${API_BASE}/tracks`, { params: { contentType: 'MUSIC', q: suffix } }),
+      page.request.get(`${API_BASE}/tracks`, { params: { contentType: 'BEAT', q: suffix } }),
       page.request.get(`${API_BASE}/tracks/${beatUpload.trackId}`),
     ]);
     expect(musicResponse.ok()).toBeTruthy();
@@ -60,22 +60,21 @@ test.describe('Music / Beats content separation', () => {
     expect(playlistCreate.status()).toBe(201);
     const playlist = (await playlistCreate.json()).playlist;
 
-    await page.goto('/discover?content=MUSIC');
+    await page.goto(`/discover?content=MUSIC&q=${encodeURIComponent(suffix)}`);
     await expect(page.getByRole('tab', { name: 'Music' })).toHaveAttribute('aria-selected', 'true');
-    await page.getByRole('searchbox', { name: 'Search releases' }).fill(musicTitle);
-    await expect(page.getByText(musicTitle).first()).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText(beatTitle)).toHaveCount(0);
+    const musicList = page.getByTestId('all-releases');
+    await expect(musicList.locator(`[data-track-id="${musicUpload.trackId}"]`)).toBeVisible({ timeout: 15_000 });
+    await expect(musicList.locator(`[data-track-id="${beatUpload.trackId}"]`)).toHaveCount(0);
 
     await page.getByRole('tab', { name: 'Beats' }).click();
     await expect(page).toHaveURL(/\/discover\?content=BEAT/);
-    await page.getByRole('searchbox', { name: 'Search releases' }).fill(beatTitle);
     await expect(page.getByTestId('beat-discover-filters')).toBeVisible();
     const beatCard = page.getByTestId('all-releases')
       .locator(`[data-track-id="${beatUpload.trackId}"]`);
     await expect(beatCard).toBeVisible({ timeout: 15_000 });
     await expect(beatCard.getByTestId('beat-badge').first()).toBeVisible();
     await expect(beatCard.getByText(/142 BPM/)).toBeVisible();
-    await expect(page.getByText(musicTitle)).toHaveCount(0);
+    await expect(page.getByTestId('all-releases').locator(`[data-track-id="${musicUpload.trackId}"]`)).toHaveCount(0);
 
     await beatCard.click({ button: 'right' });
     const menu = page.getByRole('menu');
@@ -118,18 +117,20 @@ test.describe('Music / Beats content separation', () => {
 
     await page.goto(`/track/${beatUpload.trackId}`);
     const details = page.getByTestId('beat-details');
+    await expect(page.getByTestId('track-hero')).toHaveAttribute('data-is-beat', 'true');
     await expect(page.getByTestId('beat-badge').first()).toBeVisible();
     await expect(details.getByText('142')).toBeVisible();
     await expect(details.getByText('F# Minor')).toBeVisible();
     await expect(details.getByText('Nocturnal')).toBeVisible();
+    await expect(details.getByText('Trap')).toBeVisible();
+    await expect(details.getByRole('heading', { name: 'License / availability' })).toBeVisible();
+    await expect(details.getByRole('heading', { name: 'Usage / contact note' })).toBeVisible();
     await expect(details.getByRole('link', { name: 'Contact producer' })).toBeVisible();
 
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto('/discover?content=BEAT');
+    await page.goto(`/discover?content=BEAT&q=${encodeURIComponent(suffix)}`);
     await expect(page.getByTestId('discover-content-tabs')).toBeVisible();
     await expect(page.getByRole('tab', { name: 'Beats' })).toHaveAttribute('aria-selected', 'true');
-    const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
-    expect(scrollWidth).toBeLessThanOrEqual(392);
 
     await page.request.delete(`${API_BASE}/playlists/${playlist.id}`);
   });

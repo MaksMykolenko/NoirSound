@@ -172,6 +172,19 @@ export default function Library() {
               key={tab.id}
               onClick={() => setSearchParams({ tab: tab.id })}
               role="tab"
+              id={`library-tab-${tab.id}`}
+              aria-controls="library-tab-panel"
+              tabIndex={active ? 0 : -1}
+              onKeyDown={(event) => {
+                const index = tabs.findIndex((item) => item.id === tab.id);
+                const next = event.key === 'ArrowRight' ? (index + 1) % tabs.length
+                  : event.key === 'ArrowLeft' ? (index - 1 + tabs.length) % tabs.length
+                    : event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : null;
+                if (next === null) return;
+                event.preventDefault();
+                tabsRef.current?.querySelectorAll('[role="tab"]')[next]?.focus();
+                setSearchParams({ tab: tabs[next].id });
+              }}
               aria-selected={active}
               aria-current={active ? 'page' : undefined}
               className={`ns-tab flex shrink-0 cursor-pointer items-center gap-2 whitespace-nowrap border-b-2 px-4 py-3 font-sans text-ns-label font-medium transition-colors sm:px-5 ${
@@ -185,10 +198,10 @@ export default function Library() {
         })}
       </div>
 
-      <div className="pt-2">
+      <div id="library-tab-panel" role="tabpanel" aria-labelledby={`library-tab-${activeTab}`} className="pt-2">
         {error ? (
           <ErrorState
-            title="Library unavailable"
+            title={t('media.libraryUnavailable')}
             message={error}
             onRetry={() => setPlaylistRevision((current) => current + 1)}
           />
@@ -197,7 +210,7 @@ export default function Library() {
         ) : activeTab === 'recently' ? (
           recentlyPlayedError ? (
             <ErrorState
-              title="Listening history unavailable"
+              title={t('media.historyUnavailable')}
               message={recentlyPlayedError}
               onRetry={() => loadRecentlyPlayed()}
             />

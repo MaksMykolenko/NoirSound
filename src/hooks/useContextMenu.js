@@ -46,6 +46,7 @@ export default function useContextMenu(itemsOrFactory, dependencies = []) {
   const onKeyDown = useCallback((event) => {
     const opensMenu = (event.shiftKey && event.key === 'F10') || event.key === 'ContextMenu';
     if (!opensMenu) return;
+    if (shouldKeepNativeContextMenu(event.target)) return;
     event.preventDefault();
     event.stopPropagation();
     const rect = event.currentTarget.getBoundingClientRect();

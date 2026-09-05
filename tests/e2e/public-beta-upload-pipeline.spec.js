@@ -12,11 +12,12 @@ test.describe('public beta · upload pipeline', () => {
     const artist = await playwright.request.newContext();
     expect(await loginApi(artist, 'artist@noirsound.com')).toBeTruthy();
 
-    const { trackId } = await uploadTrackViaApi(artist, { title: `E2E ${Date.now()}` });
+    const title = `E2E ${Date.now()}`;
+    const { trackId } = await uploadTrackViaApi(artist, { title });
     expect(trackId).toBeTruthy();
 
     // Track is in the public catalog.
-    const list = await artist.get(`${API_BASE}/tracks`);
+    const list = await artist.get(`${API_BASE}/tracks`, { params: { q: title } });
     const catalog = (await list.json()).data;
     expect(catalog.some((t) => t.id === trackId)).toBeTruthy();
     const publicTrack = catalog.find((t) => t.id === trackId);

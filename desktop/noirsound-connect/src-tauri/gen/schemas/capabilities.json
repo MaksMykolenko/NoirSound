@@ -1,0 +1,1 @@
+{"main-events":{"identifier":"main-events","description":"Allow the NoirSound Connect main window to subscribe to backend state events.","local":true,"windows":["main"],"permissions":["core:event:allow-listen","core:event:allow-unlisten"]}}

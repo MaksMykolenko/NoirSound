@@ -2,6 +2,7 @@ import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Check, LoaderCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { isTopmostOverlay } from '../../hooks/useDialogFocusTrap';
 
 const EDGE_GAP = 10;
 
@@ -55,6 +56,7 @@ export default function ContextMenu({
       if (!menuRef.current?.contains(event.target)) onClose();
     };
     const handleResize = (event) => {
+      if (event.type === 'scroll' && menuRef.current?.contains(event.target)) return;
       if (event.type === 'scroll' && Date.now() - mountTimeRef.current < 250) {
         return;
       }
@@ -77,7 +79,7 @@ export default function ContextMenu({
 
   useEffect(() => {
     const closeFirstOnEscape = (event) => {
-      if (event.key !== 'Escape') return;
+      if (event.key !== 'Escape' || event.defaultPrevented || !isTopmostOverlay(menuRef.current)) return;
       event.preventDefault();
       event.stopPropagation();
       event.stopImmediatePropagation();
@@ -106,6 +108,15 @@ export default function ContextMenu({
   };
 
   const handleKeyDown = (event) => {
+    if (event.key === 'Tab') {
+      event.preventDefault();
+      if (isMobile) {
+        setActiveIndex((current) => nextEnabledIndex(items, current, event.shiftKey ? -1 : 1));
+      } else {
+        closeAndRestoreFocus();
+      }
+      return;
+    }
     if (event.key === 'Escape') {
       event.preventDefault();
       event.stopPropagation();
@@ -146,10 +157,10 @@ export default function ContextMenu({
         role="menu"
         aria-label={t('contextMenu.actions')}
         onKeyDown={handleKeyDown}
-        className={`fixed z-[var(--ns-z-context-menu)] overflow-hidden border border-[var(--ns-border)] bg-[var(--ns-card-solid)] shadow-2xl ${
+        className={`fixed z-[var(--ns-z-context-menu)] overflow-y-auto overscroll-contain border border-[var(--ns-border)] bg-[var(--ns-card-solid)] shadow-[var(--ns-shadow-card)] ${
           isMobile
             ? 'inset-x-0 bottom-0 max-h-[72vh] overflow-y-auto rounded-t-lg p-2 pb-[max(.5rem,env(safe-area-inset-bottom))]'
-            : 'w-64 rounded-lg p-1.5'
+            : 'max-h-[calc(100dvh-20px)] w-72 max-w-[calc(100vw-20px)] rounded-lg p-1.5'
         }`}
         style={isMobile ? undefined : { left: position.x, top: position.y }}
       >
@@ -182,9 +193,9 @@ export default function ContextMenu({
                 : Icon
                   ? <Icon size={16} className="shrink-0" />
                   : <span className="w-4" />}
-              <span className="min-w-0 flex-1 truncate">{pending ? (item.pendingLabel || item.label) : item.label}</span>
+              <span className="min-w-0 flex-1 break-words leading-snug">{pending ? (item.pendingLabel || item.label) : item.label}</span>
               {item.checked && <Check size={15} className="text-brand-red shrink-0" aria-hidden="true" />}
-              {item.hint && <span className="text-ns-meta font-medium text-zinc-500">{item.hint}</span>}
+              {item.hint && <span className="max-w-20 shrink-0 break-words text-right text-ns-meta font-medium text-zinc-500">{item.hint}</span>}
             </button>
           );
         })}

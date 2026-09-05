@@ -11,7 +11,7 @@ export default function CreatePlaylistModal({ isOpen, onClose, onCreate }) {
   const [isPublic, setIsPublic] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const dialogRef = useDialogFocusTrap(isOpen && !isSubmitting, onClose);
+  const dialogRef = useDialogFocusTrap(isOpen, () => { if (!isSubmitting) onClose(); });
 
   if (!isOpen) return null;
 
@@ -48,21 +48,22 @@ export default function CreatePlaylistModal({ isOpen, onClose, onCreate }) {
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-[var(--ns-z-dialog)] flex items-center justify-center bg-black/70 p-4 select-none">
-      <div ref={dialogRef} className="relative w-full max-w-sm rounded-lg border border-zinc-700/70 bg-zinc-950 p-5 shadow-xl" role="dialog" aria-modal="true" aria-labelledby="playlist-modal-title">
+    <div className="fixed inset-0 z-[var(--ns-z-confirmation)] flex items-center justify-center bg-black/70 p-4 select-none">
+      <div ref={dialogRef} className="relative max-h-[calc(100dvh-2rem)] w-full max-w-sm overflow-y-auto overscroll-contain rounded-lg border border-zinc-700/70 bg-zinc-950 p-5 shadow-xl" role="dialog" aria-modal="true" aria-labelledby="playlist-modal-title">
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 ns-icon-button !min-h-10 !min-w-10 cursor-pointer"
+          disabled={isSubmitting}
+          className="absolute top-4 right-4 ns-media-action shrink-0 cursor-pointer"
           aria-label="Close create playlist dialog"
         >
           <X size={18} />
         </button>
 
-        <div className="flex flex-col items-center mb-6">
+        <div className="mb-5 flex min-w-0 flex-col items-start pr-11">
           <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-md border border-brand-red/20 bg-brand-red/5">
             <ListMusic size={20} className="text-brand-red" />
           </div>
-          <h2 id="playlist-modal-title" className="text-lg font-semibold tracking-tight text-zinc-100">{t('playlistModal.newPlaylist')}</h2>
+          <h2 id="playlist-modal-title" className="break-words text-lg font-semibold tracking-tight text-zinc-100">{t('playlistModal.newPlaylist')}</h2>
           <p className="mt-1 text-ns-label text-zinc-500">{t('playlistModal.curateSounds')}</p>
         </div>
 

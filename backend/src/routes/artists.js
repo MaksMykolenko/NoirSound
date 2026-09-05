@@ -3,6 +3,8 @@ const { userOrIpKey } = require('../lib/rateLimitKeys');
 const { scaledRateLimitMax } = require('../lib/rateLimit');
 const { serializeUserMedia } = require('../lib/profileMedia');
 const { parseTrackContentType } = require('../lib/trackContentType');
+const { publicArtistWhere, publicTrackWhere } = require('../lib/publicVisibility');
+const { discoverArtists } = require('../lib/catalogSearch');
 
 // Best-effort current-user id from the session cookie, without requiring
 // authentication. Public artist routes stay public either way; when a
@@ -37,7 +39,9 @@ async function attachIsFollowing(prisma, artists, viewerId) {
 async function artistsRoutes(fastify, _options) {
   // GET /api/artists
   // Supports ?hasPublishedTracks=true to return only artists with at least one PUBLISHED track.
-  fastify.get('/', async (request, reply) => {
+  fastify.get('/', {
+    config: { rateLimit: { max: scaledRateLimitMax(120), timeWindow: '1 minute', keyGenerator: userOrIpKey } },
+  }, async (request, reply) => {
     try {
       const filterPublished = request.query.hasPublishedTracks === 'true';
       const contentTypeResult = parseTrackContentType(request.query.contentType, {
@@ -50,14 +54,26 @@ async function artistsRoutes(fastify, _options) {
         });
       }
 
+      if (request.query.sort !== undefined) {
+        const allowed = ['sort', 'limit', 'contentType', 'hasPublishedTracks'];
+        if (Object.keys(request.query).some(key => !allowed.includes(key)) || request.query.sort !== 'trending'
+            || (request.query.hasPublishedTracks !== undefined && request.query.hasPublishedTracks !== 'true')
+            || (request.query.limit !== undefined && (typeof request.query.limit !== 'string' || !/^\d+$/.test(request.query.limit)
+              || Number(request.query.limit) < 1 || Number(request.query.limit) > 24))) {
+          return reply.status(400).send({ error: 'ARTIST_DISCOVERY_QUERY_INVALID', message: 'Artist discovery supports sort=trending and limit from 1 to 24.' });
+        }
+        const artists = await discoverArtists(fastify.prisma, { contentType: contentTypeResult.value, limit: Number(request.query.limit || 6) });
+        const data = await attachIsFollowing(fastify.prisma, artists, optionalUserId(request));
+        reply.header('Cache-Control', 'no-store');
+        return { data, meta: { sort: 'trending', windowDays: 7 } };
+      }
+
       const where = {
-        isHidden: false,
-        user: { status: 'ACTIVE' },
+        ...publicArtistWhere(),
         ...(filterPublished || contentTypeResult.value ? {
           tracks: {
             some: {
-              status: 'PUBLISHED',
-              isPublic: true,
+              ...publicTrackWhere(),
               ...(contentTypeResult.value ? { contentType: contentTypeResult.value } : {})
             }
           }
@@ -83,10 +99,10 @@ async function artistsRoutes(fastify, _options) {
   fastify.get('/:id', async (request, reply) => {
     try {
       const artist = await fastify.prisma.artistProfile.findFirst({
-        where: { id: request.params.id, isHidden: false, user: { status: 'ACTIVE' } },
+        where: { id: request.params.id, ...publicArtistWhere() },
         include: {
           user: { select: { displayName: true, username: true, avatarUrl: true, bannerUrl: true, bio: true } },
-          tracks: { where: { status: 'PUBLISHED', isPublic: true }, select: { genre: true }, take: 20 },
+          tracks: { where: publicTrackWhere(), select: { genre: true }, take: 20 },
           _count: { select: { followers: true } }
         }
       });
@@ -131,7 +147,7 @@ async function artistsRoutes(fastify, _options) {
         });
       }
       const artist = await fastify.prisma.artistProfile.findFirst({
-        where: { id: request.params.id, isHidden: false, user: { status: 'ACTIVE' } },
+        where: { id: request.params.id, ...publicArtistWhere() },
         select: { id: true }
       });
       if (!artist) {
@@ -141,8 +157,7 @@ async function artistsRoutes(fastify, _options) {
       const tracks = await fastify.prisma.track.findMany({
         where: {
           artistId: artist.id,
-          status: 'PUBLISHED',
-          isPublic: true,
+          ...publicTrackWhere(),
           ...(contentTypeResult.value ? { contentType: contentTypeResult.value } : {})
         },
         include: {
@@ -179,7 +194,7 @@ async function artistsRoutes(fastify, _options) {
   }, async (request, reply) => {
     try {
       const artistProfile = await fastify.prisma.artistProfile.findFirst({
-        where: { id: request.params.id, isHidden: false, user: { status: 'ACTIVE' } },
+        where: { id: request.params.id, ...publicArtistWhere() },
         select: { userId: true }
       });
       if (!artistProfile) {

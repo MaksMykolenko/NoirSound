@@ -11,18 +11,18 @@ export default function ProfileBannerRemoveDialog({ isOpen, onCancel, onConfirm 
   if (!isOpen || typeof document === 'undefined') return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[var(--ns-z-confirmation)] flex items-center justify-center bg-black/75 p-4">
+    <div className="fixed inset-0 z-[var(--ns-z-confirmation)] flex items-center justify-center bg-[var(--ns-overlay)] p-4">
       <section
         ref={dialogRef}
         role="alertdialog"
         aria-modal="true"
         aria-labelledby="profile-banner-remove-title"
         aria-describedby="profile-banner-remove-description"
-        className="w-full max-w-md rounded-lg border border-rose-500/30 bg-[var(--ns-bg-elevated)] p-5 shadow-2xl"
+        className="w-full max-w-md rounded-lg border border-[color-mix(in_srgb,var(--ns-danger)_30%,transparent)] bg-[var(--ns-bg-elevated)] p-5 shadow-[var(--ns-shadow-modal)]"
       >
         <div className="flex items-start justify-between gap-4">
           <div className="flex min-w-0 gap-3">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-rose-500/10 text-rose-300">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--ns-danger)_10%,transparent)] text-[var(--ns-danger)]">
               <Trash2 size={18} aria-hidden="true" />
             </span>
             <div>
@@ -58,7 +58,7 @@ export default function ProfileBannerRemoveDialog({ isOpen, onCancel, onConfirm 
           <button
             type="button"
             onClick={onConfirm}
-            className="min-h-11 rounded-md bg-rose-600 px-5 text-sm font-semibold text-white transition-colors hover:bg-rose-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400"
+            className="min-h-11 rounded-md bg-[var(--ns-danger)] px-5 text-sm font-semibold text-[var(--ns-on-danger)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ns-danger)]"
           >
             {t('profile.bannerRemoveConfirm', { defaultValue: 'Remove banner' })}
           </button>

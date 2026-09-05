@@ -26,8 +26,8 @@ export default function StatsCard({ title, value, change, iconName, trend = 'up'
           <span
             className={`rounded border px-2 py-0.5 font-sans tabular-nums text-ns-meta font-medium ${
               trend === 'up'
-                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                ? 'ns-status-badge ns-status-success'
+                : 'ns-status-badge ns-status-danger'
             }`}
           >
             {change}

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import React from 'react';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Eye } from 'lucide-react';
 import { getAdminUsers } from '../../api/admin';
@@ -16,7 +16,8 @@ import {
   AdminTableHead,
   StatusBadge,
 } from '../../components/admin/AdminUI';
-import { formatAdminDate, useAdminData } from '../../components/admin/adminUtils';
+import { formatAdminDate, formatAdminNumber, useAdminData } from '../../components/admin/adminUtils';
+import useAdminListUrlState from './useAdminListUrlState';
 
 function ArtistProfileCell({ t, user }) {
   if (!user.hasArtistProfile) {
@@ -39,13 +40,12 @@ function UploadAccessCell({ t, user }) {
 
 export default function AdminUsers() {
   const { t, i18n } = useTranslation();
-  const [searchParams] = useSearchParams();
-  const [search, setSearch] = useState('');
-  const [role, setRole] = useState(searchParams.get('role') || '');
-  const [status, setStatus] = useState(searchParams.get('status') || '');
-  const [hasArtistProfile, setHasArtistProfile] = useState(searchParams.get('hasArtistProfile') || '');
-  const [uploadBlocked, setUploadBlocked] = useState(searchParams.get('uploadBlocked') || '');
-  const [page, setPage] = useState(1);
+  const { value, page, setFilter, setPage } = useAdminListUrlState();
+  const search = value('search');
+  const role = value('role');
+  const status = value('status');
+  const hasArtistProfile = value('hasArtistProfile');
+  const uploadBlocked = value('uploadBlocked');
   const query = { search, role, status, hasArtistProfile, uploadBlocked, page };
   const { data, loading, error, reload } = useAdminData(
     () => getAdminUsers(query),
@@ -56,11 +56,11 @@ export default function AdminUsers() {
     <>
       <AdminPageHeader title={t('admin.users')} description={t('admin.usersDescription')} />
       <AdminPanel>
-        <AdminSearch value={search} onChange={(value) => { setSearch(value); setPage(1); }} placeholder={t('admin.searchUsers')}>
+        <AdminSearch value={search} onChange={(nextValue) => setFilter('search', nextValue)} placeholder={t('admin.searchUsers')}>
           <AdminSelect
             label={t('admin.role')}
             value={role}
-            onChange={(value) => { setRole(value); setPage(1); }}
+            onChange={(nextValue) => setFilter('role', nextValue)}
             options={[
               ['', t('admin.allRoles')],
               ['ADMIN', t('admin.statusValues.ADMIN')],
@@ -71,7 +71,7 @@ export default function AdminUsers() {
           <AdminSelect
             label={t('admin.status')}
             value={status}
-            onChange={(value) => { setStatus(value); setPage(1); }}
+            onChange={(nextValue) => setFilter('status', nextValue)}
             options={[
               ['', t('admin.allStatuses')],
               ['ACTIVE', t('admin.statusValues.ACTIVE')],
@@ -83,7 +83,7 @@ export default function AdminUsers() {
           <AdminSelect
             label={t('admin.artistAccess.filterProfile')}
             value={hasArtistProfile}
-            onChange={(value) => { setHasArtistProfile(value); setPage(1); }}
+            onChange={(nextValue) => setFilter('hasArtistProfile', nextValue)}
             options={[
               ['', t('admin.artistAccess.filterProfileAll')],
               ['true', t('admin.artistAccess.filterProfileHas')],
@@ -93,7 +93,7 @@ export default function AdminUsers() {
           <AdminSelect
             label={t('admin.artistAccess.filterUpload')}
             value={uploadBlocked}
-            onChange={(value) => { setUploadBlocked(value); setPage(1); }}
+            onChange={(nextValue) => setFilter('uploadBlocked', nextValue)}
             options={[
               ['', t('admin.artistAccess.filterUploadAll')],
               ['false', t('admin.artistAccess.filterUploadCan')],
@@ -128,17 +128,17 @@ export default function AdminUsers() {
                     <div className="font-semibold">{user.displayName}</div>
                     <div className="text-sm text-[var(--ns-text-muted)]">@{user.username}</div>
                   </td>
-                  <td className="px-4 py-3 text-sm text-[var(--ns-text-secondary)]">{user.email}</td>
+                  <td className="px-4 py-3 text-sm text-[var(--ns-text-secondary)]">{user.email || '—'}</td>
                   <td className="px-4 py-3"><StatusBadge status={user.role} /></td>
                   <td className="px-4 py-3"><StatusBadge status={user.status} /></td>
                   <td className="px-4 py-3"><ArtistProfileCell t={t} user={user} /></td>
                   <td className="px-4 py-3"><UploadAccessCell t={t} user={user} /></td>
                   <td className="px-4 py-3 text-sm text-[var(--ns-text-muted)]">{formatAdminDate(user.updatedAt || user.joinedAt, i18n.language)}</td>
-                  <td className="px-4 py-3">{user.counts?.tracks ?? 0}</td>
-                  <td className="px-4 py-3">{user.counts?.reports ?? 0}</td>
+                  <td className="px-4 py-3 tabular-nums">{formatAdminNumber(user.counts?.tracks ?? 0, i18n.language)}</td>
+                  <td className="px-4 py-3 tabular-nums">{formatAdminNumber(user.counts?.reports ?? 0, i18n.language)}</td>
                   <td className="px-4 py-3">
-                    <Link to={`/admin/users/${user.id}`} className="ns-button-secondary inline-flex items-center gap-1 rounded px-3 py-2 text-sm">
-                      <Eye className="h-3.5 w-3.5" /> {t('admin.view')}
+                    <Link to={`/admin/users/${user.id}`} aria-label={`${t('admin.view')}: ${user.displayName || user.username || user.id}`} className="ns-button-secondary inline-flex items-center gap-1 rounded px-3 py-2 text-sm">
+                      <Eye className="h-3.5 w-3.5" aria-hidden="true" /> <span aria-hidden="true">{t('admin.view')}</span>
                     </Link>
                   </td>
                 </tr>

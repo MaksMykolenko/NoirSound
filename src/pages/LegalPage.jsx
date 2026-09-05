@@ -31,7 +31,7 @@ export default function LegalPage({ slug: slugProp }) {
             key={item.slug}
             to={item.path}
             aria-current={item.slug === slug ? 'page' : undefined}
-            className={`shrink-0 border-b-2 px-3 py-2.5 transition-colors ${
+            className={`inline-flex min-h-11 shrink-0 items-center border-b-2 px-3 py-2.5 transition-colors ${
               item.slug === slug
                 ? 'border-brand-red text-brand-red'
                 : 'border-transparent text-zinc-500 hover:border-zinc-700 hover:text-zinc-100'

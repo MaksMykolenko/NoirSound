@@ -1,36 +1,34 @@
-import React, { useDeferredValue, useEffect, useState, useMemo } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useLocation, useNavigate, useNavigationType } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useDiscoverTracks } from '../hooks/queries/useTracks';
+import { SlidersHorizontal, X } from 'lucide-react';
+import {
+  useDiscoverPersonalization,
+  useCatalogTracks,
+  useCatalogSelection,
+} from '../hooks/queries/useTracks';
 import { useArtistsWithTracks } from '../hooks/queries/useArtists';
-import GenrePill from '../components/ui/GenrePill';
-import GenrePicker from '../components/ui/GenrePicker';
-import TrackCard from '../components/tracks/TrackCard';
-import TrackListItem from '../components/tracks/TrackListItem';
+import useDiscoverUrlState from '../hooks/useDiscoverUrlState';
+import { useUserStore } from '../store/userStore';
+import ArtistCard from '../components/artists/ArtistCard';
+import DiscoverFilterDropdown from '../components/discover/DiscoverFilterDropdown';
+import DiscoverRankedList from '../components/discover/DiscoverRankedList';
+import DiscoverSection from '../components/discover/DiscoverSection';
+import DiscoverTaxonomyTiles from '../components/discover/DiscoverTaxonomyTiles';
+import DiscoverTrackRail from '../components/discover/DiscoverTrackRail';
 import EmptyState from '../components/ui/EmptyState';
 import ErrorState from '../components/ui/ErrorState';
+import GenrePicker from '../components/ui/GenrePicker';
+import GenrePill from '../components/ui/GenrePill';
 import LoadingState from '../components/ui/LoadingState';
-import { Search, SlidersHorizontal, X, ChevronDown } from 'lucide-react';
-import FallbackAvatar from '../components/ui/FallbackAvatar';
 import PageMeta from '../components/meta/PageMeta';
-import { normalizeGenre, getGroupOf, isGenreGroup, QUICK_GROUP_LABELS } from '../constants/musicGenres';
+import { QUICK_GROUP_LABELS } from '../constants/musicGenres';
 import { getGenreLabel } from '../utils/genreLabels';
-import { formatNumber } from '../utils/formatLocale';
-import {
-  rankRecommendedArtists,
-  selectFeaturedTracks,
-  sortTracksNewest,
-} from '../utils/presentation';
-import { isBeatTrack } from '../utils/trackContent';
+import { madeForYouTracks } from '../utils/discoverPresentation';
 
 const CONTENT_TABS = ['ALL', 'MUSIC', 'BEAT'];
+const CATALOGUE_PAGE_SIZE = 30;
 
-// Quick-filter tabs: a small, curated set of groups so the bar never overflows
-// on mobile. The full taxonomy lives behind the "More" picker.
-//
-// Tab labels are genre-group NAMES, so they are always English (see
-// NOIRSOUND_GENRE_ENGLISH_ONLY_REPORT.md) — only "All" is translated via i18n,
-// since it's UI chrome, not a taxonomy term.
 const QUICK_TABS = [
   { id: 'all', kind: 'all' },
   { id: 'popular', kind: 'group', group: 'popular', label: QUICK_GROUP_LABELS.popular },
@@ -42,469 +40,737 @@ const QUICK_TABS = [
   { id: 'world', kind: 'group', group: 'world', label: QUICK_GROUP_LABELS.world },
 ];
 
-const ALL_FILTER = { kind: 'all' };
+const BEAT_STYLES = [
+  'Trap', 'Drill', 'Rage', 'Boom Bap', 'R&B', 'Lo-Fi', 'Jersey', 'Phonk', 'Experimental', 'Other',
+];
+const BEAT_MOODS = [
+  'Dark', 'Aggressive', 'Melodic', 'Chill', 'Sad', 'Nocturnal', 'Energetic', 'Atmospheric',
+];
 
-function filterFromQuery(genreParam, groupParam) {
-  const genre = normalizeGenre(genreParam);
-  if (genre) return { kind: 'genre', key: genre };
-
-  if (isGenreGroup(groupParam)) return { kind: 'group', group: groupParam };
-
-  return ALL_FILTER;
+function SectionEmpty({ title, description, onReset, resetLabel }) {
+  return (
+    <EmptyState
+      iconName="AudioLines"
+      title={title}
+      description={description}
+      actionText={onReset ? resetLabel : undefined}
+      onAction={onReset}
+    />
+  );
 }
 
 export default function Discover() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const requestedGenre = searchParams.get('genre');
-  const requestedGroup = searchParams.get('group');
-  const browseAllRequested = searchParams.get('browse') === 'all';
-  const requestedContent = String(searchParams.get('content') || '').toUpperCase();
-  const contentType = CONTENT_TABS.includes(requestedContent) ? requestedContent : 'ALL';
-  const [filter, setFilter] = useState(() => filterFromQuery(requestedGenre, requestedGroup));
-  const [moreOpen, setMoreOpen] = useState(() => browseAllRequested);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [beatMood, setBeatMood] = useState('');
-  const [beatStyle, setBeatStyle] = useState('');
-  const [beatKey, setBeatKey] = useState('');
-  const [beatBpmRange, setBeatBpmRange] = useState('');
-  const [beatSort, setBeatSort] = useState('recent');
-  const deferredSearchQuery = useDeferredValue(searchQuery.trim());
-  const pageMeta = (
-    <PageMeta
-      title={`${t('discover.title')} · NoirSound`}
-      description={t('discover.subtitle')}
-      canonical="https://noirsound.co/discover"
-    />
-  );
+  const location = useLocation();
+  const navigationType = useNavigationType();
+  const searchRef = useRef(null);
+  const catalogRef = useRef(null);
+  const catalogNavigation = useRef({ key: null, pending: false });
+  const [moreOpen, setMoreOpen] = useState(false);
+  const contentTabRefs = useRef([]);
+  const {
+    contentType,
+    q,
+    genre,
+    group,
+    style,
+    mood,
+    bpm,
+    bpmMin,
+    bpmMax,
+    key,
+    sort,
+    hasFilters,
+    setContentType,
+    setQuery,
+    setSort,
+    setGenre,
+    setGroup,
+    setBeatFilter,
+    clearFilters,
+  } = useDiscoverUrlState();
+  const user = useUserStore((state) => state.user);
 
   useEffect(() => {
-    setFilter(filterFromQuery(requestedGenre, requestedGroup));
-    setMoreOpen(browseAllRequested);
-  }, [browseAllRequested, requestedGenre, requestedGroup]);
+    setMoreOpen(false);
+  }, [contentType]);
 
+  const [searchDraft, setSearchDraft] = useState(q);
+  useEffect(() => { setSearchDraft(q); }, [q, location.key]);
+  useEffect(() => {
+    if (searchDraft.trim() === q) return undefined;
+    const timeout = window.setTimeout(() => setQuery(searchDraft, { replace: true }), 300);
+    return () => window.clearTimeout(timeout);
+  }, [q, searchDraft, setQuery, location.key]);
+  useEffect(() => {
+    if (location.hash === '#discover-search') searchRef.current?.focus();
+  }, [location.hash, location.key]);
+
+  const baseContentQuery = contentType === 'ALL' ? {} : { contentType };
+  const contentQuery = { ...baseContentQuery, q, genre, group, style, mood, bpm, bpmMin, bpmMax, key };
   const {
-    data: tracksData,
-    isLoading: tracksLoading,
-    error: tracksError,
-    refetch: refetchTracks,
-  } = useDiscoverTracks({
-    ...(contentType === 'ALL' ? {} : { contentType }),
-    ...(deferredSearchQuery ? { query: deferredSearchQuery } : {}),
-  });
+    data: catalogueData,
+    isLoading: catalogueLoading,
+    error: catalogueError,
+    refetch: refetchCatalogue,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isFetchNextPageError,
+  } = useCatalogTracks({ ...contentQuery, sort, limit: CATALOGUE_PAGE_SIZE });
+  const { data: recentPayload, isLoading: recentLoading, error: recentError, refetch: refetchRecent } = useCatalogSelection({ ...contentQuery, sort: 'recent', limit: 6 });
+  const { data: trendingPayload, isLoading: trendingLoading, error: trendingError, refetch: refetchTrending } = useCatalogSelection({ ...contentQuery, sort: 'trending', limit: 10 });
+  const { data: freshPayload, isLoading: freshLoading, error: freshError, refetch: refetchFresh } = useCatalogSelection({ ...contentQuery, contentType: 'BEAT', sort: 'recent', limit: 6, enabled: contentType === 'ALL' });
   const {
     data: artistsData,
     isLoading: artistsLoading,
     error: artistsError,
     refetch: refetchArtists,
-  } = useArtistsWithTracks(contentType === 'ALL' ? {} : { contentType });
+  } = useArtistsWithTracks({ ...baseContentQuery, sort: 'trending', limit: 6 });
+  const { data: personalizationData, isLoading: personalizationLoading } = useDiscoverPersonalization({ userId: user?.id, contentType });
 
-  const tracks = useMemo(() => sortTracksNewest(tracksData || []), [tracksData]);
-  const artists = useMemo(
-    () => rankRecommendedArtists(artistsData || [], tracks),
-    [artistsData, tracks]
-  );
-
-  const filteredTracks = useMemo(() => {
-    const matchesGenreFilter = (track) => {
-      if (filter.kind === 'all') return true;
-      if (filter.kind === 'genre') return normalizeGenre(track.genre) === filter.key;
-      return getGroupOf(track.genre) === filter.group; // group
-    };
-
-    const query = searchQuery.trim().toLowerCase();
-    const querySlug = query.replace(/[\s-]+/g, '_');
-    const filtered = tracks.filter((track) => {
-      if (contentType === 'MUSIC' && isBeatTrack(track)) return false;
-      if (contentType === 'BEAT' && !isBeatTrack(track)) return false;
-      if (!matchesGenreFilter(track)) return false;
-      if (contentType === 'BEAT') {
-        const normalizedMood = beatMood.trim().toLowerCase();
-        const normalizedStyle = beatStyle.trim().toLowerCase();
-        const normalizedKey = beatKey.trim().toLowerCase();
-        if (normalizedMood && !String(track.beatMood || '').toLowerCase().includes(normalizedMood)) return false;
-        if (normalizedStyle && !String(track.beatStyle || '').toLowerCase().includes(normalizedStyle)) return false;
-        if (normalizedKey && !String(track.beatKey || '').toLowerCase().includes(normalizedKey)) return false;
-        const bpm = Number(track.beatBpm);
-        if (beatBpmRange === 'under-90' && !(bpm > 0 && bpm < 90)) return false;
-        if (beatBpmRange === '90-119' && !(bpm >= 90 && bpm <= 119)) return false;
-        if (beatBpmRange === '120-149' && !(bpm >= 120 && bpm <= 149)) return false;
-        if (beatBpmRange === '150-plus' && !(bpm >= 150)) return false;
-      }
-      if (!query) return true;
-
-      const genreKey = normalizeGenre(track.genre);
-      return (
-        (track.title && track.title.toLowerCase().includes(query))
-        || (track.artistName && track.artistName.toLowerCase().includes(query))
-        || (track.genre && track.genre.toLowerCase().includes(query))
-        || (genreKey && genreKey.includes(querySlug))
-        || (genreKey && getGenreLabel(genreKey).toLowerCase().includes(query))
-        || (track.tags && track.tags.some((tag) => tag.toLowerCase().includes(query)))
-        || (track.beatMood && track.beatMood.toLowerCase().includes(query))
-        || (track.beatStyle && track.beatStyle.toLowerCase().includes(query))
-        || (track.beatKey && track.beatKey.toLowerCase().includes(query))
-        || (track.beatBpm && String(track.beatBpm).includes(query))
-      );
+  const leadingSectionsLoading = catalogueLoading || recentLoading || trendingLoading
+    || (contentType === 'ALL' && freshLoading) || artistsLoading || personalizationLoading;
+  useEffect(() => {
+    if (catalogNavigation.current.key !== location.key) {
+      const firstVisit = catalogNavigation.current.key === null;
+      catalogNavigation.current = {
+        key: location.key,
+        pending: location.hash === '#discover-catalog' && (firstVisit || navigationType !== 'REPLACE' || location.state?.focusDiscoverCatalog === true),
+      };
+    }
+    if (!catalogNavigation.current.pending || leadingSectionsLoading) return undefined;
+    // Wait until leading sections settle and the route's ordinary scroll
+    // effects complete. Typing replaces URL state without requesting a jump.
+    const frame = window.requestAnimationFrame(() => {
+      if (!catalogRef.current) return;
+      catalogNavigation.current.pending = false;
+      catalogRef.current.focus({ preventScroll: true });
+      catalogRef.current.scrollIntoView?.({ block: 'start' });
     });
-    if (contentType === 'BEAT' && beatSort === 'played') {
-      return [...filtered].sort((left, right) => Number(right.plays || 0) - Number(left.plays || 0));
-    }
-    return filtered;
-  }, [tracks, filter, searchQuery, contentType, beatMood, beatStyle, beatKey, beatBpmRange, beatSort]);
+    return () => window.cancelAnimationFrame(frame);
+  }, [leadingSectionsLoading, location.hash, location.key, location.state?.focusDiscoverCatalog, navigationType]);
 
-  const recommendedArtists = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
-    if (!query) return artists;
-    return artists.filter((artist) => {
-      return (
-        (artist.name && artist.name.toLowerCase().includes(query))
-        || (artist.username && artist.username.toLowerCase().includes(query))
-        || (artist.genres && artist.genres.some((g) => g.toLowerCase().includes(query)))
-      );
+  // Preserve server order. Dedupe is only a defensive measure for live ranking
+  // updates; it does not replace stable server cursor pagination.
+  const catalogue = useMemo(() => {
+    const seen = new Set();
+    return (catalogueData?.pages || []).flatMap((page) => page.items).filter((track) => {
+      if (seen.has(track.id)) return false;
+      seen.add(track.id);
+      return true;
     });
-  }, [artists, searchQuery]);
+  }, [catalogueData]);
+  const filteredCatalogue = catalogue;
+  const firstPage = catalogueData?.pages[0];
+  const total = firstPage?.total;
+  const facets = firstPage?.facets;
+  const styleItems = facets?.styles || [];
+  const moodItems = facets?.moods || [];
+  const keyItems = facets?.keys || [];
+  const genreItems = (facets?.genres || []).slice(0, 8);
+  const allGenreItems = facets?.genres || [];
+  const beatFacetLoading = catalogueLoading;
+  const beatFacetError = !firstPage ? catalogueError : null;
+  const refetchBeatFacets = refetchCatalogue;
+  const genreTilesLoading = catalogueLoading;
+  const genreTilesError = !firstPage ? catalogueError : null;
+  const creators = (artistsData || []).slice(0, 6);
+  const serverTrending = trendingPayload?.items || [];
+  const trendingTracks = serverTrending;
+  const newReleases = recentPayload?.items || [];
+  const freshBeats = freshPayload?.items || [];
+  const personalized = useMemo(() => {
+    if (!user || !personalizationData) return [];
+    return madeForYouTracks(recentPayload?.items || [], {
+      likedTracks: personalizationData.likedTracks || [],
+      recentlyPlayed: personalizationData.recentlyPlayed || [],
+      limit: 6,
+    });
+  }, [personalizationData, recentPayload, user]);
 
-  const featuredTracks = useMemo(() => selectFeaturedTracks(filteredTracks, 4), [filteredTracks]);
-  const showFeatured = !searchQuery.trim() && filter.kind === 'all' && featuredTracks.length > 0;
-  const featuredTrackIds = useMemo(
-    () => new Set(showFeatured ? featuredTracks.map((track) => track.id) : []),
-    [featuredTracks, showFeatured]
-  );
-  const listTracks = useMemo(
-    () => filteredTracks.filter((track) => !featuredTrackIds.has(track.id)).slice(0, 10),
-    [featuredTrackIds, filteredTracks]
-  );
-
-  const clearAll = () => {
-    setSearchQuery('');
-    setFilter(ALL_FILTER);
-    setMoreOpen(false);
-    setBeatMood('');
-    setBeatStyle('');
-    setBeatKey('');
-    setBeatBpmRange('');
-    setBeatSort('recent');
-    const next = new URLSearchParams(searchParams);
-    next.delete('content');
-    setSearchParams(next, { replace: true });
-  };
-
-  const selectContentType = (nextContentType) => {
-    const next = new URLSearchParams(searchParams);
-    if (nextContentType === 'ALL') next.delete('content');
-    else next.set('content', nextContentType);
-    setSearchParams(next, { replace: true });
-  };
-
-  const isTabActive = (tab) => {
-    if (tab.kind === 'all') return filter.kind === 'all';
-    return filter.kind === 'group' && filter.group === tab.group;
-  };
-
-  const selectedGenreKey = filter.kind === 'genre' ? filter.key : '';
-
-  // Empty state for the All-releases list (carries the upload CTA).
-  const renderListEmpty = () => {
-    if (tracks.length === 0) {
-      return (
-        <EmptyState
-          iconName="UploadCloud"
-          title={contentType === 'BEAT' ? t('beats.noBeats') : t('empty.noReleasesYet')}
-          description={contentType === 'BEAT' ? t('beats.noBeatsDescription') : t('discover.publishedTracksAppear')}
-          actionText={t('discover.uploadFirstTrack')}
-          onAction={() => navigate('/upload')}
-        />
-      );
+  const catalogHref = (overrides) => {
+    const next = new URLSearchParams(location.search);
+    next.delete('view'); next.delete('contentType'); next.delete('cursor'); next.delete('page');
+    if (contentType === 'ALL') next.delete('content');
+    else next.set('content', contentType);
+    for (const [name, value] of Object.entries(overrides)) {
+      if (value && value !== 'ALL') next.set(name, value);
+      else next.delete(name);
     }
-    const hasSearch = Boolean(searchQuery.trim());
-    if (hasSearch && filter.kind === 'all') {
-      return (
-        <EmptyState
-          iconName="SearchX"
-          title={t('discover.styleEmptyTitle')}
-          description={t('empty.noTracksYet')}
-          actionText={t('actions.clearFilters')}
-          onAction={clearAll}
-        />
-      );
+    if (overrides.content && overrides.content !== 'BEAT') {
+      for (const name of ['style', 'mood', 'bpm', 'bpmMin', 'bpmMax', 'key']) next.delete(name);
     }
-    return (
-      <EmptyState
-        iconName="AudioLines"
-        title={t('discover.genreEmptyTitle')}
-        description={t('discover.genreEmptyDesc')}
-        actionText={t('actions.clearFilters')}
-        onAction={clearAll}
-      />
-    );
+    return `/discover?${next}#discover-catalog`;
+  };
+  const viewAll = (overrides) => <Link className="ns-discover-clear" to={catalogHref(overrides)} state={{ focusDiscoverCatalog: true }}>{t('discover.viewAll')}</Link>;
+
+  const header = contentType === 'MUSIC'
+    ? { title: t('discover.musicTitle'), subtitle: t('discover.musicSubtitle') }
+    : contentType === 'BEAT'
+      ? { title: t('discover.beatsTitle'), subtitle: t('discover.beatsSubtitle') }
+      : { title: t('discover.title'), subtitle: t('discover.subtitle') };
+  const isRecentWindow = trendingPayload?.meta?.trendingWindowDays === 7;
+  const topTitle = contentType === 'BEAT' ? t('discover.freshBeats') : !isRecentWindow ? t('discover.mostPlayed') : contentType === 'MUSIC' ? t('discover.trendingTracks') : t('discover.trendingNow');
+  const topTracks = (contentType === 'BEAT' ? newReleases : trendingTracks).slice(0, 4);
+  const rankedTitle = isRecentWindow ? t('discover.trendingWeek') : t('discover.mostPlayed');
+  const allContentTitle = contentType === 'BEAT'
+    ? t('discover.allBeats')
+    : contentType === 'MUSIC'
+      ? t('discover.allMusic')
+      : t('discover.allReleases');
+  const emptyTitle = contentType === 'BEAT'
+    ? t('discover.noBeatsMatch')
+    : t('discover.noReleasesMatch');
+  const emptyDescription = contentType === 'BEAT'
+    ? t('discover.tryChangingBeatFilters')
+    : t('discover.tryChangingFilters');
+
+  const styleOptions = [
+    { value: '', label: t('beats.anyStyle') },
+    ...BEAT_STYLES.map((value) => ({
+      value,
+      label: value,
+      hint: styleItems.find((item) => item.value.toLowerCase() === value.toLowerCase())?.count ?? (facets && !facets.meta?.truncated?.styles ? 0 : undefined),
+    })),
+    ...styleItems
+      .filter((item) => !BEAT_STYLES.some((value) => value.toLowerCase() === item.value.toLowerCase()))
+      .map((item) => ({ value: item.value, label: item.label, hint: item.count })),
+  ];
+  const moodOptions = [
+    { value: '', label: t('beats.anyMood') },
+    ...BEAT_MOODS.map((value) => ({
+      value,
+      label: value,
+      hint: moodItems.find((item) => item.value.toLowerCase() === value.toLowerCase())?.count ?? (facets && !facets.meta?.truncated?.moods ? 0 : undefined),
+    })),
+    ...moodItems
+      .filter((item) => !BEAT_MOODS.some((value) => value.toLowerCase() === item.value.toLowerCase()))
+      .map((item) => ({ value: item.value, label: item.label, hint: item.count })),
+  ];
+  const keyOptions = [
+    { value: '', label: t('beats.anyKey') },
+    ...keyItems.map((item) => ({ value: item.value, label: item.value, hint: item.count })),
+  ];
+  const bpmOptions = [
+    { value: '', label: t('beats.anyBpm') },
+    { value: 'under-90', label: '< 90 BPM' },
+    { value: '90-119', label: '90–119 BPM' },
+    { value: '120-149', label: '120–149 BPM' },
+    { value: '150-plus', label: '150+ BPM' },
+  ];
+  const sortOptions = [
+    { value: 'recent', label: t('beats.sortRecent') },
+    { value: 'played', label: t('beats.sortPlayed') },
+    { value: 'liked', label: t('discover.sortLiked') },
+    { value: 'trending', label: t('discover.trendingWeek') },
+  ];
+
+  const isQuickTabActive = (tab) => {
+    if (tab.kind === 'all') return !genre && !group;
+    return !genre && group === tab.group;
   };
 
-  const isLoading = tracksLoading || artistsLoading;
-  const error = tracksError || artistsError;
+  const handleContentTabKeyDown = (event, index) => {
+    let nextIndex = null;
+    if (event.key === 'ArrowRight') nextIndex = (index + 1) % CONTENT_TABS.length;
+    if (event.key === 'ArrowLeft') nextIndex = (index - 1 + CONTENT_TABS.length) % CONTENT_TABS.length;
+    if (event.key === 'Home') nextIndex = 0;
+    if (event.key === 'End') nextIndex = CONTENT_TABS.length - 1;
+    if (nextIndex == null) return;
 
-  if (isLoading) {
-    return (
-      <div className="ns-page-stack">
-        {pageMeta}
-        <div>
-          <h1 className="ns-page-title">{t('discover.title')}</h1>
-          <p className="ns-page-lede">{t('discover.subtitle')}</p>
-        </div>
-        <div className="border-y border-zinc-800/60 py-4" aria-hidden="true">
-          <div className="h-11 w-full animate-pulse rounded-md bg-zinc-900" />
-        </div>
-        <LoadingState type="list" count={4} />
-      </div>
-    );
-  }
+    event.preventDefault();
+    contentTabRefs.current[nextIndex]?.focus();
+    setContentType(CONTENT_TABS[nextIndex]);
+  };
 
-  if (error) {
-    return (
-      <div className="ns-page-stack">
-        {pageMeta}
-        <div>
-          <h1 className="ns-page-title">{t('discover.title')}</h1>
-          <p className="ns-page-lede">{t('discover.subtitle')}</p>
-        </div>
-        <ErrorState
-          title="Discover is unavailable"
-          message={error.message}
-          onRetry={() => {
-            refetchTracks();
-            refetchArtists();
-          }}
-        />
-      </div>
-    );
-  }
+  const topLoading = contentType === 'BEAT' ? recentLoading : trendingLoading;
+  const topError = contentType === 'BEAT' ? recentError : trendingError;
+  const loadNextPage = () => {
+    if (!isFetchingNextPage && hasNextPage) fetchNextPage({ cancelRefetch: false });
+  };
 
   return (
-    <div className="ns-page-stack">
-      {pageMeta}
-      {/* Page Title Header */}
-      <header className="space-y-5">
-        <div>
-          <h1 className="ns-page-title">{t('discover.title')}</h1>
-          <p className="ns-page-lede">{t('discover.subtitle')}</p>
-        </div>
+    <div className="ns-page-stack ns-discover-page">
+      <PageMeta
+        title={`${header.title} · NoirSound`}
+        description={header.subtitle}
+        canonical="https://noirsound.co/discover"
+      />
 
+      <header className="ns-discover-header">
+        <div>
+          <h1 className="ns-page-title">{header.title}</h1>
+          <p className="ns-page-lede">{header.subtitle}</p>
+        </div>
         <div
           className="ns-tabs-scroll flex gap-1 overflow-x-auto border-b border-zinc-800/70"
           role="tablist"
+          aria-orientation="horizontal"
           aria-label={t('content.contentType')}
           data-testid="discover-content-tabs"
         >
-          {CONTENT_TABS.map((tab) => (
+          {CONTENT_TABS.map((tab, index) => (
             <button
               key={tab}
+              ref={(node) => { contentTabRefs.current[index] = node; }}
+              id={`discover-tab-${tab.toLowerCase()}`}
               type="button"
               role="tab"
               aria-selected={contentType === tab}
-              onClick={() => selectContentType(tab)}
-              className={`ns-tab min-h-11 shrink-0 border-b-2 px-5 font-sans text-sm font-semibold transition-colors ${
+              aria-controls="discover-content-panel"
+              tabIndex={contentType === tab ? 0 : -1}
+              onClick={() => setContentType(tab)}
+              onKeyDown={(event) => handleContentTabKeyDown(event, index)}
+              className={`ns-tab min-h-11 shrink-0 border-b-2 px-5 text-sm font-semibold transition-colors ${
                 contentType === tab
                   ? 'border-brand-red text-zinc-100'
                   : 'border-transparent text-zinc-500 hover:text-zinc-300'
               }`}
             >
-              {tab === 'ALL' ? t('content.all') : tab === 'MUSIC' ? t('content.music') : t('content.beats')}
+              {tab === 'ALL' ? t('discover.all') : tab === 'MUSIC' ? t('discover.music') : t('discover.beats')}
             </button>
           ))}
-        </div>
-
-        {/* Search stays prominent instead of reading as a dashboard filter card. */}
-        <div className="flex flex-col md:flex-row md:items-center gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" size={17} />
-            <input
-              type="search"
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder={t('header.searchPlaceholder')}
-              className="ns-field pl-11 pr-4 text-base sm:text-sm"
-              aria-label="Search releases"
-            />
-          </div>
-          <div className="flex items-center gap-2 px-1 text-ns-label font-bold uppercase tracking-ns-label text-zinc-500">
-            <SlidersHorizontal size={15} />
-            <span>{t('discover.resultsCount', { count: filteredTracks.length })}</span>
-          </div>
         </div>
       </header>
 
-      {/* Search and filters */}
-      <div className="space-y-4 border-y border-zinc-800/60 py-4">
-        {contentType === 'BEAT' && (
-          <div className="grid gap-3 rounded-md border border-zinc-800/70 bg-zinc-950/20 p-3 sm:grid-cols-2 xl:grid-cols-5" data-testid="beat-discover-filters">
-            <label className="space-y-1">
-              <span className="ns-eyebrow">{t('beats.mood')}</span>
-              <input className="ns-field px-3" value={beatMood} onChange={(event) => setBeatMood(event.target.value)} placeholder={t('beats.anyMood')} />
-            </label>
-            <label className="space-y-1">
-              <span className="ns-eyebrow">{t('beats.style')}</span>
-              <input className="ns-field px-3" value={beatStyle} onChange={(event) => setBeatStyle(event.target.value)} placeholder={t('beats.anyStyle')} />
-            </label>
-            <label className="space-y-1">
-              <span className="ns-eyebrow">{t('beats.key')}</span>
-              <input className="ns-field px-3" value={beatKey} onChange={(event) => setBeatKey(event.target.value)} placeholder={t('beats.anyKey')} />
-            </label>
-            <label className="space-y-1">
-              <span className="ns-eyebrow">{t('beats.bpm')}</span>
-              <select className="ns-field px-3" value={beatBpmRange} onChange={(event) => setBeatBpmRange(event.target.value)}>
-                <option value="">{t('beats.anyBpm')}</option>
-                <option value="under-90">&lt; 90</option>
-                <option value="90-119">90–119</option>
-                <option value="120-149">120–149</option>
-                <option value="150-plus">150+</option>
-              </select>
-            </label>
-            <label className="space-y-1">
-              <span className="ns-eyebrow">{t('beats.sort')}</span>
-              <select className="ns-field px-3" value={beatSort} onChange={(event) => setBeatSort(event.target.value)}>
-                <option value="recent">{t('beats.recentlyAdded')}</option>
-                <option value="played">{t('beats.mostPlayed')}</option>
-              </select>
-            </label>
-          </div>
-        )}
-        {/* Quick filters stay in one scrollable row on mobile. */}
-        <div
-          data-testid="genre-quick-tabs"
-          className="ns-tabs-scroll -mx-4 flex items-center gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0"
-          aria-label={t('discover.filterByGenre')}
-        >
-          {QUICK_TABS.map((tab) => (
-            <GenrePill
-              key={tab.id}
-              label={tab.kind === 'all' ? t('discover.tabs.all') : tab.label}
-              active={isTabActive(tab)}
-              onClick={() => {
-                setFilter(tab.kind === 'all' ? ALL_FILTER : { kind: 'group', group: tab.group });
-                setMoreOpen(false);
-              }}
-            />
-          ))}
-          <GenrePill
-            label={t('discover.tabs.more')}
-            active={moreOpen || filter.kind === 'genre'}
-            onClick={() => setMoreOpen((v) => !v)}
-          >
-            <ChevronDown
-              size={14}
-              className={`transition-transform duration-200 ${moreOpen ? 'rotate-180' : ''}`}
-              aria-hidden="true"
-            />
-          </GenrePill>
-        </div>
+      <div
+        id="discover-content-panel"
+        role="tabpanel"
+        aria-labelledby={`discover-tab-${contentType.toLowerCase()}`}
+        className="ns-page-stack"
+      >
+      <form role="search" onSubmit={(event) => { event.preventDefault(); setQuery(searchDraft, { replace: true }); }}>
+        <label className="sr-only" htmlFor="discover-search">{t('discover.searchLabel')}</label>
+        <input
+          ref={searchRef}
+          id="discover-search"
+          data-testid="discover-search"
+          type="search"
+          maxLength={120}
+          value={searchDraft}
+          onChange={(event) => setSearchDraft(event.target.value)}
+          placeholder={t('header.searchPlaceholder')}
+          className="ns-field w-full px-4 py-2 text-sm"
+        />
+      </form>
+      <section className="ns-discover-context" aria-label={t('discover.filters')}>
+        {contentType === 'BEAT' ? (
+          <>
+            <div className="ns-discover-filter-bar" data-testid="beat-discover-filters">
+              <DiscoverFilterDropdown
+                id="beat-genre-filter"
+                testId="beat-filter-genre-trigger"
+                label={t('discover.filterByGenre')}
+                value={genre}
+                options={[{ value: '', label: t('discover.all') }, ...allGenreItems.map((item) => ({ ...item, hint: item.count }))]}
+                onChange={setGenre}
+              />
+              <DiscoverFilterDropdown
+                id="beat-style-filter"
+                testId="beat-filter-style-trigger"
+                label={t('beats.filterStyle')}
+                value={style}
+                options={styleOptions}
+                onChange={(value) => setBeatFilter('style', value)}
+              />
+              <DiscoverFilterDropdown
+                id="beat-mood-filter"
+                testId="beat-filter-mood-trigger"
+                label={t('beats.filterMood')}
+                value={mood}
+                options={moodOptions}
+                onChange={(value) => setBeatFilter('mood', value)}
+              />
+              <DiscoverFilterDropdown
+                id="beat-bpm-filter"
+                testId="beat-filter-bpm-trigger"
+                label={t('beats.filterBpm')}
+                value={bpm}
+                options={bpmOptions}
+                onChange={(value) => setBeatFilter('bpm', value)}
+              />
+              <DiscoverFilterDropdown
+                id="beat-key-filter"
+                testId="beat-filter-key-trigger"
+                label={t('beats.filterKey')}
+                value={key}
+                options={keyOptions}
+                onChange={(value) => setBeatFilter('key', value)}
+              />
+              <span className="ns-discover-filter-spacer" aria-hidden="true" />
+              <DiscoverFilterDropdown
+                id="beat-sort-filter"
+                testId="beat-filter-sort-trigger"
+                label={t('beats.sort')}
+                value={sort}
+                options={sortOptions}
+                onChange={(value) => setBeatFilter('sort', value)}
+                align="end"
+              />
+            </div>
 
-        {/* "More" opens the full, searchable, grouped taxonomy */}
-        {moreOpen && (
-          <div data-testid="genre-more-panel" className="pt-1">
-            <GenrePicker
-              value={selectedGenreKey}
-              onChange={(key) => {
-                setFilter(key ? { kind: 'genre', key } : ALL_FILTER);
-              }}
-              ariaLabel={t('discover.browseAllGenres')}
-              placeholder={t('discover.browseAllGenres')}
-            />
-          </div>
-        )}
-
-        {/* Active specific-genre chip (the whole chip is the remove control) */}
-        {filter.kind === 'genre' && (
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              data-testid="active-genre-chip"
-              onClick={clearAll}
-              aria-label={`${t('discover.clearGenre')}: ${getGenreLabel(filter.key)}`}
-              className="group inline-flex max-w-full cursor-pointer items-center gap-1.5 rounded border border-brand-red/30 bg-brand-red/10 py-1.5 pl-3 pr-2 text-sm font-medium text-rose-200 transition-colors hover:border-brand-red/50 hover:bg-brand-red/15"
-            >
-              <span className="truncate">{getGenreLabel(filter.key)}</span>
-              <X size={13} className="shrink-0 text-rose-300 group-hover:text-zinc-100" aria-hidden="true" />
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* Featured is editorial browse content, not a duplicate search result. */}
-      {showFeatured && (
-        <section className="space-y-4">
-          <h2 className="ns-section-title">{t('discover.featured')}</h2>
-          <div data-testid="featured-tracks" className="ns-tabs-scroll -mx-4 flex gap-3 overflow-x-auto px-4 pb-2 min-[480px]:mx-0 min-[480px]:grid min-[480px]:grid-cols-2 min-[480px]:px-0 md:grid-cols-3 xl:grid-cols-4 sm:gap-5">
-            {featuredTracks.map((track) => (
-              <div key={track.id} className="w-[min(74vw,18rem)] shrink-0 min-[480px]:w-auto">
-                <TrackCard track={track} tracksContext={filteredTracks} />
+            {hasFilters && (
+              <div className="ns-discover-active-filters" aria-label={t('discover.activeFilters')}>
+                {[
+                  ['genre', genre, genre ? getGenreLabel(genre) : ''],
+                  ['group', group, QUICK_GROUP_LABELS[group] || group],
+                  ['style', style, style],
+                  ['mood', mood, mood],
+                  ['bpm', bpm, bpmOptions.find((item) => item.value === bpm)?.label],
+                  ['bpmMin', bpmMin, `≥ ${bpmMin} BPM`],
+                  ['bpmMax', bpmMax, `≤ ${bpmMax} BPM`],
+                  ['key', key, key],
+                ].filter(([, value]) => value).map(([filterKey, , label]) => (
+                  <button
+                    key={filterKey}
+                    type="button"
+                    className="ns-discover-filter-chip"
+                    onClick={() => filterKey === 'genre' ? setGenre('') : filterKey === 'group' ? setGroup('') : setBeatFilter(filterKey, '')}
+                    aria-label={`${t('discover.clearFilter')}: ${label}`}
+                  >
+                    <span>{label}</span>
+                    <X size={13} aria-hidden="true" />
+                  </button>
+                ))}
+                <button type="button" className="ns-discover-clear" onClick={clearFilters}>
+                  {t('discover.clearFilters')}
+                </button>
               </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Grid: Artists + List of Tracks Split */}
-      <div className="grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(17rem,22rem)]">
-
-        {/* Left 2 Cols: Tracks list */}
-        {(!showFeatured || listTracks.length > 0) && <section className="min-w-0 space-y-4">
-          <h2 className="ns-section-title">
-            {contentType === 'BEAT' ? t('beats.freshBeats') : contentType === 'MUSIC' ? t('discover.music') : t('discover.allReleases')}
-          </h2>
-          <div data-testid="all-releases" className="space-y-1">
-            {listTracks.length === 0 ? (
-              renderListEmpty()
-            ) : (
-              listTracks.map((track, index) => (
-                <TrackListItem
-                  key={track.id}
-                  track={track}
-                  index={index}
-                  tracksContext={listTracks}
-                />
-              ))
             )}
-          </div>
-        </section>}
-
-        {/* Right 1 Col: Recommended artists */}
-        <section className="space-y-4">
-          <h2 className="ns-section-title">{t('discover.recommendedArtists')}</h2>
-          {recommendedArtists.length === 0 ? (
-            <EmptyState
-              iconName="Users"
-              title={t('discover.noCreatorsYet')}
-              description={t('discover.moreCreatorsAppear')}
-            />
-          ) : (
-            <div data-testid="recommended-artists" className="divide-y divide-zinc-800/60 border-y border-zinc-800/60">
-              {recommendedArtists.slice(0, 3).map((artist) => (
+          </>
+        ) : (
+          <>
+            <div
+              data-testid="genre-quick-tabs"
+              className="ns-tabs-scroll -mx-4 flex items-center gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0"
+              aria-label={t('discover.filterByGenre')}
+            >
+              {QUICK_TABS.map((tab) => (
+                <GenrePill
+                  key={tab.id}
+                  label={tab.kind === 'all' ? t('discover.all') : tab.label}
+                  active={isQuickTabActive(tab)}
+                  onClick={() => {
+                    if (tab.kind === 'all') clearFilters();
+                    else setGroup(tab.group);
+                    setMoreOpen(false);
+                  }}
+                />
+              ))}
+              <GenrePill
+                label={t('discover.viewAll')}
+                active={moreOpen || Boolean(genre)}
+                onClick={() => setMoreOpen((value) => !value)}
+              />
+            </div>
+            {moreOpen && (
+              <div data-testid="genre-more-panel" className="max-w-sm">
+                <GenrePicker
+                  value={genre}
+                  onChange={(value) => setGenre(value)}
+                  ariaLabel={t('discover.exploreGenres')}
+                  placeholder={t('discover.exploreGenres')}
+                />
+              </div>
+            )}
+            {(genre || group) && (
+              <div className="ns-discover-active-filters">
                 <button
                   type="button"
-                  key={artist.id}
-                  data-artist-id={artist.id}
-                  onClick={() => navigate(`/artist/${artist.id}`)}
-                  className="flex min-h-16 w-full cursor-pointer items-center space-x-3.5 px-2 py-3 text-left transition-colors hover:bg-zinc-900/40"
+                  data-testid="active-genre-chip"
+                  className="ns-chip ns-discover-filter-chip"
+                  onClick={clearFilters}
+                  aria-label={`${t('discover.clearFilter')}: ${genre ? getGenreLabel(genre) : QUICK_GROUP_LABELS[group]}`}
                 >
-                  <FallbackAvatar
-                    src={artist.avatarUrl}
-                    name={artist.name}
-                    className="w-10 h-10 rounded-full border border-zinc-800 shrink-0 text-[34px]"
-                    imageClassName="object-cover"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <h4 className="truncate text-ns-body-sm font-semibold text-zinc-200">{artist.name}</h4>
-                    <p className="mt-0.5 truncate font-sans tabular-nums text-ns-meta text-zinc-500">
-                      {formatNumber(artist.followers || 0)} followers
-                    </p>
-                  </div>
+                  <span>{genre ? getGenreLabel(genre) : QUICK_GROUP_LABELS[group]}</span>
+                  <X size={13} aria-hidden="true" />
                 </button>
-              ))}
+              </div>
+            )}
+          </>
+        )}
+      </section>
+
+      <div className="ns-discover-lead-grid">
+        <DiscoverSection title={topTitle} testId="discover-trending" action={viewAll({ sort: contentType === 'BEAT' ? 'recent' : 'trending' })}>
+          {topLoading ? (
+            <LoadingState type="grid" count={4} />
+          ) : topError ? (
+            <ErrorState
+              title={t('discover.catalogueUnavailable')}
+              message={topError.message}
+              onRetry={() => {
+                if (contentType === 'BEAT') refetchRecent();
+                else refetchTrending();
+              }}
+            />
+          ) : topTracks.length > 0 ? (
+            <div data-testid="featured-tracks">
+              <DiscoverTrackRail tracks={topTracks} featured />
+            </div>
+          ) : (
+            <SectionEmpty
+              title={emptyTitle}
+              description={emptyDescription}
+              onReset={hasFilters ? clearFilters : undefined}
+              resetLabel={t('discover.clearFilters')}
+            />
+          )}
+        </DiscoverSection>
+
+        <DiscoverSection
+          title={rankedTitle}
+          action={viewAll({ sort: 'trending' })}
+          testId="discover-trending-week"
+          className="ns-discover-ranked-section"
+        >
+          {trendingLoading && trendingTracks.length === 0 ? (
+            <LoadingState type="list" count={5} />
+          ) : trendingTracks.length > 0 ? (
+            <DiscoverRankedList tracks={trendingTracks.slice(0, 7)} compact />
+          ) : trendingError ? (
+            <ErrorState
+              title={t('discover.noTrendingYet')}
+              message={trendingError.message}
+              onRetry={() => refetchTrending()}
+            />
+          ) : (
+            <SectionEmpty
+              title={t('discover.noTrendingYet')}
+              description={t('discover.noTrendingDescription')}
+            />
+          )}
+          {trendingError && trendingTracks.length > 0 && (
+            <button type="button" className="ns-discover-retry" onClick={() => refetchTrending()}>
+              {t('actions.retry')}
+            </button>
+          )}
+        </DiscoverSection>
+      </div>
+
+      {contentType !== 'BEAT' && (
+        <DiscoverSection title={t('discover.newReleases')} testId="discover-new-releases" action={viewAll({ sort: 'recent' })}>
+          {recentLoading ? (
+            <LoadingState type="grid" count={6} />
+          ) : recentError ? (
+            <ErrorState
+              title={t('discover.catalogueUnavailable')}
+              message={recentError.message}
+              onRetry={() => refetchRecent()}
+            />
+          ) : newReleases.length > 0 ? (
+            <DiscoverTrackRail tracks={newReleases} />
+          ) : (
+            <SectionEmpty
+              title={t('discover.noNewReleases')}
+              description={t('discover.noNewReleasesDescription')}
+            />
+          )}
+        </DiscoverSection>
+      )}
+
+      {contentType === 'ALL' && (
+        <DiscoverSection title={t('discover.freshBeats')} testId="discover-fresh-beats" action={viewAll({ content: 'BEAT', sort: 'recent' })}>
+          {freshLoading ? (
+            <LoadingState type="grid" count={6} />
+          ) : freshError ? (
+            <ErrorState
+              title={t('discover.catalogueUnavailable')}
+              message={freshError.message}
+              onRetry={() => refetchFresh()}
+            />
+          ) : freshBeats.length > 0 ? (
+            <DiscoverTrackRail tracks={freshBeats} />
+          ) : (
+            <SectionEmpty
+              title={t('discover.noFreshBeats')}
+              description={t('discover.noFreshBeatsDescription')}
+            />
+          )}
+        </DiscoverSection>
+      )}
+
+      {personalized.length > 0 && (
+        <DiscoverSection
+          title={t('discover.madeForYou')}
+          description={t('discover.madeForYouDescription')}
+          testId="discover-made-for-you"
+        >
+          <DiscoverTrackRail tracks={personalized} />
+        </DiscoverSection>
+      )}
+
+      {contentType === 'BEAT' && (
+        <>
+          <DiscoverSection title={t('discover.browseStyles')} testId="discover-style-tiles">
+            {beatFacetLoading ? (
+              <LoadingState type="grid" count={6} />
+            ) : beatFacetError ? (
+              <ErrorState
+                title={t('discover.catalogueUnavailable')}
+                message={beatFacetError.message}
+                onRetry={() => refetchBeatFacets()}
+              />
+            ) : styleItems.length > 0 ? (
+              <DiscoverTaxonomyTiles
+                items={styleItems.slice(0, 9)}
+                activeValue={style}
+                onSelect={(value) => setBeatFilter('style', value)}
+                ariaLabel={t('discover.browseStyles')}
+                variant="style"
+              />
+            ) : (
+              <SectionEmpty
+                title={t('discover.noStylesYet')}
+                description={t('discover.noStylesDescription')}
+              />
+            )}
+          </DiscoverSection>
+
+          <DiscoverSection title={t('discover.browseMoods')} testId="discover-mood-tiles">
+            {beatFacetLoading ? (
+              <LoadingState type="grid" count={6} />
+            ) : beatFacetError ? (
+              <ErrorState
+                title={t('discover.catalogueUnavailable')}
+                message={beatFacetError.message}
+                onRetry={() => refetchBeatFacets()}
+              />
+            ) : moodItems.length > 0 ? (
+              <DiscoverTaxonomyTiles
+                items={moodItems.slice(0, 8)}
+                activeValue={mood}
+                onSelect={(value) => setBeatFilter('mood', value)}
+                ariaLabel={t('discover.browseMoods')}
+                variant="mood"
+              />
+            ) : (
+              <SectionEmpty
+                title={t('discover.noMoodsYet')}
+                description={t('discover.noMoodsDescription')}
+              />
+            )}
+          </DiscoverSection>
+        </>
+      )}
+
+      {contentType !== 'BEAT' && (
+        <DiscoverSection title={t('discover.exploreGenres')} testId="discover-genre-tiles">
+          {genreTilesLoading ? (
+            <LoadingState type="grid" count={8} />
+          ) : genreTilesError ? (
+            <ErrorState
+              title={t('discover.catalogueUnavailable')}
+              message={genreTilesError.message}
+              onRetry={() => refetchCatalogue()}
+            />
+          ) : genreItems.length > 0 ? (
+            <DiscoverTaxonomyTiles
+              items={genreItems}
+              activeValue={genre}
+              onSelect={setGenre}
+              ariaLabel={t('discover.exploreGenres')}
+              variant="genre"
+            />
+          ) : (
+            <SectionEmpty
+              title={t('discover.noGenresYet')}
+              description={t('discover.noGenresDescription')}
+            />
+          )}
+        </DiscoverSection>
+      )}
+
+      <DiscoverSection
+        title={contentType === 'BEAT' ? t('discover.producersToWatch') : t('discover.artistsToWatch')}
+        testId="discover-creators"
+      >
+        {artistsLoading ? (
+          <LoadingState type="grid" count={4} />
+        ) : artistsError ? (
+          <ErrorState
+            title={t('discover.creatorsUnavailable')}
+            message={artistsError.message}
+            onRetry={() => refetchArtists()}
+          />
+        ) : creators.length > 0 ? (
+          <div data-testid="recommended-artists" className="ns-discover-creator-rail">
+            {creators.map((artist) => (
+              <ArtistCard
+                key={artist.id}
+                artist={artist}
+                roleLabel={contentType === 'BEAT' ? t('discover.producer') : t('discover.artist')}
+                metric="followers"
+              />
+            ))}
+          </div>
+        ) : (
+          <SectionEmpty
+            title={contentType === 'BEAT' ? t('discover.noProducersYet') : t('discover.noArtistsYet')}
+            description={t('discover.noCreatorsDescription')}
+          />
+        )}
+      </DiscoverSection>
+
+      <DiscoverSection
+        id="discover-catalog"
+        sectionRef={catalogRef}
+        tabIndex={-1}
+        title={allContentTitle}
+        description={t('discover.allContentDescription')}
+        testId="discover-all-content"
+        action={contentType !== 'BEAT' ? <DiscoverFilterDropdown id="catalog-sort-filter" testId="catalog-sort-trigger" label={t('beats.sort')} value={sort} options={sortOptions} onChange={setSort} align="end" /> : undefined}
+      >
+        {catalogueLoading ? (
+          <LoadingState type="list" count={8} />
+        ) : catalogueError && !firstPage ? (
+          <ErrorState
+            title={t('discover.catalogueUnavailable')}
+            message={catalogueError.message}
+            onRetry={() => refetchCatalogue()}
+          />
+        ) : (
+          <>
+          <div data-testid="all-releases" className="ns-track-list">
+            {filteredCatalogue.length > 0 ? (
+              <DiscoverRankedList tracks={filteredCatalogue} />
+            ) : (
+              <SectionEmpty
+                title={emptyTitle}
+                description={emptyDescription}
+                onReset={hasFilters ? clearFilters : undefined}
+                resetLabel={t('discover.clearFilters')}
+              />
+            )}
+          </div>
+          {Number.isFinite(total) && <p role="status" data-testid="catalog-results-summary">{t('discover.showingResults', { shown: catalogue.length, total })}</p>}
+          {catalogueError && firstPage && (
+            <div role="alert">
+              <p>{t(isFetchNextPageError ? 'discover.nextPageFailed' : 'discover.catalogueUnavailable')}</p>
+              <button type="button" className="ns-button-secondary px-4 py-2 text-sm" disabled={isFetchingNextPage} onClick={() => isFetchNextPageError ? loadNextPage() : refetchCatalogue()}>{t('actions.retry')}</button>
             </div>
           )}
-        </section>
+          {hasNextPage && !catalogueError && (
+            <button type="button" className="ns-button-secondary self-start px-4 py-2 text-sm" onClick={loadNextPage} disabled={isFetchingNextPage} aria-busy={isFetchingNextPage}>
+              {isFetchingNextPage ? t('discover.loadingMore') : t('discover.showMore')}
+            </button>
+          )}
+          {catalogue.length > 0 && !hasNextPage && !catalogueError && <p role="status">{t('discover.allResultsLoaded')}</p>}
+          {catalogue.length === 0 && total === 0 && !hasFilters && !q && (
+            <button type="button" className="ns-button-secondary self-start px-4 text-sm" onClick={() => navigate('/upload')}>
+              {t('discover.uploadFirstTrack')}
+            </button>
+          )}
+          </>
+        )}
+      </DiscoverSection>
 
+      <div className="sr-only" aria-live="polite">
+        <SlidersHorizontal size={14} aria-hidden="true" />
+        {Number.isFinite(total) ? t('discover.resultsCount', { count: total }) : ''}
+      </div>
       </div>
     </div>
   );

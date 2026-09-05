@@ -4,8 +4,10 @@ const { promisify } = require('node:util');
 const { execFile } = require('node:child_process');
 const backendPackage = require('../../package.json');
 const {
+  ADMIN_PERMISSIONS,
   adminReadOptions,
   adminMutationOptions,
+  hasAdminPermission,
   sendAdminError,
   requiredReason
 } = require('../lib/adminGuard');
@@ -15,7 +17,15 @@ const {
   sanitizeSearch,
   enumFilter
 } = require('../lib/pagination');
-const { auditData, createAudit, redactAuditMetadata } = require('../lib/auditLog');
+const { auditData, auditRequestContext, createAudit } = require('../lib/auditLog');
+const {
+  AdminAuditQueryError,
+  auditLogsCsv,
+  buildAuditWhere,
+  parseAuditExportQuery,
+  parseAuditListQuery,
+  publicAuditRecord
+} = require('../lib/adminAudit');
 const {
   ARTIST_ACCESS_USER_SELECT,
   summarizeArtistAccess,
@@ -78,11 +88,74 @@ function publicUpload(upload) {
   };
 }
 
-function publicAudit(log) {
+function adminAuditData(request, actorId, action, targetType, targetId, reason, metadata, result = 'SUCCESS') {
+  return auditData(
+    actorId,
+    action,
+    targetType,
+    targetId,
+    reason,
+    metadata,
+    auditRequestContext(request, { result })
+  );
+}
+
+function auditQueryError(reply, error) {
+  if (!(error instanceof AdminAuditQueryError)) throw error;
+  return sendAdminError(reply, 400, 'ADMIN_INVALID_FILTER', error.message, { field: error.field });
+}
+
+function canReadPii(request) {
+  return hasAdminPermission(request.user?.role, ADMIN_PERMISSIONS.PII_READ);
+}
+
+function auditActorSelect(includePii = false) {
   return {
-    ...log,
-    metadata: redactAuditMetadata(log.metadata)
+    id: true,
+    ...(includePii ? { email: true } : {}),
+    username: true,
+    displayName: true,
+    role: true
   };
+}
+
+function adminArtistAccessUserSelect(includePii = false) {
+  const { email, ...withoutPii } = ARTIST_ACCESS_USER_SELECT;
+  return includePii ? { ...withoutPii, email } : withoutPii;
+}
+
+function parseAdminSearchQuery(query = {}) {
+  const allowed = new Set(['q', 'limit']);
+  const unsupported = Object.keys(query).find((key) => !allowed.has(key));
+  if (unsupported) {
+    const error = new Error(`Unsupported search parameter: ${unsupported}.`);
+    error.field = unsupported;
+    throw error;
+  }
+  if (typeof query.q !== 'string') {
+    const error = new Error('q must be a string.');
+    error.field = 'q';
+    throw error;
+  }
+  const q = query.q.trim();
+  if (q.length < 2 || q.length > 120 || /\p{Cc}/u.test(q)) {
+    const error = new Error('q must contain 2-120 printable characters.');
+    error.field = 'q';
+    throw error;
+  }
+  const rawLimit = query.limit === undefined ? '5' : query.limit;
+  if (typeof rawLimit !== 'string' || !/^\d+$/.test(rawLimit)) {
+    const error = new Error('limit must be an integer from 1 to 10.');
+    error.field = 'limit';
+    throw error;
+  }
+  const limit = Number(rawLimit);
+  if (!Number.isSafeInteger(limit) || limit < 1 || limit > 10) {
+    const error = new Error('limit must be an integer from 1 to 10.');
+    error.field = 'limit';
+    throw error;
+  }
+  return { q, limit };
 }
 
 async function queueStatus(fastify) {
@@ -199,7 +272,7 @@ async function reportTargetContext(prisma, report) {
   }
 }
 
-async function enqueueUpload(fastify, upload, actorId, reason, action) {
+async function enqueueUpload(fastify, upload, request, reason, action) {
   const objectExists = typeof fastify.storage?.objectExists === 'function'
     ? await fastify.storage.objectExists(upload.storageKey)
     : (await fastify.storage.getObjectMetadata(upload.storageKey)).exists;
@@ -217,7 +290,7 @@ async function enqueueUpload(fastify, upload, actorId, reason, action) {
     if (upload.trackId) {
       await tx.track.update({ where: { id: upload.trackId }, data: { status: 'PROCESSING' } });
     }
-    await createAudit(tx, auditData(actorId, action, 'UPLOAD', upload.id, reason, {
+    await createAudit(tx, adminAuditData(request, request.user.id, action, 'UPLOAD', upload.id, reason, {
       trackId: upload.trackId || null
     }));
   });
@@ -251,8 +324,8 @@ async function enqueueUpload(fastify, upload, actorId, reason, action) {
 }
 
 async function adminRoutes(fastify) {
-  const read = adminReadOptions(fastify);
-  const mutate = adminMutationOptions(fastify);
+  const read = (permission) => adminReadOptions(fastify, permission);
+  const mutate = (permission) => adminMutationOptions(fastify, permission);
 
   // This handler is scoped to /api/admin and never returns an internal stack or
   // raw database/queue error to the browser.
@@ -272,7 +345,7 @@ async function adminRoutes(fastify) {
 
   // --- Overview ------------------------------------------------------------
 
-  fastify.get('/overview', read, async () => {
+  fastify.get('/overview', read(ADMIN_PERMISSIONS.OVERVIEW_READ), async () => {
     const today = new Date();
     today.setUTCHours(0, 0, 0, 0);
     const [
@@ -354,7 +427,7 @@ async function adminRoutes(fastify) {
       system: { status: system.ready ? 'ready' : 'degraded', checks: system.checks, queue: system.queue }
     };
   });
-  fastify.get('/summary', read, async (request, reply) => {
+  fastify.get('/summary', read(ADMIN_PERMISSIONS.OVERVIEW_READ), async (request, reply) => {
     const result = await fastify.inject({
       method: 'GET',
       url: '/api/admin/overview',
@@ -371,9 +444,216 @@ async function adminRoutes(fastify) {
     };
   });
 
+  fastify.get('/search', read(ADMIN_PERMISSIONS.SEARCH_READ), async (request, reply) => {
+    let parsed;
+    try {
+      parsed = parseAdminSearchQuery(request.query);
+    } catch (error) {
+      return sendAdminError(reply, 400, 'ADMIN_INVALID_SEARCH', error.message, { field: error.field });
+    }
+    const { q, limit } = parsed;
+    const includePii = canReadPii(request);
+    const [users, tracks, artists, reports, uploads, auditEvents] = await Promise.all([
+      fastify.prisma.user.findMany({
+        where: {
+          OR: [
+            { id: { contains: q, mode: 'insensitive' } },
+            ...(includePii ? [{ email: { contains: q, mode: 'insensitive' } }] : []),
+            { username: { contains: q, mode: 'insensitive' } },
+            { displayName: { contains: q, mode: 'insensitive' } }
+          ]
+        },
+        take: limit,
+        orderBy: { updatedAt: 'desc' },
+        select: {
+          id: true,
+          ...(includePii ? { email: true } : {}),
+          username: true,
+          displayName: true,
+          status: true
+        }
+      }),
+      fastify.prisma.track.findMany({
+        where: {
+          OR: [
+            { id: { contains: q, mode: 'insensitive' } },
+            { title: { contains: q, mode: 'insensitive' } },
+            { genre: { contains: q, mode: 'insensitive' } },
+            { artist: { user: { displayName: { contains: q, mode: 'insensitive' } } } },
+            { artist: { user: { username: { contains: q, mode: 'insensitive' } } } }
+          ]
+        },
+        take: limit,
+        orderBy: { updatedAt: 'desc' },
+        select: {
+          id: true,
+          title: true,
+          status: true,
+          artist: { select: { user: { select: { username: true, displayName: true } } } }
+        }
+      }),
+      fastify.prisma.artistProfile.findMany({
+        where: {
+          OR: [
+            { id: { contains: q, mode: 'insensitive' } },
+            {
+              user: {
+                OR: [
+                  ...(includePii ? [{ email: { contains: q, mode: 'insensitive' } }] : []),
+                  { username: { contains: q, mode: 'insensitive' } },
+                  { displayName: { contains: q, mode: 'insensitive' } }
+                ]
+              }
+            }
+          ]
+        },
+        take: limit,
+        orderBy: { updatedAt: 'desc' },
+        select: {
+          id: true,
+          isHidden: true,
+          user: {
+            select: {
+              ...(includePii ? { email: true } : {}),
+              username: true,
+              displayName: true,
+              status: true
+            }
+          }
+        }
+      }),
+      fastify.prisma.report.findMany({
+        where: {
+          OR: [
+            { id: { contains: q, mode: 'insensitive' } },
+            { reason: { contains: q, mode: 'insensitive' } },
+            { targetType: { contains: q, mode: 'insensitive' } },
+            { targetId: { contains: q, mode: 'insensitive' } }
+          ]
+        },
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        select: { id: true, reason: true, targetType: true, targetId: true, status: true }
+      }),
+      fastify.prisma.upload.findMany({
+        where: {
+          OR: [
+            { id: { contains: q, mode: 'insensitive' } },
+            { originalFileName: { contains: q, mode: 'insensitive' } },
+            ...(includePii ? [{ user: { email: { contains: q, mode: 'insensitive' } } }] : []),
+            { user: { username: { contains: q, mode: 'insensitive' } } },
+            { track: { title: { contains: q, mode: 'insensitive' } } }
+          ]
+        },
+        take: limit,
+        orderBy: { updatedAt: 'desc' },
+        select: {
+          id: true,
+          originalFileName: true,
+          status: true,
+          user: { select: { username: true, displayName: true } },
+          track: { select: { title: true } }
+        }
+      }),
+      fastify.prisma.auditLog.findMany({
+        where: {
+          OR: [
+            { id: { contains: q, mode: 'insensitive' } },
+            { action: { contains: q, mode: 'insensitive' } },
+            { targetType: { contains: q, mode: 'insensitive' } },
+            { targetId: { contains: q, mode: 'insensitive' } },
+            { reason: { contains: q, mode: 'insensitive' } }
+          ]
+        },
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        include: { actor: { select: auditActorSelect() } }
+      })
+    ]);
+
+    const groups = [
+      {
+        type: 'users',
+        items: users.map((user) => ({
+          id: user.id,
+          title: user.displayName || user.username || (includePii ? user.email : null) || user.id,
+          subtitle: user.username
+            ? `@${user.username}${includePii && user.email ? ` · ${user.email}` : ''}`
+            : ((includePii && user.email) || user.id),
+          status: user.status,
+          to: `/admin/users/${encodeURIComponent(user.id)}`
+        }))
+      },
+      {
+        type: 'tracks',
+        items: tracks.map((track) => ({
+          id: track.id,
+          title: track.title,
+          subtitle: track.artist.user.displayName || `@${track.artist.user.username}`,
+          status: track.status,
+          to: `/admin/tracks/${encodeURIComponent(track.id)}`
+        }))
+      },
+      {
+        type: 'artists',
+        items: artists.map((artist) => ({
+          id: artist.id,
+          title: artist.user.displayName || artist.user.username ||
+            (includePii ? artist.user.email : null) || artist.id,
+          subtitle: artist.user.username
+            ? `@${artist.user.username}`
+            : ((includePii && artist.user.email) || artist.id),
+          status: artist.isHidden ? 'HIDDEN' : artist.user.status,
+          to: `/admin/artists/${encodeURIComponent(artist.id)}`
+        }))
+      },
+      {
+        type: 'reports',
+        items: reports.map((report) => ({
+          id: report.id,
+          title: report.reason,
+          subtitle: `${report.targetType} · ${report.targetId}`,
+          status: report.status,
+          to: `/admin/reports/${encodeURIComponent(report.id)}`
+        }))
+      },
+      {
+        type: 'uploads',
+        items: uploads.map((upload) => ({
+          id: upload.id,
+          title: upload.originalFileName,
+          subtitle: upload.track?.title || upload.user.displayName || `@${upload.user.username}`,
+          status: upload.status,
+          to: `/admin/uploads?search=${encodeURIComponent(upload.id)}`
+        }))
+      },
+      {
+        type: 'auditEvents',
+        items: auditEvents.map((event) => {
+          const safeEvent = publicAuditRecord(event);
+          return {
+            id: event.id,
+            title: event.action,
+            subtitle: `${event.targetType} · ${event.targetId}`,
+            status: safeEvent.result || 'SUCCESS',
+            to: `/admin/audit-logs?event=${encodeURIComponent(event.id)}`
+          };
+        })
+      }
+    ].filter((group) => group.items.length > 0);
+
+    return {
+      query: q,
+      limitPerGroup: limit,
+      totalResults: groups.reduce((sum, group) => sum + group.items.length, 0),
+      groups
+    };
+  });
+
   // --- Users ---------------------------------------------------------------
 
-  fastify.get('/users', read, async (request, reply) => {
+  fastify.get('/users', read(ADMIN_PERMISSIONS.USERS_READ), async (request, reply) => {
+    const includePii = canReadPii(request);
     const { page, pageSize, skip, take } = parsePagination(request.query);
     const search = sanitizeSearch(request.query.search);
     const role = enumFilter(request.query.role, USER_ROLES);
@@ -391,7 +671,7 @@ async function adminRoutes(fastify) {
       ? true
       : request.query.uploadBlocked === 'false' ? false : undefined;
 
-    const allowedSort = ['updatedAt', 'id', 'email', 'joinedAt'];
+    const allowedSort = ['updatedAt', 'id', 'joinedAt', ...(includePii ? ['email'] : [])];
     const sortBy = allowedSort.includes(request.query.sortBy) ? request.query.sortBy : 'updatedAt';
     const sortOrder = request.query.sortOrder === 'asc' ? 'asc' : 'desc';
 
@@ -417,7 +697,7 @@ async function adminRoutes(fastify) {
       ...(search ? {
         OR: [
           { id: { contains: search, mode: 'insensitive' } },
-          { email: { contains: search, mode: 'insensitive' } },
+          ...(includePii ? [{ email: { contains: search, mode: 'insensitive' } }] : []),
           { username: { contains: search, mode: 'insensitive' } },
           { displayName: { contains: search, mode: 'insensitive' } }
         ]
@@ -433,7 +713,7 @@ async function adminRoutes(fastify) {
         orderBy: { [sortBy]: sortOrder },
         select: {
           id: true,
-          email: true,
+          ...(includePii ? { email: true } : {}),
           username: true,
           displayName: true,
           avatarUrl: true,
@@ -468,12 +748,13 @@ async function adminRoutes(fastify) {
     };
   });
 
-  fastify.get('/users/:id', read, async (request, reply) => {
+  fastify.get('/users/:id', read(ADMIN_PERMISSIONS.USERS_READ), async (request, reply) => {
+    const includePii = canReadPii(request);
     const user = await fastify.prisma.user.findUnique({
       where: { id: request.params.id },
       select: {
         id: true,
-        email: true,
+        ...(includePii ? { email: true } : {}),
         username: true,
         displayName: true,
         avatarUrl: true,
@@ -548,7 +829,7 @@ async function adminRoutes(fastify) {
         where: { targetType: 'USER', targetId: user.id },
         take: 50,
         orderBy: { createdAt: 'desc' },
-        include: { actor: { select: { id: true, username: true, displayName: true } } }
+        include: { actor: { select: auditActorSelect() } }
       })
     ]);
     const serializedUser = await serializeUserMedia(fastify.storage, user);
@@ -561,15 +842,18 @@ async function adminRoutes(fastify) {
         _count: undefined
       },
       reportsAgainst,
-      audit: audit.map(publicAudit)
+      audit: audit.map(publicAuditRecord)
     };
   });
 
-  fastify.patch('/users/:id', mutate, async (request, reply) => {
+  fastify.patch('/users/:id', mutate(ADMIN_PERMISSIONS.USERS_MANAGE), async (request, reply) => {
     const body = request.body || {};
     const reason = requiredReason(body);
     if (!reason) return sendAdminError(reply, 400, 'ADMIN_REASON_REQUIRED', 'A reason is required.');
-    const target = await fastify.prisma.user.findUnique({ where: { id: request.params.id } });
+    const target = await fastify.prisma.user.findUnique({
+      where: { id: request.params.id },
+      select: { id: true }
+    });
     if (!target) return sendAdminError(reply, 404, 'ADMIN_USER_NOT_FOUND', 'User not found.');
     const data = {};
     if (typeof body.displayName === 'string' && body.displayName.trim() && body.displayName.trim().length <= 100) {
@@ -585,9 +869,17 @@ async function adminRoutes(fastify) {
       const changed = await tx.user.update({
         where: { id: target.id },
         data,
-        select: { id: true, email: true, username: true, displayName: true, role: true, status: true, updatedAt: true }
+        select: {
+          id: true,
+          ...(canReadPii(request) ? { email: true } : {}),
+          username: true,
+          displayName: true,
+          role: true,
+          status: true,
+          updatedAt: true
+        }
       });
-      await createAudit(tx, auditData(request.user.id, 'USER_UPDATE', 'USER', target.id, reason, {
+      await createAudit(tx, adminAuditData(request, request.user.id, 'USER_UPDATE', 'USER', target.id, reason, {
         fields: Object.keys(data)
       }));
       return changed;
@@ -598,7 +890,10 @@ async function adminRoutes(fastify) {
   async function changeUserStatus(request, reply, nextStatus, action, allowedCurrent) {
     const reason = requiredReason(request.body);
     if (!reason) return sendAdminError(reply, 400, 'ADMIN_REASON_REQUIRED', 'A reason is required.');
-    const target = await fastify.prisma.user.findUnique({ where: { id: request.params.id } });
+    const target = await fastify.prisma.user.findUnique({
+      where: { id: request.params.id },
+      select: { id: true, role: true, status: true }
+    });
     if (!target) return sendAdminError(reply, 404, 'ADMIN_USER_NOT_FOUND', 'User not found.');
     if (target.id === request.user.id && ['SUSPENDED', 'BANNED'].includes(nextStatus)) {
       return sendAdminError(reply, 409, 'ADMIN_SELF_ACTION_BLOCKED', 'You cannot suspend or ban your own account.');
@@ -610,11 +905,15 @@ async function adminRoutes(fastify) {
       return sendAdminError(reply, 409, 'ADMIN_INVALID_STATE', `User status cannot change from ${target.status} to ${nextStatus}.`);
     }
     await fastify.prisma.$transaction(async (tx) => {
-      await tx.user.update({ where: { id: target.id }, data: { status: nextStatus } });
+      await tx.user.update({
+        where: { id: target.id },
+        data: { status: nextStatus },
+        select: { id: true }
+      });
       if (['SUSPENDED', 'BANNED'].includes(nextStatus)) {
         await tx.session.deleteMany({ where: { userId: target.id } });
       }
-      await createAudit(tx, auditData(request.user.id, action, 'USER', target.id, reason, {
+      await createAudit(tx, adminAuditData(request, request.user.id, action, 'USER', target.id, reason, {
         previousStatus: target.status,
         nextStatus
       }));
@@ -622,16 +921,16 @@ async function adminRoutes(fastify) {
     return { user: { id: target.id, status: nextStatus } };
   }
 
-  fastify.post('/users/:id/suspend', mutate, (request, reply) =>
+  fastify.post('/users/:id/suspend', mutate(ADMIN_PERMISSIONS.USERS_MANAGE), (request, reply) =>
     changeUserStatus(request, reply, 'SUSPENDED', 'USER_SUSPEND', ['ACTIVE']));
-  fastify.post('/users/:id/unsuspend', mutate, (request, reply) =>
+  fastify.post('/users/:id/unsuspend', mutate(ADMIN_PERMISSIONS.USERS_MANAGE), (request, reply) =>
     changeUserStatus(request, reply, 'ACTIVE', 'USER_UNSUSPEND', ['SUSPENDED']));
-  fastify.post('/users/:id/ban', mutate, (request, reply) =>
+  fastify.post('/users/:id/ban', mutate(ADMIN_PERMISSIONS.USERS_MANAGE), (request, reply) =>
     changeUserStatus(request, reply, 'BANNED', 'USER_BAN', ['ACTIVE', 'SUSPENDED']));
-  fastify.post('/users/:id/unban', mutate, (request, reply) =>
+  fastify.post('/users/:id/unban', mutate(ADMIN_PERMISSIONS.USERS_MANAGE), (request, reply) =>
     changeUserStatus(request, reply, 'ACTIVE', 'USER_UNBAN', ['BANNED']));
 
-  fastify.post('/users/:id/revoke-sessions', mutate, async (request, reply) => {
+  fastify.post('/users/:id/revoke-sessions', mutate(ADMIN_PERMISSIONS.USERS_MANAGE), async (request, reply) => {
     const reason = requiredReason(request.body);
     if (!reason) return sendAdminError(reply, 400, 'ADMIN_REASON_REQUIRED', 'A reason is required.');
     const target = await fastify.prisma.user.findUnique({
@@ -641,7 +940,7 @@ async function adminRoutes(fastify) {
     if (!target) return sendAdminError(reply, 404, 'ADMIN_USER_NOT_FOUND', 'User not found.');
     const revoked = await fastify.prisma.$transaction(async (tx) => {
       const result = await tx.session.deleteMany({ where: { userId: target.id } });
-      await createAudit(tx, auditData(request.user.id, 'USER_REVOKE_SESSIONS', 'USER', target.id, reason, {
+      await createAudit(tx, adminAuditData(request, request.user.id, 'USER_REVOKE_SESSIONS', 'USER', target.id, reason, {
         revokedCount: result.count
       }));
       return result.count;
@@ -649,7 +948,7 @@ async function adminRoutes(fastify) {
     return { userId: target.id, revokedSessions: revoked };
   });
 
-  fastify.post('/users/:id/set-role', mutate, async (request, reply) => {
+  fastify.post('/users/:id/set-role', mutate(ADMIN_PERMISSIONS.USERS_MANAGE), async (request, reply) => {
     const role = enumFilter(request.body?.role, USER_ROLES);
     const reason = requiredReason(request.body);
     if (!role) return sendAdminError(reply, 400, 'ADMIN_INVALID_ROLE', 'A valid role is required.');
@@ -659,7 +958,12 @@ async function adminRoutes(fastify) {
     }
     const target = await fastify.prisma.user.findUnique({
       where: { id: request.params.id },
-      include: { artistProfile: { select: { id: true, isHidden: true } } }
+      select: {
+        id: true,
+        role: true,
+        status: true,
+        artistProfile: { select: { id: true, isHidden: true } }
+      }
     });
     if (!target) return sendAdminError(reply, 404, 'ADMIN_USER_NOT_FOUND', 'User not found.');
     if (target.role === role) return { user: { id: target.id, role, ...summarizeArtistAccess(target) } };
@@ -690,8 +994,12 @@ async function adminRoutes(fastify) {
       : role !== 'ADMIN';
 
     const result = await fastify.prisma.$transaction(async (tx) => {
-      await tx.user.update({ where: { id: target.id }, data: { role } });
-      await createAudit(tx, auditData(request.user.id, 'USER_SET_ROLE', 'USER', target.id, reason, {
+      await tx.user.update({
+        where: { id: target.id },
+        data: { role },
+        select: { id: true }
+      });
+      await createAudit(tx, adminAuditData(request, request.user.id, 'USER_SET_ROLE', 'USER', target.id, reason, {
         previousRole: target.role,
         nextRole: role,
         requestId: request.id
@@ -702,14 +1010,14 @@ async function adminRoutes(fastify) {
         const ensured = await ensureArtistProfile(tx, target.id);
         profile = ensured.profile;
         if (ensured.created) {
-          await createAudit(tx, auditData(request.user.id, 'ARTIST_PROFILE_CREATED', 'ARTIST', ensured.profile.id, reason, {
+          await createAudit(tx, adminAuditData(request, request.user.id, 'ARTIST_PROFILE_CREATED', 'ARTIST', ensured.profile.id, reason, {
             userId: target.id,
             triggeredBy: 'USER_SET_ROLE'
           }));
         }
       } else if (hideArtistProfile && profile && !profile.isHidden) {
         profile = await tx.artistProfile.update({ where: { id: profile.id }, data: { isHidden: true } });
-        await createAudit(tx, auditData(request.user.id, 'ARTIST_HIDE', 'ARTIST', profile.id, reason, {
+        await createAudit(tx, adminAuditData(request, request.user.id, 'ARTIST_HIDE', 'ARTIST', profile.id, reason, {
           userId: target.id,
           triggeredBy: 'USER_SET_ROLE'
         }));
@@ -717,7 +1025,7 @@ async function adminRoutes(fastify) {
 
       if (revokeSessions) {
         const revoked = await tx.session.deleteMany({ where: { userId: target.id } });
-        await createAudit(tx, auditData(request.user.id, 'USER_REVOKE_SESSIONS', 'USER', target.id, reason, {
+        await createAudit(tx, adminAuditData(request, request.user.id, 'USER_REVOKE_SESSIONS', 'USER', target.id, reason, {
           revokedCount: revoked.count,
           triggeredBy: 'USER_SET_ROLE'
         }));
@@ -736,15 +1044,16 @@ async function adminRoutes(fastify) {
   // create/hide, and an optional session revocation into one auditable admin
   // action. See backend/src/lib/artistAccess.js for the shared rules.
 
-  fastify.post('/users/:id/grant-artist', mutate, async (request, reply) => {
+  fastify.post('/users/:id/grant-artist', mutate(ADMIN_PERMISSIONS.USERS_MANAGE), async (request, reply) => {
     const reason = requiredReason(request.body);
     if (!reason) return sendAdminError(reply, 400, 'ADMIN_REASON_REQUIRED', 'A reason is required.');
     if (request.user.status !== 'ACTIVE') {
       return sendAdminError(reply, 403, 'ADMIN_NOT_ACTIVE', 'Your admin account is not active.');
     }
+    const includePii = canReadPii(request);
     const target = await fastify.prisma.user.findUnique({
       where: { id: request.params.id },
-      select: ARTIST_ACCESS_USER_SELECT
+      select: adminArtistAccessUserSelect(includePii)
     });
     if (!target) return sendAdminError(reply, 404, 'ADMIN_USER_NOT_FOUND', 'User not found.');
     if (target.status === 'BANNED') {
@@ -763,31 +1072,31 @@ async function adminRoutes(fastify) {
       const diff = await grantArtistAccess(tx, target, options);
 
       if (diff.roleChanged) {
-        await createAudit(tx, auditData(request.user.id, 'USER_SET_ROLE', 'USER', target.id, reason, {
+        await createAudit(tx, adminAuditData(request, request.user.id, 'USER_SET_ROLE', 'USER', target.id, reason, {
           previousRole: diff.previousRole,
           nextRole: diff.nextRole,
           triggeredBy: 'USER_GRANT_ARTIST'
         }));
       }
       if (diff.profileCreated) {
-        await createAudit(tx, auditData(request.user.id, 'ARTIST_PROFILE_CREATED', 'ARTIST', diff.profile.id, reason, {
+        await createAudit(tx, adminAuditData(request, request.user.id, 'ARTIST_PROFILE_CREATED', 'ARTIST', diff.profile.id, reason, {
           userId: target.id,
           triggeredBy: 'USER_GRANT_ARTIST'
         }));
       }
       if (diff.profileUnhiddenNow) {
-        await createAudit(tx, auditData(request.user.id, 'ARTIST_UNHIDE', 'ARTIST', diff.profile.id, reason, {
+        await createAudit(tx, adminAuditData(request, request.user.id, 'ARTIST_UNHIDE', 'ARTIST', diff.profile.id, reason, {
           userId: target.id,
           triggeredBy: 'USER_GRANT_ARTIST'
         }));
       }
       if (diff.sessionsRevoked) {
-        await createAudit(tx, auditData(request.user.id, 'USER_REVOKE_SESSIONS', 'USER', target.id, reason, {
+        await createAudit(tx, adminAuditData(request, request.user.id, 'USER_REVOKE_SESSIONS', 'USER', target.id, reason, {
           revokedCount: diff.revokedSessionCount,
           triggeredBy: 'USER_GRANT_ARTIST'
         }));
       }
-      await createAudit(tx, auditData(request.user.id, 'USER_GRANT_ARTIST', 'USER', target.id, reason, {
+      await createAudit(tx, adminAuditData(request, request.user.id, 'USER_GRANT_ARTIST', 'USER', target.id, reason, {
         previousRole: diff.previousRole,
         nextRole: diff.nextRole,
         previousStatus: diff.previousStatus,
@@ -805,7 +1114,7 @@ async function adminRoutes(fastify) {
     return {
       user: {
         id: target.id,
-        email: target.email,
+        ...(includePii ? { email: target.email } : {}),
         username: target.username,
         displayName: target.displayName,
         role: outcome.nextRole,
@@ -815,15 +1124,16 @@ async function adminRoutes(fastify) {
     };
   });
 
-  fastify.post('/users/:id/revoke-artist', mutate, async (request, reply) => {
+  fastify.post('/users/:id/revoke-artist', mutate(ADMIN_PERMISSIONS.USERS_MANAGE), async (request, reply) => {
     const reason = requiredReason(request.body);
     if (!reason) return sendAdminError(reply, 400, 'ADMIN_REASON_REQUIRED', 'A reason is required.');
     if (request.user.status !== 'ACTIVE') {
       return sendAdminError(reply, 403, 'ADMIN_NOT_ACTIVE', 'Your admin account is not active.');
     }
+    const includePii = canReadPii(request);
     const target = await fastify.prisma.user.findUnique({
       where: { id: request.params.id },
-      select: ARTIST_ACCESS_USER_SELECT
+      select: adminArtistAccessUserSelect(includePii)
     });
     if (!target) return sendAdminError(reply, 404, 'ADMIN_USER_NOT_FOUND', 'User not found.');
     // Revoking artist access never demotes an admin — only role ARTIST is
@@ -839,25 +1149,25 @@ async function adminRoutes(fastify) {
       const diff = await revokeArtistAccess(tx, target, options);
 
       if (diff.roleChanged) {
-        await createAudit(tx, auditData(request.user.id, 'USER_SET_ROLE', 'USER', target.id, reason, {
+        await createAudit(tx, adminAuditData(request, request.user.id, 'USER_SET_ROLE', 'USER', target.id, reason, {
           previousRole: diff.previousRole,
           nextRole: diff.nextRole,
           triggeredBy: 'USER_REVOKE_ARTIST'
         }));
       }
       if (diff.profileHiddenNow) {
-        await createAudit(tx, auditData(request.user.id, 'ARTIST_HIDE', 'ARTIST', diff.profile.id, reason, {
+        await createAudit(tx, adminAuditData(request, request.user.id, 'ARTIST_HIDE', 'ARTIST', diff.profile.id, reason, {
           userId: target.id,
           triggeredBy: 'USER_REVOKE_ARTIST'
         }));
       }
       if (diff.sessionsRevoked) {
-        await createAudit(tx, auditData(request.user.id, 'USER_REVOKE_SESSIONS', 'USER', target.id, reason, {
+        await createAudit(tx, adminAuditData(request, request.user.id, 'USER_REVOKE_SESSIONS', 'USER', target.id, reason, {
           revokedCount: diff.revokedSessionCount,
           triggeredBy: 'USER_REVOKE_ARTIST'
         }));
       }
-      await createAudit(tx, auditData(request.user.id, 'USER_REVOKE_ARTIST', 'USER', target.id, reason, {
+      await createAudit(tx, adminAuditData(request, request.user.id, 'USER_REVOKE_ARTIST', 'USER', target.id, reason, {
         previousRole: diff.previousRole,
         nextRole: diff.nextRole,
         artistProfileId: diff.profile?.id || null,
@@ -872,7 +1182,7 @@ async function adminRoutes(fastify) {
     return {
       user: {
         id: target.id,
-        email: target.email,
+        ...(includePii ? { email: target.email } : {}),
         username: target.username,
         displayName: target.displayName,
         role: outcome.nextRole,
@@ -882,22 +1192,23 @@ async function adminRoutes(fastify) {
     };
   });
 
-  fastify.post('/users/:id/ensure-artist-profile', mutate, async (request, reply) => {
+  fastify.post('/users/:id/ensure-artist-profile', mutate(ADMIN_PERMISSIONS.USERS_MANAGE), async (request, reply) => {
     const reason = requiredReason(request.body);
     if (!reason) return sendAdminError(reply, 400, 'ADMIN_REASON_REQUIRED', 'A reason is required.');
     if (request.user.status !== 'ACTIVE') {
       return sendAdminError(reply, 403, 'ADMIN_NOT_ACTIVE', 'Your admin account is not active.');
     }
+    const includePii = canReadPii(request);
     const target = await fastify.prisma.user.findUnique({
       where: { id: request.params.id },
-      select: ARTIST_ACCESS_USER_SELECT
+      select: adminArtistAccessUserSelect(includePii)
     });
     if (!target) return sendAdminError(reply, 404, 'ADMIN_USER_NOT_FOUND', 'User not found.');
     const revokeSessions = request.body?.revokeSessions === true;
 
     const result = await fastify.prisma.$transaction(async (tx) => {
       const ensured = await ensureArtistProfile(tx, target.id);
-      await createAudit(tx, auditData(request.user.id, 'ARTIST_PROFILE_CREATED', 'ARTIST', ensured.profile.id, reason, {
+      await createAudit(tx, adminAuditData(request, request.user.id, 'ARTIST_PROFILE_CREATED', 'ARTIST', ensured.profile.id, reason, {
         userId: target.id,
         alreadyExisted: !ensured.created,
         triggeredBy: 'USER_ENSURE_ARTIST_PROFILE',
@@ -907,7 +1218,7 @@ async function adminRoutes(fastify) {
       if (revokeSessions) {
         const revoked = await tx.session.deleteMany({ where: { userId: target.id } });
         revokedSessionCount = revoked.count;
-        await createAudit(tx, auditData(request.user.id, 'USER_REVOKE_SESSIONS', 'USER', target.id, reason, {
+        await createAudit(tx, adminAuditData(request, request.user.id, 'USER_REVOKE_SESSIONS', 'USER', target.id, reason, {
           revokedCount: revoked.count,
           triggeredBy: 'USER_ENSURE_ARTIST_PROFILE'
         }));
@@ -918,7 +1229,7 @@ async function adminRoutes(fastify) {
     return {
       user: {
         id: target.id,
-        email: target.email,
+        ...(includePii ? { email: target.email } : {}),
         username: target.username,
         displayName: target.displayName,
         role: target.role,
@@ -932,7 +1243,7 @@ async function adminRoutes(fastify) {
 
   // --- Tracks --------------------------------------------------------------
 
-  fastify.get('/tracks', read, async (request, reply) => {
+  fastify.get('/tracks', read(ADMIN_PERMISSIONS.TRACKS_READ), async (request, reply) => {
     const { page, pageSize, skip, take } = parsePagination(request.query);
     const search = sanitizeSearch(request.query.search);
     const status = enumFilter(request.query.status, TRACK_STATUSES);
@@ -1009,7 +1320,7 @@ async function adminRoutes(fastify) {
     };
   });
 
-  fastify.get('/tracks/:id', read, async (request, reply) => {
+  fastify.get('/tracks/:id', read(ADMIN_PERMISSIONS.TRACKS_READ), async (request, reply) => {
     const track = await fastify.prisma.track.findUnique({
       where: { id: request.params.id },
       select: {
@@ -1085,7 +1396,7 @@ async function adminRoutes(fastify) {
         where: { targetType: 'TRACK', targetId: track.id },
         orderBy: { createdAt: 'desc' },
         take: 50,
-        include: { actor: { select: { id: true, username: true, displayName: true } } }
+        include: { actor: { select: auditActorSelect() } }
       })
     ]);
     const { processedAudioKey, uploads, ...safeTrack } = track;
@@ -1097,8 +1408,72 @@ async function adminRoutes(fastify) {
         uploads: uploads.map(publicUpload)
       },
       reports,
-      audit: audit.map(publicAudit)
+      audit: audit.map(publicAuditRecord)
     };
+  });
+
+  fastify.get('/tracks/:id/preview', read(ADMIN_PERMISSIONS.TRACKS_PREVIEW), async (request, reply) => {
+    const track = await fastify.prisma.track.findUnique({
+      where: { id: request.params.id },
+      select: { id: true, status: true, processedAudioKey: true, mimeType: true }
+    });
+    if (!track) return sendAdminError(reply, 404, 'ADMIN_TRACK_NOT_FOUND', 'Track not found.');
+    if (!track.processedAudioKey) {
+      return sendAdminError(reply, 409, 'ADMIN_PREVIEW_UNAVAILABLE', 'A processed moderation preview is unavailable.');
+    }
+
+    const range = request.headers.range;
+    if (range && !/^bytes=(?:\d+-\d*|-\d+)$/.test(range)) {
+      return sendAdminError(reply, 416, 'ADMIN_INVALID_RANGE', 'Only one valid byte range may be requested.');
+    }
+
+    if (typeof fastify.storage?.getObjectMetadata === 'function') {
+      const metadata = await fastify.storage.getObjectMetadata(track.processedAudioKey);
+      if (!metadata.exists) {
+        return sendAdminError(reply, 404, 'ADMIN_PREVIEW_NOT_FOUND', 'The processed preview object is unavailable.');
+      }
+    }
+
+    let object;
+    try {
+      if (typeof fastify.storage?.getObjectStreamResponse === 'function') {
+        object = await fastify.storage.getObjectStreamResponse(track.processedAudioKey, { range });
+      } else if (typeof fastify.storage?.getObjectStream === 'function') {
+        object = { body: await fastify.storage.getObjectStream(track.processedAudioKey) };
+      } else {
+        return sendAdminError(reply, 503, 'ADMIN_PREVIEW_UNAVAILABLE', 'Preview storage is unavailable.');
+      }
+    } catch (error) {
+      if (error?.$metadata?.httpStatusCode === 416) {
+        return sendAdminError(reply, 416, 'ADMIN_INVALID_RANGE', 'The requested byte range is unavailable.');
+      }
+      throw error;
+    }
+    if (!object?.body) {
+      return sendAdminError(reply, 404, 'ADMIN_PREVIEW_NOT_FOUND', 'The processed preview object is unavailable.');
+    }
+
+    await createAudit(fastify.prisma, adminAuditData(
+      request,
+      request.user.id,
+      'TRACK_PREVIEW',
+      'TRACK',
+      track.id,
+      'Moderation preview requested.',
+      { status: track.status, ranged: Boolean(range) }
+    ));
+
+    reply.header('Cache-Control', 'private, no-store');
+    reply.header('Accept-Ranges', object.acceptRanges || 'bytes');
+    reply.header('Content-Disposition', 'inline');
+    reply.type(object.contentType || 'audio/mpeg');
+    if (object.etag) reply.header('ETag', object.etag);
+    if (object.contentRange) reply.header('Content-Range', object.contentRange);
+    if (Number.isSafeInteger(object.contentLength) && object.contentLength >= 0) {
+      reply.header('Content-Length', object.contentLength);
+    }
+    if (range && object.contentRange) reply.status(206);
+    return reply.send(object.body);
   });
 
   async function setTrackStatus(request, reply, nextStatus, action, allowedCurrent) {
@@ -1111,7 +1486,7 @@ async function adminRoutes(fastify) {
     }
     await fastify.prisma.$transaction(async (tx) => {
       await tx.track.update({ where: { id: track.id }, data: { status: nextStatus } });
-      await createAudit(tx, auditData(request.user.id, action, 'TRACK', track.id, reason, {
+      await createAudit(tx, adminAuditData(request, request.user.id, action, 'TRACK', track.id, reason, {
         previousStatus: track.status,
         nextStatus
       }));
@@ -1119,16 +1494,16 @@ async function adminRoutes(fastify) {
     return { track: { id: track.id, status: nextStatus } };
   }
 
-  fastify.post('/tracks/:id/hide', mutate, (request, reply) =>
+  fastify.post('/tracks/:id/hide', mutate(ADMIN_PERMISSIONS.TRACKS_MANAGE), (request, reply) =>
     setTrackStatus(request, reply, 'HIDDEN', 'TRACK_HIDE', ['PUBLISHED']));
-  fastify.post('/tracks/:id/unhide', mutate, (request, reply) =>
+  fastify.post('/tracks/:id/unhide', mutate(ADMIN_PERMISSIONS.TRACKS_MANAGE), (request, reply) =>
     setTrackStatus(request, reply, 'PUBLISHED', 'TRACK_UNHIDE', ['HIDDEN']));
-  fastify.post('/tracks/:id/reject', mutate, (request, reply) =>
+  fastify.post('/tracks/:id/reject', mutate(ADMIN_PERMISSIONS.TRACKS_MANAGE), (request, reply) =>
     setTrackStatus(request, reply, 'REJECTED', 'TRACK_REJECT', ['PUBLISHED', 'PENDING_REVIEW', 'HIDDEN']));
-  fastify.post('/tracks/:id/restore', mutate, (request, reply) =>
+  fastify.post('/tracks/:id/restore', mutate(ADMIN_PERMISSIONS.TRACKS_MANAGE), (request, reply) =>
     setTrackStatus(request, reply, 'PENDING_REVIEW', 'TRACK_RESTORE', ['REJECTED']));
 
-  fastify.post('/tracks/:id/content-type', mutate, async (request, reply) => {
+  fastify.post('/tracks/:id/content-type', mutate(ADMIN_PERMISSIONS.TRACKS_MANAGE), async (request, reply) => {
     const reason = requiredReason(request.body);
     if (!reason) return sendAdminError(reply, 400, 'ADMIN_REASON_REQUIRED', 'A reason is required.');
     const track = await fastify.prisma.track.findUnique({ where: { id: request.params.id } });
@@ -1155,7 +1530,7 @@ async function adminRoutes(fastify) {
           ...beatMetadataResult.data
         }
       });
-      await createAudit(tx, auditData(
+      await createAudit(tx, adminAuditData(request,
         request.user.id,
         'TRACK_CONTENT_TYPE_UPDATE',
         'TRACK',
@@ -1181,7 +1556,7 @@ async function adminRoutes(fastify) {
     };
   });
 
-  fastify.post('/tracks/:id/lyrics/remove', mutate, async (request, reply) => {
+  fastify.post('/tracks/:id/lyrics/remove', mutate(ADMIN_PERMISSIONS.TRACKS_MANAGE), async (request, reply) => {
     const reason = requiredReason(request.body);
     if (!reason) return sendAdminError(reply, 400, 'ADMIN_REASON_REQUIRED', 'A reason is required.');
     const track = await fastify.prisma.track.findUnique({ where: { id: request.params.id } });
@@ -1200,7 +1575,7 @@ async function adminRoutes(fastify) {
           lyricsUpdatedAt
         }
       });
-      await createAudit(tx, auditData(
+      await createAudit(tx, adminAuditData(request,
         request.user.id,
         'TRACK_LYRICS_MODERATED',
         'TRACK',
@@ -1219,7 +1594,7 @@ async function adminRoutes(fastify) {
     };
   });
 
-  fastify.post('/tracks/:id/force-reprocess', mutate, async (request, reply) => {
+  fastify.post('/tracks/:id/force-reprocess', mutate(ADMIN_PERMISSIONS.TRACKS_MANAGE), async (request, reply) => {
     const reason = requiredReason(request.body);
     if (!reason) return sendAdminError(reply, 400, 'ADMIN_REASON_REQUIRED', 'A reason is required.');
     const track = await fastify.prisma.track.findUnique({
@@ -1235,7 +1610,7 @@ async function adminRoutes(fastify) {
       return sendAdminError(reply, 409, 'ADMIN_REPROCESS_UNSAFE', 'No safe upload source is available for reprocessing.');
     }
     try {
-      const jobId = await enqueueUpload(fastify, upload, request.user.id, reason, 'TRACK_FORCE_REPROCESS');
+      const jobId = await enqueueUpload(fastify, upload, request, reason, 'TRACK_FORCE_REPROCESS');
       return { track: { id: track.id, status: 'PROCESSING' }, uploadId: upload.id, jobId };
     } catch (error) {
       if (error.code === 'ADMIN_UPLOAD_OBJECT_MISSING') {
@@ -1247,7 +1622,8 @@ async function adminRoutes(fastify) {
 
   // --- Uploads -------------------------------------------------------------
 
-  fastify.get('/uploads', read, async (request, reply) => {
+  fastify.get('/uploads', read(ADMIN_PERMISSIONS.UPLOADS_READ), async (request, reply) => {
+    const includePii = canReadPii(request);
     const { page, pageSize, skip, take } = parsePagination(request.query);
     const search = sanitizeSearch(request.query.search);
     const status = enumFilter(request.query.status, UPLOAD_STATUSES);
@@ -1258,7 +1634,9 @@ async function adminRoutes(fastify) {
         OR: [
           { id: { contains: search, mode: 'insensitive' } },
           { originalFileName: { contains: search, mode: 'insensitive' } },
-          { user: { email: { contains: search, mode: 'insensitive' } } },
+          ...(includePii ? [{ user: { email: { contains: search, mode: 'insensitive' } } }] : []),
+          { user: { username: { contains: search, mode: 'insensitive' } } },
+          { user: { displayName: { contains: search, mode: 'insensitive' } } },
           { track: { title: { contains: search, mode: 'insensitive' } } }
         ]
       } : {})
@@ -1271,7 +1649,7 @@ async function adminRoutes(fastify) {
         take,
         orderBy: { updatedAt: 'desc' },
         include: {
-          user: { select: { id: true, username: true, displayName: true, email: true } },
+          user: { select: { id: true, username: true, displayName: true, ...(includePii ? { email: true } : {}) } },
           track: { select: { id: true, title: true, status: true } }
         }
       })
@@ -1282,11 +1660,12 @@ async function adminRoutes(fastify) {
     };
   });
 
-  fastify.get('/uploads/:id', read, async (request, reply) => {
+  fastify.get('/uploads/:id', read(ADMIN_PERMISSIONS.UPLOADS_READ), async (request, reply) => {
+    const includePii = canReadPii(request);
     const upload = await fastify.prisma.upload.findUnique({
       where: { id: request.params.id },
       include: {
-        user: { select: { id: true, username: true, displayName: true, email: true, status: true } },
+        user: { select: { id: true, username: true, displayName: true, ...(includePii ? { email: true } : {}), status: true } },
         track: {
           select: {
             id: true,
@@ -1302,7 +1681,7 @@ async function adminRoutes(fastify) {
       where: { targetType: 'UPLOAD', targetId: upload.id },
       orderBy: { createdAt: 'desc' },
       take: 50,
-      include: { actor: { select: { id: true, username: true, displayName: true } } }
+      include: { actor: { select: auditActorSelect() } }
     });
     let worker = { status: 'unavailable' };
     if (typeof fastify.audioQueue?.getJob === 'function') {
@@ -1313,10 +1692,10 @@ async function adminRoutes(fastify) {
         worker = { status: 'error' };
       }
     }
-    return { upload: publicUpload(upload), worker, audit: audit.map(publicAudit) };
+    return { upload: publicUpload(upload), worker, audit: audit.map(publicAuditRecord) };
   });
 
-  fastify.post('/uploads/:id/retry', mutate, async (request, reply) => {
+  fastify.post('/uploads/:id/retry', mutate(ADMIN_PERMISSIONS.UPLOADS_MANAGE), async (request, reply) => {
     const reason = requiredReason(request.body);
     if (!reason) return sendAdminError(reply, 400, 'ADMIN_REASON_REQUIRED', 'A reason is required.');
     const upload = await fastify.prisma.upload.findUnique({ where: { id: request.params.id } });
@@ -1325,7 +1704,7 @@ async function adminRoutes(fastify) {
       return sendAdminError(reply, 409, 'ADMIN_INVALID_STATE', 'Only failed uploads can be retried.');
     }
     try {
-      const jobId = await enqueueUpload(fastify, upload, request.user.id, reason, 'UPLOAD_RETRY');
+      const jobId = await enqueueUpload(fastify, upload, request, reason, 'UPLOAD_RETRY');
       return { upload: { id: upload.id, status: 'PROCESSING' }, jobId };
     } catch (error) {
       if (error.code === 'ADMIN_UPLOAD_OBJECT_MISSING') {
@@ -1335,7 +1714,7 @@ async function adminRoutes(fastify) {
     }
   });
 
-  fastify.post('/uploads/:id/cancel', mutate, async (request, reply) => {
+  fastify.post('/uploads/:id/cancel', mutate(ADMIN_PERMISSIONS.UPLOADS_MANAGE), async (request, reply) => {
     const reason = requiredReason(request.body);
     if (!reason) return sendAdminError(reply, 400, 'ADMIN_REASON_REQUIRED', 'A reason is required.');
     const upload = await fastify.prisma.upload.findUnique({ where: { id: request.params.id } });
@@ -1351,7 +1730,7 @@ async function adminRoutes(fastify) {
           data: { status: 'REJECTED' }
         });
       }
-      await createAudit(tx, auditData(request.user.id, 'UPLOAD_CANCEL', 'UPLOAD', upload.id, reason, {
+      await createAudit(tx, adminAuditData(request, request.user.id, 'UPLOAD_CANCEL', 'UPLOAD', upload.id, reason, {
         previousStatus: upload.status,
         trackId: upload.trackId || null
       }));
@@ -1361,7 +1740,8 @@ async function adminRoutes(fastify) {
 
   // --- Artists -------------------------------------------------------------
 
-  fastify.get('/artists', read, async (request) => {
+  fastify.get('/artists', read(ADMIN_PERMISSIONS.ARTISTS_READ), async (request) => {
+    const includePii = canReadPii(request);
     const { page, pageSize, skip, take } = parsePagination(request.query);
     const search = sanitizeSearch(request.query.search);
     const hidden = request.query.hidden === 'true'
@@ -1374,7 +1754,7 @@ async function adminRoutes(fastify) {
           OR: [
             { username: { contains: search, mode: 'insensitive' } },
             { displayName: { contains: search, mode: 'insensitive' } },
-            { email: { contains: search, mode: 'insensitive' } }
+            ...(includePii ? [{ email: { contains: search, mode: 'insensitive' } }] : [])
           ]
         }
       } : {})
@@ -1393,7 +1773,7 @@ async function adminRoutes(fastify) {
           monthlyListeners: true,
           createdAt: true,
           updatedAt: true,
-          user: { select: { id: true, username: true, displayName: true, email: true, avatarUrl: true, status: true } },
+          user: { select: { id: true, username: true, displayName: true, ...(includePii ? { email: true } : {}), avatarUrl: true, status: true } },
           _count: { select: { tracks: true, followers: true } }
         }
       })
@@ -1401,7 +1781,8 @@ async function adminRoutes(fastify) {
     return { data: artists, pagination: paginationMeta(total, page, pageSize) };
   });
 
-  fastify.get('/artists/:id', read, async (request, reply) => {
+  fastify.get('/artists/:id', read(ADMIN_PERMISSIONS.ARTISTS_READ), async (request, reply) => {
+    const includePii = canReadPii(request);
     const artist = await fastify.prisma.artistProfile.findUnique({
       where: { id: request.params.id },
       select: {
@@ -1417,7 +1798,7 @@ async function adminRoutes(fastify) {
             id: true,
             username: true,
             displayName: true,
-            email: true,
+            ...(includePii ? { email: true } : {}),
             avatarUrl: true,
             bio: true,
             status: true,
@@ -1444,10 +1825,10 @@ async function adminRoutes(fastify) {
         where: { targetType: 'ARTIST', targetId: artist.id },
         orderBy: { createdAt: 'desc' },
         take: 50,
-        include: { actor: { select: { id: true, username: true, displayName: true } } }
+        include: { actor: { select: auditActorSelect() } }
       })
     ]);
-    return { artist, reports, audit: audit.map(publicAudit) };
+    return { artist, reports, audit: audit.map(publicAuditRecord) };
   });
 
   async function setArtistHidden(request, reply, isHidden) {
@@ -1460,7 +1841,7 @@ async function adminRoutes(fastify) {
     }
     await fastify.prisma.$transaction(async (tx) => {
       await tx.artistProfile.update({ where: { id: artist.id }, data: { isHidden } });
-      await createAudit(tx, auditData(
+      await createAudit(tx, adminAuditData(request,
         request.user.id,
         isHidden ? 'ARTIST_HIDE' : 'ARTIST_UNHIDE',
         'ARTIST',
@@ -1470,12 +1851,12 @@ async function adminRoutes(fastify) {
     });
     return { artist: { id: artist.id, isHidden } };
   }
-  fastify.post('/artists/:id/hide', mutate, (request, reply) => setArtistHidden(request, reply, true));
-  fastify.post('/artists/:id/unhide', mutate, (request, reply) => setArtistHidden(request, reply, false));
+  fastify.post('/artists/:id/hide', mutate(ADMIN_PERMISSIONS.ARTISTS_MANAGE), (request, reply) => setArtistHidden(request, reply, true));
+  fastify.post('/artists/:id/unhide', mutate(ADMIN_PERMISSIONS.ARTISTS_MANAGE), (request, reply) => setArtistHidden(request, reply, false));
 
   // --- Comments ------------------------------------------------------------
 
-  fastify.get('/comments', read, async (request, reply) => {
+  fastify.get('/comments', read(ADMIN_PERMISSIONS.COMMENTS_READ), async (request, reply) => {
     const { page, pageSize, skip, take } = parsePagination(request.query);
     const search = sanitizeSearch(request.query.search);
     const visibility = request.query.status
@@ -1527,12 +1908,13 @@ async function adminRoutes(fastify) {
     };
   });
 
-  fastify.get('/comments/:id', read, async (request, reply) => {
+  fastify.get('/comments/:id', read(ADMIN_PERMISSIONS.COMMENTS_READ), async (request, reply) => {
+    const includePii = canReadPii(request);
     const comment = await fastify.prisma.comment.findUnique({
       where: { id: request.params.id },
       select: {
         ...COMMENT_SELECT,
-        user: { select: { id: true, username: true, displayName: true, email: true, status: true } },
+        user: { select: { id: true, username: true, displayName: true, ...(includePii ? { email: true } : {}), status: true } },
         track: { select: { id: true, title: true, status: true } },
         replies: {
           take: 100,
@@ -1556,10 +1938,10 @@ async function adminRoutes(fastify) {
         where: { targetType: 'COMMENT', targetId: comment.id },
         orderBy: { createdAt: 'desc' },
         take: 50,
-        include: { actor: { select: { id: true, username: true, displayName: true } } }
+        include: { actor: { select: auditActorSelect() } }
       })
     ]);
-    return { comment, reports, audit: audit.map(publicAudit) };
+    return { comment, reports, audit: audit.map(publicAuditRecord) };
   });
 
   async function setCommentHidden(request, reply, hidden) {
@@ -1588,7 +1970,7 @@ async function adminRoutes(fastify) {
           ? { isDeleted: true, text: '[Removed by moderator]' }
           : { isDeleted: false, text: originalText }
       });
-      await createAudit(tx, auditData(
+      await createAudit(tx, adminAuditData(request,
         request.user.id,
         hidden ? 'COMMENT_HIDE' : 'COMMENT_UNHIDE',
         'COMMENT',
@@ -1599,12 +1981,12 @@ async function adminRoutes(fastify) {
     });
     return { comment: { id: comment.id, isDeleted: hidden } };
   }
-  fastify.post('/comments/:id/hide', mutate, (request, reply) => setCommentHidden(request, reply, true));
-  fastify.post('/comments/:id/unhide', mutate, (request, reply) => setCommentHidden(request, reply, false));
+  fastify.post('/comments/:id/hide', mutate(ADMIN_PERMISSIONS.COMMENTS_MANAGE), (request, reply) => setCommentHidden(request, reply, true));
+  fastify.post('/comments/:id/unhide', mutate(ADMIN_PERMISSIONS.COMMENTS_MANAGE), (request, reply) => setCommentHidden(request, reply, false));
 
   // --- Reports -------------------------------------------------------------
 
-  fastify.get('/reports', read, async (request, reply) => {
+  fastify.get('/reports', read(ADMIN_PERMISSIONS.REPORTS_READ), async (request, reply) => {
     const { page, pageSize, skip, take } = parsePagination(request.query);
     const status = enumFilter(request.query.status, REPORT_STATUSES);
     const targetType = enumFilter(request.query.targetType, REPORT_TARGET_TYPES);
@@ -1635,11 +2017,12 @@ async function adminRoutes(fastify) {
     return { data: reports, pagination: paginationMeta(total, page, pageSize) };
   });
 
-  fastify.get('/reports/:id', read, async (request, reply) => {
+  fastify.get('/reports/:id', read(ADMIN_PERMISSIONS.REPORTS_READ), async (request, reply) => {
+    const includePii = canReadPii(request);
     const report = await fastify.prisma.report.findUnique({
       where: { id: request.params.id },
       include: {
-        reporter: { select: { id: true, username: true, displayName: true, email: true, status: true } },
+        reporter: { select: { id: true, username: true, displayName: true, ...(includePii ? { email: true } : {}), status: true } },
         decision: true
       }
     });
@@ -1650,10 +2033,10 @@ async function adminRoutes(fastify) {
         where: { targetType: 'REPORT', targetId: report.id },
         orderBy: { createdAt: 'desc' },
         take: 50,
-        include: { actor: { select: { id: true, username: true, displayName: true } } }
+        include: { actor: { select: auditActorSelect() } }
       })
     ]);
-    return { report, target, audit: audit.map(publicAudit) };
+    return { report, target, audit: audit.map(publicAuditRecord) };
   });
 
   async function decideReport(request, reply, status, auditAction) {
@@ -1677,7 +2060,7 @@ async function adminRoutes(fastify) {
           const track = await tx.track.findUnique({ where: { id: report.targetId } });
           if (!track || track.status !== 'PUBLISHED') throw Object.assign(new Error('Target track cannot be hidden.'), { safeCode: 'ADMIN_TARGET_ACTION_INVALID' });
           await tx.track.update({ where: { id: track.id }, data: { status: 'HIDDEN' } });
-          await createAudit(tx, auditData(request.user.id, 'TRACK_HIDE', 'TRACK', track.id, notes, { reportId: report.id }));
+          await createAudit(tx, adminAuditData(request, request.user.id, 'TRACK_HIDE', 'TRACK', track.id, notes, { reportId: report.id }));
         } else if (report.targetType === 'COMMENT') {
           const comment = await tx.comment.findUnique({ where: { id: report.targetId } });
           if (!comment || comment.isDeleted) throw Object.assign(new Error('Target comment cannot be hidden.'), { safeCode: 'ADMIN_TARGET_ACTION_INVALID' });
@@ -1685,7 +2068,7 @@ async function adminRoutes(fastify) {
             where: { id: comment.id },
             data: { isDeleted: true, text: '[Removed by moderator]' }
           });
-          await createAudit(tx, auditData(request.user.id, 'COMMENT_HIDE', 'COMMENT', comment.id, notes, {
+          await createAudit(tx, adminAuditData(request, request.user.id, 'COMMENT_HIDE', 'COMMENT', comment.id, notes, {
             reportId: report.id,
             originalText: comment.text
           }));
@@ -1693,7 +2076,7 @@ async function adminRoutes(fastify) {
           const artist = await tx.artistProfile.findUnique({ where: { id: report.targetId } });
           if (!artist || artist.isHidden) throw Object.assign(new Error('Target artist cannot be hidden.'), { safeCode: 'ADMIN_TARGET_ACTION_INVALID' });
           await tx.artistProfile.update({ where: { id: artist.id }, data: { isHidden: true } });
-          await createAudit(tx, auditData(request.user.id, 'ARTIST_HIDE', 'ARTIST', artist.id, notes, { reportId: report.id }));
+          await createAudit(tx, adminAuditData(request, request.user.id, 'ARTIST_HIDE', 'ARTIST', artist.id, notes, { reportId: report.id }));
         } else {
           throw Object.assign(new Error('This target type cannot be hidden.'), { safeCode: 'ADMIN_TARGET_ACTION_INVALID' });
         }
@@ -1716,13 +2099,20 @@ async function adminRoutes(fastify) {
           const artist = await tx.artistProfile.findUnique({ where: { id: report.targetId }, select: { userId: true } });
           userId = artist?.userId || null;
         }
-        const user = userId ? await tx.user.findUnique({ where: { id: userId } }) : null;
+        const user = userId ? await tx.user.findUnique({
+          where: { id: userId },
+          select: { id: true, role: true, status: true }
+        }) : null;
         if (!user || user.role === 'ADMIN' || user.id === request.user.id || user.status !== 'ACTIVE') {
           throw Object.assign(new Error('The target user cannot be suspended.'), { safeCode: 'ADMIN_TARGET_ACTION_INVALID' });
         }
-        await tx.user.update({ where: { id: user.id }, data: { status: 'SUSPENDED' } });
+        await tx.user.update({
+          where: { id: user.id },
+          data: { status: 'SUSPENDED' },
+          select: { id: true }
+        });
         await tx.session.deleteMany({ where: { userId: user.id } });
-        await createAudit(tx, auditData(request.user.id, 'USER_SUSPEND', 'USER', user.id, notes, { reportId: report.id }));
+        await createAudit(tx, adminAuditData(request, request.user.id, 'USER_SUSPEND', 'USER', user.id, notes, { reportId: report.id }));
       }
 
       await tx.report.update({
@@ -1739,7 +2129,7 @@ async function adminRoutes(fastify) {
           notes
         }
       });
-      await createAudit(tx, auditData(request.user.id, auditAction, 'REPORT', report.id, notes, {
+      await createAudit(tx, adminAuditData(request, request.user.id, auditAction, 'REPORT', report.id, notes, {
         previousStatus: report.status,
         nextStatus: status,
         targetAction
@@ -1748,16 +2138,16 @@ async function adminRoutes(fastify) {
     return { report: { id: report.id, status }, targetAction };
   }
 
-  fastify.post('/reports/:id/resolve', mutate, (request, reply) => {
+  fastify.post('/reports/:id/resolve', mutate(ADMIN_PERMISSIONS.REPORTS_MANAGE), (request, reply) => {
     const legacyAction = request.body?.action;
     const status = legacyAction && ['REVIEWED', 'ACTION_TAKEN'].includes(legacyAction)
       ? legacyAction
       : (request.body?.targetAction && request.body.targetAction !== 'NONE' ? 'ACTION_TAKEN' : 'REVIEWED');
     return decideReport(request, reply, status, 'REPORT_RESOLVE');
   });
-  fastify.post('/reports/:id/reject', mutate, (request, reply) =>
+  fastify.post('/reports/:id/reject', mutate(ADMIN_PERMISSIONS.REPORTS_MANAGE), (request, reply) =>
     decideReport(request, reply, 'DISMISSED', 'REPORT_REJECT'));
-  fastify.post('/reports/:id/escalate', mutate, async (request, reply) => {
+  fastify.post('/reports/:id/escalate', mutate(ADMIN_PERMISSIONS.REPORTS_MANAGE), async (request, reply) => {
     const notes = typeof request.body?.notes === 'string'
       ? request.body.notes.trim().slice(0, 2000)
       : requiredReason(request.body, 2000);
@@ -1769,40 +2159,23 @@ async function adminRoutes(fastify) {
     }
     await fastify.prisma.$transaction(async (tx) => {
       await tx.report.update({ where: { id: report.id }, data: { status: 'ESCALATED' } });
-      await createAudit(tx, auditData(request.user.id, 'REPORT_ESCALATE', 'REPORT', report.id, notes));
+      await createAudit(tx, adminAuditData(request, request.user.id, 'REPORT_ESCALATE', 'REPORT', report.id, notes));
     });
     return { report: { id: report.id, status: 'ESCALATED' } };
   });
 
   // --- Audit logs ----------------------------------------------------------
 
-  fastify.get('/audit-logs', read, async (request) => {
-    const { page, pageSize, skip, take } = parsePagination(request.query);
-    const actor = sanitizeSearch(request.query.actor);
-    const action = sanitizeSearch(request.query.action, 80).toUpperCase();
-    const targetType = sanitizeSearch(request.query.targetType, 40).toUpperCase();
-    const targetId = sanitizeSearch(request.query.targetId);
-    const from = request.query.from && !Number.isNaN(Date.parse(request.query.from))
-      ? new Date(request.query.from)
-      : null;
-    const to = request.query.to && !Number.isNaN(Date.parse(request.query.to))
-      ? new Date(request.query.to)
-      : null;
-    const where = {
-      ...(action ? { action: { contains: action, mode: 'insensitive' } } : {}),
-      ...(targetType ? { targetType } : {}),
-      ...(targetId ? { targetId: { contains: targetId, mode: 'insensitive' } } : {}),
-      ...(from || to ? { createdAt: { ...(from ? { gte: from } : {}), ...(to ? { lte: to } : {}) } } : {}),
-      ...(actor ? {
-        actor: {
-          OR: [
-            { id: { contains: actor, mode: 'insensitive' } },
-            { username: { contains: actor, mode: 'insensitive' } },
-            { displayName: { contains: actor, mode: 'insensitive' } }
-          ]
-        }
-      } : {})
-    };
+  fastify.get('/audit-logs', read(ADMIN_PERMISSIONS.AUDIT_READ), async (request, reply) => {
+    let parsed;
+    try {
+      parsed = parseAuditListQuery(request.query);
+    } catch (error) {
+      return auditQueryError(reply, error);
+    }
+    const { page, pageSize, skip, take } = parsed;
+    const includePii = canReadPii(request);
+    const where = buildAuditWhere(parsed, { includePii });
     const [total, logs] = await fastify.prisma.$transaction([
       fastify.prisma.auditLog.count({ where }),
       fastify.prisma.auditLog.findMany({
@@ -1810,24 +2183,71 @@ async function adminRoutes(fastify) {
         skip,
         take,
         orderBy: { createdAt: 'desc' },
-        include: { actor: { select: { id: true, username: true, displayName: true } } }
+        include: { actor: { select: auditActorSelect(includePii) } }
       })
     ]);
-    return { data: logs.map(publicAudit), pagination: paginationMeta(total, page, pageSize) };
+    return {
+      data: logs.map((log) => publicAuditRecord(log, { includePii })),
+      pagination: paginationMeta(total, page, pageSize)
+    };
   });
 
-  fastify.get('/audit-logs/:id', read, async (request, reply) => {
+  fastify.get('/audit-logs/export', read(ADMIN_PERMISSIONS.AUDIT_EXPORT), async (request, reply) => {
+    let parsed;
+    try {
+      parsed = parseAuditExportQuery(request.query);
+    } catch (error) {
+      return auditQueryError(reply, error);
+    }
+    const includePii = canReadPii(request);
+    const logs = await fastify.prisma.auditLog.findMany({
+      where: buildAuditWhere(parsed, { includePii }),
+      take: parsed.limit,
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      include: { actor: { select: auditActorSelect(includePii) } }
+    });
+    await createAudit(fastify.prisma, adminAuditData(
+      request,
+      request.user.id,
+      'AUDIT_EXPORT',
+      'AUDIT',
+      'EXPORT',
+      'Audit log CSV export.',
+      {
+        rowCount: logs.length,
+        limit: parsed.limit,
+        filters: {
+          hasQuery: Boolean(parsed.q),
+          action: parsed.action,
+          resource: parsed.resource,
+          hasActorFilter: Boolean(parsed.actor),
+          from: parsed.from,
+          to: parsed.to,
+          environment: parsed.environment,
+          result: parsed.result
+        }
+      }
+    ));
+    const date = new Date().toISOString().slice(0, 10);
+    reply.header('Cache-Control', 'private, no-store');
+    reply.header('Content-Disposition', `attachment; filename="noirsound-audit-${date}.csv"`);
+    reply.type('text/csv; charset=utf-8');
+    return reply.send(auditLogsCsv(logs, { includePii }));
+  });
+
+  fastify.get('/audit-logs/:id', read(ADMIN_PERMISSIONS.AUDIT_READ), async (request, reply) => {
+    const includePii = canReadPii(request);
     const log = await fastify.prisma.auditLog.findUnique({
       where: { id: request.params.id },
-      include: { actor: { select: { id: true, username: true, displayName: true } } }
+      include: { actor: { select: auditActorSelect(includePii) } }
     });
     if (!log) return sendAdminError(reply, 404, 'ADMIN_AUDIT_NOT_FOUND', 'Audit entry not found.');
-    return { auditLog: publicAudit(log) };
+    return { auditLog: publicAuditRecord(log, { includePii }) };
   });
 
   // --- System --------------------------------------------------------------
 
-  fastify.get('/system', read, async () => {
+  fastify.get('/system', read(ADMIN_PERMISSIONS.SYSTEM_READ), async () => {
     const system = await systemChecks(fastify);
     const commit = process.env.APP_COMMIT_SHA || process.env.GIT_COMMIT || null;
     return {
@@ -1861,9 +2281,8 @@ async function adminRoutes(fastify) {
   // desired. Runs the exact same checks as `npm run stats:check` (see
   // backend/src/lib/statsIntegrity.js), so the admin UI and the CLI can
   // never disagree.
-  fastify.get('/stats/integrity', read, async () => {
-    const report = await runStatsIntegrityCheck(fastify.prisma);
-    return report;
+  fastify.get('/stats/integrity', read(ADMIN_PERMISSIONS.STATS_READ), async (request) => {
+    return runStatsIntegrityCheck(fastify.prisma, new Date(), { includePii: canReadPii(request) });
   });
 
   // POST /admin/stats/recalculate — admin-only, audited, CSRF-protected
@@ -1871,37 +2290,39 @@ async function adminRoutes(fastify) {
   // { reason, target?: 'monthlyListeners' | 'trackPlays' | 'all' }.
   // Recomputes (never increments) the requested stored aggregate(s) from
   // the real PlayEvent rows, so it is always safe to run repeatedly.
-  fastify.post('/stats/recalculate', mutate, async (request, reply) => {
+  fastify.post('/stats/recalculate', mutate(ADMIN_PERMISSIONS.STATS_MANAGE), async (request, reply) => {
     const reason = requiredReason(request.body);
     if (!reason) return sendAdminError(reply, 400, 'ADMIN_REASON_REQUIRED', 'A reason is required.');
     const target = ['monthlyListeners', 'trackPlays', 'all'].includes(request.body?.target)
       ? request.body.target
       : 'all';
 
-    const summary = { target, monthlyListeners: null, trackPlays: null };
-    if (target === 'monthlyListeners' || target === 'all') {
-      const results = await recalculateAllArtistMonthlyListeners(fastify.prisma);
-      summary.monthlyListeners = {
-        artistsChecked: results.length,
-        artistsChanged: results.filter((result) => result.changed).length
-      };
-    }
-    if (target === 'trackPlays' || target === 'all') {
-      const results = await recalculateAllTrackPlayCounts(fastify.prisma);
-      summary.trackPlays = {
-        tracksChecked: results.length,
-        tracksChanged: results.filter((result) => result.changed).length
-      };
-    }
-
-    await createAudit(fastify.prisma, auditData(
-      request.user.id,
-      'STATS_RECALCULATE',
-      'SYSTEM',
-      'stats',
-      reason,
-      { requestId: request.id, ...summary }
-    ));
+    const summary = await fastify.prisma.$transaction(async (tx) => {
+      const result = { target, monthlyListeners: null, trackPlays: null };
+      if (target === 'monthlyListeners' || target === 'all') {
+        const rows = await recalculateAllArtistMonthlyListeners(tx);
+        result.monthlyListeners = {
+          artistsChecked: rows.length,
+          artistsChanged: rows.filter((row) => row.changed).length
+        };
+      }
+      if (target === 'trackPlays' || target === 'all') {
+        const rows = await recalculateAllTrackPlayCounts(tx);
+        result.trackPlays = {
+          tracksChecked: rows.length,
+          tracksChanged: rows.filter((row) => row.changed).length
+        };
+      }
+      await createAudit(tx, adminAuditData(request,
+        request.user.id,
+        'STATS_RECALCULATE',
+        'SYSTEM',
+        'stats',
+        reason,
+        { requestId: request.id, ...result }
+      ));
+      return result;
+    });
 
     return { success: true, ...summary };
   });
@@ -1909,21 +2330,24 @@ async function adminRoutes(fastify) {
   // POST /admin/stats/artists/:id/recalculate — same recomputation, scoped
   // to a single artist (used by the per-artist "recalculate" affordance
   // rather than forcing a full-catalog recalculation for a one-off fix).
-  fastify.post('/stats/artists/:id/recalculate', mutate, async (request, reply) => {
+  fastify.post('/stats/artists/:id/recalculate', mutate(ADMIN_PERMISSIONS.STATS_MANAGE), async (request, reply) => {
     const reason = requiredReason(request.body);
     if (!reason) return sendAdminError(reply, 400, 'ADMIN_REASON_REQUIRED', 'A reason is required.');
 
-    const result = await recalculateArtistMonthlyListeners(fastify.prisma, request.params.id);
+    const result = await fastify.prisma.$transaction(async (tx) => {
+      const recalculated = await recalculateArtistMonthlyListeners(tx, request.params.id);
+      if (!recalculated) return null;
+      await createAudit(tx, adminAuditData(request,
+        request.user.id,
+        'STATS_RECALCULATE',
+        'ARTIST',
+        request.params.id,
+        reason,
+        { requestId: request.id, ...recalculated }
+      ));
+      return recalculated;
+    });
     if (!result) return sendAdminError(reply, 404, 'ADMIN_ARTIST_NOT_FOUND', 'Artist profile not found.');
-
-    await createAudit(fastify.prisma, auditData(
-      request.user.id,
-      'STATS_RECALCULATE',
-      'ARTIST',
-      request.params.id,
-      reason,
-      { requestId: request.id, ...result }
-    ));
 
     return { success: true, ...result };
   });

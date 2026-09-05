@@ -46,3 +46,14 @@ backups/
 *.njsproj
 *.sln
 *.sw?
+
+# Desktop & Rust build artifacts
+target/
+**/target/
+desktop/**/dist/
+desktop/**/build/
+desktop/**/node_modules/
+
+# Discord Social SDK binaries and archives
+vendor/
+!vendor/discord-social-sdk/README.md

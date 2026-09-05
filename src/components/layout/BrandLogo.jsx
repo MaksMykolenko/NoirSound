@@ -1,12 +1,15 @@
-import React from 'react';
+import React, { useId } from 'react';
 import { NavLink } from 'react-router-dom';
 import { Radio } from 'lucide-react';
 import { usePlayerStore } from '../../store/playerStore';
+import { isMockMode } from '../../api/mode';
 
 export default function BrandLogo({ size = 'md', showSubtitle = true, onClick }) {
   const isPlaying = usePlayerStore((state) => state.isPlaying);
   const hasTrack = usePlayerStore((state) => Boolean(state.currentTrack));
   const isCompact = size === 'sm';
+  const demoMode = isMockMode();
+  const modeDescriptionId = useId();
 
   return (
     <NavLink
@@ -16,6 +19,7 @@ export default function BrandLogo({ size = 'md', showSubtitle = true, onClick })
         isCompact ? 'gap-2 px-1.5 py-1' : 'w-full gap-3 border-b border-zinc-800/70 px-2.5 py-2.5'
       }`}
       aria-label="NoirSound home"
+      aria-describedby={demoMode ? modeDescriptionId : undefined}
     >
       <span className={`flex shrink-0 items-center justify-center rounded-md border border-brand-red/35 bg-brand-red/10 text-brand-red ${isCompact ? 'h-8 w-8' : 'h-10 w-10'}`} aria-hidden="true">
         {hasTrack ? (
@@ -36,9 +40,13 @@ export default function BrandLogo({ size = 'md', showSubtitle = true, onClick })
           </span>
           {isPlaying && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand-red" aria-hidden="true" />}
         </div>
-        {showSubtitle && (
-          <span className="block truncate font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-zinc-500">
-            Creator First
+        {(showSubtitle || demoMode) && (
+          <span
+            id={demoMode ? modeDescriptionId : undefined}
+            data-testid={demoMode ? 'demo-mode-indicator' : undefined}
+            className={`block truncate font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label ${demoMode ? 'text-[var(--ns-warning)]' : 'text-zinc-500'}`}
+          >
+            {demoMode ? 'Demo mode' : 'Creator First'}
           </span>
         )}
         {hasTrack && <span className="sr-only">{isPlaying ? 'Music playing' : 'Music paused'}</span>}

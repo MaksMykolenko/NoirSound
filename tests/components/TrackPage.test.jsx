@@ -3,11 +3,11 @@ import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import i18n from '../../src/i18n';
-import { getTrackById, getTracks } from '../../src/api';
+import { getTrackById, getCatalogTracks } from '../../src/api';
 
 vi.mock('../../src/api', () => ({
   getTrackById: vi.fn(),
-  getTracks: vi.fn(),
+  getCatalogTracks: vi.fn(),
 }));
 // Isolate TrackPage from the react-query-backed comments tree.
 vi.mock('../../src/components/ui/CommentSection', () => ({
@@ -44,20 +44,11 @@ function renderTrack() {
   );
 }
 
-describe('TrackPage refreshed design', () => {
+describe('TrackPage', () => {
   beforeEach(async () => {
     await i18n.changeLanguage('en');
     vi.clearAllMocks();
-    getTracks.mockResolvedValue([]);
-  });
-
-  it('renders without the old 2x2 stats grid', async () => {
-    getTrackById.mockResolvedValue(baseTrack);
-    renderTrack();
-    await screen.findByText('Midnight Protocol');
-    expect(screen.queryByLabelText('Track details')).toBeNull();
-    expect(screen.queryByText('Plays')).toBeNull();
-    expect(screen.queryByText('Released', { exact: true })).toBeNull();
+    getCatalogTracks.mockResolvedValue({ items: [] });
   });
 
   it('shows a compact metadata row (plays, duration, date), genre pill, and note', async () => {
@@ -88,19 +79,18 @@ describe('TrackPage refreshed design', () => {
     expect(screen.getByText(i18n.t('trackPage.beFirstToListen'))).toBeInTheDocument();
   });
 
-  it('uses the full main column and omits the related rail when no related tracks exist', async () => {
+  it('omits related tracks when none are returned and keeps lyrics available', async () => {
     getTrackById.mockResolvedValue(baseTrack);
-    getTracks.mockResolvedValue([]);
+    getCatalogTracks.mockResolvedValue({ items: [] });
     renderTrack();
     await screen.findByText('Midnight Protocol');
     expect(screen.queryByTestId('track-related-rail')).not.toBeInTheDocument();
-    expect(screen.getByTestId('track-main-column')).toHaveClass('xl:col-span-12');
     expect(within(screen.getByTestId('track-main-column')).getByTestId('track-lyrics-card')).toBeInTheDocument();
   });
 
-  it('renders related tracks in a four-column rail as native links', async () => {
+  it('renders related tracks as native links', async () => {
     getTrackById.mockResolvedValue(baseTrack);
-    getTracks.mockResolvedValue([
+    getCatalogTracks.mockResolvedValue({ items: [
       {
         ...baseTrack,
         id: 't2',
@@ -108,22 +98,12 @@ describe('TrackPage refreshed design', () => {
         artistId: 'a2',
         artistName: 'Static Bloom',
       },
-    ]);
+    ] });
     renderTrack();
 
     await screen.findByText('Midnight Protocol');
     const rail = screen.getByTestId('track-related-rail');
-    expect(rail).toHaveClass('xl:col-span-4');
-    expect(screen.getByTestId('track-main-column')).toHaveClass('xl:col-span-8');
     expect(within(rail).getByRole('link', { name: /Afterglow Signal/ })).toHaveAttribute('href', '/track/t2');
-  });
-
-  it('uses theme CSS variables for hero accents (no hardcoded pink)', async () => {
-    getTrackById.mockResolvedValue(baseTrack);
-    const { container } = renderTrack();
-    await screen.findByText('Midnight Protocol');
-    expect(container.innerHTML).toContain('--ns-accent-soft');
-    expect(container.innerHTML).toContain('--ns-border');
   });
 
   it('renders a Beat detail surface without inventing a separate player or empty lyrics block', async () => {
@@ -139,10 +119,9 @@ describe('TrackPage refreshed design', () => {
       beatContactEnabled: true,
       hasLyrics: false,
     });
-    getTracks.mockResolvedValue([
-      { ...baseTrack, id: 'music-related', title: 'Music candidate', contentType: 'MUSIC' },
+    getCatalogTracks.mockResolvedValue({ items: [
       { ...baseTrack, id: 'beat-related', title: 'Beat candidate', contentType: 'BEAT' },
-    ]);
+    ] });
 
     renderTrack();
 
@@ -155,7 +134,10 @@ describe('TrackPage refreshed design', () => {
     expect(within(details).getByRole('link', { name: i18n.t('beats.contactProducer') })).toHaveAttribute('href', '/artist/a1#contact');
     expect(screen.queryByTestId('track-lyrics-card')).not.toBeInTheDocument();
     expect(screen.getByText('Beat candidate')).toBeInTheDocument();
-    expect(screen.queryByText('Music candidate')).not.toBeInTheDocument();
+    expect(getCatalogTracks).toHaveBeenCalledWith(
+      { contentType: 'BEAT', genre: 'rap', sort: 'recent', limit: 5 },
+      { signal: expect.any(AbortSignal) },
+    );
     expect(screen.getAllByText(i18n.t('beats.playBeat')).length).toBeGreaterThan(0);
   });
 

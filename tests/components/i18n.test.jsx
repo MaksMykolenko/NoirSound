@@ -1,6 +1,22 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import i18n from '../../src/i18n';
 
+function flattenTranslationTree(value, prefix = '') {
+  return Object.entries(value).reduce((entries, [key, child]) => {
+    const path = prefix ? `${prefix}.${key}` : key;
+    if (child && typeof child === 'object' && !Array.isArray(child)) {
+      return { ...entries, ...flattenTranslationTree(child, path) };
+    }
+    return { ...entries, [path]: child };
+  }, {});
+}
+
+function interpolationVariables(value) {
+  return [...String(value).matchAll(/{{\s*([^},\s]+)/g)]
+    .map((match) => match[1])
+    .sort();
+}
+
 describe('Multilingual i18n Localization Engine', () => {
   beforeEach(async () => {
     localStorage.removeItem('noirsound_language');
@@ -122,6 +138,16 @@ describe('Multilingual i18n Localization Engine', () => {
       'beats.producedBy',
       'beats.beatDetailsDescription',
       'beats.relatedBeats',
+      'beats.homeInfoEyebrow',
+      'beats.homeInfoTitle',
+      'beats.homeInfoDesc',
+      'beats.homeInfoFeat1Title',
+      'beats.homeInfoFeat1Desc',
+      'beats.homeInfoFeat2Title',
+      'beats.homeInfoFeat2Desc',
+      'beats.homeInfoFeat3Title',
+      'beats.homeInfoFeat3Desc',
+      'beats.browseBeats',
       'home.newMusic',
       'home.newMusicDesc',
       'home.freshBeatsDesc',
@@ -135,6 +161,24 @@ describe('Multilingual i18n Localization Engine', () => {
         const translation = i18n.t(key);
         expect(translation, `${language}:${key}`).not.toBe(key);
         expect(translation, `${language}:${key}`).not.toHaveLength(0);
+      }
+    }
+  });
+
+  it('keeps the complete admin key and interpolation contract aligned across locales', () => {
+    const english = flattenTranslationTree(i18n.getResourceBundle('en', 'common').admin);
+    const englishKeys = Object.keys(english).sort();
+
+    for (const language of ['uk', 'pl', 'ru']) {
+      const localized = flattenTranslationTree(i18n.getResourceBundle(language, 'common').admin);
+      expect(Object.keys(localized).sort(), `${language}:admin key parity`).toEqual(englishKeys);
+
+      for (const key of englishKeys) {
+        expect(String(localized[key]).trim(), `${language}:admin.${key}`).not.toHaveLength(0);
+        expect(
+          interpolationVariables(localized[key]),
+          `${language}:admin.${key} interpolation parity`
+        ).toEqual(interpolationVariables(english[key]));
       }
     }
   });

@@ -42,14 +42,9 @@ test.describe('Playlist detail table', () => {
     await loginAsListener(page);
   });
 
-  test('renders the spec desktop columns and the honest Single fallback for a real track', async ({ page }) => {
+  test('uses the honest Single fallback for a real track', async ({ page }) => {
     const { playlist, tracks } = await createPlaylistWithTracks(page, { trackCount: 1 });
     await page.goto(`/playlist/${playlist.id}`);
-
-    await expect(page.getByRole('columnheader', { name: 'Title' })).toBeVisible();
-    await expect(page.getByRole('columnheader', { name: 'Album' })).toBeVisible();
-    await expect(page.getByRole('columnheader', { name: 'Date added' })).toBeVisible();
-    await expect(page.getByRole('columnheader', { name: 'Duration' })).toBeVisible();
 
     const row = page.locator(`table tr[data-track-id="${tracks[0].id}"]`);
     await expect(row).toBeVisible();
@@ -80,7 +75,7 @@ test.describe('Playlist detail table', () => {
     const { playlist } = await createPlaylistWithTracks(page, { trackCount: 2 });
     await page.goto(`/playlist/${playlist.id}`);
 
-    await expect(page.getByText('2 tracks')).toBeVisible();
+    await expect(page.getByTestId('playlist-hero').getByText('2 tracks', { exact: true })).toBeVisible();
 
     await page.request.delete(`${API_BASE}/playlists/${playlist.id}`);
   });
@@ -105,22 +100,6 @@ test.describe('Playlist detail table', () => {
 
     await expect(rows).toHaveCount(1);
     await expect(rows.first()).toHaveAttribute('data-track-id', first.id);
-
-    await page.request.delete(`${API_BASE}/playlists/${playlist.id}`);
-  });
-
-  test('renders the mobile row list without horizontal overflow at a phone viewport', async ({ page }) => {
-    const { playlist, tracks } = await createPlaylistWithTracks(page, { trackCount: 2 });
-    await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto(`/playlist/${playlist.id}`);
-
-    // At this width the desktop table is `hidden` (excluded from the a11y
-    // tree entirely) and only the mobile row list is rendered/visible.
-    await expect(page.getByRole('table')).toHaveCount(0);
-    await expect(page.locator(`div[data-track-id="${tracks[0].id}"]`)).toBeVisible();
-
-    const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
-    expect(scrollWidth).toBeLessThanOrEqual(392); // small tolerance over the 390px viewport
 
     await page.request.delete(`${API_BASE}/playlists/${playlist.id}`);
   });

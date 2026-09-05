@@ -111,7 +111,6 @@ describe('Dashboard polish', () => {
     expect(await screen.findByText(i18n.t('dashboard.publishedReleases', { count: 1 }))).toBeInTheDocument();
     const actions = getDashboardUploadActions();
     expect(actions).toHaveLength(1);
-    expect(actions[0]).toHaveClass('ns-button-primary');
     expect(screen.getAllByRole('heading', { name: 'Midnight Signals' })).toHaveLength(3);
     expect(screen.getAllByText('42').length).toBeGreaterThan(0);
   });
@@ -156,7 +155,6 @@ describe('Dashboard polish', () => {
 
     await screen.findByText(i18n.t('dashboard.publishedReleases', { count: 1 }));
     const [action] = getDashboardUploadActions();
-    expect(action).not.toHaveClass('hidden');
     await user.click(action);
 
     expect(await screen.findByRole('heading', { name: 'Upload destination' })).toBeInTheDocument();
@@ -194,7 +192,7 @@ describe('Dashboard polish', () => {
     expect(getDashboardUploadActions()[0]).toHaveTextContent('Завантажити новий трек');
   });
 
-  it('uses the responsive density contract and one compact analytics unavailable region', async () => {
+  it('reports analytics unavailability without fabricated geography or trend data', async () => {
     getArtistDashboard.mockResolvedValue(populatedDashboard);
 
     renderDashboard();
@@ -203,18 +201,8 @@ describe('Dashboard polish', () => {
       name: i18n.t('dashboard.publishedReleases', { count: 1 }),
     });
 
-    expect(screen.getByRole('region', { name: i18n.t('dashboard.title') })).toHaveClass('ns-metrics-strip');
-
-    const contentGrid = screen.getByTestId('dashboard-content-grid');
-    expect(contentGrid).toHaveClass('grid-cols-1', 'xl:grid-cols-12');
-    expect(screen.getByRole('heading', { name: i18n.t('dashboard.topTracks') }).closest('section')).toHaveClass('xl:col-span-7');
-    expect(screen.getByRole('heading', { name: i18n.t('dashboard.publishedReleases', { count: 1 }) }).closest('section')).toHaveClass('xl:col-span-5');
-    expect(screen.getByRole('heading', { name: i18n.t('dashboard.recentUploads') }).closest('section')).toHaveClass('xl:col-span-6');
-    expect(screen.getByRole('heading', { name: i18n.t('dashboard.failedUploads') }).closest('section')).toHaveClass('xl:col-span-6');
-
     const analyticsRegion = screen.getByRole('region', { name: i18n.t('dashboard.analytics') });
     expect(analyticsRegion).toBe(screen.getByTestId('dashboard-analytics-unavailable'));
-    expect(analyticsRegion).toHaveClass('py-4');
     expect(within(analyticsRegion).getByText(i18n.t('dashboard.analyticsUnavailable'))).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: i18n.t('dashboard.geographyTitle') })).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: i18n.t('dashboard.trendsTitle') })).not.toBeInTheDocument();

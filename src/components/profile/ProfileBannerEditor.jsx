@@ -173,7 +173,7 @@ export default function ProfileBannerEditor({
                 type="button"
                 onClick={() => setRemoveDialogOpen(true)}
                 disabled={disabled}
-                className="flex min-h-11 w-full items-center justify-center gap-2 rounded-md border border-rose-500/30 px-4 text-sm font-semibold text-rose-300 transition-colors hover:bg-rose-500/10 disabled:opacity-50 min-[480px]:w-auto lg:w-full 2xl:w-auto"
+                className="flex min-h-11 w-full items-center justify-center gap-2 rounded-md border border-[color-mix(in_srgb,var(--ns-danger)_30%,transparent)] px-4 text-sm font-semibold text-[var(--ns-danger)] transition-colors hover:bg-[color-mix(in_srgb,var(--ns-danger)_10%,transparent)] disabled:opacity-50 min-[480px]:w-auto lg:w-full 2xl:w-auto"
               >
                 <Trash2 size={16} aria-hidden="true" />
                 {t('profile.bannerRemove', { defaultValue: 'Remove banner' })}
@@ -195,7 +195,7 @@ export default function ProfileBannerEditor({
           </div>
 
           {validationError && (
-            <p id="profile-banner-file-error" role="alert" className="text-sm font-semibold text-rose-300">
+            <p id="profile-banner-file-error" role="alert" className="text-sm font-semibold text-[var(--ns-danger)]">
               {validationError}
             </p>
           )}

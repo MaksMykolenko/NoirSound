@@ -65,16 +65,18 @@ test.describe('public beta · auth & sessions', () => {
 
   test('UI login works for a seeded user', async ({ page }) => {
     await page.goto('/');
-    // Open auth modal (login entry point varies by layout; fall back to direct).
-    const emailField = page.locator('input[name="email"]');
-    if (!(await emailField.count())) {
-      const signIn = page.getByRole('button', { name: /sign in|log in/i }).first();
-      if (await signIn.count()) await signIn.click();
-    }
-    const form = page.locator('form').filter({
+    const signIn = page.getByRole('button', { name: /sign in|log in/i }).first();
+    await expect(signIn).toBeVisible();
+    await signIn.click();
+
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+    const form = dialog.locator('form').filter({
       has: page.locator('input[name="email"]'),
     }).first();
-    await form.locator('input[name="email"]').fill('listener@noirsound.com');
+    const emailField = form.locator('input[name="email"]');
+    await expect(emailField).toBeVisible();
+    await emailField.fill('listener@noirsound.com');
     await form.locator('input[name="password"]').fill('password123');
     await form.getByRole('button', { name: /sign in|log in/i }).click();
     await expect(page.locator('input[name="password"]')).toHaveCount(0, { timeout: 8000 });

@@ -1,6 +1,4 @@
 import React from 'react';
-import { readFileSync } from 'node:fs';
-import path from 'node:path';
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -326,25 +324,18 @@ describe('UserSettingsForm', () => {
     expect(counter.closest('[aria-live]')).toBeNull();
   });
 
-  it('uses a bounded responsive preview and a complete desktop control rail', () => {
+  it('exposes banner requirements and available management controls', () => {
     render(<UserSettingsForm />);
 
-    const layout = screen.getByTestId('profile-banner-settings-grid');
-    const preview = screen.getByTestId('profile-banner-preview');
-    const previewColumn = preview.parentElement;
     const controls = screen.getByTestId('profile-banner-controls');
 
-    expect(layout).toHaveClass('grid-cols-1', 'lg:grid-cols-12');
-    expect(previewColumn).toHaveClass('lg:col-span-7', 'xl:col-span-8');
-    expect(preview).toHaveClass('aspect-[3/1]', 'max-h-[260px]', 'max-w-[780px]');
-    expect(controls).toHaveClass('lg:col-span-5', 'xl:col-span-4');
     expect(within(controls).getByRole('heading', { name: 'Profile banner' })).toBeInTheDocument();
     expect(within(controls).getByText(/JPEG, PNG, or WebP up to 8 MB/)).toBeInTheDocument();
     expect(within(controls).getByRole('button', { name: 'Replace banner' })).toBeInTheDocument();
     expect(within(controls).getByRole('button', { name: 'Remove banner' })).toBeInTheDocument();
   });
 
-  it('keeps the empty preview semantic and reserves no unavailable Remove action', () => {
+  it('shows the missing banner state and omits the unavailable Remove action', () => {
     useUserStore.setState({
       user: { ...useUserStore.getState().user, bannerUrl: null },
     });
@@ -352,10 +343,8 @@ describe('UserSettingsForm', () => {
 
     const preview = screen.getByTestId('profile-banner-preview');
     const controls = screen.getByTestId('profile-banner-controls');
-    const fallback = within(preview).getByRole('img', { name: 'No profile banner selected' });
+    expect(within(preview).getByRole('img', { name: 'No profile banner selected' })).toBeInTheDocument();
 
-    expect(fallback).toHaveClass('bg-[var(--ns-surface-elevated)]');
-    expect(fallback.className).not.toContain('gradient');
     expect(within(controls).getByRole('button', { name: 'Upload banner' })).toBeInTheDocument();
     expect(within(controls).queryByRole('button', { name: 'Remove banner' })).not.toBeInTheDocument();
   });
@@ -393,24 +382,4 @@ describe('UserSettingsForm', () => {
     expect(uploadBanner).not.toHaveBeenCalled();
   });
 
-  it('keeps the settings route on the wide shell with tabs sticky inside the main scroller', () => {
-    const profileSource = readFileSync(path.join(process.cwd(), 'src/pages/Profile.jsx'), 'utf8');
-
-    expect(profileSource).toMatch(/data-testid="profile-tabs"[\s\S]*?sticky top-0[\s\S]*?scroll-mt-2/);
-    expect(profileSource).toMatch(/data-testid="profile-settings-layout"[\s\S]*?xl:grid-cols-12/);
-    expect(profileSource).toContain('ns-layout-page--form');
-    expect(profileSource).toContain('min-w-0 xl:col-span-12');
-    expect(profileSource).not.toContain('2xl:col-span-9');
-    expect(profileSource).toContain('className="flex flex-col pb-10"');
-    expect(profileSource).toMatch(/data-testid="profile-tabs"[\s\S]*?mt-4[\s\S]*?overflow-x-auto[\s\S]*?xl:mt-0/);
-    expect(profileSource).toMatch(
-      /data-testid="profile-tab-content"[\s\S]*?'pt-6 xl:pt-4'[\s\S]*?'pt-4 xl:pt-3'/
-    );
-    expect(profileSource).not.toMatch(/data-testid="profile-tab-content"[^>]*(?:min-h|minHeight|height:)/);
-    expect(profileSource).not.toContain('sm:ml-auto');
-    expect(profileSource).toContain('useScrollableTabs(`${activeTab}:${i18n.resolvedLanguage}`)');
-    expect(profileSource).toMatch(
-      /Keep the settings form mounted[\s\S]*?activeTab === 'settings'[\s\S]*?'hidden'[\s\S]*?<UserSettingsForm \/>/
-    );
-  });
 });

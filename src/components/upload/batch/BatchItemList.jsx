@@ -5,12 +5,12 @@ import { getGenreLabel } from '../../../utils/genreLabels';
 import { formatBytes } from './batchUploadUtils';
 
 const STATUS_STYLE = {
-  READY: 'text-emerald-300 bg-emerald-500/10 border-emerald-500/20',
-  PUBLISHED: 'text-emerald-300 bg-emerald-500/10 border-emerald-500/20',
-  FAILED: 'text-rose-300 bg-rose-500/10 border-rose-500/20',
-  PROCESSING: 'text-amber-300 bg-amber-500/10 border-amber-500/20',
-  UPLOADING: 'text-sky-300 bg-sky-500/10 border-sky-500/20',
-  EXCLUDED: 'text-zinc-500 bg-zinc-800/50 border-zinc-700',
+  READY: 'ns-status-success',
+  PUBLISHED: 'ns-status-success',
+  FAILED: 'ns-status-danger',
+  PROCESSING: 'ns-status-warning',
+  UPLOADING: 'ns-status-info',
+  EXCLUDED: 'ns-status-neutral',
 };
 
 export default function BatchItemList({ items, onOpen, onTarget, onReorder, onRetry, progress = {} }) {
@@ -34,10 +34,12 @@ export default function BatchItemList({ items, onOpen, onTarget, onReorder, onRe
           <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-3 sm:grid-cols-[auto_auto_minmax(0,1fr)_auto] sm:items-center">
             <GripVertical size={16} className={`mt-3 sm:mt-0 ${item.target === 'PLAYLIST' ? 'cursor-grab text-zinc-600' : 'text-zinc-800'}`} />
             <div className="hidden h-9 w-9 shrink-0 place-items-center border-r border-zinc-800 font-sans tabular-nums text-ns-meta text-zinc-500 sm:grid">{index + 1}</div>
-            <button type="button" onClick={() => onOpen(item)} className="min-w-0 text-left">
+            <button type="button" onClick={() => onOpen(item)} className="min-w-0 space-y-1 text-left">
               <div className="flex items-center gap-2">
                 <span className="font-sans tabular-nums text-ns-meta text-zinc-600 sm:hidden">{index + 1}</span>
-                <p className="truncate text-sm font-bold text-zinc-200">{item.title}</p>
+                <p title={item.title} className="min-w-0 truncate text-sm font-semibold text-zinc-200">{item.title}</p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
                 <span
                   data-testid={`batch-content-type-${item.id}`}
                   className={`shrink-0 rounded border px-1.5 py-0.5 font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label ${
@@ -48,13 +50,14 @@ export default function BatchItemList({ items, onOpen, onTarget, onReorder, onRe
                 >
                   {item.contentType === 'BEAT' ? t('content.beats') : t('content.music')}
                 </span>
-                {item.missingFields?.length > 0 && <AlertTriangle size={14} className="text-amber-300 shrink-0" />}
-                {item.status === 'READY' && <CheckCircle2 size={14} className="text-emerald-400 shrink-0" />}
+                <span className={`ns-status-badge rounded border px-1.5 py-0.5 text-ns-meta ${STATUS_STYLE[item.status] || 'ns-status-neutral'}`}>{t(`admin.statusValues.${item.status}`, { defaultValue: item.status })}</span>
+                {item.missingFields?.length > 0 && <AlertTriangle size={14} className="text-[var(--ns-warning)] shrink-0" />}
+                {item.status === 'READY' && <CheckCircle2 size={14} className="text-[var(--ns-success)] shrink-0" />}
                 {item.hasLyrics && <FileText size={14} className="text-brand-red shrink-0" aria-label={t('lyrics.title')} />}
               </div>
-              <p className="truncate font-sans tabular-nums text-ns-meta text-zinc-500">{item.fileName} · {formatBytes(item.fileSize)} · {item.genre ? getGenreLabel(item.genre, i18n.language) : t('batchUpload.missingGenre')}</p>
+              <p title={item.fileName} className="truncate font-sans tabular-nums text-ns-meta text-zinc-500">{item.fileName} · {formatBytes(item.fileSize)} · {item.genre ? getGenreLabel(item.genre, i18n.language) : t('batchUpload.missingGenre')}</p>
               {item.contentType === 'BEAT' && (item.beatBpm || item.beatKey || item.beatMood || item.beatStyle) && (
-                <p className="truncate font-sans tabular-nums text-ns-meta text-zinc-500" data-testid={`batch-beat-summary-${item.id}`}>
+                <p title={[item.beatBpm && `${item.beatBpm} ${t('beats.bpm')}`, item.beatKey, item.beatMood, item.beatStyle].filter(Boolean).join(' · ')} className="truncate font-sans tabular-nums text-ns-meta text-zinc-500" data-testid={`batch-beat-summary-${item.id}`}>
                   {[
                     item.beatBpm ? `${item.beatBpm} ${t('beats.bpm')}` : '',
                     item.beatKey ? `${t('beats.key')}: ${item.beatKey}` : '',
@@ -63,14 +66,13 @@ export default function BatchItemList({ items, onOpen, onTarget, onReorder, onRe
                   ].filter(Boolean).join(' · ')}
                 </p>
               )}
-              <p className="truncate font-sans tabular-nums text-ns-meta text-zinc-600">
+              <p className="font-sans tabular-nums text-ns-meta text-zinc-500">
                 {item.hasLyrics
                   ? `${t('batchUpload.lyricsAdded')} · ${item.lyricsRightsConfirmed ? t('batchUpload.lyricsRightsConfirmed') : t('lyrics.rightsRequired')}`
                   : t('batchUpload.noLyrics')}
               </p>
             </button>
             <div className="col-span-2 flex min-w-0 items-center gap-2 pl-7 sm:col-span-1 sm:pl-0">
-              <span className={`hidden rounded border px-2 py-1 font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label md:inline-flex ${STATUS_STYLE[item.status] || 'text-zinc-400 border-zinc-700'}`}>{item.status}</span>
               <label className="min-w-0 flex-1 sm:w-32 sm:flex-none md:w-36">
                 <span className="sr-only">{t('batchUpload.target')}</span>
                 <select aria-label={`${item.title} ${t('batchUpload.target')}`} className="ns-field w-full !rounded px-2 text-base sm:text-sm" value={item.target} onChange={(event) => onTarget(item, event.target.value)}>
@@ -80,18 +82,18 @@ export default function BatchItemList({ items, onOpen, onTarget, onReorder, onRe
                 </select>
               </label>
               {item.status === 'FAILED' ? (
-                <button type="button" className="ns-icon-button !rounded" aria-label={t('batchUpload.retry')} onClick={() => onRetry(item)}><RotateCcw size={15} /></button>
+                <button type="button" className="ns-icon-button ns-media-action !rounded" aria-label={t('batchUpload.retry')} onClick={() => onRetry(item)}><RotateCcw size={15} /></button>
               ) : (
-                <button type="button" className="ns-icon-button !rounded" aria-label={t('batchUpload.editTrack')} onClick={() => onOpen(item)}><ChevronRight size={16} /></button>
+                <button type="button" className="ns-icon-button ns-media-action !rounded" aria-label={t('batchUpload.editTrack')} onClick={() => onOpen(item)}><ChevronRight size={16} /></button>
               )}
             </div>
           </div>
           {progress[item.id] != null && progress[item.id] < 100 && (
-            <div className="ml-7 mt-3 h-1.5 overflow-hidden rounded-sm bg-zinc-900 sm:ml-20" role="progressbar" aria-valuenow={progress[item.id]} aria-valuemin="0" aria-valuemax="100">
+            <div className="ml-7 mt-3 h-1.5 overflow-hidden rounded-sm bg-zinc-900 sm:ml-20" role="progressbar" aria-label={`${item.title}: ${t('batchUpload.uploading')}`} aria-valuenow={progress[item.id]} aria-valuemin="0" aria-valuemax="100">
               <div className="h-full bg-brand-red transition-all" style={{ width: `${progress[item.id]}%` }} />
             </div>
           )}
-          {item.errorMessage && <p role="alert" className="ml-7 mt-2 text-sm text-rose-300 sm:ml-20">{item.errorMessage}</p>}
+          {item.errorMessage && <p role="alert" className="ml-7 mt-2 break-words [overflow-wrap:anywhere] text-sm text-[var(--ns-danger)] sm:ml-20">{item.errorMessage}</p>}
         </div>
       ))}
     </div>

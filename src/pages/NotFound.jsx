@@ -17,13 +17,13 @@ export default function NotFound() {
         description="This NoirSound page could not be found."
         canonical={canonical}
       />
-      <span className="ns-eyebrow relative mb-3 text-brand-red">Lost in the static</span>
+      <span className="ns-eyebrow relative mb-3 text-brand-red">{t('notFound.eyebrow')}</span>
       <h1 className="relative mb-4 font-sans text-7xl font-semibold tracking-tighter text-brand-red sm:text-8xl">
         404
       </h1>
-      <h2 className="relative mb-2 font-sans text-xl font-semibold text-zinc-100">This signal went dark</h2>
+      <h2 className="relative mb-2 font-sans text-xl font-semibold text-zinc-100">{t('notFound.title')}</h2>
       <p className="text-sm leading-relaxed text-zinc-400 max-w-md mx-auto mb-8 relative">
-        The page may have moved, been removed, or never existed in this part of NoirSound.
+        {t('notFound.description')}
       </p>
       <div className="flex w-full max-w-sm flex-col items-stretch justify-center gap-2.5 min-[420px]:w-auto min-[420px]:max-w-none min-[420px]:flex-row">
         <Link

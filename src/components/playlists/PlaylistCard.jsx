@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { MoreHorizontal, Play } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { usePlayerStore } from '../../store/playerStore';
@@ -8,6 +9,7 @@ import { usePlaylistContextMenu } from '../../hooks/useEntityContextMenu';
 import { getPlaylistById } from '../../api/playlists';
 
 export default function PlaylistCard({ playlist, onToggleSaved, onEdit, onDelete }) {
+  const { t } = useTranslation();
   const { playTrack } = usePlayerStore();
   const { contextMenuProps, openFromButton } = usePlaylistContextMenu(playlist, {
     onToggleSaved,
@@ -63,13 +65,13 @@ export default function PlaylistCard({ playlist, onToggleSaved, onEdit, onDelete
             className="pointer-events-auto relative z-20 flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-brand-red text-[var(--ns-on-accent)] transition-colors duration-150 hover:bg-rose-700"
             aria-label={`Play ${playlist.name}`}
           >
-            <Play size={20} className="translate-x-[1px]" fill="white" strokeWidth={0} />
+            <Play size={20} className="translate-x-[1px]" fill="currentColor" strokeWidth={0} />
           </button>
         </div>
         <button
           type="button"
           onClick={openFromButton}
-          className="pointer-events-auto absolute right-2 top-2 z-20 ns-icon-button !min-h-9 !min-w-9 bg-zinc-950/85 text-zinc-300 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 focus:opacity-100"
+          className="pointer-events-auto absolute right-2 top-2 z-20 ns-media-action ns-media-action--card bg-zinc-950/85 text-zinc-300 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 focus:opacity-100"
           aria-label={`More actions for ${playlist.name}`}
           aria-haspopup="menu"
         >
@@ -78,19 +80,19 @@ export default function PlaylistCard({ playlist, onToggleSaved, onEdit, onDelete
 
         {/* Tracks count tag */}
         <div className="absolute bottom-2 left-2 rounded bg-zinc-950/85 px-2 py-0.5 font-sans tabular-nums text-ns-meta font-medium text-zinc-300 select-none">
-          {playlist.trackCount ?? (playlist.trackIds || playlist.tracks || []).length} tracks
+          {t('playlists.tracksCount', { count: playlist.trackCount ?? (playlist.trackIds || playlist.tracks || []).length })}
         </div>
       </div>
 
       {/* Playlist info */}
       <div className="space-y-1 px-1">
-        <h4 className="truncate text-ns-body-sm font-semibold text-zinc-200">
+        <h4 title={playlist.name} className="truncate text-ns-body-sm font-semibold text-zinc-200">
           {playlist.name}
         </h4>
-        <p className="truncate text-ns-label text-zinc-500">{playlist.description}</p>
-        <div className="flex items-center justify-between gap-2 font-sans tabular-nums text-ns-meta text-zinc-500">
-          <span>By {playlist.creator}</span>
-          <span className="font-sans tabular-nums">{formatNumber(playlist.likes || 0)} likes</span>
+        <p title={playlist.description} className="truncate text-ns-label text-zinc-400">{playlist.description}</p>
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-2 font-sans tabular-nums text-ns-meta text-zinc-400">
+          <span className="truncate" title={playlist.creator}>{t('playlists.by', { creator: playlist.creator })}</span>
+          <span className="font-sans tabular-nums">{t('media.likes', { count: formatNumber(playlist.likes || 0) })}</span>
         </div>
       </div>
       </div>

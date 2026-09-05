@@ -60,7 +60,7 @@ function ArtistPageSkeleton() {
   return (
     <div className="ns-page-stack pb-10" aria-busy="true" aria-label={t('profile.loadingArtist')}>
       <section className="ns-artist-hero ns-artist-skeleton">
-        <div className="ns-artist-skeleton__artwork" />
+        <div className="ns-artist-skeleton__artwork ns-avatar-frame" />
         <div className="min-w-0 space-y-4">
           <div className="h-3 w-36 rounded bg-zinc-900" />
           <div className="h-14 w-3/4 max-w-2xl rounded bg-zinc-900" />
@@ -267,7 +267,7 @@ export default function ArtistPage() {
           </div>
         )}
 
-        <div className="ns-artist-hero__artwork">
+        <div className="ns-artist-hero__artwork ns-avatar-frame">
           <FallbackAvatar
             src={artist.avatarUrl}
             name={artist.name}
@@ -335,8 +335,9 @@ export default function ArtistPage() {
                 type="button"
                 onClick={handleFollowClick}
                 disabled={followActionPending}
+                aria-busy={followActionPending ? 'true' : undefined}
                 aria-pressed={isFollowing}
-                className="ns-button-secondary ns-artist-follow-action px-3 text-ns-label disabled:cursor-wait disabled:opacity-60"
+                className="ns-pill-action ns-pill-action-lg ns-pill-toggle ns-artist-follow-action text-ns-label disabled:cursor-wait disabled:opacity-60"
               >
                 {followActionPending
                   ? t('actions.saving')
@@ -503,7 +504,7 @@ export default function ArtistPage() {
               <p className="ns-eyebrow">{t('profile.focusGenres')}</p>
               <div className="mt-2 flex flex-wrap gap-2">
                 {artist.genres.map((genre) => (
-                  <span key={genre} className="rounded border border-zinc-800 bg-zinc-900 px-2.5 py-1 text-ns-label font-medium text-rose-300">
+                  <span key={genre} className="ns-pill inline-flex border border-zinc-800 bg-zinc-900 px-2.5 py-1 text-ns-label font-medium text-rose-300">
                     {getLocalizedGenre(genre)}
                   </span>
                 ))}

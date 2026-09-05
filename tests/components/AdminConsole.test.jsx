@@ -2,7 +2,7 @@ import React from 'react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import i18n from '../../src/i18n';
 import { useUserStore } from '../../src/store/userStore';
 import AdminLayout from '../../src/pages/admin/AdminLayout';
@@ -16,6 +16,7 @@ import {
   getAdminOverview,
   getAdminTracks,
   getAdminTrack,
+  getAdminTrackPreview,
   getAdminUser,
   getAdminUsers,
   suspendUser,
@@ -28,6 +29,7 @@ vi.mock('../../src/api/admin', () => ({
   getAdminOverview: vi.fn(),
   getAdminTracks: vi.fn(),
   getAdminTrack: vi.fn(),
+  getAdminTrackPreview: vi.fn(),
   getAdminUsers: vi.fn(),
   getAdminUser: vi.fn(),
   suspendUser: vi.fn(),
@@ -53,6 +55,16 @@ const adminUser = {
   status: 'ACTIVE',
 };
 
+let mediaPause;
+
+beforeAll(() => {
+  mediaPause = vi.spyOn(window.HTMLMediaElement.prototype, 'pause').mockImplementation(() => {});
+});
+
+afterAll(() => {
+  mediaPause.mockRestore();
+});
+
 function renderAdmin(path, element) {
   return render(
     <MemoryRouter initialEntries={[path]}>
@@ -74,6 +86,7 @@ describe('Admin console', () => {
     vi.clearAllMocks();
     await i18n.changeLanguage('en');
     useUserStore.setState({ user: adminUser, authHydrated: true });
+    getAdminTrackPreview.mockResolvedValue({ url: 'https://preview.test/audio.mp3' });
   });
 
   it('shows access denied to an authenticated non-admin', () => {
@@ -142,7 +155,7 @@ describe('Admin console', () => {
     expect(screen.getByText('listener@test.local')).toBeInTheDocument();
   });
 
-  it('renders long admin track fixtures in a contained, paginated table', async () => {
+  it('renders complete admin track data and requests the next page', async () => {
     const longTitle = 'Midnight Signals from an Empty City Without Any Convenient Short Display Name';
     const longArtist = 'The Independent Artists Collective with an Exceptionally Long Public Name';
     const track = (id, status, overrides = {}) => ({
@@ -174,28 +187,59 @@ describe('Admin console', () => {
 
     renderAdmin('/admin/tracks', <AdminTracks />);
 
-    const title = await screen.findByText(longTitle);
-    expect(title).toHaveClass('max-w-[18rem]', 'break-words');
-    expect(screen.getByText(longArtist)).toHaveClass('max-w-[14rem]', 'break-words');
+    expect(await screen.findByText(longTitle)).toBeInTheDocument();
+    expect(screen.getByText(longArtist)).toBeInTheDocument();
 
     const table = screen.getByRole('table');
-    expect(table).toHaveClass('min-w-[760px]');
-    expect(table.parentElement).toHaveClass('overflow-auto');
-    within(table).getAllByRole('columnheader').forEach((heading) => {
-      expect(heading).toHaveClass('sticky');
-    });
+    expect(table.parentElement).toHaveAttribute('role', 'region');
+    expect(table.parentElement).toHaveAttribute('tabindex', '0');
 
     ['PUBLISHED', 'PROCESSING', 'HIDDEN', 'FAILED'].forEach((status) => {
       expect(within(table).getByText(i18n.t(`admin.statusValues.${status}`))).toBeInTheDocument();
     });
     expect(within(table).getByText('73')).toBeInTheDocument();
-    expect(within(table).getAllByRole('link', { name: i18n.t('admin.view') })).toHaveLength(4);
+    expect(within(table).getAllByRole('button', { name: new RegExp(`^${i18n.t('admin.view')}:`) })).toHaveLength(4);
     expect(screen.getByText(i18n.t('admin.pageOf', { page: 1, total: 6 }))).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: i18n.t('admin.next') }));
     await waitFor(() => {
       expect(getAdminTracks).toHaveBeenLastCalledWith({ search: '', status: '', contentType: '', page: 2 });
     });
+  });
+
+  it('opens a URL-addressable track moderation drawer with the isolated media preview', async () => {
+    getAdminTracks.mockResolvedValue({
+      data: [],
+      pagination: { page: 1, pageSize: 25, total: 0, totalPages: 1 },
+    });
+    getAdminTrack.mockResolvedValue({
+      track: {
+        id: 'track-1',
+        title: 'Moderation Fixture',
+        contentType: 'MUSIC',
+        status: 'HIDDEN',
+        plays: 12,
+        reportsCount: 1,
+        genre: 'AMBIENT',
+        coverUrl: '/cover.png',
+        streamAvailable: false,
+        updatedAt: '2026-09-03T12:00:00.000Z',
+        artist: { id: 'artist-1', user: { displayName: 'Fixture Artist' } },
+        uploads: [{ status: 'READY' }],
+      },
+      reports: [],
+    });
+    getAdminTrackPreview.mockResolvedValue({ url: '/api/admin/tracks/track-1/preview' });
+
+    renderAdmin('/admin/tracks?track=track-1', <AdminTracks />);
+
+    const drawer = await screen.findByTestId('admin-track-drawer');
+    expect(within(drawer).getByRole('heading', { name: 'Moderation Fixture' })).toBeInTheDocument();
+    expect(within(drawer).getByLabelText('Preview Moderation Fixture')).toHaveAttribute(
+      'src',
+      '/api/admin/tracks/track-1/preview'
+    );
+    expect(within(drawer).getByText(i18n.t('admin.securePreviewDescription'))).toBeInTheDocument();
   });
 
   it('renders Beat metadata and requires an audited reason to change content type', async () => {

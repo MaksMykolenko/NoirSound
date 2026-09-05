@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { escalateReport, getAdminReport, rejectReport, resolveReport } from '../../api/admin';
+import { escalateReport, getAdminReport, getAdminTrackPreview, rejectReport, resolveReport } from '../../api/admin';
 import { useToastStore } from '../../store/toastStore';
 import {
   AdminEmpty,
@@ -13,12 +13,18 @@ import {
   StatusBadge,
 } from '../../components/admin/AdminUI';
 import { formatAdminDate, useAdminData } from '../../components/admin/adminUtils';
+import AdminMediaPreview from '../../components/admin/AdminMediaPreview';
 
 export default function AdminReportDetail() {
   const { id } = useParams();
   const { t, i18n } = useTranslation();
   const addToast = useToastStore((state) => state.addToast);
   const { data, loading, error, reload } = useAdminData(() => getAdminReport(id), [id]);
+  const previewTrackId = data?.report?.targetType === 'TRACK' ? data.report.targetId : '';
+  const preview = useAdminData(
+    () => previewTrackId ? getAdminTrackPreview(previewTrackId) : Promise.resolve(null),
+    [previewTrackId]
+  );
   const [pendingAction, setPendingAction] = useState(null);
 
   if (loading) return <AdminLoading />;
@@ -84,6 +90,15 @@ export default function AdminReportDetail() {
         </AdminPanel>
         <AdminPanel className="p-4">
           <h2 className="text-sm font-bold">{t('admin.targetPreview')}</h2>
+          {report.targetType === 'TRACK' && (
+            <AdminMediaPreview
+              title={t('admin.moderationPreview')}
+              description={t('admin.securePreviewDescription')}
+              url={preview.data?.url}
+              mediaLabel={t('admin.previewTrack', { title: target?.title || report.targetId })}
+              unavailableLabel={preview.loading ? t('admin.loadingPreview') : t('admin.previewUnavailable')}
+            />
+          )}
           <pre className="mt-3 max-h-64 overflow-auto whitespace-pre-wrap break-words rounded border border-[var(--ns-border-subtle)] bg-[var(--ns-input-bg)] p-3 text-sm text-[var(--ns-text-muted)]">
             {target ? JSON.stringify(target, null, 2) : t('admin.unavailable')}
           </pre>
@@ -97,8 +112,8 @@ export default function AdminReportDetail() {
           <div className="mt-4 flex flex-wrap gap-2">
             <button type="button" onClick={() => setPendingAction('resolve')} className="ns-button-secondary rounded px-3 py-2 text-sm">{t('admin.resolveOnly')}</button>
             <button type="button" onClick={() => setPendingAction('reject')} className="ns-button-secondary rounded px-3 py-2 text-sm">{t('admin.rejectReport')}</button>
-            {['TRACK', 'COMMENT', 'ARTIST'].includes(report.targetType) && <button type="button" onClick={() => setPendingAction('hide')} className="rounded bg-[var(--ns-danger)] px-3 py-2 text-sm font-semibold text-white">{t('admin.hideTargetResolve')}</button>}
-            {['TRACK', 'COMMENT', 'USER', 'ARTIST'].includes(report.targetType) && <button type="button" onClick={() => setPendingAction('suspend')} className="rounded bg-[var(--ns-danger)] px-3 py-2 text-sm font-semibold text-white">{t('admin.suspendUserResolve')}</button>}
+            {['TRACK', 'COMMENT', 'ARTIST'].includes(report.targetType) && <button type="button" onClick={() => setPendingAction('hide')} className="rounded bg-[var(--ns-danger)] px-3 py-2 text-sm font-semibold text-[var(--ns-on-danger)]">{t('admin.hideTargetResolve')}</button>}
+            {['TRACK', 'COMMENT', 'USER', 'ARTIST'].includes(report.targetType) && <button type="button" onClick={() => setPendingAction('suspend')} className="rounded bg-[var(--ns-danger)] px-3 py-2 text-sm font-semibold text-[var(--ns-on-danger)]">{t('admin.suspendUserResolve')}</button>}
             {report.status === 'OPEN' && <button type="button" onClick={() => setPendingAction('escalate')} className="ns-button-secondary rounded px-3 py-2 text-sm">{t('admin.escalate')}</button>}
           </div>
         </AdminPanel>

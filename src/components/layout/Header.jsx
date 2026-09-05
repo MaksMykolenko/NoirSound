@@ -1,14 +1,29 @@
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import { useUserStore } from '../../store/userStore';
 import AccountDropdown from '../profile/AccountDropdown';
 import FallbackAvatar from '../ui/FallbackAvatar';
+import LanguageSwitcher from '../ui/LanguageSwitcher';
 
 export default function Header() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [query, setQuery] = useState(() => new URLSearchParams(location.search).get('q') || '');
+  useEffect(() => {
+    setQuery(location.pathname === '/discover' ? new URLSearchParams(location.search).get('q') || '' : '');
+  }, [location.pathname, location.search]);
+  const submitSearch = (event) => {
+    event.preventDefault();
+    const params = new URLSearchParams(location.pathname === '/discover' ? location.search : '');
+    const normalized = query.trim();
+    if (normalized) params.set('q', normalized);
+    else params.delete('q');
+    params.delete('cursor'); params.delete('page');
+    navigate(`/discover?${params}#discover-catalog`, { state: { focusDiscoverCatalog: true } });
+  };
   const { user, setAuthModalOpen } = useUserStore();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const pillRef = useRef(null);
@@ -35,21 +50,23 @@ export default function Header() {
         </div>
 
         {/* Search Bar */}
-        <div className="relative w-full">
+        <form role="search" onSubmit={submitSearch} className="relative w-full">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500" size={16} />
           <input
-            type="text"
-            readOnly
-            onFocus={() => navigate('/discover')}
+            type="search"
+            maxLength={120}
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
             placeholder={t('header.searchPlaceholder')}
             className="ns-field w-full rounded-md py-2 pl-10 pr-4 text-sm placeholder-zinc-600"
-            aria-label="Search NoirSound"
+            aria-label={t('header.searchLabel')}
           />
-        </div>
+        </form>
       </div>
 
         {/* User options */}
       <div className="flex items-center gap-2.5 xl:gap-3 shrink-0">
+        <LanguageSwitcher compact />
         {user ? (
           <div className="relative" ref={pillRef}>
             <button

@@ -9,7 +9,7 @@ export default function HomeHero({ onDiscover, onUpload }) {
   return (
     <section
       data-testid="home-hero"
-      className="relative flex min-h-[240px] items-center overflow-hidden rounded-lg border border-zinc-800/60 bg-zinc-950 sm:min-h-[260px]"
+      className="ns-home-hero relative flex min-h-[240px] items-center overflow-hidden rounded-lg border border-zinc-800/60 bg-zinc-950 sm:min-h-[260px]"
     >
       <div
         className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-35"
@@ -21,7 +21,7 @@ export default function HomeHero({ onDiscover, onUpload }) {
         <h1 className="ns-home-hero-title max-w-2xl text-white">
           {t('home.title')}
         </h1>
-        <p className="mt-2.5 sm:mt-3 max-w-xl text-sm sm:text-[15px] text-zinc-300 leading-relaxed">
+        <p className="mt-2.5 sm:mt-3 max-w-xl text-sm sm:text-[15px] text-white/85 leading-relaxed">
           {t('home.subtitle')}
         </p>
 
@@ -45,7 +45,7 @@ export default function HomeHero({ onDiscover, onUpload }) {
           </button>
         </div>
 
-        <p className="mt-4 hidden font-sans tabular-nums text-ns-meta uppercase tracking-ns-label text-zinc-500 sm:block">
+        <p className="mt-4 hidden font-sans tabular-nums text-ns-meta uppercase tracking-ns-label text-white/70 sm:block">
           {t('home.genreCount', { count: MUSIC_GENRES.length })}
         </p>
       </div>

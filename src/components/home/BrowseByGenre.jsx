@@ -48,7 +48,7 @@ export default function BrowseByGenre({ onSelect }) {
             data-genre-kind={item.kind}
             data-genre-value={item.value}
             onClick={() => onSelect(item)}
-            className="min-h-9 cursor-pointer rounded border border-zinc-800/80 bg-zinc-950/65 px-2.5 py-1.5 text-ns-label font-medium text-zinc-300 transition-colors hover:border-brand-red/35 hover:bg-brand-red/5 hover:text-zinc-100 sm:min-h-10 sm:px-3"
+            className="ns-pill min-h-9 shrink-0 cursor-pointer whitespace-nowrap border border-zinc-800/80 bg-zinc-950/65 px-3 py-1.5 text-ns-label font-medium text-zinc-300 transition-colors hover:border-brand-red/35 hover:bg-brand-red/5 hover:text-zinc-100 sm:min-h-10 sm:px-3.5"
           >
             {homeGenreLabel(item)}
           </button>
@@ -57,7 +57,7 @@ export default function BrowseByGenre({ onSelect }) {
           type="button"
           data-testid="home-more-genres"
           onClick={() => onSelect({ kind: 'more' })}
-          className="inline-flex min-h-9 cursor-pointer items-center gap-1 rounded border border-brand-red/25 bg-brand-red/5 px-2.5 py-1.5 text-ns-label font-semibold text-rose-300 transition-colors hover:border-brand-red/45 hover:bg-brand-red/10 sm:min-h-10 sm:px-3"
+          className="ns-pill inline-flex min-h-9 shrink-0 cursor-pointer items-center gap-1 whitespace-nowrap border border-brand-red/25 bg-brand-red/5 px-3 py-1.5 text-ns-label font-semibold text-rose-300 transition-colors hover:border-brand-red/45 hover:bg-brand-red/10 sm:min-h-10 sm:px-3.5"
         >
           <span>{t('home.moreGenres')}</span>
           <ChevronRight size={13} aria-hidden="true" />
