@@ -29,6 +29,17 @@ function canStreamTrack(track) {
   return track?.isStreamable ?? (useMockApi && Boolean(track?.audioUrl));
 }
 
+function readPlayerCollapsed() {
+  try { return typeof window !== 'undefined' && window.localStorage.getItem('noirsound.playerCollapsed') === 'true'; }
+  catch { return false; }
+}
+
+function persistPlayerCollapsed(collapsed) {
+  try {
+    if (typeof window !== 'undefined') window.localStorage.setItem('noirsound.playerCollapsed', String(collapsed));
+  } catch { /* Player controls also work when browser storage is unavailable. */ }
+}
+
 if (typeof window !== 'undefined') {
   // Admin routes dispatch this event without importing the listener player.
   // A direct admin load therefore creates no listener audio engine, while an
@@ -197,7 +208,7 @@ export const usePlayerStore = create((set, get) => {
     likedTracks: useMockApi ? ["1", "2", "5"] : [],
     recentlyPlayed: [],
     recentlyPlayedError: null,
-    isPlayerCollapsed: typeof window !== 'undefined' ? localStorage.getItem("noirsound.playerCollapsed") === "true" : false,
+    isPlayerCollapsed: readPlayerCollapsed(),
     lyricsFullscreenOpen: false,
 
     openLyricsFullscreen: () => {
@@ -212,24 +223,18 @@ export const usePlayerStore = create((set, get) => {
 
     collapsePlayer: () => {
       set({ isPlayerCollapsed: true });
-      if (typeof window !== 'undefined') {
-        localStorage.setItem("noirsound.playerCollapsed", "true");
-      }
+      persistPlayerCollapsed(true);
     },
 
     expandPlayer: () => {
       set({ isPlayerCollapsed: false });
-      if (typeof window !== 'undefined') {
-        localStorage.setItem("noirsound.playerCollapsed", "false");
-      }
+      persistPlayerCollapsed(false);
     },
 
     togglePlayerCollapsed: () => {
       const nextCollapsed = !get().isPlayerCollapsed;
       set({ isPlayerCollapsed: nextCollapsed });
-      if (typeof window !== 'undefined') {
-        localStorage.setItem("noirsound.playerCollapsed", String(nextCollapsed));
-      }
+      persistPlayerCollapsed(nextCollapsed);
     },
 
     updateTrackMetadata: (trackId, updates) => {

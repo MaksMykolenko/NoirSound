@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import i18n from '../../src/i18n';
 import AppLayout from '../../src/components/layout/AppLayout';
+import PublicAppShell from '../../src/components/layout/PublicAppShell';
 import PlayerBar from '../../src/components/player/PlayerBar';
 import { __getAudioElementForTests, usePlayerStore } from '../../src/store/playerStore';
 import { isUnmodifiedPrimaryActivation } from '../../src/utils/linkActivation';
@@ -49,9 +50,9 @@ function mockMobileViewport() {
 function renderPlayerApp(initialRoute = '/discover') {
   return render(
     <MemoryRouter initialEntries={[initialRoute]}>
-      <AppLayout>
+      <PublicAppShell><AppLayout>
         <LocationProbe />
-      </AppLayout>
+      </AppLayout></PublicAppShell>
     </MemoryRouter>
   );
 }

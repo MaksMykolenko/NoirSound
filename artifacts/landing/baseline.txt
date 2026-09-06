@@ -1,0 +1,215 @@
+## feat/noirsound-connect-discord-presence
+ M .github/workflows/public-beta.yml
+ D NOIRSOUND_ADMIN_ARTIST_ACCESS_REPORT.md
+ D NOIRSOUND_ADMIN_CONSOLE_AUDIT.md
+ D NOIRSOUND_ADMIN_SECURITY_REPORT.md
+ D NOIRSOUND_ADMIN_UI_QA_REPORT.md
+ D NOIRSOUND_ARTIST_ACCESS_ADMIN_AUDIT.md
+ D NOIRSOUND_ARTIST_DASHBOARD_STATS_REPORT.md
+ D NOIRSOUND_ARTIST_PROFILE_AUTOCREATE_REPORT.md
+ D NOIRSOUND_BATCH_UPLOAD_IMPLEMENTATION_REPORT.md
+ D NOIRSOUND_CONNECT_IMPLEMENTATION.md
+ D NOIRSOUND_CONNECT_PRODUCTION_ROLLOUT.md
+ D NOIRSOUND_CONTEXT_MENU_SYSTEM_REPORT.md
+ D NOIRSOUND_DEPLOYMENT_FINAL_COMMANDS.md
+ D NOIRSOUND_DNS_HOSTINGER_RUNBOOK.md
+ D NOIRSOUND_FOLLOWERS_QA_REPORT.md
+ D NOIRSOUND_FRONTEND_EVIDENCE_MATRIX.md
+ D NOIRSOUND_FULLSCREEN_LYRICS_PLAYERBAR_FIX_REPORT.md
+ D NOIRSOUND_FULLSCREEN_LYRICS_PLAYERBAR_QA_REPORT.md
+ D NOIRSOUND_FULLSCREEN_LYRICS_PLAYER_REPORT.md
+ D NOIRSOUND_FULLSCREEN_LYRICS_QA_REPORT.md
+ D NOIRSOUND_FULL_ADMIN_CONSOLE_REPORT.md
+ D NOIRSOUND_GENRE_ENGLISH_ONLY_REPORT.md
+ D NOIRSOUND_GENRE_LABELS_AUDIT.md
+ D NOIRSOUND_GENRE_LABELS_QA_REPORT.md
+ D NOIRSOUND_GITHUB_DEPLOYMENT_AUDIT.md
+ D NOIRSOUND_GITHUB_SECRETS_CHECKLIST.md
+ D NOIRSOUND_GITHUB_TO_HOSTINGER_DEPLOYMENT_REPORT.md
+ D NOIRSOUND_HOSTINGER_BACKUP_RUNBOOK.md
+ D NOIRSOUND_HOSTINGER_DEPLOYMENT_CHECKLIST.md
+ D NOIRSOUND_HUMAN_DESIGN_AUDIT.md
+ D NOIRSOUND_HUMAN_DESIGN_POLISH_REPORT.md
+ D NOIRSOUND_HUMAN_DESIGN_QA_REPORT.md
+ D NOIRSOUND_LISTENING_STATS_QA_REPORT.md
+ D NOIRSOUND_LYRICS_IMPLEMENTATION_REPORT.md
+ D NOIRSOUND_LYRICS_PLAYER_UI_REPORT.md
+ D NOIRSOUND_LYRICS_QA_REPORT.md
+ D NOIRSOUND_LYRICS_SYSTEM_AUDIT.md
+ D NOIRSOUND_METADATA_AUDIT.md
+ D NOIRSOUND_METADATA_HEAD_PLACEMENT_FIX_REPORT.md
+ D NOIRSOUND_METADATA_MARKER_PLACEMENT_FIX_REPORT.md
+ D NOIRSOUND_METADATA_SOCIAL_PREVIEW_REPORT.md
+ D NOIRSOUND_MULTI_UPLOAD_AUDIT.md
+ D NOIRSOUND_MULTI_UPLOAD_FINAL_VERIFICATION_REPORT.md
+ D NOIRSOUND_MULTI_UPLOAD_QA_REPORT.md
+ D NOIRSOUND_PLAYLISTS_CONTEXT_MENU_AUDIT.md
+ D NOIRSOUND_PLAYLISTS_CONTEXT_MENU_QA_REPORT.md
+ D NOIRSOUND_PLAYLISTS_IMPLEMENTATION_REPORT.md
+ D NOIRSOUND_PLAYLIST_BUILDER_UI_REPORT.md
+ D NOIRSOUND_PLAYLIST_DETAIL_TABLE_AUDIT.md
+ D NOIRSOUND_PLAYLIST_DETAIL_TABLE_QA_REPORT.md
+ D NOIRSOUND_PLAYLIST_DETAIL_TABLE_REPORT.md
+ D NOIRSOUND_PRODUCTION_CSRF_FIX_REPORT.md
+ D NOIRSOUND_RELEASE_AND_ROLLBACK_RUNBOOK.md
+ D NOIRSOUND_SEO_METADATA_REPORT.md
+ D NOIRSOUND_SITEMAP_ROBOTS_REPORT.md
+ D NOIRSOUND_STATS_DATA_AUDIT.md
+ D NOIRSOUND_STATS_DATA_INTEGRITY_REPORT.md
+ D NOIRSOUND_UPLOAD_ACCESS_QA_REPORT.md
+ M backend/prisma/schema.prisma
+ M backend/src/lib/adminGuard.js
+ M backend/src/lib/batchUpload.js
+ M backend/src/lib/publicTrack.js
+ M backend/src/lib/statsAccess.js
+ M backend/src/routes/admin.js
+ M backend/src/routes/artists.js
+ M backend/src/routes/playlists.js
+ M backend/src/routes/stats.js
+ M backend/src/routes/tracks.js
+ M backend/src/routes/uploadBatches.js
+ M backend/src/routes/uploads.js
+ M backend/tests/runTests.js
+ M backend/vitest.config.js
+ M design-audit-screenshots/genre-ui/desktop-discover-genres-1440x900.png
+ M design-audit-screenshots/genre-ui/desktop-discover-more-picker-1440x900.png
+ M design-audit-screenshots/genre-ui/mobile-discover-genres-390x844.png
+ M design-audit-screenshots/genre-ui/mobile-discover-genres-uk-390x844.png
+ M design-audit-screenshots/genre-ui/mobile-discover-more-picker-390x844.png
+ M design-audit-screenshots/home-refresh/desktop-home-1440x900.png
+ M design-audit-screenshots/home-refresh/mobile-home-390x844.png
+ M design-audit-screenshots/home-refresh/mobile-home-uk-390x844.png
+ M design-audit-screenshots/themes/crimson-red-home.png
+ M design-audit-screenshots/themes/emerald-dark-home.png
+ M design-audit-screenshots/themes/green-stream-discover.png
+ M design-audit-screenshots/themes/green-stream-home.png
+ M design-audit-screenshots/themes/green-stream-player.png
+ M design-audit-screenshots/themes/light-minimal-discover.png
+ M design-audit-screenshots/themes/light-minimal-home.png
+ M design-audit-screenshots/themes/light-minimal-player.png
+ M design-audit-screenshots/themes/light-minimal-profile-settings.png
+ M design-audit-screenshots/themes/light-minimal-upload.png
+ M design-audit-screenshots/themes/midnight-blue-discover.png
+ M design-audit-screenshots/themes/midnight-blue-home.png
+ M design-audit-screenshots/themes/midnight-blue-player.png
+ M design-audit-screenshots/themes/midnight-blue-profile-settings.png
+ M design-audit-screenshots/themes/midnight-blue-upload.png
+ M design-audit-screenshots/themes/mobile-green-stream-390x844.png
+ M design-audit-screenshots/themes/mobile-orange-wave-390x844.png
+ M design-audit-screenshots/themes/mobile-theme-selector-390x844.png
+ M design-audit-screenshots/themes/noir-pink-discover.png
+ M design-audit-screenshots/themes/noir-pink-home.png
+ M design-audit-screenshots/themes/noir-pink-player.png
+ M design-audit-screenshots/themes/noir-pink-profile-settings.png
+ M design-audit-screenshots/themes/noir-pink-upload.png
+ M design-audit-screenshots/themes/orange-wave-home.png
+ M design-audit-screenshots/themes/orange-wave-player.png
+ M design-audit-screenshots/themes/orange-wave-upload.png
+ M design-audit-screenshots/themes/royal-purple-home.png
+ M playwright.config.js
+ M src/__tests__/modernPlayerLayout.test.js
+ M src/api/__tests__/csrfClient.test.js
+ M src/api/client.js
+ M src/api/mappers/__tests__/presentationMappers.test.js
+ M src/api/mappers/trackMapper.js
+ M src/api/mock/batchUploads.js
+ M src/api/mock/data.js
+ M src/api/mock/playlists.js
+ M src/api/mock/tracks.js
+ M src/api/real/admin.js
+ M src/api/real/artists.js
+ M src/api/real/playlists.js
+ M src/api/real/tracks.js
+ M src/api/real/uploads.js
+ M src/components/admin/AdminUI.jsx
+ M src/components/artists/ArtistCard.jsx
+ M src/components/artists/ArtistReleaseCard.jsx
+ M src/components/context-menu/ContextMenuProvider.jsx
+ M src/components/context-menu/__tests__/contextMenuActions.test.js
+ M src/components/context-menu/contextMenuActions.js
+ M src/components/context-menu/contextMenuController.js
+ M src/components/home/BrowseByGenre.jsx
+ M src/components/layout/BrandLogo.jsx
+ M src/components/layout/Footer.jsx
+ M src/components/layout/Header.jsx
+ M src/components/layout/LibraryDrawer.jsx
+ M src/components/layout/MobileHeader.jsx
+ M src/components/layout/__tests__/BrandLogo.test.jsx
+ M src/components/playlists/PlaylistTrackTable.jsx
+ M src/components/tracks/TrackCard.jsx
+ M src/components/tracks/TrackListItem.jsx
+ M src/components/ui/FallbackAvatar.jsx
+ M src/components/ui/FallbackCover.jsx
+ M src/components/ui/GenrePill.jsx
+ M src/components/ui/LanguageSwitcher.jsx
+ M src/components/ui/ReportButton.jsx
+ M src/components/ui/ToastContainer.jsx
+ M src/components/upload/UploadForm.jsx
+ M src/components/upload/batch/BatchItemList.jsx
+ M src/components/upload/batch/BatchPlaylistEditor.jsx
+ M src/components/upload/batch/BatchTrackSettingsDrawer.jsx
+ M src/hooks/queries/useArtists.js
+ M src/hooks/queries/useTracks.js
+ M src/hooks/useEntityContextMenu.js
+ M src/i18n/locales/en/common.json
+ M src/i18n/locales/pl/common.json
+ M src/i18n/locales/ru/common.json
+ M src/i18n/locales/uk/common.json
+ M src/index.css
+ M src/pages/ArtistPage.jsx
+ M src/pages/Dashboard.jsx
+ M src/pages/Discover.jsx
+ M src/pages/Home.jsx
+ M src/pages/Library.jsx
+ M src/pages/TrackPage.jsx
+ M src/pages/admin/AdminOverview.jsx
+ M src/pages/admin/AdminTrackDetail.jsx
+ M src/pages/admin/AdminTracks.jsx
+ M src/pages/upload/BatchUploadPage.jsx
+ M tests/components/AdminConsole.test.jsx
+ M tests/components/ArtistCard.test.jsx
+ M tests/components/ArtistPage.test.jsx
+ M tests/components/BatchUploadStudio.test.jsx
+ M tests/components/Dashboard.test.jsx
+ M tests/components/DiscoverPresentation.test.jsx
+ M tests/components/FallbackVisuals.test.jsx
+ M tests/components/Home.test.jsx
+ M tests/components/MobileHeader.test.jsx
+ M tests/components/PlaylistPage.test.jsx
+ M tests/components/TrackPage.test.jsx
+ M tests/components/UploadFormGenres.test.jsx
+ M tests/components/i18n.test.jsx
+ M tests/e2e/_helpers.js
+ M tests/e2e/batch-upload-studio.spec.js
+ M tests/e2e/genre-design.spec.js
+ M tests/e2e/playlists-context-menu.spec.js
+ M tests/e2e/theme-system.spec.js
+?? artifacts/
+?? backend/prisma/migrations/20260827120000_add_track_content_type_and_beats/
+?? backend/scripts/fill-demo-images.js
+?? backend/src/lib/beatMetadata.js
+?? backend/src/lib/trackContentType.js
+?? backend/tests/musicBeats.unit.test.js
+?? design-audit-screenshots/genre-ui/mobile-discover-genres-pl-390x844.png
+?? design-audit-screenshots/genre-ui/mobile-discover-genres-ru-390x844.png
+?? noirsound-landing-prototype/
+?? public/images/avatar_female.jpg
+?? public/images/avatar_producer.jpg
+?? public/images/cover_jazz_noir.jpg
+?? public/images/cover_synthwave.jpg
+?? public/images/cover_techno.jpg
+?? public/noirsound-e2e-identity.json
+?? src/api/__tests__/uploadContentType.test.js
+?? src/api/mock/__tests__/batchUploadContentType.test.js
+?? src/components/home/BeatsInfoCard.jsx
+?? src/components/tracks/TrackContentMeta.jsx
+?? src/components/upload/BeatMetadataFields.jsx
+?? src/components/upload/ContentTypeSelector.jsx
+?? src/components/upload/beatMetadata.js
+?? src/utils/trackContent.js
+?? tests/components/HeaderLanguage.test.jsx
+?? tests/components/LibraryContentTypes.test.jsx
+?? tests/components/PillControls.test.jsx
+?? tests/e2e/globalSetup.js
+?? tests/e2e/music-beats.spec.js
+?? tests/e2e/release-gate-visuals.spec.js

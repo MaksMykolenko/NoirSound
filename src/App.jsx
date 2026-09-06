@@ -24,6 +24,7 @@ const queryClient = new QueryClient({
 
 // Lazy load pages for performance
 const Home = lazy(() => import('./pages/Home'));
+const LandingPage = lazy(() => import('./pages/LandingPage'));
 const Discover = lazy(() => import('./pages/Discover'));
 const TrackPage = lazy(() => import('./pages/TrackPage'));
 const ArtistPage = lazy(() => import('./pages/ArtistPage'));
@@ -38,6 +39,8 @@ const ConnectDesktop = lazy(() => import('./pages/ConnectDesktop'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 const LegalPage = lazy(() => import('./pages/LegalPage'));
 const PublicAppShell = lazy(() => import('./components/layout/PublicAppShell'));
+const AppLayout = lazy(() => import('./components/layout/AppLayout'));
+const LandingLayout = lazy(() => import('./components/layout/LandingLayout'));
 const AdminLayout = lazy(() => import('./pages/admin/AdminLayout'));
 const AdminOverview = lazy(() => import('./pages/admin/AdminOverview'));
 const AdminUsers = lazy(() => import('./pages/admin/AdminUsers'));
@@ -134,26 +137,31 @@ export default function App() {
         <Suspense fallback={<RouteSkeleton />}>
           <Routes>
             <Route element={<PublicAppShell />}>
-              <Route index element={<Home />} />
-              <Route path="/discover" element={<Discover />} />
-              <Route path="/track/:id" element={<TrackPage />} />
-              <Route path="/artist/:id" element={<ArtistPage />} />
-              <Route path="/library" element={<Library />} />
-              <Route path="/upload" element={<Upload />} />
-              <Route path="/upload/batch" element={<BatchUploadPage />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/profile/:username" element={<PublicProfile />} />
-              <Route path="/playlist/:id" element={<PlaylistPage />} />
-              <Route path="/connect/desktop" element={<ConnectDesktop />} />
-              <Route path="/terms" element={<LegalPage slug="terms" />} />
-              <Route path="/privacy" element={<LegalPage slug="privacy" />} />
-              <Route path="/guidelines" element={<LegalPage slug="guidelines" />} />
-              <Route path="/copyright" element={<LegalPage slug="copyright" />} />
-              <Route path="/dmca" element={<LegalPage slug="dmca" />} />
-              <Route path="/abuse" element={<LegalPage slug="abuse" />} />
-              <Route path="/creator-rules" element={<LegalPage slug="creator-rules" />} />
-              <Route path="*" element={<NotFound />} />
+              <Route element={<LandingLayout />}>
+                <Route index element={<LandingPage />} />
+              </Route>
+              <Route element={<AppLayout />}>
+                <Route path="/home" element={<Home />} />
+                <Route path="/discover" element={<Discover />} />
+                <Route path="/track/:id" element={<TrackPage />} />
+                <Route path="/artist/:id" element={<ArtistPage />} />
+                <Route path="/library" element={<Library />} />
+                <Route path="/upload" element={<Upload />} />
+                <Route path="/upload/batch" element={<BatchUploadPage />} />
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/profile" element={<Profile />} />
+                <Route path="/profile/:username" element={<PublicProfile />} />
+                <Route path="/playlist/:id" element={<PlaylistPage />} />
+                <Route path="/connect/desktop" element={<ConnectDesktop />} />
+                <Route path="/terms" element={<LegalPage slug="terms" />} />
+                <Route path="/privacy" element={<LegalPage slug="privacy" />} />
+                <Route path="/guidelines" element={<LegalPage slug="guidelines" />} />
+                <Route path="/copyright" element={<LegalPage slug="copyright" />} />
+                <Route path="/dmca" element={<LegalPage slug="dmca" />} />
+                <Route path="/abuse" element={<LegalPage slug="abuse" />} />
+                <Route path="/creator-rules" element={<LegalPage slug="creator-rules" />} />
+                <Route path="*" element={<NotFound />} />
+              </Route>
             </Route>
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<Navigate to="overview" replace />} />

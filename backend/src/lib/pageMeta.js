@@ -10,7 +10,7 @@ const { normalizeGenre, getLabelOfKey } = require('../constants/musicGenres');
 
 const SITE_NAME = 'NoirSound';
 const DEFAULT_DESCRIPTION =
-  'Discover independent music, upload your own tracks, and build your audience on NoirSound.';
+  'Discover independent music and beats. Listen, create, and share your sound on NoirSound.';
 
 const LEGAL_PAGES = {
   terms: { title: 'Terms of Service — NoirSound', description: 'The terms that govern your use of NoirSound.' },
@@ -82,7 +82,7 @@ function genreLabel(genre) {
 function homeMeta(base) {
   const url = `${trimSlash(base)}/`;
   return {
-    title: 'NoirSound — Creator-first music platform',
+    title: 'NoirSound — your sound',
     description: DEFAULT_DESCRIPTION,
     canonical: url,
     url,
@@ -92,7 +92,7 @@ function homeMeta(base) {
     imageType: 'image/png',
     imageWidth: 1200,
     imageHeight: 630,
-    imageAlt: 'NoirSound — creator-first music platform',
+    imageAlt: 'NoirSound — your sound',
     twitterCard: 'summary_large_image',
     jsonLd: {
       '@context': 'https://schema.org',
@@ -105,6 +105,20 @@ function homeMeta(base) {
         'query-input': 'required name=search_term_string'
       }
     }
+  };
+}
+
+function discoverMeta(base, contentType) {
+  const content = ['MUSIC', 'BEAT'].includes(contentType) ? contentType : null;
+  const label = content === 'MUSIC' ? 'Music' : content === 'BEAT' ? 'Beats' : 'Music and beats';
+  const url = `${trimSlash(base)}/discover${content ? `?content=${content}` : ''}`;
+  const { jsonLd: _jsonLd, ...defaults } = homeMeta(base);
+  return {
+    ...defaults,
+    title: `${label} — Discover | NoirSound`,
+    description: 'Explore independent music and beats on NoirSound. Find your next track and listen to real releases.',
+    canonical: url,
+    url
   };
 }
 
@@ -311,6 +325,7 @@ module.exports = {
   humanDuration,
   genreLabel,
   homeMeta,
+  discoverMeta,
   legalMeta,
   trackMeta,
   trackUnavailableMeta,

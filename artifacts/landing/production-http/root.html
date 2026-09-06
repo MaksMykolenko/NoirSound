@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en" data-theme="noir-pink" data-theme-preference="noir-pink">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0a0a0c" />
+    <!-- SSR-injected per-route metadata; see backend/src/lib/metaRenderer.js -->
+    <!--noirsound:ssr-meta-->
+    <title>NoirSound — your sound</title>
+    <meta name="description" content="Discover independent music and beats. Listen, create, and share your sound on NoirSound.">
+    <link rel="canonical" href="http://127.0.0.1:52765/">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="NoirSound">
+    <meta property="og:title" content="NoirSound — your sound">
+    <meta property="og:description" content="Discover independent music and beats. Listen, create, and share your sound on NoirSound.">
+    <meta property="og:url" content="http://127.0.0.1:52765/">
+    <meta property="og:image" content="http://127.0.0.1:52765/og/noirsound-cover.png">
+    <meta property="og:image:secure_url" content="http://127.0.0.1:52765/og/noirsound-cover.png">
+    <meta property="og:image:type" content="image/png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="NoirSound — your sound">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="NoirSound — your sound">
+    <meta name="twitter:description" content="Discover independent music and beats. Listen, create, and share your sound on NoirSound.">
+    <meta name="twitter:image" content="http://127.0.0.1:52765/og/noirsound-cover.png">
+    <meta name="twitter:image:alt" content="NoirSound — your sound">
+    <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"NoirSound","url":"http://127.0.0.1:52765","potentialAction":{"@type":"SearchAction","target":"http://127.0.0.1:52765/discover?q={search_term_string}","query-input":"required name=search_term_string"}}</script>
+    <script>
+      (function () {
+        var allowedThemes = [
+          'noir-pink',
+          'midnight-blue',
+          'crimson-red',
+          'royal-purple',
+          'emerald-dark',
+          'light-minimal',
+          'green-stream',
+          'orange-wave',
+          'system'
+        ];
+        var themeBackgrounds = {
+          'noir-pink': '#0a0a0c',
+          'midnight-blue': '#030712',
+          'crimson-red': '#070303',
+          'royal-purple': '#07030f',
+          'emerald-dark': '#020806',
+          'light-minimal': '#f7f7fb',
+          'green-stream': '#050706',
+          'orange-wave': '#080604'
+        };
+        function syncThemeColor(themeId) {
+          var themeColor = document.querySelector('meta[name="theme-color"]');
+          if (themeColor) themeColor.setAttribute('content', themeBackgrounds[themeId] || '#0a0a0c');
+        }
+        try {
+          var selectedTheme = localStorage.getItem('noirsound.theme') || 'noir-pink';
+          if (allowedThemes.indexOf(selectedTheme) === -1) selectedTheme = 'noir-pink';
+          var resolvedTheme = selectedTheme;
+          if (selectedTheme === 'system') {
+            resolvedTheme = window.matchMedia('(prefers-color-scheme: light)').matches
+              ? 'light-minimal'
+              : 'noir-pink';
+          }
+          document.documentElement.dataset.theme = resolvedTheme;
+          document.documentElement.dataset.themePreference = selectedTheme;
+          document.documentElement.style.colorScheme =
+            resolvedTheme === 'light-minimal' ? 'light' : 'dark';
+          syncThemeColor(resolvedTheme);
+        } catch (error) {
+          document.documentElement.dataset.theme = 'noir-pink';
+          document.documentElement.dataset.themePreference = 'noir-pink';
+          syncThemeColor('noir-pink');
+        }
+      })();
+    </script>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Commissioner:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script type="module" crossorigin src="/assets/index-CYRC88hv.js"></script>
+    <link rel="modulepreload" crossorigin href="/assets/react-B8IZ02wI.js">
+    <link rel="modulepreload" crossorigin href="/assets/initReactI18next-CunpV_Wf.js">
+    <link rel="modulepreload" crossorigin href="/assets/i18n-Csnw3oQS.js">
+    <link rel="modulepreload" crossorigin href="/assets/preload-helper-CZgWQFsJ.js">
+    <link rel="modulepreload" crossorigin href="/assets/jsx-runtime-fBfwind-.js">
+    <link rel="modulepreload" crossorigin href="/assets/QueryClientProvider-DkWoySGo.js">
+    <link rel="modulepreload" crossorigin href="/assets/react-C8v9AR8h.js">
+    <link rel="modulepreload" crossorigin href="/assets/client-Dxl1ZVqH.js">
+    <link rel="stylesheet" crossorigin href="/assets/index-uMCJQdC7.css">
+  </head>
+  <body>
+    <div id="root"><main id="landing-initial" lang="en">
+      <header><a href="/">NoirSound</a><nav aria-label="Main navigation"><a href="/discover">Listen</a> <a href="/upload">Create</a></nav></header>
+      <h1>Your sound.</h1>
+      <p>Not everything has to sound the same.</p>
+      <p><a href="/discover?content=MUSIC">Discover music</a> <a href="/discover?content=BEAT">Discover beats</a></p>
+      <h2>Your music. Your space.</h2>
+      <p>Upload. Shape. Share.</p>
+      <h2>Start with one track.</h2>
+      <p><a href="/discover">Start listening</a> <a href="/upload">Continue to upload</a></p>
+      <footer><a href="/terms">Terms</a> <a href="/privacy">Privacy</a> <a href="/abuse">Support</a></footer>
+    </main></div>
+  </body>
+</html>

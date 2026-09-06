@@ -13,12 +13,19 @@ import { lyricsCounts, MAX_LYRICS_LINES } from '../lyrics/lyricsUtils';
 import BeatMetadataFields from './BeatMetadataFields';
 import ContentTypeSelector from './ContentTypeSelector';
 import { beatMetadataPayload, EMPTY_BEAT_METADATA } from './beatMetadata';
+import { useLandingDraftStore } from '../../store/landingDraftStore';
 
 export default function UploadForm() {
   const { t } = useTranslation();
   const { user, authHydrated, setAuthModalOpen, fetchCurrentUser } = useUserStore();
   const addToast = useToastStore((state) => state.addToast);
   const [profileSetupStatus, setProfileSetupStatus] = useState('idle'); // idle | loading
+  const [landingDraft] = useState(() => {
+    const draft = useLandingDraftStore.getState().draft;
+    return draft?.uploadRequested ? draft : null;
+  });
+  const lostLandingDraft = useLandingDraftStore((state) => state.lostDraft);
+  const draftFields = landingDraft?.uploadFields;
 
   async function handleCreateMyArtistProfile() {
     setProfileSetupStatus('loading');
@@ -32,21 +39,21 @@ export default function UploadForm() {
       setProfileSetupStatus('idle');
     }
   }
-  const [title, setTitle] = useState('');
-  const [genre, setGenre] = useState('');
-  const [description, setDescription] = useState('');
-  const [tags, setTags] = useState('');
-  const [contentType, setContentType] = useState('MUSIC');
-  const [beatMetadata, setBeatMetadata] = useState(() => ({ ...EMPTY_BEAT_METADATA }));
-  const [rightsChecked, setRightsChecked] = useState(false);
-  const [lyricsForm, setLyricsForm] = useState({
+  const [title, setTitle] = useState(landingDraft?.title || '');
+  const [genre, setGenre] = useState(draftFields?.genre || '');
+  const [description, setDescription] = useState(draftFields?.description || '');
+  const [tags, setTags] = useState(draftFields?.tags || '');
+  const [contentType, setContentType] = useState(landingDraft?.contentType || 'MUSIC');
+  const [beatMetadata, setBeatMetadata] = useState(() => draftFields?.beatMetadata || ({ ...EMPTY_BEAT_METADATA }));
+  const [rightsChecked, setRightsChecked] = useState(draftFields?.rightsChecked || false);
+  const [lyricsForm, setLyricsForm] = useState(draftFields?.lyricsForm || {
     lyricsText: '',
     lyricsType: 'NONE',
     lyricsLanguage: '',
     lyricsRightsConfirmed: false,
   });
-  const [audioFile, setAudioFile] = useState(null);
-  const [coverFile, setCoverFile] = useState(null);
+  const [audioFile, setAudioFile] = useState(landingDraft?.audioFile || null);
+  const [coverFile, setCoverFile] = useState(draftFields?.coverFile || null);
   const [coverPreviewUrl, setCoverPreviewUrl] = useState('');
 
   const [uploadStatus, setUploadStatus] = useState('idle'); // idle | uploading | processing | generating | success | error
@@ -55,6 +62,14 @@ export default function UploadForm() {
   const [uploadId, setUploadId] = useState(null);
 
   const uploadMutation = useUploadTrack();
+
+  useEffect(() => {
+    if (!landingDraft || !['idle', 'error'].includes(uploadStatus)) return;
+    const store = useLandingDraftStore.getState();
+    if (!store.draft?.uploadRequested) return;
+    store.updateDraft({ title, contentType, audioFile });
+    store.saveUploadFields({ genre, description, tags, beatMetadata, rightsChecked, lyricsForm, coverFile });
+  }, [landingDraft, title, contentType, audioFile, genre, description, tags, beatMetadata, rightsChecked, lyricsForm, coverFile, uploadStatus]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -86,6 +101,7 @@ export default function UploadForm() {
         copyrightConfirmed: rightsChecked,
         ...lyricsForm,
       });
+      if (landingDraft) useLandingDraftStore.getState().clearDraft();
       
       setUploadProgress(100);
       setUploadId(res.uploadId);
@@ -151,6 +167,7 @@ export default function UploadForm() {
   }, [coverFile]);
 
   const handleReset = () => {
+    if (landingDraft) useLandingDraftStore.getState().clearDraft();
     setTitle('');
     setGenre('');
     setDescription('');
@@ -187,6 +204,8 @@ export default function UploadForm() {
           <p className="text-sm leading-relaxed text-zinc-400">
             {t('empty.signInDesc')}
           </p>
+          {landingDraft && <p className="text-sm leading-relaxed text-zinc-400">{t('landing.creator.localNotice')}</p>}
+          {lostLandingDraft && <p role="status" className="text-sm leading-relaxed text-zinc-400">{t('landing.creator.lostDraft')}</p>}
         </div>
         <button
           type="button"
@@ -208,6 +227,8 @@ export default function UploadForm() {
           <p className="text-sm leading-relaxed text-zinc-400 mt-2">
             {t('uploadForm.creatorAccessHelp')}
           </p>
+          {landingDraft && <p className="mt-2 text-sm leading-relaxed text-zinc-400">{t('landing.creator.localNotice')}</p>}
+          {lostLandingDraft && <p role="status" className="mt-2 text-sm leading-relaxed text-zinc-400">{t('landing.creator.lostDraft')}</p>}
         </div>
       </div>
     );
@@ -230,6 +251,8 @@ export default function UploadForm() {
               defaultValue: 'Your artist profile is not ready yet. Please contact an admin or complete your artist profile before uploading tracks.',
             })}
           </p>
+          {landingDraft && <p className="mt-2 text-sm leading-relaxed text-zinc-400">{t('landing.creator.localNotice')}</p>}
+          {lostLandingDraft && <p role="status" className="mt-2 text-sm leading-relaxed text-zinc-400">{t('landing.creator.lostDraft')}</p>}
         </div>
         {canSelfService && (
           <button
@@ -363,6 +386,13 @@ export default function UploadForm() {
   return (
     <form onSubmit={handleSubmit} className="mx-auto grid max-w-6xl gap-7 xl:grid-cols-[minmax(0,1fr)_19rem] xl:items-start" noValidate>
       <div className="min-w-0 space-y-8">
+        {landingDraft && (
+          <div className="space-y-2 border-l-2 border-zinc-600 pl-4 text-sm leading-relaxed text-zinc-400" role="status">
+            <p>{t('landing.creator.uploadDraftNotice')}</p>
+            {landingDraft.artistCredit && <p>{t('landing.creator.uploadCreditNotice', { credit: landingDraft.artistCredit })}</p>}
+          </div>
+        )}
+        {lostLandingDraft && <p role="status" className="text-sm leading-relaxed text-zinc-400">{t('landing.creator.lostDraft')}</p>}
         {errorMsg && (
           <div id="upload-error" className="flex items-start gap-2.5 border-l-2 border-[var(--ns-danger)] bg-[color-mix(in_srgb,var(--ns-danger)_10%,transparent)] p-3.5 text-sm text-[var(--ns-danger)]" role="alert">
             <AlertCircle size={16} className="mt-0.5 shrink-0" />

@@ -63,7 +63,7 @@ test.describe('Theme system behavior', () => {
 
   test('account dropdown exposes the compact theme selector', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
-    await page.goto('/');
+    await page.goto('/home');
     const accountButton = page.locator('header button[aria-haspopup="menu"]');
     await expect(accountButton).toHaveCount(1);
     await accountButton.click();

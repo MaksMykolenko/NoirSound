@@ -54,7 +54,7 @@ describe('escapeHtml', () => {
 describe('buildMetaTags', () => {
   it('emits OG, Twitter, canonical, and JSON-LD', () => {
     const html = buildMetaTags(homeMeta(BASE));
-    expect(html).toContain('<meta property="og:title" content="NoirSound — Creator-first music platform">');
+    expect(html).toContain('<meta property="og:title" content="NoirSound — your sound">');
     expect(html).toContain('<meta property="og:image" content="https://noirsound.co/og/noirsound-cover.png">');
     expect(html).toContain('<meta property="og:image:secure_url" content="https://noirsound.co/og/noirsound-cover.png">');
     expect(html).toContain('<meta name="twitter:card" content="summary_large_image">');
@@ -146,7 +146,7 @@ describe('injectMeta', () => {
 describe('homeMeta', () => {
   it('is the canonical site default', () => {
     const m = homeMeta(BASE);
-    expect(m.title).toBe('NoirSound — Creator-first music platform');
+    expect(m.title).toBe('NoirSound — your sound');
     expect(m.canonical).toBe('https://noirsound.co/');
     expect(m.image).toBe('https://noirsound.co/og/noirsound-cover.png');
     expect(m.jsonLd['@type']).toBe('WebSite');

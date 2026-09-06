@@ -1,46 +1,25 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import MobileHeader from './MobileHeader';
 import LibraryDrawer from './LibraryDrawer';
-import PlayerBar from '../player/PlayerBar';
-import QueuePanel from '../player/QueuePanel';
-import FullscreenLyricsPlayer from '../player/FullscreenLyricsPlayer';
 import MobileNavbar from './MobileNavbar';
 import Footer from './Footer';
 import { usePlayerStore } from '../../store/playerStore';
-import { useAnimatedFavicon } from '../../hooks/useAnimatedFavicon';
+import { usePublicPlayback } from './publicPlaybackContext';
 
 export default function AppLayout({ children }) {
-  useAnimatedFavicon();
-  const [isQueueOpen, setIsQueueOpen] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [isMobileViewport, setIsMobileViewport] = useState(() => (
-    typeof window !== 'undefined'
-    && typeof window.matchMedia === 'function'
-    && window.matchMedia('(max-width: 1023px)').matches
-  ));
-  const { isPlayerCollapsed, currentTrack, lyricsFullscreenOpen } = usePlayerStore();
+  const isPlayerCollapsed = usePlayerStore((state) => state.isPlayerCollapsed);
+  const currentTrack = usePlayerStore((state) => state.currentTrack);
+  const { shellIsInert: playbackIsInert } = usePublicPlayback();
   const location = useLocation();
   const mainRef = useRef(null);
-  const mobilePlayerIsModal = Boolean(
-    isMobileViewport && currentTrack && !isPlayerCollapsed && !lyricsFullscreenOpen
-  );
-  const shellIsInert = lyricsFullscreenOpen || isQueueOpen || isDrawerOpen || mobilePlayerIsModal;
-
-  useEffect(() => {
-    if (typeof window.matchMedia !== 'function') return undefined;
-    const query = window.matchMedia('(max-width: 1023px)');
-    const updateViewport = (event) => setIsMobileViewport(event.matches);
-    setIsMobileViewport(query.matches);
-    query.addEventListener?.('change', updateViewport);
-    return () => query.removeEventListener?.('change', updateViewport);
-  }, []);
+  const shellIsInert = playbackIsInert || isDrawerOpen;
 
   useEffect(() => {
     mainRef.current?.scrollTo?.({ top: 0, behavior: 'auto' });
-    setIsQueueOpen(false);
     setIsDrawerOpen(false);
   }, [location.pathname]);
 
@@ -72,7 +51,7 @@ export default function AppLayout({ children }) {
         {/* Scrollable page contents view */}
         <main ref={mainRef} className={`ns-main-scroll flex-1 overflow-y-auto overflow-x-hidden transition-[padding] duration-200 ${paddingClass}`}>
           <div className="ns-page-container pt-5 sm:pt-6">
-            {children}
+            {children ?? <Outlet />}
             <Footer />
           </div>
         </main>
@@ -83,19 +62,6 @@ export default function AppLayout({ children }) {
 
       </div>
       <LibraryDrawer isOpen={isDrawerOpen} onClose={() => setIsDrawerOpen(false)} />
-      {!lyricsFullscreenOpen && (
-        <QueuePanel isOpen={isQueueOpen} onClose={() => setIsQueueOpen(false)} />
-      )}
-      {!lyricsFullscreenOpen && (
-        <PlayerBar onToggleQueue={() => setIsQueueOpen(!isQueueOpen)} isQueueOpen={isQueueOpen} />
-      )}
-      {lyricsFullscreenOpen && (
-        <FullscreenLyricsPlayer
-          isQueueOpen={isQueueOpen}
-          onToggleQueue={() => setIsQueueOpen(!isQueueOpen)}
-          onCloseQueue={() => setIsQueueOpen(false)}
-        />
-      )}
     </>
   );
 }

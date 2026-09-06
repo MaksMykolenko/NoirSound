@@ -1,0 +1,191 @@
+{
+  "scope": "Production Docker images and Caddy routing with explicit DB/storage fixtures; no persistence verification",
+  "checks": [
+    {
+      "check": "Root is served through the backend metadata renderer",
+      "status": "PASS"
+    },
+    {
+      "check": "Initial root HTML includes readable main content and real CTAs without JavaScript",
+      "status": "PASS"
+    },
+    {
+      "check": "Root metadata has no duplicate managed tags",
+      "status": "PASS"
+    },
+    {
+      "check": "Root landing title is correct",
+      "status": "PASS"
+    },
+    {
+      "check": "Root points at the production hashed web build",
+      "status": "PASS"
+    },
+    {
+      "check": "Built asset resolves: /assets/index-CYRC88hv.js",
+      "status": "PASS"
+    },
+    {
+      "check": "Built asset resolves: /assets/react-B8IZ02wI.js",
+      "status": "PASS"
+    },
+    {
+      "check": "Built asset resolves: /assets/initReactI18next-CunpV_Wf.js",
+      "status": "PASS"
+    },
+    {
+      "check": "Built asset resolves: /assets/i18n-Csnw3oQS.js",
+      "status": "PASS"
+    },
+    {
+      "check": "Built asset resolves: /assets/preload-helper-CZgWQFsJ.js",
+      "status": "PASS"
+    },
+    {
+      "check": "Built asset resolves: /assets/jsx-runtime-fBfwind-.js",
+      "status": "PASS"
+    },
+    {
+      "check": "Built asset resolves: /assets/QueryClientProvider-DkWoySGo.js",
+      "status": "PASS"
+    },
+    {
+      "check": "Built asset resolves: /assets/react-C8v9AR8h.js",
+      "status": "PASS"
+    },
+    {
+      "check": "Built asset resolves: /assets/client-Dxl1ZVqH.js",
+      "status": "PASS"
+    },
+    {
+      "check": "Built asset resolves: /assets/index-uMCJQdC7.css",
+      "status": "PASS"
+    },
+    {
+      "check": "Correct metadata, current shell, and no landing content: /discover?content=MUSIC",
+      "status": "PASS"
+    },
+    {
+      "check": "Current bundle preserved: /discover?content=MUSIC",
+      "status": "PASS"
+    },
+    {
+      "check": "Correct metadata, current shell, and no landing content: /discover?content=BEAT",
+      "status": "PASS"
+    },
+    {
+      "check": "Current bundle preserved: /discover?content=BEAT",
+      "status": "PASS"
+    },
+    {
+      "check": "Correct metadata, current shell, and no landing content: /track/http-track",
+      "status": "PASS"
+    },
+    {
+      "check": "Current bundle preserved: /track/http-track",
+      "status": "PASS"
+    },
+    {
+      "check": "Correct metadata, current shell, and no landing content: /artist/http-artist",
+      "status": "PASS"
+    },
+    {
+      "check": "Current bundle preserved: /artist/http-artist",
+      "status": "PASS"
+    },
+    {
+      "check": "Correct metadata, current shell, and no landing content: /playlist/http-playlist",
+      "status": "PASS"
+    },
+    {
+      "check": "Current bundle preserved: /playlist/http-playlist",
+      "status": "PASS"
+    },
+    {
+      "check": "Correct metadata, current shell, and no landing content: /terms",
+      "status": "PASS"
+    },
+    {
+      "check": "Current bundle preserved: /terms",
+      "status": "PASS"
+    },
+    {
+      "check": "SPA deep link refresh resolves: /home",
+      "status": "PASS"
+    },
+    {
+      "check": "SPA deep link refresh resolves: /upload?landingDraft=1",
+      "status": "PASS"
+    },
+    {
+      "check": "SPA deep link refresh resolves: /upload/batch",
+      "status": "PASS"
+    },
+    {
+      "check": "SPA deep link refresh resolves: /profile?tab=settings",
+      "status": "PASS"
+    },
+    {
+      "check": "SPA deep link refresh resolves: /admin",
+      "status": "PASS"
+    },
+    {
+      "check": "Root OG image is publicly accessible PNG data",
+      "status": "PASS"
+    },
+    {
+      "check": "robots.txt remains available",
+      "status": "PASS"
+    },
+    {
+      "check": "Dynamic public sitemap remains available",
+      "status": "PASS"
+    },
+    {
+      "check": "Same-origin showcase API returns an honest empty fixture catalog",
+      "status": "PASS"
+    },
+    {
+      "check": "Existing security headers remain applied",
+      "status": "PASS"
+    },
+    {
+      "check": "Built backend OAuth return stays on configured origin: '/\\n/redirect.example.invalid'",
+      "status": "PASS"
+    },
+    {
+      "check": "Built backend OAuth return stays on configured origin: '/\\r/redirect.example.invalid'",
+      "status": "PASS"
+    },
+    {
+      "check": "Built backend OAuth return stays on configured origin: '/\\t/redirect.example.invalid'",
+      "status": "PASS"
+    },
+    {
+      "check": "Built backend OAuth return stays on configured origin: '/upload?landingDraft=1'",
+      "status": "PASS"
+    },
+    {
+      "check": "Changed web shell is used immediately through real Caddy ETag revalidation",
+      "status": "PASS"
+    },
+    {
+      "check": "Revalidated shell bundle URL remains accessible",
+      "status": "PASS"
+    }
+  ],
+  "baseUrl": "http://127.0.0.1:52765",
+  "assets": [
+    "/assets/index-CYRC88hv.js",
+    "/assets/react-B8IZ02wI.js",
+    "/assets/initReactI18next-CunpV_Wf.js",
+    "/assets/i18n-Csnw3oQS.js",
+    "/assets/preload-helper-CZgWQFsJ.js",
+    "/assets/jsx-runtime-fBfwind-.js",
+    "/assets/QueryClientProvider-DkWoySGo.js",
+    "/assets/react-C8v9AR8h.js",
+    "/assets/client-Dxl1ZVqH.js",
+    "/assets/index-uMCJQdC7.css"
+  ],
+  "status": "PASS"
+}

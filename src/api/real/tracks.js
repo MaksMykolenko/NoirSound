@@ -84,3 +84,12 @@ export async function setTrackLiked(trackId, liked) {
 export async function getLikedTracks(options = {}) {
   return mapTrackList(await apiFetch(`/me/liked-tracks${trackQuery(options)}`));
 }
+
+export async function getLandingShowcase(requestOptions = {}) {
+  const response = await apiFetch('/tracks/showcase', { ...requestOptions, suppressErrorToast: true });
+  const data = response?.data;
+  if (!Array.isArray(data?.MUSIC) || !Array.isArray(data?.BEAT)) throw new Error('Invalid showcase response');
+  const group = (type) => data[type].slice(0, 3).map(mapTrackResponse)
+    .filter(track => track?.contentType === type && track.isStreamable && track.audioUrl && track.isAvailable !== false);
+  return { MUSIC: group('MUSIC'), BEAT: group('BEAT') };
+}

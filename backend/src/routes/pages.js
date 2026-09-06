@@ -1,9 +1,11 @@
 'use strict';
 
 const { injectMeta, escapeHtml } = require('../lib/metaRenderer');
+const { injectLandingDocument } = require('../lib/landingDocument');
 const {
   LEGAL_PAGES,
   homeMeta,
+  discoverMeta,
   legalMeta,
   trackMeta,
   trackUnavailableMeta,
@@ -14,10 +16,9 @@ const {
   trimSlash
 } = require('../lib/pageMeta');
 
-// The SPA shell is served statically by Caddy. The backend fetches it once and
-// caches it so per-route metadata can be injected into the real, hashed build.
+// The SPA shell is served statically by Caddy. Revalidate its ETag per request
+// so a frontend rebuild never leaves backend HTML pointing to old bundle hashes.
 const SHELL_ORIGIN = trimSlash(process.env.APP_SHELL_ORIGIN || 'http://web:8080');
-const SHELL_TTL_MS = Number(process.env.APP_SHELL_TTL_MS || 60_000);
 
 const FALLBACK_SHELL =
   '<!doctype html><html lang="en"><head><meta charset="UTF-8">' +
@@ -26,17 +27,18 @@ const FALLBACK_SHELL =
   '<!--noirsound:ssr-meta--></head>' +
   '<body><div id="root"></div></body></html>';
 
-let shellCache = { html: null, ts: 0 };
-
-async function getShell(fastify) {
-  const now = Date.now();
-  if (shellCache.html && now - shellCache.ts < SHELL_TTL_MS) return shellCache.html;
+async function getShell(fastify, shellCache) {
   try {
-    const res = await fetch(`${SHELL_ORIGIN}/index.html`, { headers: { accept: 'text/html' } });
+    const res = await fetch(`${SHELL_ORIGIN}/index.html`, {
+      headers: { accept: 'text/html', ...(shellCache.etag ? { 'if-none-match': shellCache.etag } : {}) },
+      signal: AbortSignal.timeout(3000)
+    });
+    if (res.status === 304 && shellCache.html) return shellCache.html;
     if (res.ok) {
       const html = await res.text();
-      if (html && /<\/head>/i.test(html)) {
-        shellCache = { html, ts: now };
+      if (html && /<\/head>/i.test(html) && /<div\s+id=["']root["']/i.test(html)) {
+        shellCache.html = html;
+        shellCache.etag = res.headers.get('etag');
         return html;
       }
     }
@@ -60,16 +62,21 @@ function baseUrl(request) {
 }
 
 module.exports = async function pages(fastify) {
-  async function sendPage(request, reply, meta) {
-    const shell = await getShell(fastify);
-    const html = injectMeta(shell, meta);
+  // Cache belongs to this Fastify instance, including isolated test servers.
+  const shellCache = { html: null, etag: null };
+  async function sendPage(request, reply, meta, landing = false) {
+    const shell = await getShell(fastify, shellCache);
+    const html = injectMeta(landing ? injectLandingDocument(shell) : shell, meta);
     reply.header('content-type', 'text/html; charset=utf-8');
-    reply.header('cache-control', 'public, max-age=300');
+    reply.header('cache-control', 'no-cache');
     reply.header('x-noirsound-ssr', '1');
     return reply.send(html);
   }
 
-  fastify.get('/', async (request, reply) => sendPage(request, reply, homeMeta(baseUrl(request))));
+  fastify.get('/', async (request, reply) => sendPage(request, reply, homeMeta(baseUrl(request)), true));
+
+  fastify.get('/discover', async (request, reply) =>
+    sendPage(request, reply, discoverMeta(baseUrl(request), request.query.content)));
 
   fastify.get('/track/:id', async (request, reply) => {
     const base = baseUrl(request);

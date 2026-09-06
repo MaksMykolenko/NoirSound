@@ -78,7 +78,7 @@ export default function Home() {
       <PageMeta
         title="NoirSound — Creator-first music platform"
         description="Discover independent music, upload your own tracks, and build your audience on NoirSound."
-        canonical="https://noirsound.co/"
+        canonical="https://noirsound.co/home"
       />
       <HomeHero
         onDiscover={() => navigate('/discover')}

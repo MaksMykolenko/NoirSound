@@ -58,6 +58,46 @@ function publicTrackWhere({ contentType, query, filters }) {
 }
 
 async function tracksRoutes(fastify, _options) {
+  // A small, playable landing selection. Discovery deliberately includes
+  // published tracks whose audio is not ready; this route uses the same
+  // visibility policy and additionally verifies the processed object without
+  // opening streams or recording playback. A missing object never becomes a
+  // decorative/fake playable release, and client parameters cannot unbound it.
+  fastify.get('/showcase', {
+    config: { rateLimit: { max: scaledRateLimitMax(60), timeWindow: '1 minute', keyGenerator: userOrIpKey } }
+  }, async (_request, reply) => {
+    try {
+      const groups = await Promise.all(['MUSIC', 'BEAT'].map(async (contentType) => {
+        const candidates = await fastify.prisma.track.findMany({
+          where: publicVisibilityWhere({
+            contentType,
+            processedAudioKey: { not: null },
+            NOT: { processedAudioKey: '' }
+          }),
+          include: PUBLIC_TRACK_ARTIST_INCLUDE,
+          orderBy: [{ publishedAt: { sort: 'desc', nulls: 'last' } }, { id: 'asc' }],
+          take: 12
+        });
+        const tracks = [];
+        for (const candidate of candidates) {
+          const audio = await fastify.storage.getObjectMetadata(candidate.processedAudioKey);
+          if (audio?.exists && Number(audio.size) > 0 && /^audio\//i.test(audio.mimeType || '')) {
+            tracks.push(serializePublicTrack(candidate));
+            if (tracks.length === 3) break;
+          }
+        }
+        return [contentType, tracks];
+      }));
+      // Author visibility is checked for every request; do not cache revoked
+      // or hidden releases in an independent landing recommendation cache.
+      reply.header('cache-control', 'no-store');
+      return { data: Object.fromEntries(groups) };
+    } catch (error) {
+      fastify.log.error(error, 'Landing showcase unavailable');
+      return reply.status(503).send({ error: 'SHOWCASE_UNAVAILABLE' });
+    }
+  });
+
   // GET /api/tracks
   fastify.get('/', async (request, reply) => {
     try {

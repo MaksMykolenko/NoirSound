@@ -4,6 +4,7 @@ import { X, Mail, Lock, User, AtSign, Loader2 } from 'lucide-react';
 import { useLogin, useRegister } from '../../hooks/mutations/useAuth';
 import { getGoogleAuthorizationUrl } from '../../api/client';
 import useDialogFocusTrap from '../../hooks/useDialogFocusTrap';
+import { useLandingDraftStore } from '../../store/landingDraftStore';
 
 function GoogleIcon() {
   return (
@@ -32,6 +33,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }) {
   const loginMutation = useLogin();
   const registerMutation = useRegister();
   const isLoading = loginMutation.isPending || registerMutation.isPending;
+  const hasLandingDraft = useLandingDraftStore((state) => Boolean(state.draft));
 
   useEffect(() => {
     if (!isOpen) return;
@@ -101,11 +103,13 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }) {
             type="button"
             disabled={isLoading}
             onClick={() => window.location.assign(getGoogleAuthorizationUrl())}
+            aria-describedby={hasLandingDraft ? 'auth-landing-draft-notice' : undefined}
             className="flex h-11 w-full cursor-pointer items-center justify-center gap-3 rounded-md border border-[var(--ns-border)] bg-zinc-900 font-medium text-zinc-100 transition-colors hover:bg-zinc-800 disabled:opacity-50"
           >
             <GoogleIcon />
             <span>{t('auth.continueGoogle')}</span>
           </button>
+          {hasLandingDraft && <p id="auth-landing-draft-notice" className="mt-3 text-sm leading-relaxed text-zinc-400">{t('landing.creator.googleDraftNotice')}</p>}
 
           <div className="flex items-center gap-3 my-5" aria-hidden="true">
             <span className="h-px flex-1 bg-zinc-800" />

@@ -7,6 +7,7 @@ import i18n from '../../src/i18n';
 import LyricsEditor from '../../src/components/lyrics/LyricsEditor';
 import TrackLyricsCard from '../../src/components/lyrics/TrackLyricsCard';
 import AppLayout from '../../src/components/layout/AppLayout';
+import PublicAppShell from '../../src/components/layout/PublicAppShell';
 import PlayerBar from '../../src/components/player/PlayerBar';
 import FullscreenLyricsPlayer from '../../src/components/player/FullscreenLyricsPlayer';
 import { PlaybackErrorStatus } from '../../src/components/player/PlayerBarShared';
@@ -353,9 +354,9 @@ describe('lyrics UI', () => {
 
     render(
       <MemoryRouter initialEntries={['/discover']}>
-        <AppLayout>
+        <PublicAppShell><AppLayout>
           <LocationProbe />
-        </AppLayout>
+        </AppLayout></PublicAppShell>
       </MemoryRouter>
     );
 
@@ -412,9 +413,9 @@ describe('lyrics UI', () => {
 
     render(
       <BrowserRouter>
-        <AppLayout>
+        <PublicAppShell><AppLayout>
           <HistoryRouteFixture />
-        </AppLayout>
+        </AppLayout></PublicAppShell>
       </BrowserRouter>
     );
 

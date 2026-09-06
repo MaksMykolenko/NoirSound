@@ -17,8 +17,18 @@ function safeReturnTo(value) {
     typeof value !== 'string' ||
     !value.startsWith('/') ||
     value.startsWith('//') ||
-    value.includes('\\')
+    value.includes('\\') ||
+    Array.from(value).some(character => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127)
   ) {
+    return '/';
+  }
+  // The URL parser strips tabs/newlines before resolving URLs. Validate the
+  // resolved origin as well as the source string, so a return path cannot
+  // become a protocol-relative external redirect after normalization.
+  const localOrigin = 'https://noirsound.invalid';
+  try {
+    if (new URL(value, localOrigin).origin !== localOrigin) return '/';
+  } catch {
     return '/';
   }
   return value;
