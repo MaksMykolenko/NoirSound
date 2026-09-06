@@ -489,3 +489,93 @@ to{transform:none;opacity:1}
  .ns-landing .listen-scene { height:auto; min-height:0; }
  .ns-landing .listen-sticky { position:relative; height:auto; min-height:0; max-height:none; overflow:visible; padding-block:110px 70px; }
 }
+
+.ns-landing .landing-notice-banner {
+  position: relative;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px var(--pad);
+  background: rgba(229, 9, 20, 0.12);
+  border-bottom: 1px solid rgba(229, 9, 20, 0.35);
+  backdrop-filter: blur(12px);
+}
+.ns-landing .landing-notice-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.ns-landing .landing-notice-badge {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: var(--accent);
+  color: #fff;
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+.ns-landing .landing-notice-text {
+  font-size: 13px;
+  color: #e4e4e7;
+  margin: 0;
+}
+.ns-landing .landing-notice-close {
+  background: transparent;
+  border: 0;
+  color: #a1a1aa;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  border-radius: 4px;
+}
+.ns-landing .landing-notice-close:hover {
+  color: #fff;
+}
+.ns-landing .landing-user-status {
+  margin-top: 24px;
+  padding: 14px 18px;
+  background: rgba(24, 24, 27, 0.75);
+  border: 1px solid #27272a;
+  border-radius: 8px;
+  backdrop-filter: blur(8px);
+}
+.ns-landing .landing-user-status-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ns-landing .landing-user-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.ns-landing .landing-user-role-badge {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  background: #27272a;
+  color: #a1a1aa;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+.ns-landing .landing-user-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+}
+.ns-landing .landing-user-message {
+  font-size: 13px;
+  color: #a1a1aa;
+  margin: 0;
+}
+.ns-landing .landing-user-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 4px;
+}

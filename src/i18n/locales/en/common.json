@@ -1361,6 +1361,44 @@
       "ipAddress": "IP address",
       "userAgent": "User agent",
       "sanitizedEventJson": "sanitized event JSON"
+    },
+    "creators": {
+      "title": "Creator Registrations",
+      "description": "Review, evaluate, and enable access for creators registered via the landing page.",
+      "exportCsv": "Export CSV",
+      "total": "Total Creators",
+      "type": "Creator Type",
+      "allTypes": "All Types",
+      "types": {
+        "ARTIST": "Artist",
+        "BEATMAKER": "Beatmaker",
+        "BOTH": "Both"
+      },
+      "statusValues": {
+        "REGISTERED": "Registered",
+        "REVIEWED": "Reviewed",
+        "ENABLED": "Enabled"
+      },
+      "searchPlaceholder": "Search creators by name, username, or email...",
+      "noCreatorsFound": "No creator registrations found",
+      "noCreatorsFoundDesc": "New creators who register from the landing page will appear here.",
+      "creator": "Creator",
+      "content": "Content",
+      "links": "Portfolio / Link",
+      "registeredAt": "Registered",
+      "grantAccess": "Grant Access",
+      "revokeAccess": "Revoke",
+      "changeStatus": "Change Status",
+      "editNote": "Admin Note",
+      "grantSuccess": "Artist access granted",
+      "revokeSuccess": "Artist access revoked",
+      "statusUpdated": "Status updated",
+      "noteSaved": "Admin note saved",
+      "confirmGrantTitle": "Grant Artist Access",
+      "confirmGrantDesc": "This will promote @{{username}} to ARTIST, activate their ArtistProfile, and grant immediate track upload access.",
+      "confirmRevokeTitle": "Revoke Artist Access",
+      "confirmRevokeDesc": "This will demote @{{username}} to LISTENER and hide their artist profile.",
+      "adminNoteTitle": "Admin Note for"
     }
   },
   "lyrics": {
@@ -1458,7 +1496,27 @@
     "password": "Password",
     "noAccount": "Don't have an account?",
     "haveAccount": "Already have an account?",
-    "signUp": "Sign up"
+    "signUp": "Sign up",
+    "joinCreator": "Register as Creator",
+    "creatorDescription": "Claim your artist handle, establish your profile, and be first in line to publish.",
+    "listenerTab": "Listener",
+    "creatorTab": "Creator",
+    "creatorTypeLabel": "I identify as:",
+    "creatorTypes": {
+      "ARTIST": "Artist",
+      "BEATMAKER": "Beatmaker",
+      "BOTH": "Both"
+    },
+    "intendsLabel": "What will you publish?",
+    "intendsMusic": "Music / Songs",
+    "intendsBeats": "Beats / Instrumentals",
+    "artistNamePlaceholder": "Artist / Stage Name",
+    "portfolioUrlPlaceholder": "https://soundcloud.com/... (optional)",
+    "registerAsCreator": "Register as Creator",
+    "createAccount": "Create Account",
+    "creatorSuccess": "Creator account registered! Your profile is ready. You will have upload access as soon as our creator phase opens.",
+    "listenerSuccess": "Account created! NoirSound public listening opens soon.",
+    "loginSuccess": "Welcome back!"
   },
   "notFound": {
     "eyebrow": "Lost in the static",
@@ -1475,5 +1533,21 @@
     "likes": "{{count}} likes",
     "libraryUnavailable": "Library unavailable",
     "historyUnavailable": "Listening history unavailable"
+  },
+  "landing": {
+    "noticeComingSoon": "NoirSound is currently in landing-only access. Full platform features will open soon! Create your account or register as a creator to be first in line.",
+    "adminNotice": "Admin mode active — you have full platform and admin console access.",
+    "creatorActiveNotice": "Creator access enabled! Your profile is ready and you can publish tracks.",
+    "creatorPendingNotice": "Creator profile registered! Your artist handle is reserved. Upload access will activate soon.",
+    "listenerNotice": "You are registered as a Listener. Full platform access is opening soon.",
+    "creator": {
+      "registeredBadge": "Creator Profile Active",
+      "canUploadNotice": "You have upload access enabled! Open the app to publish.",
+      "pendingNotice": "Registered as a Creator. Upload tools will open when the creator rollout begins.",
+      "listenerUpgradePrompt": "You are registered as a Listener. Register your creator profile to get ready for publishing.",
+      "upgradeButton": "Register as Creator",
+      "joinPrompt": "Ready to share your music or beats with NoirSound? Register your creator account now.",
+      "registerButton": "Register as Creator"
+    }
   }
 }

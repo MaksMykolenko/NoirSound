@@ -1,8 +1,9 @@
 import React, { useId, useState } from 'react';
-import { ArrowUpRight, Upload } from 'lucide-react';
+import { ArrowUpRight, CheckCircle2, Sparkles, Upload } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useLandingDraftStore } from '../../store/landingDraftStore';
+import { useUserStore } from '../../store/userStore';
 import { BATCH_MAX_FILE_BYTES, validateSelectedFiles } from '../upload/batch/batchUploadUtils';
 import LandingReleasePreview from './LandingReleasePreview';
 
@@ -10,6 +11,8 @@ export default function LandingCreatorSection() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { draft, lostDraft, updateDraft, requestUpload } = useLandingDraftStore();
+  const user = useUserStore((s) => s.user);
+  const openAuth = useUserStore((s) => s.setAuthModalOpen);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [fileError, setFileError] = useState(false);
   const [dragging, setDragging] = useState(false);
@@ -18,6 +21,9 @@ export default function LandingCreatorSection() {
   const artistCredit = draft?.artistCredit || '';
   const contentType = draft?.contentType || 'MUSIC';
   const audioFile = draft?.audioFile;
+
+  const isCreatorRegistered = Boolean(user?.creatorRegistration);
+  const canUploadTracks = Boolean(user?.canUploadTracks);
 
   function chooseFile(file) {
     if (!file) return;
@@ -30,8 +36,6 @@ export default function LandingCreatorSection() {
   function continueUpload() {
     setPreviewOpen(false);
     requestUpload();
-    // A fixed same-origin router destination carries no user-controlled URL.
-    // The existing form owns sign-in, artist access and upload submission.
     navigate('/upload');
   }
 
@@ -50,6 +54,59 @@ export default function LandingCreatorSection() {
                 </li>
               ))}
             </ol>
+
+            <div className="creator-cta-box mt-6 p-4 rounded-lg border border-zinc-800 bg-zinc-900/60">
+              {isCreatorRegistered ? (
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-emerald-400 font-semibold text-sm">
+                    <CheckCircle2 size={16} />
+                    <span>{t('landing.creator.registeredBadge') || 'Creator Profile Active'}</span>
+                  </div>
+                  <p className="text-xs text-zinc-400">
+                    {canUploadTracks
+                      ? (t('landing.creator.canUploadNotice') || 'You have upload access enabled! Open the app to publish.')
+                      : (t('landing.creator.pendingNotice') || `Registered as ${user.creatorRegistration?.creatorType}. Upload tools will open when the creator rollout begins.`)}
+                  </p>
+                  {canUploadTracks && (
+                    <button
+                      type="button"
+                      onClick={continueUpload}
+                      className="button button-accent mt-2 inline-flex items-center gap-2 text-xs"
+                    >
+                      {t('landing.publish') || 'Open Studio'} <ArrowUpRight size={14} />
+                    </button>
+                  )}
+                </div>
+              ) : user ? (
+                <div className="space-y-2">
+                  <p className="text-xs text-zinc-300">
+                    {t('landing.creator.listenerUpgradePrompt') || 'You are registered as a Listener. Register your creator profile to get ready for publishing.'}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => openAuth(true, 'register', 'CREATOR')}
+                    className="button button-accent w-full justify-center text-xs font-semibold"
+                  >
+                    <Sparkles size={14} className="mr-1.5" />
+                    {t('landing.creator.upgradeButton') || 'Register as Creator'}
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-xs text-zinc-400">
+                    {t('landing.creator.joinPrompt') || 'Ready to share your music or beats with NoirSound? Register your creator account now.'}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => openAuth(true, 'register', 'CREATOR')}
+                    className="button button-accent w-full justify-center text-xs font-semibold cursor-pointer"
+                  >
+                    <Sparkles size={14} className="mr-1.5" />
+                    {t('landing.creator.registerButton') || 'Register as Creator'}
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
           <div className="release-editor">
             <div className="editor-top"><span className="editor-dot" aria-hidden="true" /><span>{t('landing.creator.newRelease')}</span><span className="editor-badge">{t('landing.creator.previewBadge')}</span></div>

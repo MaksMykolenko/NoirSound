@@ -8,8 +8,10 @@ COPY . .
 # In production the SPA talks to the API same-origin via Caddy at /api.
 ARG VITE_API_BASE_URL=/api
 ARG VITE_USE_MOCK_API=false
+ARG VITE_PUBLIC_APP_ENABLED=false
 ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
 ENV VITE_USE_MOCK_API=${VITE_USE_MOCK_API}
+ENV VITE_PUBLIC_APP_ENABLED=${VITE_PUBLIC_APP_ENABLED}
 RUN npm run build
 
 FROM caddy:2-alpine

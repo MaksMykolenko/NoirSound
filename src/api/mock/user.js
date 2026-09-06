@@ -43,7 +43,24 @@ export async function login(email) {
 }
 
 export async function register(userData) {
-  currentDemoUser = { ...demoUser, ...userData };
+  const isCreator = userData.accountType === 'CREATOR';
+  const creatorRegistration = isCreator ? {
+    id: 'mock-reg-id',
+    creatorType: userData.creatorType || 'ARTIST',
+    intendsMusic: userData.intendsMusic ?? true,
+    intendsBeats: userData.intendsBeats ?? false,
+    displayName: userData.displayName || userData.username,
+    portfolioUrl: userData.portfolioUrl || null,
+    primaryPlatformUrl: userData.primaryPlatformUrl || null,
+    status: 'REGISTERED',
+    createdAt: new Date().toISOString()
+  } : null;
+  currentDemoUser = {
+    ...demoUser,
+    ...userData,
+    role: userData.role || 'LISTENER',
+    creatorRegistration
+  };
   return { user: currentDemoUser };
 }
 
