@@ -1540,6 +1540,7 @@
     "creatorActiveNotice": "Dostęp twórcy włączony! Twój profil jest gotowy i możesz publikować utwory.",
     "creatorPendingNotice": "Profil twórcy zarejestrowany! Dostęp do publikacji zostanie otwarty wkrótce.",
     "listenerNotice": "Zarejestrowano jako słuchacz. Dostęp do odtwarzania zostanie wkrótce otwarty.",
+    "openPlatform": "Otwórz platformę",
     "creator": {
       "registeredBadge": "Profil twórcy aktywny",
       "canUploadNotice": "Dostęp do przesyłania włączony! Otwórz aplikację, aby publikować.",

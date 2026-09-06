@@ -1540,6 +1540,7 @@
     "creatorActiveNotice": "Creator access enabled! Your profile is ready and you can publish tracks.",
     "creatorPendingNotice": "Creator profile registered! Your artist handle is reserved. Upload access will activate soon.",
     "listenerNotice": "You are registered as a Listener. Full platform access is opening soon.",
+    "openPlatform": "Open Platform",
     "creator": {
       "registeredBadge": "Creator Profile Active",
       "canUploadNotice": "You have upload access enabled! Open the app to publish.",

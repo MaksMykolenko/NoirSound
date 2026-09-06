@@ -123,7 +123,7 @@ export default function LandingPage() {
                       )}
                       {(isAdmin || publicAppEnabled) && (
                         <Link to="/discover" className="button button-light text-xs">
-                          {t('landing.openApp') || 'Open App'} <ArrowUpRight size={14} />
+                          {t('landing.openPlatform') || 'Open Platform'} <ArrowUpRight size={14} />
                         </Link>
                       )}
                       {!isCreator && !isAdmin && (
