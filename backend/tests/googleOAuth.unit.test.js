@@ -3,7 +3,48 @@ import cookie from '@fastify/cookie';
 import { randomBytes } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { safeReturnTo } from '../src/lib/googleOAuth';
-import googleAuthRoutes from '../src/routes/googleAuth';
+import googleAuthRoutes, { resolveGoogleUser } from '../src/routes/googleAuth';
+
+describe('Google email association with legacy case variants', () => {
+  function fixture(users, linkedUser = null) {
+    const prisma = {
+      user: {
+        findFirst: vi.fn(async () => users[0] || null),
+        findMany: vi.fn(async () => users.slice(0, 2)),
+        create: vi.fn(),
+      },
+      oAuthAccount: {
+        findUnique: vi.fn(async () => linkedUser ? { user: linkedUser } : null),
+        create: vi.fn(async ({ data }) => data),
+      },
+    };
+    prisma.$transaction = async callback => callback(prisma);
+    return prisma;
+  }
+
+  const user = { id: 'legacy-user', email: 'Person@Example.Test', status: 'ACTIVE' };
+  const profile = { sub: 'verified-google-subject', email: ' person@example.test ' };
+  it('rejects ambiguous email association without linking or changing existing accounts', async () => {
+    const prisma = fixture([user, { ...user, id: 'other-user', email: 'person@example.test' }]);
+    await expect(resolveGoogleUser(prisma, profile)).rejects.toMatchObject({ code: 'AUTH_EMAIL_AMBIGUOUS' });
+    expect(prisma.oAuthAccount.create).not.toHaveBeenCalled();
+    expect(prisma.user.create).not.toHaveBeenCalled();
+  });
+  it('still links one unambiguous legacy account while retaining its stored email', async () => {
+    const prisma = fixture([user]);
+    await expect(resolveGoogleUser(prisma, profile)).resolves.toEqual(user);
+    expect(prisma.oAuthAccount.create).toHaveBeenCalledWith({ data: {
+      provider: 'GOOGLE', providerAccountId: profile.sub, providerEmail: 'person@example.test', userId: user.id,
+    } });
+    expect(prisma.user.create).not.toHaveBeenCalled();
+  });
+  it('keeps an existing provider-subject binding authoritative without reassociating by email', async () => {
+    const prisma = fixture([user, { ...user, id: 'other-user' }], user);
+    await expect(resolveGoogleUser(prisma, profile)).resolves.toEqual(user);
+    expect(prisma.user.findMany).not.toHaveBeenCalled();
+    expect(prisma.oAuthAccount.create).not.toHaveBeenCalled();
+  });
+});
 
 const origin = 'https://noirsound.example.invalid';
 const hostilePaths = ['/\n/redirect.example.invalid', '/\r/redirect.example.invalid', '/\t/redirect.example.invalid'];

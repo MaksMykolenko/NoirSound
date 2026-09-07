@@ -21,6 +21,8 @@ beforeEach(async () => {
   const creatorRow = data => ({ id: `creator-${state.creators.length + 1}`, createdAt: new Date(), ...staffOnly, ...data });
   prisma = {
     user: {
+      findMany: vi.fn(async ({ where, take }) => state.users.filter(user =>
+        user.email.toLowerCase() === where.email.equals.toLowerCase()).slice(0, take)),
       findFirst: vi.fn(async ({ where }) => state.users.find(user => (where.OR || [where]).some(filter =>
         Object.entries(filter).some(([key, value]) => user[key]?.toLowerCase() === (value.equals || value).toLowerCase()))) || null),
       findUnique: vi.fn(async ({ where }) => state.users.find(user => user.id === where.id) || null),
@@ -32,6 +34,14 @@ beforeEach(async () => {
     },
     artistProfile: {
       findUnique: vi.fn(async ({ where }) => state.profiles.find(row => row.userId === where.userId) || null),
+      createMany: vi.fn(async ({ data }) => {
+        let count = 0;
+        for (const item of data) {
+          if (state.profiles.some(row => row.userId === item.userId)) continue;
+          state.profiles.push({ id: `artist-${state.profiles.length + 1}`, ...item }); count += 1;
+        }
+        return { count };
+      }),
       create: vi.fn(async ({ data }) => { const row = { id: `artist-${state.profiles.length + 1}`, ...data }; state.profiles.push(row); return row; })
     },
     creatorRegistration: {
@@ -97,6 +107,16 @@ describe('registration and onboarding HTTP contracts', () => {
     expect(state.creators[0]).toMatchObject({ userId: state.users[0].id, status: 'REGISTERED', creatorType });
     expect(state.profiles).toHaveLength(1); expect(state.sessions).toHaveLength(1); expect(state.audits).toHaveLength(1);
     expect(prisma.$transaction).toHaveBeenCalledOnce();
+  });
+  it.each(['person@example.test', ' PERSON@EXAMPLE.TEST '])('rejects ambiguous legacy email %s without issuing a session or changing either account', async email => {
+    expect((await register(payload)).statusCode).toBe(200);
+    state.users.push({ ...state.users[0], id: 'legacy-case-variant', email: 'Person@Example.Test', username: 'legacy_variant' });
+    const before = structuredClone(state);
+    const response = await app.inject({ method: 'POST', url: '/api/auth/login', payload: { email, password: payload.password } });
+    expect(response.statusCode).toBe(401);
+    expect(response.json()).toEqual({ error: 'Invalid credentials' });
+    expect(response.headers['set-cookie']).toBeUndefined();
+    expect(state).toEqual(before);
   });
   it.each([['email', { email: 'PERSON@EXAMPLE.TEST', username: 'different' }, 'REGISTER_EMAIL_EXISTS'], ['username', { email: 'different@example.test', username: 'PERSON_123' }, 'REGISTER_USERNAME_EXISTS']])('rejects normalized duplicate %s without a partial account', async (_field, values, code) => {
     expect((await register(payload)).statusCode).toBe(200);
