@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { usePlayerStore, __getAudioElementForTests, qualifyThresholdSeconds } from '../playerStore';
 
 const track = {
@@ -30,6 +30,7 @@ function playEventCalls(fetchMock) {
 const flushAsyncWork = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 describe('usePlayerStore in real API mode', () => {
+  afterEach(() => vi.unstubAllEnvs());
   beforeEach(() => {
     vi.restoreAllMocks();
     vi.spyOn(window.HTMLMediaElement.prototype, 'pause').mockImplementation(() => {});
@@ -62,6 +63,21 @@ describe('usePlayerStore in real API mode', () => {
     expect(usePlayerStore.getState().isPlaying).toBe(true);
     expect(usePlayerStore.getState().recentlyPlayed).toEqual([]);
     expect(playEventCalls(fetchMock)).toHaveLength(0);
+  });
+
+  it.each(['false', 'true'])('keeps landing playback working and respects the stats gate with public mode %s', async mode => {
+    vi.stubEnv('VITE_PUBLIC_APP_ENABLED', mode);
+    vi.spyOn(window.HTMLMediaElement.prototype, 'play').mockResolvedValue();
+    const fetchMock = vi.fn().mockResolvedValue(successResponse());
+    vi.stubGlobal('fetch', fetchMock);
+    await usePlayerStore.getState().playTrack({ ...track, playbackSource: 'landing', audioUrl: '/api/landing/tracks/track-1/stream' });
+    const audio = __getAudioElementForTests();
+    expect(new URL(audio.src).pathname).toBe('/api/landing/tracks/track-1/stream');
+    audio.currentTime = 31;
+    audio.dispatchEvent(new Event('timeupdate'));
+    await flushAsyncWork();
+    expect(usePlayerStore.getState().isPlaying).toBe(true);
+    expect(playEventCalls(fetchMock)).toHaveLength(mode === 'false' ? 0 : 1);
   });
 
   it('reports exactly one qualifying play and adds to Recently Played once the threshold is crossed', async () => {

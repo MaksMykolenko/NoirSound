@@ -2,6 +2,7 @@
 
 const { injectMeta, escapeHtml } = require('../lib/metaRenderer');
 const { injectLandingDocument } = require('../lib/landingDocument');
+const { resolveAuthenticatedSession } = require('../lib/sessionResolver');
 const {
   LEGAL_PAGES,
   homeMeta,
@@ -62,13 +63,22 @@ function baseUrl(request) {
 }
 
 module.exports = async function pages(fastify) {
+  fastify.addHook('preHandler', async (request, reply) => {
+    const path = request.url.split('?')[0];
+    if (process.env.PUBLIC_APP_ENABLED !== 'false' || !/^\/(discover(?:\/|$)|track\/|artist\/|playlist\/)/.test(path)) return;
+    reply.header('cache-control', 'no-store');
+    reply.header('x-robots-tag', 'noindex, nofollow');
+    const session = await resolveAuthenticatedSession(fastify, request);
+    if (session?.user.role === 'ADMIN') return;
+    return reply.redirect('/?notice=coming-soon', 302);
+  });
   // Cache belongs to this Fastify instance, including isolated test servers.
   const shellCache = { html: null, etag: null };
   async function sendPage(request, reply, meta, landing = false) {
     const shell = await getShell(fastify, shellCache);
     const html = injectMeta(landing ? injectLandingDocument(shell) : shell, meta);
     reply.header('content-type', 'text/html; charset=utf-8');
-    reply.header('cache-control', 'no-cache');
+    reply.header('cache-control', process.env.PUBLIC_APP_ENABLED === 'false' ? 'no-store' : 'no-cache');
     reply.header('x-noirsound-ssr', '1');
     return reply.send(html);
   }
@@ -154,12 +164,23 @@ module.exports = async function pages(fastify) {
     );
   }
 
+  // One policy for crawlers and documents, evaluated at runtime in both modes.
+  fastify.get('/robots.txt', async (request, reply) => {
+    const closed = process.env.PUBLIC_APP_ENABLED === 'false';
+    const lines = closed
+      ? ['User-agent: *', 'Disallow: /', 'Allow: /$', ...Object.keys(LEGAL_PAGES).map(slug => `Allow: /${slug}$`), 'Allow: /assets/', 'Allow: /landing/', 'Allow: /fonts/']
+      : ['User-agent: *', 'Allow: /', 'Disallow: /admin', 'Disallow: /api/admin'];
+    lines.push('', `Sitemap: ${trimSlash(baseUrl(request))}/sitemap.xml`, '');
+    return reply.type('text/plain; charset=utf-8').header('cache-control', 'no-cache').send(lines.join('\n'));
+  });
+
   // Dynamic sitemap — public/published content only.
   fastify.get('/sitemap.xml', async (request, reply) => {
     const base = trimSlash(baseUrl(request));
+    const closed = process.env.PUBLIC_APP_ENABLED === 'false';
     const staticPages = [
       ['/', '1.0'],
-      ['/discover', '0.8'],
+      ...(!closed ? [['/discover', '0.8']] : []),
       ['/terms', '0.3'],
       ['/privacy', '0.3'],
       ['/guidelines', '0.3'],
@@ -171,7 +192,7 @@ module.exports = async function pages(fastify) {
     let tracks = [];
     let artists = [];
     try {
-      tracks = await fastify.prisma.track.findMany({
+      if (!closed) tracks = await fastify.prisma.track.findMany({
         where: { status: 'PUBLISHED', isPublic: true, artist: { isHidden: false, user: { status: 'ACTIVE' } } },
         select: { id: true, updatedAt: true },
         orderBy: { publishedAt: 'desc' },
@@ -181,7 +202,7 @@ module.exports = async function pages(fastify) {
       fastify.log.error({ err }, 'sitemap: track query failed');
     }
     try {
-      artists = await fastify.prisma.artistProfile.findMany({
+      if (!closed) artists = await fastify.prisma.artistProfile.findMany({
         where: { isHidden: false, user: { status: 'ACTIVE' }, tracks: { some: { status: 'PUBLISHED', isPublic: true } } },
         select: { id: true, updatedAt: true },
         take: 5000
@@ -192,7 +213,7 @@ module.exports = async function pages(fastify) {
 
     let playlists = [];
     try {
-      playlists = await fastify.prisma.playlist.findMany({
+      if (!closed) playlists = await fastify.prisma.playlist.findMany({
         where: { isPublic: true, creator: { status: 'ACTIVE' } },
         select: { id: true, updatedAt: true },
         take: 5000
@@ -221,7 +242,7 @@ module.exports = async function pages(fastify) {
     lines.push('</urlset>');
 
     reply.header('content-type', 'application/xml; charset=utf-8');
-    reply.header('cache-control', 'public, max-age=3600');
+    reply.header('cache-control', 'no-cache');
     return reply.send(lines.join('\n'));
   });
 };

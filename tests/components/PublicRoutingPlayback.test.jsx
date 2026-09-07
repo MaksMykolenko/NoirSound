@@ -49,6 +49,7 @@ function renderAt(path) {
 
 describe('public layout routing and persistent playback', () => {
   beforeEach(async () => {
+    vi.stubEnv('VITE_PUBLIC_APP_ENABLED', 'true');
     await i18n.changeLanguage('en');
     localStorage.clear();
     clearFullscreenLyricsCache();
@@ -70,6 +71,7 @@ describe('public layout routing and persistent playback', () => {
 
   afterEach(() => {
     cleanup();
+    vi.unstubAllEnvs();
     mediaPlay.mockRestore();
     mediaPause.mockRestore();
     useUserStore.setState(userState);

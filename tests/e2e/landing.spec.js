@@ -100,7 +100,7 @@ test('public showcase exposes only real playable Music and Beats without streams
   const streams = [];
   page.on('request', request => { if (/\/tracks\/[^/]+\/stream(?:\?|$)/.test(request.url())) streams.push(request.url()); });
   const eventsBefore = await prisma.playEvent.count({ where: eventFilter() });
-  const showcaseResponse = page.waitForResponse(response => response.url().endsWith('/api/tracks/showcase'));
+  const showcaseResponse = page.waitForResponse(response => response.url().endsWith('/api/landing/showcase'));
   await page.goto('/?campaign=landing-functional');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Yoursound.');
   const response = await showcaseResponse;
