@@ -7,9 +7,10 @@ const response = (hash = 'first') => new Response(shell(hash), { headers: { etag
 
 describe('landing initial HTTP document and existing metadata routes', () => {
   let app;
-  afterEach(async () => { if (app) await app.close(); vi.unstubAllGlobals(); });
+  afterEach(async () => { if (app) await app.close(); vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 
   async function build() {
+    vi.stubEnv('PUBLIC_APP_ENABLED', 'true');
     vi.stubGlobal('fetch', vi.fn(async () => response()));
     app = Fastify();
     app.decorate('prisma', {
@@ -81,5 +82,41 @@ describe('landing initial HTTP document and existing metadata routes', () => {
     expect(result.statusCode).toBe(200);
     expect(result.headers['content-type']).toContain('application/xml');
     for (const path of ['/discover', '/track/track-1', '/artist/artist-1', '/playlist/playlist-1', '/terms']) expect(result.body).toContain(`${path}</loc>`);
+  });
+
+  it('advertises only landing and legal documents in closed-mode sitemap and robots', async () => {
+    await build();
+    vi.stubEnv('PUBLIC_APP_ENABLED', 'false');
+    const sitemap = await app.inject('/sitemap.xml');
+    for (const path of ['/terms', '/privacy', '/guidelines', '/copyright', '/abuse', '/creator-rules']) expect(sitemap.body).toContain(`${path}</loc>`);
+    expect(sitemap.body).not.toMatch(/\/discover|\/track\/|\/artist\/|\/playlist\//);
+    expect(app.prisma.track.findMany).not.toHaveBeenCalled();
+    expect(app.prisma.artistProfile.findMany).not.toHaveBeenCalled();
+    expect(app.prisma.playlist.findMany).not.toHaveBeenCalled();
+    const robots = await app.inject('/robots.txt');
+    expect(robots.body).toContain('Disallow: /\n');
+    expect(robots.body).toContain('Allow: /$\n');
+    expect(robots.body).toContain('Allow: /privacy$');
+    expect(robots.body).not.toMatch(/Allow: \/(?:discover|api|admin)/);
+    expect(robots.headers['cache-control']).toBe('no-cache');
+  });
+
+  it.each(['/discover', '/track/private-id', '/artist/private-id', '/playlist/private-id'])('does not disclose app metadata through closed HTML %s', async path => {
+    await build();
+    vi.stubEnv('PUBLIC_APP_ENABLED', 'false');
+    const result = await app.inject(path);
+    expect(result.statusCode).toBe(302);
+    expect(result.headers.location).toBe('/?notice=coming-soon');
+    expect(result.headers['x-robots-tag']).toBe('noindex, nofollow');
+    expect(result.body).not.toMatch(/Real release|Real artist|Real playlist/);
+    expect(app.prisma.track.findFirst).not.toHaveBeenCalled();
+  });
+
+  it('restores the normal crawler policy when open', async () => {
+    await build();
+    const robots = await app.inject('/robots.txt');
+    expect(robots.body).toContain('Allow: /\n');
+    expect(robots.body).toContain('Disallow: /admin');
+    expect(robots.body).not.toContain('Allow: /$');
   });
 });

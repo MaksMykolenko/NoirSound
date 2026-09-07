@@ -1,14 +1,11 @@
 const argon2 = require('argon2');
-const { issueSession } = require('../lib/authSession');
+const { issueSession, createSession, setSessionCookie } = require('../lib/authSession');
 const { userOrIpKey } = require('../lib/rateLimitKeys');
 const { scaledRateLimitMax } = require('../lib/rateLimit');
 const { evaluateUploadAccess, ensureArtistProfile } = require('../lib/artistAccess');
 const { auditData, createAudit } = require('../lib/auditLog');
-const {
-  CREATOR_TYPES,
-  MAX_NOTE_LENGTH,
-  sanitizeUrl
-} = require('../lib/creators');
+const { RegistrationValidationError, validateRegistration, validateCreatorInput } = require('../lib/registrationValidation');
+const { creatorSelfView, CREATOR_SELF_SELECT } = require('../lib/creatorViews');
 const {
   MAX_BANNER_BYTES,
   ProfileMediaError,
@@ -33,7 +30,11 @@ function withArtistAccess(user, artistProfile) {
 }
 
 async function safeSerializedUser(fastify, user) {
-  const { passwordHash: _passwordHash, ...safeUser } = user;
+  const fields = ['id', 'email', 'username', 'displayName', 'avatarUrl', 'bannerUrl', 'bio',
+    'location', 'preferredLanguage', 'role', 'status', 'joinedAt', 'updatedAt',
+    'discordPresenceEnabled', 'discordPresenceShowCover', 'discordPresenceShowTimer'];
+  const safeUser = Object.fromEntries(fields.filter((field) => user[field] !== undefined)
+    .map((field) => [field, user[field]]));
   return serializeUserMedia(fastify.storage, safeUser);
 }
 
@@ -48,24 +49,14 @@ async function serializedUserWithArtistAccess(fastify, user, knownArtistProfile)
     fastify.prisma.creatorRegistration
       ? fastify.prisma.creatorRegistration.findUnique({
           where: { userId: user.id },
-          select: {
-            id: true,
-            creatorType: true,
-            intendsMusic: true,
-            intendsBeats: true,
-            displayName: true,
-            portfolioUrl: true,
-            primaryPlatformUrl: true,
-            status: true,
-            createdAt: true
-          }
+          select: CREATOR_SELF_SELECT
         })
       : Promise.resolve(null)
   ]);
   const serialized = withArtistAccess(await safeSerializedUser(fastify, user), artistProfile);
   return {
     ...serialized,
-    creatorRegistration: creatorRegistration || null
+    creatorRegistration: creatorSelfView(creatorRegistration)
   };
 }
 
@@ -87,100 +78,59 @@ async function authRoutes(fastify, _options) {
       }
     }
   }, async (request, reply) => {
-    const {
-      email,
-      password,
-      username,
-      displayName,
-      accountType,
-      creatorType,
-      intendsMusic,
-      intendsBeats,
-      portfolioUrl,
-      primaryPlatformUrl,
-      note
-    } = request.body || {};
-
-    if (!email || !password || !username || !displayName) {
-      return reply.status(400).send({ error: 'Missing required fields' });
-    }
-
-    const isCreator = accountType === 'CREATOR' || Boolean(creatorType);
-    let cleanPortfolioUrl = null;
-    let cleanPlatformUrl = null;
-    if (isCreator) {
-      try {
-        cleanPortfolioUrl = sanitizeUrl(portfolioUrl);
-        cleanPlatformUrl = sanitizeUrl(primaryPlatformUrl);
-      } catch (err) {
-        return reply.status(400).send({ error: 'INVALID_URL', message: err.message });
-      }
-    }
-
     try {
-      // Check if user exists
+      const input = validateRegistration(request.body);
       const existingUser = await fastify.prisma.user.findFirst({
-        where: { OR: [{ email }, { username }] }
+        where: { OR: [
+          { email: { equals: input.email, mode: 'insensitive' } },
+          { username: { equals: input.username, mode: 'insensitive' } }
+        ] }
       });
-      
       if (existingUser) {
-        return reply.status(400).send({ error: 'Email or username already in use' });
+        const emailExists = existingUser.email.toLowerCase() === input.email;
+        return reply.status(409).send({
+          error: emailExists ? 'REGISTER_EMAIL_EXISTS' : 'REGISTER_USERNAME_EXISTS',
+          message: emailExists ? 'Email is already in use.' : 'Username is already in use.'
+        });
       }
-
-      const passwordHash = await argon2.hash(password);
-
-      const user = await fastify.prisma.user.create({
-        data: {
-          email,
-          username,
-          displayName,
-          passwordHash,
-          avatarUrl: null
+      const passwordHash = await argon2.hash(input.password);
+      // User, prepared profile, creator registration, audit and session either
+      // persist together or roll back; an invalid creator never leaves an account.
+      const { user, token } = await fastify.prisma.$transaction(async (client) => {
+        const user = await client.user.create({ data: {
+          email: input.email, username: input.username, displayName: input.displayName,
+          passwordHash, avatarUrl: null, role: 'LISTENER'
+        } });
+        if (input.creator) {
+          await ensureArtistProfile(client, user.id);
+          await client.creatorRegistration.create({ data: {
+            userId: user.id, ...input.creator, status: 'REGISTERED'
+          } });
+          await createAudit(client, {
+            actorId: user.id, action: 'CREATOR_REGISTERED', targetType: 'USER', targetId: user.id,
+            metadata: { creatorType: input.creator.creatorType,
+              intendsMusic: input.creator.intendsMusic, intendsBeats: input.creator.intendsBeats }
+          });
         }
+        return { user, token: await createSession(client, user) };
       });
-
-      if (isCreator) {
-        const cType = CREATOR_TYPES.includes(creatorType) ? creatorType : 'ARTIST';
-        const musicIntent = intendsMusic !== undefined ? Boolean(intendsMusic) : (cType === 'ARTIST' || cType === 'BOTH');
-        const beatIntent = intendsBeats !== undefined ? Boolean(intendsBeats) : (cType === 'BEATMAKER' || cType === 'BOTH');
-        const cleanNote = note ? String(note).trim().slice(0, MAX_NOTE_LENGTH) : null;
-        const creatorDisplayName = (displayName || username).trim().slice(0, 120);
-
-        // Safely prepare ArtistProfile
-        await ensureArtistProfile(fastify.prisma, user.id);
-
-        // Record CreatorRegistration
-        await fastify.prisma.creatorRegistration.create({
-          data: {
-            userId: user.id,
-            creatorType: cType,
-            intendsMusic: musicIntent,
-            intendsBeats: beatIntent,
-            displayName: creatorDisplayName,
-            portfolioUrl: cleanPortfolioUrl,
-            primaryPlatformUrl: cleanPlatformUrl,
-            note: cleanNote,
-            status: 'REGISTERED'
-          }
-        });
-
-        await createAudit(fastify.prisma, {
-          actorId: user.id,
-          action: 'CREATOR_REGISTERED',
-          targetType: 'USER',
-          targetId: user.id,
-          metadata: { creatorType: cType, intendsMusic: musicIntent, intendsBeats: beatIntent }
-        });
-      }
-
-      // Issue a revocable session + JWT cookie
-      await issueSession(fastify, reply, user);
-
-      return {
-        message: 'Registered successfully',
-        user: await serializedUserWithArtistAccess(fastify, user)
-      };
+      setSessionCookie(reply, token);
+      return { message: 'Registered successfully', user: await serializedUserWithArtistAccess(fastify, user) };
     } catch (error) {
+      if (error instanceof RegistrationValidationError) {
+        return reply.status(400).send({ error: error.code, message: error.message });
+      }
+      // A concurrent registration may win after the initial uniqueness check.
+      if (error.code === 'P2002') {
+        const target = Array.isArray(error.meta?.target) ? error.meta.target : [String(error.meta?.target || '')];
+        const emailExists = target.some((field) => field.includes('email'));
+        if (emailExists || target.some((field) => field.includes('username'))) {
+          return reply.status(409).send({
+            error: emailExists ? 'REGISTER_EMAIL_EXISTS' : 'REGISTER_USERNAME_EXISTS',
+            message: emailExists ? 'Email is already in use.' : 'Username is already in use.'
+          });
+        }
+      }
       fastify.log.error(error);
       return reply.status(500).send({ error: 'Internal Server Error' });
     }
@@ -188,76 +138,38 @@ async function authRoutes(fastify, _options) {
 
   // POST /api/auth/creator-onboarding
   fastify.post('/creator-onboarding', {
-    preHandler: [fastify.authenticate]
+    preHandler: [fastify.authenticate],
+    config: { rateLimit: { max: scaledRateLimitMax(10), timeWindow: '1 hour', keyGenerator: userOrIpKey } }
   }, async (request, reply) => {
-    const userId = request.user.id;
-    const {
-      creatorType,
-      intendsMusic,
-      intendsBeats,
-      displayName,
-      portfolioUrl,
-      primaryPlatformUrl,
-      note
-    } = request.body || {};
-
-    const cType = CREATOR_TYPES.includes(creatorType) ? creatorType : 'ARTIST';
-    let cleanPortfolioUrl = null;
-    let cleanPlatformUrl = null;
     try {
-      cleanPortfolioUrl = sanitizeUrl(portfolioUrl);
-      cleanPlatformUrl = sanitizeUrl(primaryPlatformUrl);
-    } catch (err) {
-      return reply.status(400).send({ error: 'INVALID_URL', message: err.message });
-    }
-
-    const musicIntent = intendsMusic !== undefined ? Boolean(intendsMusic) : (cType === 'ARTIST' || cType === 'BOTH');
-    const beatIntent = intendsBeats !== undefined ? Boolean(intendsBeats) : (cType === 'BEATMAKER' || cType === 'BOTH');
-    const cleanNote = note ? String(note).trim().slice(0, MAX_NOTE_LENGTH) : null;
-    const cleanName = (displayName || request.user.displayName || request.user.username).trim().slice(0, 120);
-
-    // Safely ensure ArtistProfile
-    await ensureArtistProfile(fastify.prisma, userId);
-
-    // Upsert CreatorRegistration
-    const registration = await fastify.prisma.creatorRegistration.upsert({
-      where: { userId },
-      create: {
-        userId,
-        creatorType: cType,
-        intendsMusic: musicIntent,
-        intendsBeats: beatIntent,
-        displayName: cleanName,
-        portfolioUrl: cleanPortfolioUrl,
-        primaryPlatformUrl: cleanPlatformUrl,
-        note: cleanNote,
-        status: 'REGISTERED'
-      },
-      update: {
-        creatorType: cType,
-        intendsMusic: musicIntent,
-        intendsBeats: beatIntent,
-        displayName: cleanName,
-        portfolioUrl: cleanPortfolioUrl,
-        primaryPlatformUrl: cleanPlatformUrl,
-        note: cleanNote
+      const userId = request.user.id;
+      const creator = validateCreatorInput(request.body || {}, request.user.displayName || request.user.username);
+      const registration = await fastify.prisma.$transaction(async (client) => {
+        await ensureArtistProfile(client, userId);
+        const registration = await client.creatorRegistration.upsert({
+          where: { userId },
+          create: { userId, ...creator, status: 'REGISTERED' },
+          update: creator
+        });
+        await createAudit(client, {
+          actorId: userId, action: 'CREATOR_REGISTERED', targetType: 'USER', targetId: userId,
+          metadata: { creatorType: creator.creatorType, intendsMusic: creator.intendsMusic, intendsBeats: creator.intendsBeats }
+        });
+        return registration;
+      });
+      const updatedUser = await fastify.prisma.user.findUnique({ where: { id: userId } });
+      return {
+        message: 'Creator profile registered successfully',
+        user: await serializedUserWithArtistAccess(fastify, updatedUser),
+        creatorRegistration: creatorSelfView(registration)
+      };
+    } catch (error) {
+      if (error instanceof RegistrationValidationError) {
+        return reply.status(400).send({ error: error.code, message: error.message });
       }
-    });
-
-    await createAudit(fastify.prisma, {
-      actorId: userId,
-      action: 'CREATOR_REGISTERED',
-      targetType: 'USER',
-      targetId: userId,
-      metadata: { creatorType: cType, intendsMusic: musicIntent, intendsBeats: beatIntent }
-    });
-
-    const updatedUser = await fastify.prisma.user.findUnique({ where: { id: userId } });
-    return {
-      message: 'Creator profile registered successfully',
-      user: await serializedUserWithArtistAccess(fastify, updatedUser),
-      creatorRegistration: registration
-    };
+      fastify.log.error(error);
+      return reply.status(500).send({ error: 'Internal Server Error' });
+    }
   });
 
   // POST /api/auth/login
@@ -269,15 +181,15 @@ async function authRoutes(fastify, _options) {
       }
     }
   }, async (request, reply) => {
-    const { email, password } = request.body;
+    const { email, password } = request.body || {};
 
-    if (!email || !password) {
+    if (typeof email !== 'string' || !email.trim() || typeof password !== 'string' || !password) {
       return reply.status(400).send({ error: 'Missing email or password' });
     }
 
     try {
-      const user = await fastify.prisma.user.findUnique({
-        where: { email }
+      const user = await fastify.prisma.user.findFirst({
+        where: { email: { equals: email.trim().toLowerCase(), mode: 'insensitive' } }
       });
 
       if (!user || !user.passwordHash) {

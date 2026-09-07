@@ -22,6 +22,7 @@ if (![parsedBaseUrl, new URL(mockBaseUrl)].every(url => ['http:', 'https:'].incl
 
 export default defineConfig({
   testDir: './tests/e2e',
+  testIgnore: '**/landing-closed.spec.js',
   globalSetup: './tests/e2e/globalSetup.js',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,

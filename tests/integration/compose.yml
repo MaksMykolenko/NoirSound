@@ -6,11 +6,11 @@ services:
     environment:
       POSTGRES_USER: ${NS_TEST_DB_USER:?generated test user required}
       POSTGRES_PASSWORD: ${NS_TEST_DB_PASSWORD:?generated test password required}
-      POSTGRES_DB: noirsound_api_test
+      POSTGRES_DB: postgres
     ports: ['127.0.0.1:${NS_TEST_DB_PORT:?generated port required}:5432']
     tmpfs: ['/var/lib/postgresql/data']
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U "$$POSTGRES_USER" -d noirsound_api_test']
+      test: ['CMD-SHELL', 'pg_isready -U "$$POSTGRES_USER" -d postgres']
       interval: 2s
       timeout: 3s
       retries: 30

@@ -19,6 +19,7 @@ function isValidExternalUrl(urlString) {
 
   try {
     const parsed = new URL(trimmed);
+    if (parsed.username || parsed.password) return false;
     if (process.env.NODE_ENV === 'test' || process.env.NODE_ENV === 'development') {
       return parsed.protocol === 'https:' || (parsed.protocol === 'http:' && parsed.hostname === 'localhost');
     }
@@ -32,7 +33,8 @@ function isValidExternalUrl(urlString) {
  * Sanitize and validate optional creator external links.
  */
 function sanitizeUrl(urlString) {
-  if (!urlString || typeof urlString !== 'string') return null;
+  if (urlString === undefined || urlString === null) return null;
+  if (typeof urlString !== 'string') throw new Error('External URLs must be valid HTTPS addresses.');
   const trimmed = urlString.trim();
   if (!trimmed) return null;
   if (!isValidExternalUrl(trimmed)) {
@@ -50,7 +52,7 @@ function escapeCsvCell(val) {
   if (val === null || val === undefined) return '""';
   let str = String(val);
 
-  if (/^[=+\-@\t\r]/.test(str)) {
+  if (/^[\s]*[=+\-@]|^[\t\r\n]/.test(str)) {
     str = `'${str}`;
   }
 
@@ -60,12 +62,12 @@ function escapeCsvCell(val) {
 /**
  * Format creator registrations array as a safe CSV string.
  */
-function formatCreatorsCsv(registrations) {
+function formatCreatorsCsv(registrations, { includePii = false } = {}) {
   const headers = [
     'Registration ID',
     'User ID',
     'Username',
-    'User Email',
+    ...(includePii ? ['User Email'] : []),
     'Account Role',
     'Account Status',
     'Creator Type',
@@ -88,7 +90,7 @@ function formatCreatorsCsv(registrations) {
       item.id,
       user.id || '',
       user.username || '',
-      user.email || '',
+      ...(includePii ? [user.email || ''] : []),
       user.role || '',
       user.status || '',
       item.creatorType,
@@ -98,7 +100,7 @@ function formatCreatorsCsv(registrations) {
       item.portfolioUrl || '',
       item.primaryPlatformUrl || '',
       item.status,
-      user.canUploadTracks ? 'YES' : 'NO',
+      item.userAccess?.canUploadTracks ? 'YES' : 'NO',
       item.createdAt instanceof Date ? item.createdAt.toISOString() : String(item.createdAt || ''),
       item.adminNote || ''
     ];

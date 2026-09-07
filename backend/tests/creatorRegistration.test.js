@@ -5,15 +5,38 @@ import seedModule from '../prisma/seed';
 
 const { seedDemo } = seedModule;
 
+async function requestWithParserDiagnostics(stage, request) {
+  try {
+    return await request;
+  } catch (error) {
+    const packet = Buffer.isBuffer(error.rawPacket) ? error.rawPacket : null;
+    const safeReason = typeof error.reason === 'string'
+      && !/(?:https?:\/\/|authorization|cookie|token|password)/i.test(error.reason)
+      ? error.reason.slice(0, 160) : null;
+    const diagnostic = {
+      code: /^[A-Z0-9_]+$/.test(error.code || '') ? error.code : null,
+      reason: safeReason,
+      bytesParsed: Number.isSafeInteger(error.bytesParsed) ? error.bytesParsed : null,
+      packetLength: packet?.length ?? null,
+      packetStartsWithHttp: packet ? packet.subarray(0, 5).equals(Buffer.from('HTTP/')) : null
+    };
+    // Do not attach the original error: its raw packet can contain session cookies.
+    throw new Error(`${stage} HTTP request failed: ${JSON.stringify(diagnostic)}`);
+  }
+}
+
 describe('Creator Registration & Public App Gate API', () => {
   let app;
+  let listeningEvents = 0;
   let adminCookie;
   let listenerCookie;
   let _artistCookie;
 
   beforeAll(async () => {
     app = buildServer();
-    await app.ready();
+    app.server.on('listening', () => { listeningEvents += 1; });
+    // The fixture owns one real HTTP listener; Supertest must not reopen it per request.
+    await app.listen({ host: '127.0.0.1', port: 0 });
     await seedDemo(app.prisma);
 
     const adminLogin = await supertest(app.server)
@@ -35,6 +58,7 @@ describe('Creator Registration & Public App Gate API', () => {
   afterAll(async () => {
     delete process.env.PUBLIC_APP_ENABLED;
     await app.close();
+    expect(listeningEvents).toBe(1);
   });
 
   describe('Public App Gate (PUBLIC_APP_ENABLED=false)', () => {
@@ -150,12 +174,14 @@ describe('Creator Registration & Public App Gate API', () => {
       expect(res.body.user.hasArtistProfile).toBe(true); // ArtistProfile prepared
       expect(res.body.user.creatorRegistration).toBeDefined();
       expect(res.body.user.creatorRegistration.creatorType).toBe('BOTH');
-      expect(res.body.user.creatorRegistration.status).toBe('REGISTERED');
+      expect(res.body.user.creatorRegistration).not.toHaveProperty('status');
+      const stored = await app.prisma.creatorRegistration.findUnique({ where: { userId: res.body.user.id } });
+      expect(stored.status).toBe('REGISTERED');
     });
 
     it('allows an authenticated listener to register as a creator via /api/auth/creator-onboarding', async () => {
       const suffix = Date.now();
-      const reg = await supertest(app.server)
+      const reg = await requestWithParserDiagnostics('onboarding registration', supertest(app.server)
         .post('/api/auth/register')
         .send({
           email: `onboard_${suffix}@test.com`,
@@ -163,10 +189,10 @@ describe('Creator Registration & Public App Gate API', () => {
           displayName: `Onboard ${suffix}`,
           password: 'Password123!',
           accountType: 'LISTENER'
-        });
+        }));
       const cookie = reg.headers['set-cookie'];
 
-      const onboardRes = await supertest(app.server)
+      const onboardRes = await requestWithParserDiagnostics('creator onboarding', supertest(app.server)
         .post('/api/auth/creator-onboarding')
         .set('Cookie', cookie)
         .send({
@@ -175,7 +201,7 @@ describe('Creator Registration & Public App Gate API', () => {
           intendsBeats: true,
           portfolioUrl: 'https://beatstars.com/test-onboard',
           displayName: 'Beat Master'
-        });
+        }));
 
       expect(onboardRes.status).toBe(200);
       expect(onboardRes.body.creatorRegistration.creatorType).toBe('BEATMAKER');

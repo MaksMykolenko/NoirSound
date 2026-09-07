@@ -1,4 +1,4 @@
-import { apiFetch } from '../client';
+import { apiFetch, API_BASE_URL } from '../client';
 import { mapTrackResponse } from '../mappers/trackMapper';
 
 function mapTrackList(response) {
@@ -86,10 +86,15 @@ export async function getLikedTracks(options = {}) {
 }
 
 export async function getLandingShowcase(requestOptions = {}) {
-  const response = await apiFetch('/tracks/showcase', { ...requestOptions, suppressErrorToast: true });
+  const response = await apiFetch('/landing/showcase', { ...requestOptions, suppressErrorToast: true });
   const data = response?.data;
   if (!Array.isArray(data?.MUSIC) || !Array.isArray(data?.BEAT)) throw new Error('Invalid showcase response');
-  const group = (type) => data[type].slice(0, 3).map(mapTrackResponse)
+  const group = (type) => data[type].slice(0, 3).map(raw => {
+    const track = mapTrackResponse(raw);
+    if (!track) return null;
+    const base = `${API_BASE_URL}/landing/tracks/${encodeURIComponent(track.id)}`;
+    return { ...track, hasLyrics: import.meta.env.VITE_PUBLIC_APP_ENABLED !== 'false' && track.hasLyrics, audioUrl: track.isStreamable ? `${base}/stream` : null, coverUrl: raw.hasCoverImage ? `${base}/cover` : null, playbackSource: 'landing' };
+  })
     .filter(track => track?.contentType === type && track.isStreamable && track.audioUrl && track.isAvailable !== false);
   return { MUSIC: group('MUSIC'), BEAT: group('BEAT') };
 }

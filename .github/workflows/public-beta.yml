@@ -56,6 +56,10 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+      - name: Build landing-only frontend
+        run: npm run build
+        env:
+          VITE_PUBLIC_APP_ENABLED: 'false'
 
   backend-test:
     name: Backend tests
@@ -126,7 +130,7 @@ jobs:
           npm ci --prefix backend
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
-      - name: Run all 80 functional cases with isolated real services
+      - name: Run 86 open-mode and 8 closed-mode functional cases with isolated services
         run: node scripts/run-integration.mjs e2e
       - uses: actions/upload-artifact@v4
         if: always()
@@ -142,8 +146,12 @@ jobs:
       - uses: actions/checkout@v4
       - name: Validate production compose file
         run: APP_ENV_FILE=.env.production.example docker compose -f docker-compose.production.yml --env-file .env.production.example config --quiet
+      - name: Record reproducible image metadata
+        run: echo "BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_ENV"
       - name: Build backend image
-        run: docker build -t noirsound-backend ./backend
+        run: docker build --build-arg "GIT_SHA=$GITHUB_SHA" --build-arg "BUILD_DATE=$BUILD_DATE" -t noirsound-backend ./backend
+      - name: Tag worker from its shared backend Dockerfile build
+        run: docker tag noirsound-backend noirsound-worker
       - name: Verify shared taxonomy is in backend image
         run: |
           docker run --rm noirsound-backend sh -c "test -f src/shared/musicGenres.json && test -f src/constants/musicGenres.js" \
@@ -151,4 +159,19 @@ jobs:
       - name: Verify worker has FFmpeg and FFprobe
         run: docker run --rm noirsound-backend sh -c "ffmpeg -version >/dev/null && ffprobe -version >/dev/null"
       - name: Build frontend image
-        run: docker build -t noirsound-web -f Dockerfile .
+        run: docker build --build-arg "GIT_SHA=$GITHUB_SHA" --build-arg "BUILD_DATE=$BUILD_DATE" --build-arg VITE_PUBLIC_APP_ENABLED=false -t noirsound-web -f Dockerfile .
+      - name: Verify exact revision, source and creation labels on all application images
+        run: |
+          python3 - <<'PY'
+          import json, os, subprocess
+          expected_source = 'https://github.com/MaksMykolenko/NoirSound'
+          for image in ['noirsound-web', 'noirsound-backend', 'noirsound-worker']:
+              labels = json.loads(subprocess.check_output(['docker', 'image', 'inspect', '--format', '{{json .Config.Labels}}', image]))
+              assert labels.get('org.opencontainers.image.revision') == os.environ['GITHUB_SHA'], image
+              assert labels.get('org.opencontainers.image.created') == os.environ['BUILD_DATE'], image
+              assert labels.get('org.opencontainers.image.source') == expected_source, image
+              print(image, 'revision/source/created labels verified', os.environ['GITHUB_SHA'])
+          PY
+
+      - name: Verify production proxy routing boundaries
+        run: python3 scripts/check-caddy-routing.py

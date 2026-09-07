@@ -6,13 +6,13 @@ const {
   SESSION_TTL_DAYS
 } = require('./session');
 
-async function issueSession(fastify, reply, user, env = process.env) {
+async function createSession(client, user, env = process.env) {
   const sid = newSessionId();
   const token = jwt.sign({ userId: user.id, sid }, env.JWT_SECRET, {
     expiresIn: `${SESSION_TTL_DAYS}d`
   });
 
-  await fastify.prisma.session.create({
+  await client.session.create({
     data: {
       id: sid,
       userId: user.id,
@@ -21,6 +21,10 @@ async function issueSession(fastify, reply, user, env = process.env) {
     }
   });
 
+  return token;
+}
+
+function setSessionCookie(reply, token, env = process.env) {
   reply.setCookie('token', token, {
     path: '/',
     httpOnly: true,
@@ -30,4 +34,9 @@ async function issueSession(fastify, reply, user, env = process.env) {
   });
 }
 
-module.exports = { issueSession };
+async function issueSession(fastify, reply, user, env = process.env) {
+  const token = await createSession(fastify.prisma, user, env);
+  setSessionCookie(reply, token, env);
+}
+
+module.exports = { issueSession, createSession, setSessionCookie };

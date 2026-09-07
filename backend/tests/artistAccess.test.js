@@ -49,7 +49,7 @@ describe('artist access admin API', () => {
   });
 
   async function registerUser(overrides = {}) {
-    const suffix = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const suffix = `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
     const credentials = {
       email: `artist_access_${suffix}@test.local`,
       password: 'Password123!',

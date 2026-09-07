@@ -86,6 +86,9 @@ export function qualifyThresholdSeconds(durationSeconds) {
 }
 
 async function reportQualifyingPlay(track, listenedSeconds, completed) {
+  // Landing media is public in closed mode, while application stats remain gated.
+  // Playback continues on the same singleton without issuing forbidden writes.
+  if (track.playbackSource === 'landing' && import.meta.env.VITE_PUBLIC_APP_ENABLED === 'false') return;
   try {
     await useUserStore.getState().incrementPlayStats(track.id, track.artistId, {
       durationListenedSeconds: Math.round(listenedSeconds),
@@ -322,6 +325,8 @@ export const usePlayerStore = create((set, get) => {
 
       if (useMockApi) {
         audio.src = track.audioUrl;
+      } else if (track.playbackSource === 'landing') {
+        audio.src = `${API_BASE_URL}/landing/tracks/${encodeURIComponent(track.id)}/stream`;
       } else {
         audio.src = `${API_BASE_URL}/tracks/${track.id}/stream`;
       }

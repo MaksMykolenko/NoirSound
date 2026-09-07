@@ -1,3 +1,4 @@
+const { optionalAuthenticatedUserId } = require('../lib/optionalAuth');
 const { normalizeGenre } = require('../constants/musicGenres');
 const { userOrIpKey } = require('../lib/rateLimitKeys');
 const { serializePublicTrack } = require('../lib/publicTrack');
@@ -15,18 +16,7 @@ async function statsRoutes(fastify, _options) {
       rateLimit: { max: scaledRateLimitMax(60), timeWindow: '1 minute', keyGenerator: userOrIpKey }
     }
   }, async (request, reply) => {
-    // Optionally authenticating
-    let userId = null;
-    try {
-      const token = request.cookies.token;
-      if (token) {
-        const jwt = require('jsonwebtoken');
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        userId = decoded.userId;
-      }
-    } catch {
-      // ignore, anonymous user
-    }
+    const userId = await optionalAuthenticatedUserId(fastify, request);
 
     const { durationListenedSeconds, completed, source, sessionId } = request.body;
 

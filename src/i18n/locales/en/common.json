@@ -1364,6 +1364,7 @@
       "sanitizedEventJson": "sanitized event JSON"
     },
     "creators": {
+      "navLabel": "Creators",
       "title": "Creator Registrations",
       "description": "Review, evaluate, and enable access for creators registered via the landing page.",
       "exportCsv": "Export CSV",

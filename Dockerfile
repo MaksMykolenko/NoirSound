@@ -15,6 +15,11 @@ ENV VITE_PUBLIC_APP_ENABLED=${VITE_PUBLIC_APP_ENABLED}
 RUN npm run build
 
 FROM caddy:2-alpine
+ARG GIT_SHA=unknown
+ARG BUILD_DATE=unknown
+LABEL org.opencontainers.image.revision=$GIT_SHA \
+      org.opencontainers.image.created=$BUILD_DATE \
+      org.opencontainers.image.source="https://github.com/MaksMykolenko/NoirSound"
 COPY Caddyfile /etc/caddy/Caddyfile
 COPY --from=build /app/dist /srv
 EXPOSE 80 443

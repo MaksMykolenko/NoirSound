@@ -1,23 +1,11 @@
 const path = require('path');
 const { spawnSync } = require('child_process');
-const { Client } = require('pg');
 const { readdirSync } = require('fs');
-require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
+const { assertDatabaseScope, databaseUrl, createOwnedDatabase, dropOwnedDatabase } = require('../../scripts/integration/database-guard.cjs');
 
 function run(command, args, env) {
-  const result = spawnSync(command, args, {
-    cwd: path.join(__dirname, '..'),
-    env,
-    stdio: 'inherit'
-  });
-  if (result.status !== 0) {
-    process.exit(result.status || 1);
-  }
-}
-
-function resetAndSeed(prismaBin, env) {
-  run(prismaBin, ['migrate', 'reset', '--force'], env);
-  run(process.execPath, ['prisma/seed.js', 'demo'], env);
+  const result = spawnSync(command, args, { cwd: path.join(__dirname, '..'), env, stdio: 'inherit' });
+  if (result.status !== 0) throw new Error(`Backend test command failed (${result.status ?? result.signal ?? 'spawn error'}).`);
 }
 
 const DATABASE_TEST_FILES = [
@@ -29,72 +17,38 @@ const DATABASE_TEST_FILES = [
   'tests/statsQA.test.js',
 ];
 
-async function ensureTestDatabase(testUrl) {
-  const parsed = new URL(testUrl);
-  const databaseName = parsed.pathname.slice(1);
-  if (!/^[a-zA-Z0-9_]*test[a-zA-Z0-9_]*$/i.test(databaseName)) {
-    throw new Error(
-      `Refusing to reset database "${databaseName}". DATABASE_URL_TEST must name a test database.`
-    );
-  }
-
-  const adminUrl = new URL(testUrl);
-  adminUrl.pathname = '/postgres';
-  adminUrl.search = '';
-  const client = new Client({ connectionString: adminUrl.toString() });
-  await client.connect();
-  const existing = await client.query(
-    'SELECT 1 FROM pg_database WHERE datname = $1',
-    [databaseName]
-  );
-  if (existing.rowCount === 0) {
-    await client.query(`CREATE DATABASE "${databaseName}"`);
-  }
-  await client.end();
-}
-
 async function main() {
-  const testUrl = process.env.DATABASE_URL_TEST;
-  if (!testUrl) {
-    throw new Error('DATABASE_URL_TEST is required for backend tests.');
-  }
-  if (process.env.NODE_ENV === 'production') {
-    throw new Error('Backend tests cannot run with NODE_ENV=production.');
-  }
-
-  await ensureTestDatabase(testUrl);
-
-  const env = {
-    ...process.env,
-    NODE_ENV: 'test',
-    DATABASE_URL: testUrl
-  };
-  const prismaBin = path.join(__dirname, '..', 'node_modules', '.bin', 'prisma');
-  const vitestBin = path.join(__dirname, '..', 'node_modules', '.bin', 'vitest');
-
-  run(prismaBin, ['generate'], env);
-
-  const allTestFiles = readdirSync(path.join(__dirname))
-    .filter((file) => file.endsWith('.test.js'))
-    .map((file) => `tests/${file}`)
-    .sort();
-  const unitTestFiles = allTestFiles.filter((file) => !DATABASE_TEST_FILES.includes(file));
-
-  // Unit/mocked suites do not touch the shared PostgreSQL fixture and can run
-  // together, but the cleanup-script safety contracts still inspect the
-  // database in dry-run mode. Establish the schema and fixture before that
-  // group so a brand-new CI service database behaves like a warmed local one.
-  // Each real integration file then gets its own reset + demo seed so a
-  // destructive fixture or leaked role/status can never affect another file.
-  resetAndSeed(prismaBin, env);
-  run(vitestBin, ['run', ...unitTestFiles], env);
-  for (const testFile of DATABASE_TEST_FILES) {
-    resetAndSeed(prismaBin, env);
-    run(vitestBin, ['run', testFile], env);
-  }
+  // No dotenv or arbitrary URL: the outer harness provides generated identity
+  // and its fresh PostgreSQL marker, checked before any CREATE/DROP operation.
+  const scope = assertDatabaseScope(process.env, process.env.DATABASE_URL_TEST, 'backend');
+  assertDatabaseScope(process.env, process.env.DATABASE_URL, 'api');
+  const { Client } = require('pg');
+  const client = new Client({ connectionString: scope.adminUrl });
+  await client.connect();
+  try {
+    const prismaBin = path.join(__dirname, '..', 'node_modules', '.bin', 'prisma');
+    const vitestBin = path.join(__dirname, '..', 'node_modules', '.bin', 'vitest');
+    const allTestFiles = readdirSync(__dirname).filter(file => file.endsWith('.test.js')).map(file => `tests/${file}`).sort();
+    const unitTestFiles = allTestFiles.filter(file => !DATABASE_TEST_FILES.includes(file));
+    run(prismaBin, ['generate'], process.env);
+    const groups = [unitTestFiles, ...DATABASE_TEST_FILES.map(file => [file])];
+    for (const [index, files] of groups.entries()) {
+      const purpose = index === 0 ? 'backend_unit' : `backend_${index}`;
+      const url = databaseUrl(process.env, purpose);
+      const owned = await createOwnedDatabase(client, assertDatabaseScope(process.env, url, purpose));
+      console.log(`Created owned disposable backend database: ${owned.name}`);
+      try {
+        const env = { ...process.env, DATABASE_URL: url, DATABASE_URL_TEST: url };
+        // Fresh databases make a destructive reset unnecessary.
+        run(prismaBin, ['migrate', 'deploy'], env);
+        run(process.execPath, ['prisma/seed.js', 'demo'], env);
+        run(vitestBin, ['run', ...files], env);
+      } finally {
+        await dropOwnedDatabase(client, owned);
+        console.log(`Removed owned disposable backend database: ${owned.name}`);
+      }
+    }
+  } finally { await client.end(); }
 }
 
-main().catch((error) => {
-  console.error(error.message);
-  process.exit(1);
-});
+main().catch(error => { console.error(error.message); process.exitCode = 1; });
