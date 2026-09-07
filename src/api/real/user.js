@@ -125,3 +125,10 @@ export async function ensureMyArtistProfile() {
   const response = await apiFetch('/auth/me/ensure-artist-profile', { method: 'POST' });
   return response.user ?? response;
 }
+
+export async function onboardCreator(creatorData) {
+  return apiFetch('/auth/creator-onboarding', {
+    method: 'POST',
+    body: JSON.stringify(creatorData),
+  });
+}

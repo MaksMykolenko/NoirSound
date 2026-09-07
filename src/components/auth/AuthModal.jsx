@@ -2,10 +2,12 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { X, Mail, Lock, User, AtSign, Loader2, Headphones, Sparkles, Link as LinkIcon } from 'lucide-react';
 import { useLogin, useRegister } from '../../hooks/mutations/useAuth';
+import { onboardCreator } from '../../api/user';
 import { getGoogleAuthorizationUrl } from '../../api/client';
 import useDialogFocusTrap from '../../hooks/useDialogFocusTrap';
 import { useLandingDraftStore } from '../../store/landingDraftStore';
 import { useToastStore } from '../../store/toastStore';
+import { useUserStore } from '../../store/userStore';
 
 function GoogleIcon() {
   return (
@@ -21,6 +23,9 @@ function GoogleIcon() {
 export default function AuthModal({ isOpen, onClose, initialMode = 'login', initialAccountType = 'LISTENER' }) {
   const { t } = useTranslation();
   const addToast = useToastStore((state) => state.addToast);
+  const currentUser = useUserStore((state) => state.user);
+  const fetchCurrentUser = useUserStore((state) => state.fetchCurrentUser);
+  const [isSubmittingOnboarding, setIsSubmittingOnboarding] = useState(false);
   const [mode, setMode] = useState(initialMode);
   const [accountType, setAccountType] = useState(initialAccountType);
   const [creatorType, setCreatorType] = useState('ARTIST');
@@ -39,8 +44,12 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login', init
 
   const loginMutation = useLogin();
   const registerMutation = useRegister();
-  const isLoading = loginMutation.isPending || registerMutation.isPending;
+  const isLoading = loginMutation.isPending || registerMutation.isPending || isSubmittingOnboarding;
   const hasLandingDraft = useLandingDraftStore((state) => Boolean(state.draft));
+
+  const isRegister = mode === 'register';
+  const isCreator = isRegister && accountType === 'CREATOR';
+  const isExistingUserUpgrade = Boolean(currentUser && !currentUser.creatorRegistration && isCreator);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -75,20 +84,39 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login', init
     setErrorMsg('');
 
     try {
+      if (isExistingUserUpgrade) {
+        setIsSubmittingOnboarding(true);
+        await onboardCreator({
+          creatorType,
+          intendsMusic: Boolean(intendsMusic),
+          intendsBeats: Boolean(intendsBeats),
+          portfolioUrl: formData.primaryPlatformUrl?.trim() || null,
+          primaryPlatformUrl: formData.primaryPlatformUrl?.trim() || null,
+        });
+        await fetchCurrentUser();
+        addToast(
+          t('auth.creatorSuccess') ||
+            'Creator account registered! Your profile is ready. You will have upload access as soon as our creator phase opens.',
+          'success'
+        );
+        onClose();
+        return;
+      }
+
       if (mode === 'login') {
         await loginMutation.mutateAsync({ email: formData.email, password: formData.password });
         addToast(t('auth.loginSuccess') || 'Welcome back!', 'success');
       } else {
-        const isCreator = accountType === 'CREATOR';
+        const isCreatorAcc = accountType === 'CREATOR';
         const payload = {
           email: formData.email.trim(),
           password: formData.password,
           username: formData.username.trim(),
           displayName: (formData.displayName || formData.username).trim(),
-          accountType: isCreator ? 'CREATOR' : 'LISTENER',
+          accountType: isCreatorAcc ? 'CREATOR' : 'LISTENER',
         };
 
-        if (isCreator) {
+        if (isCreatorAcc) {
           payload.creatorType = creatorType;
           payload.intendsMusic = Boolean(intendsMusic);
           payload.intendsBeats = Boolean(intendsBeats);
@@ -99,7 +127,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login', init
         }
 
         await registerMutation.mutateAsync(payload);
-        if (isCreator) {
+        if (isCreatorAcc) {
           addToast(
             t('auth.creatorSuccess') ||
               'Creator account registered! Your profile is ready. You will have upload access as soon as our creator phase opens.',
@@ -115,11 +143,10 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login', init
       onClose();
     } catch (err) {
       setErrorMsg(err.message);
+    } finally {
+      setIsSubmittingOnboarding(false);
     }
   };
-
-  const isRegister = mode === 'register';
-  const isCreator = isRegister && accountType === 'CREATOR';
 
   return (
     <div
@@ -147,14 +174,18 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login', init
         <div className="p-6 sm:p-8">
           <div className="mb-6 pr-8 text-left">
             <h2 id="auth-modal-title" className="mb-1 font-sans text-2xl font-bold tracking-tight text-[var(--ns-text)]">
-              {mode === 'login'
+              {isExistingUserUpgrade
+                ? (t('landing.creator.upgradeButton') || 'Register as Creator')
+                : mode === 'login'
                 ? t('header.signIn')
                 : isCreator
                 ? t('auth.joinCreator') || 'Register as Creator'
                 : t('auth.join') || 'Join NoirSound'}
             </h2>
             <p className="text-sm text-zinc-400">
-              {mode === 'login'
+              {isExistingUserUpgrade
+                ? `@${currentUser.username} • ${(t('landing.creator.listenerUpgradePrompt') || 'Register your creator profile to get ready for publishing.')}`
+                : mode === 'login'
                 ? t('empty.signInDesc')
                 : isCreator
                 ? t('auth.creatorDescription') || 'Claim your artist handle, establish your profile, and be first in line to publish.'
@@ -163,7 +194,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login', init
           </div>
 
           {/* Account Type Selector for Registration */}
-          {isRegister && (
+          {isRegister && !isExistingUserUpgrade && (
             <div className="mb-5 flex rounded-lg border border-zinc-800 bg-zinc-900/80 p-1" role="tablist" aria-label="Account Type">
               <button
                 type="button"
@@ -250,11 +281,32 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login', init
                   </label>
                 </div>
               </div>
+
+              {isExistingUserUpgrade && (
+                <div>
+                  <label htmlFor="auth-platform-url-upgrade" className="text-xs font-medium text-zinc-300 block mb-1">
+                    {t('auth.portfolioUrlPlaceholder') || 'Portfolio Link'}
+                  </label>
+                  <div className="relative">
+                    <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={16} />
+                    <input
+                      id="auth-platform-url-upgrade"
+                      type="url"
+                      name="primaryPlatformUrl"
+                      placeholder={t('auth.portfolioUrlPlaceholder') || 'https://soundcloud.com/... (optional)'}
+                      value={formData.primaryPlatformUrl}
+                      onChange={handleChange}
+                      className="ns-field w-full pl-10 pr-4 text-xs"
+                      disabled={isLoading}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
           {/* Google SSO Button (shown when not registering as creator) */}
-          {!isCreator && (
+          {!isCreator && !isExistingUserUpgrade && (
             <>
               <button
                 type="button"
@@ -277,7 +329,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login', init
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {isRegister && (
+            {!isExistingUserUpgrade && isRegister && (
               <>
                 <div className="relative">
                   <label htmlFor="auth-username" className="sr-only">{t('auth.username')}</label>
@@ -331,43 +383,47 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login', init
               </>
             )}
 
-            <div className="relative">
-              <label htmlFor="auth-email" className="sr-only">{t('auth.email')}</label>
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={16} />
-              <input
-                id="auth-email"
-                ref={emailRef}
-                autoFocus={!isCreator}
-                type="email"
-                name="email"
-                required
-                placeholder={t('auth.emailPlaceholder')}
-                value={formData.email}
-                onChange={handleChange}
-                className="ns-field w-full pl-10 pr-4"
-                disabled={isLoading}
-                aria-invalid={Boolean(errorMsg)}
-                aria-describedby={errorMsg ? 'auth-error' : undefined}
-              />
-            </div>
+            {!isExistingUserUpgrade && (
+              <>
+                <div className="relative">
+                  <label htmlFor="auth-email" className="sr-only">{t('auth.email')}</label>
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={16} />
+                  <input
+                    id="auth-email"
+                    ref={emailRef}
+                    autoFocus={!isCreator}
+                    type="email"
+                    name="email"
+                    required
+                    placeholder={t('auth.emailPlaceholder')}
+                    value={formData.email}
+                    onChange={handleChange}
+                    className="ns-field w-full pl-10 pr-4"
+                    disabled={isLoading}
+                    aria-invalid={Boolean(errorMsg)}
+                    aria-describedby={errorMsg ? 'auth-error' : undefined}
+                  />
+                </div>
 
-            <div className="relative">
-              <label htmlFor="auth-password" className="sr-only">{t('auth.password')}</label>
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={16} />
-              <input
-                id="auth-password"
-                type="password"
-                name="password"
-                required
-                placeholder={t('auth.password')}
-                value={formData.password}
-                onChange={handleChange}
-                className="ns-field w-full pl-10 pr-4"
-                disabled={isLoading}
-                aria-invalid={Boolean(errorMsg)}
-                aria-describedby={errorMsg ? 'auth-error' : undefined}
-              />
-            </div>
+                <div className="relative">
+                  <label htmlFor="auth-password" className="sr-only">{t('auth.password')}</label>
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={16} />
+                  <input
+                    id="auth-password"
+                    type="password"
+                    name="password"
+                    required
+                    placeholder={t('auth.password')}
+                    value={formData.password}
+                    onChange={handleChange}
+                    className="ns-field w-full pl-10 pr-4"
+                    disabled={isLoading}
+                    aria-invalid={Boolean(errorMsg)}
+                    aria-describedby={errorMsg ? 'auth-error' : undefined}
+                  />
+                </div>
+              </>
+            )}
 
             {errorMsg && (
               <div id="auth-error" className="rounded-md border ns-status-badge ns-status-danger p-3 text-center text-sm" role="alert">
@@ -382,7 +438,9 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login', init
             >
               {isLoading && <Loader2 size={16} className="animate-spin" />}
               <span>
-                {mode === 'login'
+                {isExistingUserUpgrade
+                  ? (t('landing.creator.upgradeButton') || 'Register as Creator')
+                  : mode === 'login'
                   ? t('header.signIn')
                   : isCreator
                   ? t('auth.registerAsCreator') || 'Register as Creator'
@@ -391,31 +449,33 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login', init
             </button>
           </form>
 
-          <div className="mt-6 text-center text-sm text-zinc-500">
-            {mode === 'login' ? (
-              <p>
-                {t('auth.noAccount')}{' '}
-                <button
-                  type="button"
-                  onClick={() => setMode('register')}
-                  className="text-brand-red hover:text-[var(--ns-text-primary)] transition-colors font-medium cursor-pointer"
-                >
-                  {t('auth.signUp')}
-                </button>
-              </p>
-            ) : (
-              <p>
-                {t('auth.haveAccount')}{' '}
-                <button
-                  type="button"
-                  onClick={() => setMode('login')}
-                  className="text-brand-red hover:text-[var(--ns-text-primary)] transition-colors font-medium cursor-pointer"
-                >
-                  {t('header.signIn')}
-                </button>
-              </p>
-            )}
-          </div>
+          {!isExistingUserUpgrade && (
+            <div className="mt-6 text-center text-sm text-zinc-500">
+              {mode === 'login' ? (
+                <p>
+                  {t('auth.noAccount')}{' '}
+                  <button
+                    type="button"
+                    onClick={() => setMode('register')}
+                    className="text-brand-red hover:text-[var(--ns-text-primary)] transition-colors font-medium cursor-pointer"
+                  >
+                    {t('auth.signUp')}
+                  </button>
+                </p>
+              ) : (
+                <p>
+                  {t('auth.haveAccount')}{' '}
+                  <button
+                    type="button"
+                    onClick={() => setMode('login')}
+                    className="text-brand-red hover:text-[var(--ns-text-primary)] transition-colors font-medium cursor-pointer"
+                  >
+                    {t('header.signIn')}
+                  </button>
+                </p>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

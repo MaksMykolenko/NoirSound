@@ -106,3 +106,23 @@ export async function ensureMyArtistProfile() {
   };
   return currentDemoUser;
 }
+
+export async function onboardCreator(creatorData) {
+  const current = currentDemoUser || demoUser;
+  const creatorRegistration = {
+    id: 'mock-reg-id',
+    creatorType: creatorData.creatorType || 'ARTIST',
+    intendsMusic: creatorData.intendsMusic ?? true,
+    intendsBeats: creatorData.intendsBeats ?? false,
+    displayName: creatorData.displayName || current.displayName || current.username,
+    portfolioUrl: creatorData.portfolioUrl || null,
+    primaryPlatformUrl: creatorData.primaryPlatformUrl || null,
+    status: 'REGISTERED',
+    createdAt: new Date().toISOString(),
+  };
+  currentDemoUser = {
+    ...current,
+    creatorRegistration,
+  };
+  return { user: currentDemoUser, creatorRegistration };
+}

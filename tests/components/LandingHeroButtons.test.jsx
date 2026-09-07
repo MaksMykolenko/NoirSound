@@ -97,4 +97,37 @@ describe('LandingPage Hero Buttons', () => {
     await user.click(creatorBtn);
     expect(setAuthModalOpen).toHaveBeenCalledWith(true, 'register', 'CREATOR');
   });
+
+  it('renders localized listener notice and upgrade button when signed in as listener in Ukrainian', async () => {
+    await i18n.changeLanguage('uk');
+    useUserStore.setState({
+      user: { id: 'u1', username: 'testuser', role: 'LISTENER', creatorRegistration: null },
+      authHydrated: true,
+    });
+
+    const { container } = render(
+      <MemoryRouter>
+        <LandingPage />
+      </MemoryRouter>
+    );
+
+    // Verify localized listener notice is displayed, NOT the raw key
+    expect(screen.queryByText('landing.listenerNotice')).toBeNull();
+    expect(screen.getByText(/Ви зареєстровані як слухач/i)).toBeDefined();
+
+    // Verify upgrade button is localized, NOT the raw key
+    expect(screen.queryByText('landing.creator.upgradeButton')).toBeNull();
+    const upgradeBtn = screen.getByRole('button', { name: /зареєструватися як креатор/i });
+    expect(upgradeBtn).toBeDefined();
+
+    // Verify signOut in header is localized to "Вийти"
+    expect(screen.queryByText('header.signOut')).toBeNull();
+    const signOutBtn = screen.getByRole('button', { name: /вийти/i });
+    expect(signOutBtn).toBeDefined();
+
+    // Verify css contains max-width constraint for landing-user-status
+    const cssPath = path.resolve(__dirname, '../../src/components/landing/landing.css');
+    const cssContent = fs.readFileSync(cssPath, 'utf8');
+    expect(cssContent).toMatch(/\.ns-landing \.landing-user-status\s*\{[^}]*max-width:\s*440px/);
+  });
 });

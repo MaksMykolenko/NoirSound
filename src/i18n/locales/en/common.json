@@ -34,6 +34,7 @@
     "profileSettings": "Profile Settings",
     "creatorDashboard": "Creator Dashboard",
     "logout": "Log Out",
+    "signOut": "Sign Out",
     "searchLabel": "Search NoirSound",
     "searchAction": "Search"
   },

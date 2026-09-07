@@ -117,7 +117,7 @@ export default function LandingHeader({ motion }) {
                 className="landing-sign-in"
                 onClick={handleSignOut}
               >
-                {t('header.signOut') || 'Sign out'}
+                {t('header.signOut', { defaultValue: t('header.logout', { defaultValue: 'Sign out' }) })}
               </button>
             </div>
           ) : (
@@ -170,7 +170,7 @@ export default function LandingHeader({ motion }) {
             <div className="mt-4 pt-4 border-t border-zinc-800 flex flex-col gap-2">
               <span className="text-xs text-zinc-400">@{user.username}</span>
               <button type="button" className="landing-sign-in text-left text-brand-red" onClick={handleSignOut}>
-                {t('header.signOut') || 'Sign out'}
+                {t('header.signOut', { defaultValue: t('header.logout', { defaultValue: 'Sign out' }) })}
               </button>
             </div>
           ) : (

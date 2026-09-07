@@ -34,6 +34,7 @@
     "profileSettings": "Настройки профиля",
     "creatorDashboard": "Панель создателя",
     "logout": "Выйти",
+    "signOut": "Выйти",
     "searchLabel": "Поиск в NoirSound",
     "searchAction": "Поиск"
   },

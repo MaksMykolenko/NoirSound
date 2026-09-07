@@ -538,16 +538,19 @@ to{transform:none;opacity:1}
 }
 .ns-landing .landing-user-status {
   margin-top: 24px;
-  padding: 14px 18px;
-  background: rgba(24, 24, 27, 0.75);
+  padding: 16px 20px;
+  background: rgba(24, 24, 27, 0.85);
   border: 1px solid #27272a;
-  border-radius: 8px;
-  backdrop-filter: blur(8px);
+  border-radius: 12px;
+  backdrop-filter: blur(12px);
+  max-width: 440px;
+  width: 100%;
+  pointer-events: auto;
 }
 .ns-landing .landing-user-status-inner {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 .ns-landing .landing-user-info {
   display: flex;
@@ -560,7 +563,7 @@ to{transform:none;opacity:1}
   letter-spacing: 0.05em;
   background: #27272a;
   color: #a1a1aa;
-  padding: 2px 8px;
+  padding: 3px 8px;
   border-radius: 4px;
 }
 .ns-landing .landing-user-name {
@@ -570,6 +573,7 @@ to{transform:none;opacity:1}
 }
 .ns-landing .landing-user-message {
   font-size: 13px;
+  line-height: 1.5;
   color: #a1a1aa;
   margin: 0;
 }
@@ -577,5 +581,12 @@ to{transform:none;opacity:1}
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-top: 4px;
+  margin-top: 6px;
+}
+.ns-landing .landing-user-actions .button {
+  min-height: 38px;
+  padding: 0 18px;
+  gap: 8px;
+  font-size: 12px;
+  border-radius: 20px;
 }

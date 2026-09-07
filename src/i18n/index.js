@@ -9,11 +9,27 @@ import ukCommon from './locales/uk/common.json';
 import plCommon from './locales/pl/common.json';
 import ruCommon from './locales/ru/common.json';
 
+const mergeCommon = (commonJson, landingRes, creatorRes) => ({
+  ...commonJson,
+  header: {
+    ...commonJson.header,
+    signOut: commonJson.header?.signOut || commonJson.admin?.signOut || commonJson.header?.logout || 'Sign out',
+  },
+  landing: {
+    ...(commonJson.landing || {}),
+    ...landingRes,
+    creator: {
+      ...(commonJson.landing?.creator || {}),
+      ...creatorRes,
+    },
+  },
+});
+
 const resources = {
-  en: { common: { ...enCommon, landing: { ...landingResources.en, creator: landingCreatorResources.en } } },
-  uk: { common: { ...ukCommon, landing: { ...landingResources.uk, creator: landingCreatorResources.uk } } },
-  pl: { common: { ...plCommon, landing: { ...landingResources.pl, creator: landingCreatorResources.pl } } },
-  ru: { common: { ...ruCommon, landing: { ...landingResources.ru, creator: landingCreatorResources.ru } } },
+  en: { common: mergeCommon(enCommon, landingResources.en, landingCreatorResources.en) },
+  uk: { common: mergeCommon(ukCommon, landingResources.uk, landingCreatorResources.uk) },
+  pl: { common: mergeCommon(plCommon, landingResources.pl, landingCreatorResources.pl) },
+  ru: { common: mergeCommon(ruCommon, landingResources.ru, landingCreatorResources.ru) },
 };
 
 const customDetector = {
