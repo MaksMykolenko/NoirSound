@@ -48,12 +48,19 @@ export default function AdminCreators() {
   );
 
   const items = data?.items || [];
-  const total = data?.total || 0;
-  const totalPages = data?.totalPages || 1;
-
-  const registeredCount = items.filter((i) => i.status === 'REGISTERED').length;
-  const reviewedCount = items.filter((i) => i.status === 'REVIEWED').length;
-  const enabledCount = items.filter((i) => i.status === 'ENABLED' || i.user?.canUploadTracks).length;
+  // Real API counts cover all registrations; pagination describes the filtered
+  // result. Keep the flat mock response compatible without counting one page as
+  // the global summary or treating upload permission as registration status.
+  const pagination = {
+    page: data?.pagination?.page ?? data?.page ?? page,
+    pageSize: data?.pagination?.limit ?? data?.pageSize ?? 50,
+    total: data?.pagination?.total ?? data?.total ?? 0,
+    totalPages: data?.pagination?.totalPages ?? data?.totalPages ?? 1,
+  };
+  const total = data?.counts?.TOTAL ?? pagination.total;
+  const registeredCount = data?.counts?.REGISTERED ?? items.filter((item) => item.status === 'REGISTERED').length;
+  const reviewedCount = data?.counts?.REVIEWED ?? items.filter((item) => item.status === 'REVIEWED').length;
+  const enabledCount = data?.counts?.ENABLED ?? items.filter((item) => item.status === 'ENABLED').length;
 
   async function handleGrantAccess(creator, reason) {
     setActionLoading(true);
@@ -198,7 +205,7 @@ export default function AdminCreators() {
                     t('admin.creators.content') || 'Content',
                     t('admin.creators.links') || 'Portfolio / Link',
                     t('admin.status') || 'Status',
-                    t('admin.artistAccess.navLabel') || 'Artist Access',
+                    t('admin.artistAccess.title') || 'Artist Access',
                     t('admin.creators.registeredAt') || 'Registered',
                     t('admin.actions') || 'Actions',
                   ].map((label) => (
@@ -209,7 +216,7 @@ export default function AdminCreators() {
               <tbody className="divide-y divide-[var(--ns-border-subtle)] text-xs">
                 {items.map((item) => {
                   const user = item.user || {};
-                  const canUpload = user.canUploadTracks;
+                  const canUpload = item.userAccess?.canUploadTracks ?? user.canUploadTracks ?? false;
                   const link = item.portfolioUrl || item.primaryPlatformUrl;
 
                   return (
@@ -321,7 +328,7 @@ export default function AdminCreators() {
               </tbody>
             </AdminTable>
             <AdminPagination
-              pagination={{ page, pageSize: 50, total, totalPages }}
+              pagination={pagination}
               onPage={setPage}
             />
           </>

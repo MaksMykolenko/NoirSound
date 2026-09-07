@@ -16,7 +16,7 @@ const NAV_GROUPS = [
   ['overviewGroup', [['overview', 'overview', Gauge]]],
   ['moderationGroup', [['reports', 'reports', Flag], ['comments', 'comments', MessageSquare]]],
   ['catalogGroup', [['tracks', 'tracks', Music2], ['artists', 'artists', UserRound]]],
-  ['usersGroup', [['users', 'users', UsersRound], ['creators', 'creators', Sparkles]]],
+  ['usersGroup', [['users', 'users', UsersRound], ['creators', 'creators.navLabel', Sparkles]]],
   ['operationsGroup', [['uploads', 'uploads', HardDriveUpload], ['system', 'system', Activity], ['system/stats', 'statsIntegrity.navLabel', BarChart3]]],
   ['systemGroup', [['audit-logs', 'auditLogs', ScrollText], ['settings', 'settings', Settings]]],
 ];

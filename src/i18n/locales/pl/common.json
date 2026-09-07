@@ -1364,6 +1364,7 @@
       "sanitizedEventJson": "oczyszczony JSON zdarzenia"
     },
     "creators": {
+      "navLabel": "Twórcy",
       "title": "Rejestracje twórców",
       "description": "Przeglądaj i zarządzaj twórcami zarejestrowanymi przez stronę docelową.",
       "exportCsv": "Eksportuj CSV",
