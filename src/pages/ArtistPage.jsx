@@ -252,6 +252,7 @@ export default function ArtistPage() {
         title={`${artist.name} — NoirSound`}
         description={artist.bio || `${artist.name} is an independent creator on NoirSound. Listen to music and beats.`}
         canonical={`https://noirsound.co/artist/${artist.id}`}
+        image={artist.avatarUrl || undefined}
       />
 
       <section

@@ -3,8 +3,8 @@ import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('../../src/pages/Home', () => ({
-  default: () => <div data-testid="public-home-page">Public home</div>,
+vi.mock('../../src/pages/LandingPage', () => ({
+  default: () => <main data-testid="public-landing-page">Public landing</main>,
 }));
 vi.mock('../../src/pages/admin/AdminOverview', () => ({
   default: () => <div data-testid="admin-overview-page">Admin overview</div>,
@@ -172,7 +172,7 @@ describe.sequential('admin route shell isolation', () => {
     expect(getAudioElement()).toBe(audio);
 
     await userEvent.click(screen.getByRole('link', { name: 'Back to NoirSound' }));
-    expect(await screen.findByTestId('public-home-page')).toBeInTheDocument();
+    expect(await screen.findByTestId('public-landing-page')).toBeInTheDocument();
     expect(window.location.pathname).toBe('/');
     expect(mediaPlay).not.toHaveBeenCalled();
     expect(usePlayerStore.getState().queue).toEqual(queue);

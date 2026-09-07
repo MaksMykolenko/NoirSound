@@ -348,3 +348,83 @@ export async function recalculateArtistStats(id, reason) {
   log('ARTIST_STATS_RECALCULATE', 'ARTIST', artist, reason);
   return getStatsIntegrity();
 }
+
+let mockCreators = [
+  {
+    id: 'mock-reg-1',
+    userId: 'user-artist-1',
+    user: {
+      id: 'user-artist-1',
+      username: 'artisto',
+      displayName: 'Artisto Official',
+      email: 'artisto@example.com',
+      role: 'LISTENER',
+      status: 'ACTIVE',
+      artistProfile: { id: 'prof-1', isHidden: false },
+      canUploadTracks: false,
+    },
+    creatorType: 'BOTH',
+    intendsMusic: true,
+    intendsBeats: true,
+    displayName: 'Artisto Official',
+    portfolioUrl: 'https://soundcloud.com/artisto',
+    primaryPlatformUrl: 'https://soundcloud.com/artisto',
+    status: 'REGISTERED',
+    adminNote: null,
+    reviewedAt: null,
+    enabledAt: null,
+    createdAt: '2026-09-06T12:00:00.000Z',
+  }
+];
+
+export async function getAdminCreators(params = {}) {
+  let items = [...mockCreators];
+  if (params.status && params.status !== 'ALL') {
+    items = items.filter(c => c.status === params.status);
+  }
+  if (params.creatorType && params.creatorType !== 'ALL') {
+    items = items.filter(c => c.creatorType === params.creatorType);
+  }
+  if (params.q) {
+    const q = params.q.toLowerCase();
+    items = items.filter(c =>
+      c.displayName?.toLowerCase().includes(q) ||
+      c.user?.username?.toLowerCase().includes(q) ||
+      c.user?.email?.toLowerCase().includes(q)
+    );
+  }
+  return {
+    items,
+    total: items.length,
+    page: 1,
+    pageSize: 50,
+    totalPages: 1,
+  };
+}
+
+export async function getAdminCreator(id) {
+  const found = mockCreators.find(c => c.id === id || c.userId === id);
+  if (!found) throw new Error('Creator registration not found');
+  return found;
+}
+
+export async function updateCreatorStatus(id, { status }) {
+  const item = mockCreators.find(c => c.id === id || c.userId === id);
+  if (item) {
+    item.status = status;
+    if (status === 'REVIEWED') item.reviewedAt = new Date().toISOString();
+    if (status === 'ENABLED') item.enabledAt = new Date().toISOString();
+  }
+  return item;
+}
+
+export async function updateCreatorNote(id, { note }) {
+  const item = mockCreators.find(c => c.id === id || c.userId === id);
+  if (item) {
+    item.adminNote = note;
+  }
+  return item;
+}
+
+export const getAdminCreatorsExportUrl = () => '/api/admin/creators/export';
+

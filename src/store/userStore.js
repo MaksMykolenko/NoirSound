@@ -37,7 +37,13 @@ export const useUserStore = create((set) => ({
   authHydrated: isMockMode(),
   authError: null,
   isAuthModalOpen: false,
-  setAuthModalOpen: (isOpen) => set({ isAuthModalOpen: isOpen }),
+  authModalMode: 'login',
+  authModalInitialAccountType: 'LISTENER',
+  setAuthModalOpen: (isOpen, mode = 'login', initialAccountType = 'LISTENER') => set({
+    isAuthModalOpen: isOpen,
+    authModalMode: mode || 'login',
+    authModalInitialAccountType: initialAccountType || 'LISTENER',
+  }),
 
   userListeningStats: { ...EMPTY_LISTENING_STATS },
   listeningStatsHydrated: false,

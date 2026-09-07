@@ -5,7 +5,7 @@ import { test, expect } from '@playwright/test';
 test.describe('public beta · i18n & theme', () => {
   test('language selection persists across reload', async ({ page }) => {
     await page.addInitScript(() => localStorage.setItem('noirsound_language', 'uk'));
-    await page.goto('/');
+    await page.goto('/home');
     // Ukrainian label for nav.home is "Головна".
     await expect(page.getByText('Головна').first()).toBeVisible({ timeout: 8000 });
 
@@ -16,7 +16,7 @@ test.describe('public beta · i18n & theme', () => {
 
   test('theme selection persists across reload', async ({ page }) => {
     await page.addInitScript(() => localStorage.setItem('noirsound.theme', 'midnight-blue'));
-    await page.goto('/');
+    await page.goto('/home');
     await expect.poll(async () =>
       page.evaluate(() => document.documentElement.dataset.themePreference)
     ).toBe('midnight-blue');
@@ -29,7 +29,7 @@ test.describe('public beta · i18n & theme', () => {
 
   test('English default renders home navigation', async ({ page }) => {
     await page.addInitScript(() => localStorage.setItem('noirsound_language', 'en'));
-    await page.goto('/');
+    await page.goto('/home');
     await expect(page.getByText('Home').first()).toBeVisible({ timeout: 8000 });
   });
 });

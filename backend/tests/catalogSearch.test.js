@@ -17,6 +17,11 @@ describe('catalog search with real PostgreSQL records', () => {
     prisma = createPrismaClient(); await prisma.$connect();
     fixture = await seedCatalogFixture(prisma, { prefix, now: new Date() });
     app = Fastify({ logger: false }); app.decorate('prisma', prisma); app.decorate('authenticate', async () => {});
+    app.decorate('storage', {
+      // The database selection is real here; object availability is an explicit
+      // storage fixture. End-to-end storage/playback is verified by Playwright.
+      getObjectMetadata: async key => ({ exists: key === 'catalog-test/shared.mp3', size: 1000, mimeType: 'audio/mpeg' })
+    });
     await app.register(discoverRoutes, { prefix: '/api/discover' });
     await app.register(tracksRoutes, { prefix: '/api/tracks' });
     await app.register(artistsRoutes, { prefix: '/api/artists' });
@@ -53,6 +58,29 @@ describe('catalog search with real PostgreSQL records', () => {
     expect(new Set(ids).size).toBe(ids.length);
     return ids;
   }
+
+  it('selects only bounded, visible, processed Music and Beats for landing without recording a play', async () => {
+    const ids = fixture.hiddenTracks.map(track => track.id);
+    const playsBefore = await prisma.playEvent.count();
+    try {
+      // Even if unavailable releases are newer, none can enter the selection.
+      await prisma.track.updateMany({ where: { id: { in: ids } }, data: { publishedAt: new Date(Date.now() + 86400000) } });
+      const result = await request({ limit: '10000' }, '/api/tracks/showcase');
+      for (const contentType of ['MUSIC', 'BEAT']) {
+        expect(result.data[contentType]).toHaveLength(3);
+        for (const track of result.data[contentType]) {
+          expect(track.contentType).toBe(contentType);
+          expect(track.isStreamable).toBe(true);
+          expect(fixture.publicTracks.some(publicTrack => publicTrack.id === track.id && publicTrack.processedAudioKey)).toBe(true);
+          expect(ids).not.toContain(track.id);
+          expect(track).not.toHaveProperty('processedAudioKey');
+        }
+      }
+      expect(await prisma.playEvent.count()).toBe(playsBefore);
+    } finally {
+      for (const track of fixture.hiddenTracks) await prisma.track.update({ where: { id: track.id }, data: { publishedAt: track.publishedAt } });
+    }
+  });
 
   it.each(['recent', 'played', 'liked', 'trending'])('traverses every public record exactly once in global %s order including null dates and ties', async sort => {
     const ids = await traverse({ sort });

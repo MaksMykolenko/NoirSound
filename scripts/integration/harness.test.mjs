@@ -11,7 +11,7 @@ const environment = () => ({
   VITE_API_BASE_URL: 'http://127.0.0.1:54324/api', E2E_BASE_URL: 'http://127.0.0.1:54325', VITE_USE_MOCK_API: 'false',
 });
 const report = () => ({ suites: [{ specs: [
-  ...Array.from({ length: 64 }, (_, index) => ({ file: 'real.spec.js', title: `real ${index}`, tests: [{ projectName: 'chromium', expectedStatus: 'passed', status: 'expected', results: [{ status: 'passed' }] }] })),
+  ...Array.from({ length: 70 }, (_, index) => ({ file: 'real.spec.js', title: `real ${index}`, tests: [{ projectName: 'chromium', expectedStatus: 'passed', status: 'expected', results: [{ status: 'passed' }] }] })),
   ...Array.from({ length: 8 }, (_, index) => ({ file: 'ui-interactions.spec.js', title: `HTTP ${index}`, tests: [{ projectName: 'chromium', expectedStatus: 'passed', status: 'expected', results: [{ status: 'passed' }] }] })),
   ...Array.from({ length: 8 }, (_, index) => ({ file: 'demo.spec.js', title: `demo ${index}`, tests: [{ projectName: 'chromium-demo', expectedStatus: 'passed', status: 'expected', results: [{ status: 'passed' }] }] })),
 ] }] });
@@ -23,7 +23,7 @@ for (const [key, value] of [
   ['DATABASE_URL', 'postgresql://test@db.example.invalid:54321/noirsound_api_test'],
   ['S3_PUBLIC_ENDPOINT', 'https://storage.example.invalid'], ['VITE_USE_MOCK_API', 'true'],
 ]) test(`rejects an unsafe ${key}`, () => assert.throws(() => assertTestEnvironment({ ...environment(), [key]: value })));
-test('classifies all 80 cases without conflating fixtures and real services', () => assert.deepEqual(summarizeE2E(report()), { real: 64, httpFixture: 8, demo: 8, passed: 80, failed: 0, skipped: 0, interrupted: 0, notRun: 0 }));
+test('classifies all 86 cases without conflating fixtures and real services', () => assert.deepEqual(summarizeE2E(report()), { real: 70, httpFixture: 8, demo: 8, passed: 86, failed: 0, skipped: 0, interrupted: 0, notRun: 0 }));
 for (const status of ['skipped', 'failed', 'interrupted']) test(`rejects an E2E ${status} result`, () => {
   const value = report(); value.suites[0].specs[0].tests[0].results[0].status = status;
   assert.throws(() => summarizeE2E(value));

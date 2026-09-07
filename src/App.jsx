@@ -1,5 +1,5 @@
 import React, { Suspense, lazy, useEffect } from 'react';
-import { BrowserRouter as Router, Navigate, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Navigate, Outlet, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import ToastContainer from './components/ui/ToastContainer';
@@ -24,6 +24,7 @@ const queryClient = new QueryClient({
 
 // Lazy load pages for performance
 const Home = lazy(() => import('./pages/Home'));
+const LandingPage = lazy(() => import('./pages/LandingPage'));
 const Discover = lazy(() => import('./pages/Discover'));
 const TrackPage = lazy(() => import('./pages/TrackPage'));
 const ArtistPage = lazy(() => import('./pages/ArtistPage'));
@@ -38,6 +39,8 @@ const ConnectDesktop = lazy(() => import('./pages/ConnectDesktop'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 const LegalPage = lazy(() => import('./pages/LegalPage'));
 const PublicAppShell = lazy(() => import('./components/layout/PublicAppShell'));
+const AppLayout = lazy(() => import('./components/layout/AppLayout'));
+const LandingLayout = lazy(() => import('./components/layout/LandingLayout'));
 const AdminLayout = lazy(() => import('./pages/admin/AdminLayout'));
 const AdminOverview = lazy(() => import('./pages/admin/AdminOverview'));
 const AdminUsers = lazy(() => import('./pages/admin/AdminUsers'));
@@ -54,6 +57,7 @@ const AdminAuditLogs = lazy(() => import('./pages/admin/AdminAuditLogs'));
 const AdminSystem = lazy(() => import('./pages/admin/AdminSystem'));
 const AdminStats = lazy(() => import('./pages/admin/AdminStats'));
 const AdminSettings = lazy(() => import('./pages/admin/AdminSettings'));
+const AdminCreators = lazy(() => import('./pages/admin/AdminCreators'));
 
 // Fallback skeleton while loading routes
 const RouteSkeleton = () => {
@@ -65,9 +69,29 @@ const RouteSkeleton = () => {
   );
 };
 
+function PublicAppGate() {
+  const user = useUserStore((state) => state.user);
+  const authHydrated = useUserStore((state) => state.authHydrated);
+  const publicAppEnabled = import.meta.env.VITE_PUBLIC_APP_ENABLED !== 'false';
+
+  if (!publicAppEnabled) {
+    if (!authHydrated) {
+      return <RouteSkeleton />;
+    }
+    const isAdmin = user && (user.role === 'ADMIN' || user.role === 'SUPERADMIN');
+    if (!isAdmin) {
+      return <Navigate to="/?notice=coming-soon" replace />;
+    }
+  }
+
+  return <Outlet />;
+}
+
 export default function App() {
   const fetchCurrentUser = useUserStore((state) => state.fetchCurrentUser);
   const isAuthModalOpen = useUserStore((state) => state.isAuthModalOpen);
+  const authModalMode = useUserStore((state) => state.authModalMode);
+  const authModalInitialAccountType = useUserStore((state) => state.authModalInitialAccountType);
   const setAuthModalOpen = useUserStore((state) => state.setAuthModalOpen);
   const addToast = useToastStore((state) => state.addToast);
   const hydrateTheme = useThemeStore((state) => state.hydrateTheme);
@@ -134,26 +158,33 @@ export default function App() {
         <Suspense fallback={<RouteSkeleton />}>
           <Routes>
             <Route element={<PublicAppShell />}>
-              <Route index element={<Home />} />
-              <Route path="/discover" element={<Discover />} />
-              <Route path="/track/:id" element={<TrackPage />} />
-              <Route path="/artist/:id" element={<ArtistPage />} />
-              <Route path="/library" element={<Library />} />
-              <Route path="/upload" element={<Upload />} />
-              <Route path="/upload/batch" element={<BatchUploadPage />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/profile/:username" element={<PublicProfile />} />
-              <Route path="/playlist/:id" element={<PlaylistPage />} />
-              <Route path="/connect/desktop" element={<ConnectDesktop />} />
-              <Route path="/terms" element={<LegalPage slug="terms" />} />
-              <Route path="/privacy" element={<LegalPage slug="privacy" />} />
-              <Route path="/guidelines" element={<LegalPage slug="guidelines" />} />
-              <Route path="/copyright" element={<LegalPage slug="copyright" />} />
-              <Route path="/dmca" element={<LegalPage slug="dmca" />} />
-              <Route path="/abuse" element={<LegalPage slug="abuse" />} />
-              <Route path="/creator-rules" element={<LegalPage slug="creator-rules" />} />
-              <Route path="*" element={<NotFound />} />
+              <Route element={<LandingLayout />}>
+                <Route index element={<LandingPage />} />
+              </Route>
+              <Route element={<AppLayout />}>
+                <Route element={<PublicAppGate />}>
+                  <Route path="/home" element={<Home />} />
+                  <Route path="/discover" element={<Discover />} />
+                  <Route path="/track/:id" element={<TrackPage />} />
+                  <Route path="/artist/:id" element={<ArtistPage />} />
+                  <Route path="/library" element={<Library />} />
+                  <Route path="/upload" element={<Upload />} />
+                  <Route path="/upload/batch" element={<BatchUploadPage />} />
+                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/profile" element={<Profile />} />
+                  <Route path="/profile/:username" element={<PublicProfile />} />
+                  <Route path="/playlist/:id" element={<PlaylistPage />} />
+                  <Route path="/connect/desktop" element={<ConnectDesktop />} />
+                </Route>
+                <Route path="/terms" element={<LegalPage slug="terms" />} />
+                <Route path="/privacy" element={<LegalPage slug="privacy" />} />
+                <Route path="/guidelines" element={<LegalPage slug="guidelines" />} />
+                <Route path="/copyright" element={<LegalPage slug="copyright" />} />
+                <Route path="/dmca" element={<LegalPage slug="dmca" />} />
+                <Route path="/abuse" element={<LegalPage slug="abuse" />} />
+                <Route path="/creator-rules" element={<LegalPage slug="creator-rules" />} />
+                <Route path="*" element={<NotFound />} />
+              </Route>
             </Route>
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<Navigate to="overview" replace />} />
@@ -162,6 +193,7 @@ export default function App() {
               <Route path="reports/:id" element={<AdminReportDetail />} />
               <Route path="users" element={<AdminUsers />} />
               <Route path="users/:id" element={<AdminUserDetail />} />
+              <Route path="creators" element={<AdminCreators />} />
               <Route path="tracks" element={<AdminTracks />} />
               <Route path="tracks/:id" element={<AdminTrackDetail />} />
               <Route path="artists" element={<AdminArtists />} />
@@ -180,6 +212,8 @@ export default function App() {
         <ToastContainer />
         <AuthModal 
           isOpen={isAuthModalOpen} 
+          initialMode={authModalMode}
+          initialAccountType={authModalInitialAccountType}
           onClose={() => setAuthModalOpen(false)} 
         />
       </Router>

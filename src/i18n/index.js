@@ -1,4 +1,6 @@
 import i18n from 'i18next';
+import landingResources from './landingResources';
+import landingCreatorResources from './landingCreatorResources';
 import { initReactI18next } from 'react-i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
 
@@ -8,16 +10,17 @@ import plCommon from './locales/pl/common.json';
 import ruCommon from './locales/ru/common.json';
 
 const resources = {
-  en: { common: enCommon },
-  uk: { common: ukCommon },
-  pl: { common: plCommon },
-  ru: { common: ruCommon },
+  en: { common: { ...enCommon, landing: { ...landingResources.en, creator: landingCreatorResources.en } } },
+  uk: { common: { ...ukCommon, landing: { ...landingResources.uk, creator: landingCreatorResources.uk } } },
+  pl: { common: { ...plCommon, landing: { ...landingResources.pl, creator: landingCreatorResources.pl } } },
+  ru: { common: { ...ruCommon, landing: { ...landingResources.ru, creator: landingCreatorResources.ru } } },
 };
 
 const customDetector = {
   name: 'customLanguageDetector',
   lookup() {
-    const saved = localStorage.getItem('noirsound_language');
+    let saved;
+    try { saved = localStorage.getItem('noirsound_language'); } catch { /* Use the browser language when storage is unavailable. */ }
     if (saved && ['en', 'uk', 'pl', 'ru'].includes(saved)) {
       return saved;
     }
@@ -34,7 +37,7 @@ const customDetector = {
   },
   cacheUserLanguage(lng) {
     if (lng && ['en', 'uk', 'pl', 'ru'].includes(lng)) {
-      localStorage.setItem('noirsound_language', lng);
+      try { localStorage.setItem('noirsound_language', lng); } catch { /* In-memory language still works. */ }
     }
   },
 };

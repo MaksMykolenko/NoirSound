@@ -180,3 +180,9 @@ export async function getCatalogTracks(options = {}, { signal } = {}) {
     meta: { sort, trendingWindowDays: null, rankingAsOf: null },
   };
 }
+
+// Explicit demo build only. Real builds use the bounded public showcase endpoint.
+export async function getLandingShowcase() {
+  const group = type => mockTracks.filter(track => normalizeTrackContentType(track.contentType) === type && track.audioUrl && track.isStreamable !== false).slice(0, 3);
+  return { MUSIC: group('MUSIC'), BEAT: group('BEAT') };
+}

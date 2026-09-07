@@ -63,13 +63,15 @@ describe('admin permission registry', () => {
     };
     await adminRoutes(fastify);
 
-    expect(routes).toHaveLength(49);
+    expect(routes).toHaveLength(54);
     expect(routes.every(({ options }) =>
       Object.values(ADMIN_PERMISSIONS).includes(options.config.adminPermission))).toBe(true);
     expect(routes.find(({ path }) => path === '/audit-logs/export').options.config.adminPermission)
       .toBe(ADMIN_PERMISSIONS.AUDIT_EXPORT);
     expect(routes.find(({ path }) => path === '/tracks/:id/preview').options.config.adminPermission)
       .toBe(ADMIN_PERMISSIONS.TRACKS_PREVIEW);
+    expect(routes.find(({ path }) => path === '/creators/export').options.config.adminPermission)
+      .toBe(ADMIN_PERMISSIONS.USERS_READ);
   });
 });
 

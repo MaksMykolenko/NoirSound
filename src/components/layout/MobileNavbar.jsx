@@ -9,7 +9,7 @@ export default function MobileNavbar() {
   const user = useUserStore((state) => state.user);
   const canCreate = ['ARTIST', 'ADMIN'].includes(user?.role);
   const navItems = [
-    { to: '/', label: t('nav.home'), icon: Home },
+    { to: '/home', label: t('nav.home'), icon: Home },
     { to: '/discover', label: t('nav.discover'), icon: Compass },
     { to: '/library', label: t('nav.library'), icon: Library },
     ...(canCreate ? [{ to: '/upload', label: t('nav.upload'), icon: PlusCircle }] : []),

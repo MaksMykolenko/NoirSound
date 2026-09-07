@@ -45,8 +45,10 @@ export function summarizeE2E(report) {
   };
   if (report.errors?.length) throw new Error('Playwright reported a global error.');
   for (const suite of report.suites || []) visit(suite);
-  if (counts.real !== 64 || counts.httpFixture !== 8 || counts.demo !== 8) throw new Error(`E2E coverage changed: ${JSON.stringify(counts)}; review the expected 64 real / 8 HTTP / 8 demo cases explicitly.`);
-  return { ...counts, passed: 80, failed: 0, skipped: 0, interrupted: 0, notRun: 0 };
+  // Landing adds four real catalog/player/navigation cases and two real creator
+  // upload/auth cases. Fixture-only checks remain classified separately.
+  if (counts.real !== 70 || counts.httpFixture !== 8 || counts.demo !== 8) throw new Error(`E2E coverage changed: ${JSON.stringify(counts)}; review the expected 70 real / 8 HTTP / 8 demo cases explicitly.`);
+  return { ...counts, passed: 86, failed: 0, skipped: 0, interrupted: 0, notRun: 0 };
 }
 
 export function redactIntegrationOutput(value, secrets = []) {
@@ -72,7 +74,7 @@ async function allocatePorts(count) {
 }
 
 async function main(mode) {
-  if (!['all', 'backend', 'security', 'e2e', 'performance'].includes(mode)) throw new Error('Usage: node scripts/run-integration.mjs all|backend|security|e2e|performance (after npm ci in root and backend).');
+  if (!['all', 'backend', 'security', 'e2e', 'performance', 'preview'].includes(mode)) throw new Error('Usage: node scripts/run-integration.mjs all|backend|security|e2e|performance|preview (after npm ci in root and backend).');
   if (process.env.NODE_ENV === 'production') throw new Error('Do not invoke test verification from a production environment.');
   for (const directory of [root, backend]) {
     const privateEnv = readdirSync(directory).find(name => /^\.env(?:\.|$)/.test(name) && !['.env.example', '.env.production.example'].includes(name));
@@ -80,6 +82,7 @@ async function main(mode) {
   }
   if (!existsSync(resolve(backend, 'node_modules/.bin/prisma'))) throw new Error('Run npm ci in backend before verification.');
   if (['all', 'e2e'].includes(mode) && !existsSync(resolve(root, 'node_modules/.bin/playwright'))) throw new Error('Run npm ci in the repository root before verification.');
+  if (mode === 'preview' && !existsSync(resolve(root, 'node_modules/.bin/vite'))) throw new Error('Run npm ci in the repository root before local preview.');
   const scratch = mkdtempSync(resolve(tmpdir(), 'noirsound-integration-'));
   mkdirSync(reportDir, { recursive: true });
   const [dbPort, redisPort, storagePort, apiPort, webPort, mockPort] = await allocatePorts(6);
@@ -100,6 +103,7 @@ async function main(mode) {
     FRONTEND_ORIGIN: `http://127.0.0.1:${webPort},http://localhost:${webPort}`,
     VITE_API_BASE_URL: `http://127.0.0.1:${apiPort}/api`, VITE_USE_MOCK_API: 'false',
     E2E_PORT: String(webPort), E2E_BASE_URL: `http://127.0.0.1:${webPort}`,
+    APP_SHELL_ORIGIN: `http://127.0.0.1:${webPort}`,
     E2E_MOCK_PORT: String(mockPort), E2E_MOCK_BASE_URL: `http://127.0.0.1:${mockPort}`,
     RATE_LIMIT_MULTIPLIER: '20', E2E_REQUIRE_REAL_SERVICES: 'true', E2E_REUSE_SERVER: 'false',
     PLAYWRIGHT_JSON_OUTPUT_NAME: resolve(scratch, 'playwright.json'), PLAYWRIGHT_HTML_OPEN: 'never',
@@ -182,19 +186,36 @@ async function main(mode) {
       if (mode === 'security') await command('npm', ['run', 'test:unit'], { cwd: backend, environment: { ...env, NODE_ENV: 'test' }, label: 'backend-security-tests' });
     }
     if (mode === 'performance') await command(process.execPath, ['scripts/measure-catalog-test.js'], { cwd: backend, label: 'catalog-performance' });
-    if (['all', 'e2e'].includes(mode)) {
+    if (['all', 'e2e', 'preview'].includes(mode)) {
       await command('npx', ['--no-install', 'prisma', 'migrate', 'deploy'], { cwd: backend, label: 'api-migrate' });
       await command(process.execPath, ['prisma/seed.js', 'minimal'], { cwd: backend, label: 'api-seed' });
       const api = command(process.execPath, ['scripts/integration/start-api.cjs'], { background: true, label: 'api' });
       const worker = command(process.execPath, ['src/workers/audioProcessor.js'], { cwd: backend, background: true, label: 'worker' });
       await waitUntil(`${env.VITE_API_BASE_URL}/ready`, [api, worker]);
-      await command('npm', ['run', 'test:e2e', '--', '--workers=1', '--retries=0', '--trace=off', '--reporter=list,json', `--output=${resolve(scratch, 'playwright-results')}`], { label: 'e2e' });
-      if ([api, worker].some(child => child.failure || child.exitCode !== null)) throw new Error('A required API/worker service exited during E2E.');
-      evidence.e2e = summarizeE2E(JSON.parse(readFileSync(env.PLAYWRIGHT_JSON_OUTPUT_NAME, 'utf8')));
-      console.log(`E2E verified: ${JSON.stringify(evidence.e2e)}`);
+      if (mode === 'preview') {
+        const web = command('npm', ['run', 'dev', '--', '--host', '127.0.0.1', '--port', String(webPort), '--strictPort'], { background: true, label: 'preview-web' });
+        await waitUntil(env.E2E_BASE_URL, [api, worker, web]);
+        evidence.status = 'ready';
+        evidence.preview = { url: env.E2E_BASE_URL, apiUrl: env.VITE_API_BASE_URL, pid: process.pid, apiMode: 'real', data: 'Fresh isolated test database with minimal test accounts and no demo releases; data lasts until this preview stops.' };
+        writeFileSync(resolve(reportDir, 'preview-summary.json'), `${JSON.stringify(evidence, null, 2)}\n`, { mode: 0o600 });
+        console.log(`Local real-service preview ready: ${env.E2E_BASE_URL}`);
+        console.log('Uses a fresh isolated database, real API, storage, and processing worker. No demo releases. Stop with Ctrl+C; preview data is temporary.');
+        await new Promise((done, reject) => {
+          const timer = setInterval(() => {
+            if (exitSignal) { clearInterval(timer); done(); return; }
+            const failed = [api, worker, web].find(child => child.failure || child.exitCode !== null);
+            if (failed) { clearInterval(timer); reject(failed.failure || new Error('A required preview service exited.')); }
+          }, 500);
+        });
+      } else {
+        await command('npm', ['run', 'test:e2e', '--', '--workers=1', '--retries=0', '--trace=off', '--reporter=list,json', `--output=${resolve(scratch, 'playwright-results')}`], { label: 'e2e' });
+        if ([api, worker].some(child => child.failure || child.exitCode !== null)) throw new Error('A required API/worker service exited during E2E.');
+        evidence.e2e = summarizeE2E(JSON.parse(readFileSync(env.PLAYWRIGHT_JSON_OUTPUT_NAME, 'utf8')));
+        console.log(`E2E verified: ${JSON.stringify(evidence.e2e)}`);
+      }
     }
-    if (exitSignal) throw new Error(`Verification interrupted by ${exitSignal}.`);
-    evidence.status = 'passed';
+    if (exitSignal && mode !== 'preview') throw new Error(`Verification interrupted by ${exitSignal}.`);
+    evidence.status = mode === 'preview' ? 'stopped' : 'passed';
   } catch (error) {
     evidence.status = 'failed';
     throw error;

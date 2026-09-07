@@ -140,7 +140,7 @@ test('a reasoned demo moderation mutation creates a visible audit event', { tag:
   await expect(auditRow).toContainText('Track hidden');
 });
 
-test('returning from admin restores the public player shell', { tag: '@demo' }, async ({ page }) => {
+test('returning from admin opens landing and retains the application player shell', { tag: '@demo' }, async ({ page }) => {
   await page.setViewportSize({ width: 1024, height: 768 });
   await page.goto('/admin/overview');
   await expect(page.getByRole('button', { name: 'Expand sidebar' })).toBeVisible();
@@ -148,6 +148,13 @@ test('returning from admin restores the public player shell', { tag: '@demo' }, 
 
   await page.getByRole('link', { name: 'Back to NoirSound' }).click();
   await expect(page).toHaveURL(/\/$/);
+  await expect(page.locator('footer')).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Yoursound.');
+  // A direct admin visit has no selected track. The public landing intentionally
+  // hides the empty player; entering the application must still restore it.
+  await expect(page.getByTestId('desktop-player')).toHaveCount(0);
+  await page.getByRole('link', { name: 'Open NoirSound', exact: true }).filter({ visible: true }).click();
+  await expect(page).toHaveURL(/\/discover$/);
   await expect(page.locator('footer')).toBeVisible();
   await expect(page.getByTestId('desktop-player')).toBeVisible();
 });

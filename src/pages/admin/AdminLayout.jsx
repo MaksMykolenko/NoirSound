@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import {
   Activity, BarChart3, ChevronLeft, ChevronRight, Flag, Gauge,
   HardDriveUpload, LogOut, MessageSquare, Music2, Radio, ScrollText,
-  Settings, ShieldAlert, UserRound, UsersRound,
+  Settings, ShieldAlert, Sparkles, UserRound, UsersRound,
 } from 'lucide-react';
 import { useUserStore } from '../../store/userStore';
 import { AdminLoading } from '../../components/admin/AdminUI';
@@ -16,7 +16,7 @@ const NAV_GROUPS = [
   ['overviewGroup', [['overview', 'overview', Gauge]]],
   ['moderationGroup', [['reports', 'reports', Flag], ['comments', 'comments', MessageSquare]]],
   ['catalogGroup', [['tracks', 'tracks', Music2], ['artists', 'artists', UserRound]]],
-  ['usersGroup', [['users', 'users', UsersRound]]],
+  ['usersGroup', [['users', 'users', UsersRound], ['creators', 'creators', Sparkles]]],
   ['operationsGroup', [['uploads', 'uploads', HardDriveUpload], ['system', 'system', Activity], ['system/stats', 'statsIntegrity.navLabel', BarChart3]]],
   ['systemGroup', [['audit-logs', 'auditLogs', ScrollText], ['settings', 'settings', Settings]]],
 ];

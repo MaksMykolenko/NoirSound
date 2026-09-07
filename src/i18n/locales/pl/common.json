@@ -1361,6 +1361,44 @@
       "ipAddress": "Adres IP",
       "userAgent": "Agent użytkownika",
       "sanitizedEventJson": "oczyszczony JSON zdarzenia"
+    },
+    "creators": {
+      "title": "Rejestracje twórców",
+      "description": "Przeglądaj i zarządzaj twórcami zarejestrowanymi przez stronę docelową.",
+      "exportCsv": "Eksportuj CSV",
+      "total": "Wszyscy twórcy",
+      "type": "Typ twórcy",
+      "allTypes": "Wszystkie typy",
+      "types": {
+        "ARTIST": "Artysta",
+        "BEATMAKER": "Beatmaker",
+        "BOTH": "Oba"
+      },
+      "statusValues": {
+        "REGISTERED": "Zarejestrowany",
+        "REVIEWED": "Przejrzany",
+        "ENABLED": "Włączony"
+      },
+      "searchPlaceholder": "Szukaj według nazwy, loginu lub emaila...",
+      "noCreatorsFound": "Nie znaleziono twórców",
+      "noCreatorsFoundDesc": "Tutaj pojawią się nowi twórcy zarejestrowani na stronie docelowej.",
+      "creator": "Twórca",
+      "content": "Zawartość",
+      "links": "Portfolio / Link",
+      "registeredAt": "Zarejestrowano",
+      "grantAccess": "Przyznaj dostęp",
+      "revokeAccess": "Cofnij",
+      "changeStatus": "Zmień status",
+      "editNote": "Notatka",
+      "grantSuccess": "Przyznano dostęp artysty",
+      "revokeSuccess": "Cofnięto dostęp artysty",
+      "statusUpdated": "Zaktualizowano status",
+      "noteSaved": "Zapisano notatkę",
+      "confirmGrantTitle": "Przyznaj dostęp artysty",
+      "confirmGrantDesc": "Zmieni rolę @{{username}} na ARTIST i odblokuje przesyłanie utworów.",
+      "confirmRevokeTitle": "Cofnij dostęp artysty",
+      "confirmRevokeDesc": "Zmieni rolę @{{username}} na LISTENER.",
+      "adminNoteTitle": "Notatka dla"
     }
   },
   "lyrics": {
@@ -1458,7 +1496,27 @@
     "password": "Hasło",
     "noAccount": "Nie masz jeszcze konta?",
     "haveAccount": "Masz już konto?",
-    "signUp": "Zarejestruj się"
+    "signUp": "Zarejestruj się",
+    "joinCreator": "Zarejestruj się jako twórca",
+    "creatorDescription": "Zarezerwuj swój pseudonim, stwórz profil i publikuj jako pierwszy.",
+    "listenerTab": "Słuchacz",
+    "creatorTab": "Twórca",
+    "creatorTypeLabel": "Identyfikuję się jako:",
+    "creatorTypes": {
+      "ARTIST": "Artysta",
+      "BEATMAKER": "Beatmaker",
+      "BOTH": "Oba"
+    },
+    "intendsLabel": "Co zamierzasz publikować?",
+    "intendsMusic": "Muzyka / Utwory",
+    "intendsBeats": "Beaty / Instrumentale",
+    "artistNamePlaceholder": "Pseudonim artystyczny",
+    "portfolioUrlPlaceholder": "https://soundcloud.com/... (opcjonalnie)",
+    "registerAsCreator": "Zarejestruj się jako twórca",
+    "createAccount": "Utwórz konto",
+    "creatorSuccess": "Konto twórcy zarejestrowane! Twój profil jest gotowy. Dostęp do przesyłania zostanie otwarty wkrótce.",
+    "listenerSuccess": "Konto utworzone! Dostęp do odtwarzania zostanie wkrótce otwarty.",
+    "loginSuccess": "Witaj ponownie!"
   },
   "notFound": {
     "eyebrow": "Zagubiono w szumie",
@@ -1475,5 +1533,22 @@
     "likes": "Polubienia: {{count}}",
     "libraryUnavailable": "Biblioteka jest niedostępna",
     "historyUnavailable": "Historia słuchania jest niedostępna"
+  },
+  "landing": {
+    "noticeComingSoon": "NoirSound jest obecnie w trybie strony docelowej. Pełna platforma zostanie wkrótce otwarta! Zarejestruj się teraz.",
+    "adminNotice": "Tryb administratora aktywny — masz pełny dostęp do konsoli i platformy.",
+    "creatorActiveNotice": "Dostęp twórcy włączony! Twój profil jest gotowy i możesz publikować utwory.",
+    "creatorPendingNotice": "Profil twórcy zarejestrowany! Dostęp do publikacji zostanie otwarty wkrótce.",
+    "listenerNotice": "Zarejestrowano jako słuchacz. Dostęp do odtwarzania zostanie wkrótce otwarty.",
+    "openPlatform": "Otwórz platformę",
+    "creator": {
+      "registeredBadge": "Profil twórcy aktywny",
+      "canUploadNotice": "Dostęp do przesyłania włączony! Otwórz aplikację, aby publikować.",
+      "pendingNotice": "Zarejestrowano jako twórca. Narzędzia do przesyłania zostaną wkrótce odblokowane.",
+      "listenerUpgradePrompt": "Jesteś zarejestrowany jako słuchacz. Zarejestruj profil twórcy.",
+      "upgradeButton": "Zarejestruj się jako twórca",
+      "joinPrompt": "Gotowy dzielić się muzyką lub beatami? Zarejestruj konto twórcy.",
+      "registerButton": "Zarejestruj się jako twórca"
+    }
   }
 }

@@ -127,7 +127,7 @@ test('batch failure keeps publication disabled and editors support keyboard dism
 
 test('auth switching retains keyboard focus within the dialog and Escape dismisses it', async ({ page }) => {
   const fixture = await installFixtures(page, { guest: true });
-  await page.goto('/'); await ready(page);
+  await page.goto('/home'); await ready(page);
   await page.getByRole('button', { name: /^sign in$/i }).filter({ visible: true }).first().click();
   const dialog = page.getByRole('dialog'); await expect(dialog).toBeVisible();
   await dialog.getByRole('button', { name: /^sign up$/i }).click();

@@ -19,7 +19,7 @@ export default function LanguageSwitcher({ compact = false, variant, className =
   const handleLanguageChange = async (code) => {
     if (code === currentLang) return;
     await i18n.changeLanguage(code);
-    localStorage.setItem('noirsound_language', code);
+    try { localStorage.setItem('noirsound_language', code); } catch { /* Language changes also work without storage. */ }
 
     if (user) {
       updateUserStore({ preferredLanguage: code }).catch(() => {});

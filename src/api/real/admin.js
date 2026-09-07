@@ -97,3 +97,15 @@ export const getAdminSystem = () => get('/admin/system');
 export const getStatsIntegrity = () => get('/admin/stats/integrity');
 export const recalculateStats = (reason, target = 'all') => mutate('/admin/stats/recalculate', { reason, target });
 export const recalculateArtistStats = (id, reason) => mutate(`/admin/stats/artists/${encodeURIComponent(id)}/recalculate`, { reason });
+
+export const getAdminCreators = (params) => get('/admin/creators', params);
+export const getAdminCreator = (id) => get(`/admin/creators/${encodeURIComponent(id)}`);
+export const updateCreatorStatus = (id, payload) => apiFetch(`/admin/creators/${encodeURIComponent(id)}/status`, {
+  method: 'PATCH',
+  body: JSON.stringify(payload),
+});
+export const updateCreatorNote = (id, payload) => apiFetch(`/admin/creators/${encodeURIComponent(id)}/note`, {
+  method: 'PATCH',
+  body: JSON.stringify(payload),
+});
+export const getAdminCreatorsExportUrl = (params = {}) => `${API_BASE_URL}/admin/creators/export${queryString(params)}`;

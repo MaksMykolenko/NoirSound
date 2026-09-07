@@ -43,6 +43,12 @@ const { hasLyrics } = require('../lib/lyrics');
 const { serializeUserMedia } = require('../lib/profileMedia');
 const { parseTrackContentType } = require('../lib/trackContentType');
 const { validateBeatMetadata } = require('../lib/beatMetadata');
+const {
+  formatCreatorsCsv,
+  CREATOR_TYPES,
+  CREATOR_STATUSES,
+  MAX_ADMIN_NOTE_LENGTH
+} = require('../lib/creators');
 
 const execFileAsync = promisify(execFile);
 const USER_ROLES = ['LISTENER', 'ARTIST', 'ADMIN'];
@@ -2350,6 +2356,306 @@ async function adminRoutes(fastify) {
     if (!result) return sendAdminError(reply, 404, 'ADMIN_ARTIST_NOT_FOUND', 'Artist profile not found.');
 
     return { success: true, ...result };
+  });
+
+  // ==========================================
+  // CREATOR REGISTRATIONS MANAGEMENT
+  // ==========================================
+
+  // GET /admin/creators — List creator registrations with filters, search, and upload access state
+  fastify.get('/creators', read(ADMIN_PERMISSIONS.USERS_READ), async (request, _reply) => {
+    const {
+      page: pageRaw = 1,
+      limit: limitRaw = 20,
+      q,
+      creatorType,
+      status,
+      uploadAccess
+    } = request.query || {};
+
+    const page = Math.max(1, parseInt(pageRaw, 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(limitRaw, 10) || 20));
+    const skip = (page - 1) * limit;
+
+    const where = {};
+    if (status && status !== 'ALL' && CREATOR_STATUSES.includes(status)) {
+      where.status = status;
+    }
+    if (creatorType && creatorType !== 'ALL' && CREATOR_TYPES.includes(creatorType)) {
+      where.creatorType = creatorType;
+    }
+    if (q && typeof q === 'string' && q.trim().length > 0) {
+      const cleanQ = q.trim();
+      where.OR = [
+        { displayName: { contains: cleanQ, mode: 'insensitive' } },
+        { user: { username: { contains: cleanQ, mode: 'insensitive' } } },
+        { user: { displayName: { contains: cleanQ, mode: 'insensitive' } } },
+        { user: { email: { contains: cleanQ, mode: 'insensitive' } } }
+      ];
+    }
+
+    const [totalMatching, rawItems, countsGroup] = await Promise.all([
+      fastify.prisma.creatorRegistration.count({ where }),
+      fastify.prisma.creatorRegistration.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          user: {
+            select: {
+              id: true,
+              username: true,
+              displayName: true,
+              email: true,
+              role: true,
+              status: true,
+              joinedAt: true,
+              artistProfile: {
+                select: { id: true, isHidden: true }
+              }
+            }
+          }
+        }
+      }),
+      fastify.prisma.creatorRegistration.groupBy({
+        by: ['status'],
+        _count: { status: true }
+      })
+    ]);
+
+    const counts = {
+      REGISTERED: 0,
+      REVIEWED: 0,
+      ENABLED: 0,
+      TOTAL: 0
+    };
+    for (const group of countsGroup) {
+      counts[group.status] = group._count.status;
+      counts.TOTAL += group._count.status;
+    }
+
+    let items = rawItems.map((item) => {
+      const userAccess = summarizeArtistAccess(item.user);
+      return {
+        ...item,
+        userAccess
+      };
+    });
+
+    if (uploadAccess === 'GRANTED') {
+      items = items.filter((i) => i.userAccess.canUploadTracks);
+    } else if (uploadAccess === 'NOT_GRANTED') {
+      items = items.filter((i) => !i.userAccess.canUploadTracks);
+    }
+
+    return {
+      items,
+      counts,
+      pagination: {
+        page,
+        limit,
+        total: totalMatching,
+        totalPages: Math.ceil(totalMatching / limit) || 1
+      }
+    };
+  });
+
+  // GET /admin/creators/export — Export creator registrations as CSV with formula injection escaping
+  fastify.get('/creators/export', read(ADMIN_PERMISSIONS.USERS_READ), async (request, reply) => {
+    const { q, creatorType, status } = request.query || {};
+
+    const where = {};
+    if (status && status !== 'ALL' && CREATOR_STATUSES.includes(status)) {
+      where.status = status;
+    }
+    if (creatorType && creatorType !== 'ALL' && CREATOR_TYPES.includes(creatorType)) {
+      where.creatorType = creatorType;
+    }
+    if (q && typeof q === 'string' && q.trim().length > 0) {
+      const cleanQ = q.trim();
+      where.OR = [
+        { displayName: { contains: cleanQ, mode: 'insensitive' } },
+        { user: { username: { contains: cleanQ, mode: 'insensitive' } } },
+        { user: { displayName: { contains: cleanQ, mode: 'insensitive' } } },
+        { user: { email: { contains: cleanQ, mode: 'insensitive' } } }
+      ];
+    }
+
+    const items = await fastify.prisma.creatorRegistration.findMany({
+      where,
+      take: 1000,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            displayName: true,
+            email: true,
+            role: true,
+            status: true,
+            artistProfile: {
+              select: { id: true, isHidden: true }
+            }
+          }
+        }
+      }
+    });
+
+    const enriched = items.map((item) => {
+      const userAccess = summarizeArtistAccess(item.user);
+      return {
+        ...item,
+        user: {
+          ...item.user,
+          canUploadTracks: userAccess.canUploadTracks
+        }
+      };
+    });
+
+    const csvData = formatCreatorsCsv(enriched);
+
+    await createAudit(fastify.prisma, adminAuditData(request,
+      request.user.id,
+      'CREATORS_EXPORTED',
+      'SYSTEM',
+      'creators',
+      'Exported creator registrations CSV',
+      { count: items.length }
+    ));
+
+    const filename = `noirsound-creators-${new Date().toISOString().slice(0, 10)}.csv`;
+    reply.header('Content-Type', 'text/csv; charset=utf-8');
+    reply.header('Content-Disposition', `attachment; filename="${filename}"`);
+    return reply.send(csvData);
+  });
+
+  // GET /admin/creators/:id — Detail of a creator registration
+  fastify.get('/creators/:id', read(ADMIN_PERMISSIONS.USERS_READ), async (request, reply) => {
+    const id = request.params.id;
+
+    const registration = await fastify.prisma.creatorRegistration.findFirst({
+      where: {
+        OR: [{ id }, { userId: id }]
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            displayName: true,
+            email: true,
+            role: true,
+            status: true,
+            joinedAt: true,
+            artistProfile: true
+          }
+        }
+      }
+    });
+
+    if (!registration) {
+      return sendAdminError(reply, 404, 'CREATOR_REGISTRATION_NOT_FOUND', 'Creator registration not found.');
+    }
+
+    const userAccess = summarizeArtistAccess(registration.user);
+
+    const auditLogs = await fastify.prisma.auditLog.findMany({
+      where: {
+        targetType: 'USER',
+        targetId: registration.user.id
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 10
+    });
+
+    return {
+      creator: registration,
+      userAccess,
+      auditLogs
+    };
+  });
+
+  // PATCH /admin/creators/:id/status — Transition creator registration status
+  fastify.patch('/creators/:id/status', mutate(ADMIN_PERMISSIONS.USERS_MANAGE), async (request, reply) => {
+    const id = request.params.id;
+    const { status, reason } = request.body || {};
+
+    if (!status || !CREATOR_STATUSES.includes(status)) {
+      return sendAdminError(reply, 400, 'INVALID_STATUS', `Status must be one of: ${CREATOR_STATUSES.join(', ')}`);
+    }
+
+    const existing = await fastify.prisma.creatorRegistration.findFirst({
+      where: {
+        OR: [{ id }, { userId: id }]
+      }
+    });
+
+    if (!existing) {
+      return sendAdminError(reply, 404, 'CREATOR_REGISTRATION_NOT_FOUND', 'Creator registration not found.');
+    }
+
+    const updateData = { status };
+    if (status === 'REVIEWED') {
+      updateData.reviewedAt = new Date();
+    } else if (status === 'ENABLED') {
+      updateData.enabledAt = new Date();
+    }
+
+    const updated = await fastify.prisma.creatorRegistration.update({
+      where: { id: existing.id },
+      data: updateData
+    });
+
+    await createAudit(fastify.prisma, adminAuditData(request,
+      request.user.id,
+      'CREATOR_STATUS_CHANGED',
+      'USER',
+      existing.userId,
+      reason || `Changed status from ${existing.status} to ${status}`,
+      { previousStatus: existing.status, nextStatus: status }
+    ));
+
+    return { creator: updated };
+  });
+
+  // PATCH /admin/creators/:id/note — Update admin internal evaluation note
+  fastify.patch('/creators/:id/note', mutate(ADMIN_PERMISSIONS.USERS_MANAGE), async (request, reply) => {
+    const id = request.params.id;
+    const { note } = request.body || {};
+
+    if (note !== null && typeof note !== 'string') {
+      return sendAdminError(reply, 400, 'INVALID_NOTE', 'Note must be a string or null.');
+    }
+
+    const trimmed = note ? note.trim().slice(0, MAX_ADMIN_NOTE_LENGTH) : null;
+
+    const existing = await fastify.prisma.creatorRegistration.findFirst({
+      where: {
+        OR: [{ id }, { userId: id }]
+      }
+    });
+
+    if (!existing) {
+      return sendAdminError(reply, 404, 'CREATOR_REGISTRATION_NOT_FOUND', 'Creator registration not found.');
+    }
+
+    const updated = await fastify.prisma.creatorRegistration.update({
+      where: { id: existing.id },
+      data: { adminNote: trimmed }
+    });
+
+    await createAudit(fastify.prisma, adminAuditData(request,
+      request.user.id,
+      'CREATOR_ADMIN_NOTE_UPDATED',
+      'USER',
+      existing.userId,
+      'Updated creator registration admin note',
+      { noteLength: trimmed ? trimmed.length : 0 }
+    ));
+
+    return { creator: updated };
   });
 }
 

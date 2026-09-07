@@ -132,6 +132,7 @@ model User {
   notifications  Notification[]
   auditLogs      AuditLog[]          @relation("AuditActor")
   desktopDevices DesktopConnectionDevice[]
+  creatorRegistration CreatorRegistration?
 }
 
 model DesktopConnectionDevice {
@@ -582,3 +583,39 @@ model AuditLog {
   @@index([createdAt])
   @@index([targetType, targetId])
 }
+
+enum CreatorType {
+  ARTIST
+  BEATMAKER
+  BOTH
+}
+
+enum CreatorRegistrationStatus {
+  REGISTERED
+  REVIEWED
+  ENABLED
+}
+
+model CreatorRegistration {
+  id                 String                    @id @default(uuid())
+  userId             String                    @unique
+  user               User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  creatorType        CreatorType               @default(ARTIST)
+  intendsMusic       Boolean                   @default(true)
+  intendsBeats       Boolean                   @default(false)
+  displayName        String?                   @db.VarChar(120)
+  portfolioUrl       String?                   @db.VarChar(2048)
+  primaryPlatformUrl String?                   @db.VarChar(2048)
+  note               String?                   @db.VarChar(1000)
+  status             CreatorRegistrationStatus @default(REGISTERED)
+  adminNote          String?                   @db.VarChar(2000)
+  reviewedAt         DateTime?
+  enabledAt          DateTime?
+  createdAt          DateTime                  @default(now())
+  updatedAt          DateTime                  @updatedAt
+
+  @@index([status])
+  @@index([creatorType])
+  @@index([createdAt])
+}
+

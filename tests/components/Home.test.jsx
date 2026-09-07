@@ -39,9 +39,9 @@ function LocationProbe() {
 
 function renderHome() {
   return render(
-    <MemoryRouter initialEntries={['/']}>
+    <MemoryRouter initialEntries={['/home']}>
       <Routes>
-        <Route path="/" element={<Home />} />
+        <Route path="/home" element={<Home />} />
         <Route path="/discover" element={<LocationProbe />} />
         <Route path="/upload" element={<LocationProbe />} />
       </Routes>

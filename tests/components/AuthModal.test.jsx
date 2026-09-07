@@ -16,6 +16,9 @@ vi.mock('lucide-react', () => ({
   Music: () => <span data-testid="icon-music">Music</span>,
   Headphones: () => <span data-testid="icon-headphones">Headphones</span>,
   AtSign: () => <span data-testid="icon-atsign">AtSign</span>,
+  Loader2: () => <span data-testid="icon-loader">Loader</span>,
+  Sparkles: () => <span data-testid="icon-sparkles">Sparkles</span>,
+  Link: () => <span data-testid="icon-link">Link</span>,
 }));
 
 const queryClient = new QueryClient();
@@ -58,5 +61,18 @@ describe('AuthModal Component', () => {
     renderWithProvider(<AuthModal isOpen={true} onClose={vi.fn()} />);
     expect(screen.getByPlaceholderText('Email Address')).toBeRequired();
     expect(screen.getByPlaceholderText('Password')).toBeRequired();
+  });
+
+  it('allows selecting Creator account type with Artist/Beatmaker options and portfolio link', () => {
+    renderWithProvider(
+      <AuthModal isOpen={true} initialMode="register" initialAccountType="CREATOR" onClose={vi.fn()} />
+    );
+    expect(screen.getByRole('heading', { name: 'Register as Creator' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Register as Creator' })).toBeInTheDocument();
+    expect(screen.getByText('Artist')).toBeInTheDocument();
+    expect(screen.getByText('Beatmaker')).toBeInTheDocument();
+    expect(screen.getByText('Both')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Artist / Stage Name')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('https://soundcloud.com/... (optional)')).toBeInTheDocument();
   });
 });

@@ -78,6 +78,7 @@ function buildServer(options = {}) {
   fastify.register(require('./plugins/prisma'), { client: options.prisma });
   fastify.register(require('./plugins/auth'));
   fastify.register(require('./plugins/csrf'));
+  fastify.register(require('./lib/publicAppGate'));
   fastify.decorate('storage', storage);
   fastify.decorate('audioQueue', audioQueue);
 

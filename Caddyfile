@@ -32,10 +32,10 @@
 	# Discord, X, Facebook read the initial HTML and do not run React). The
 	# backend injects per-route <head> into the built SPA shell and serves the
 	# dynamic sitemap. All OTHER paths (assets, /og/*, /images/*, /robots.txt,
-	# /favicon*, and client-only routes like /discover) fall through to the
+	# /favicon*, and other client-only routes) fall through to the
 	# static file_server below. `/index.html` is NOT matched here, so the
 	# backend can fetch the shell from this server without looping.
-	@ssr path / /track/* /artist/* /playlist/* /terms /privacy /guidelines /copyright /abuse /creator-rules /sitemap.xml
+	@ssr path / /discover /track/* /artist/* /playlist/* /terms /privacy /guidelines /copyright /abuse /creator-rules /sitemap.xml
 	handle @ssr {
 		reverse_proxy backend:3000
 	}
