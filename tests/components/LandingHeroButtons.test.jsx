@@ -130,4 +130,12 @@ describe('LandingPage Hero Buttons', () => {
     const cssContent = fs.readFileSync(cssPath, 'utf8');
     expect(cssContent).toMatch(/\.ns-landing \.landing-user-status\s*\{[^}]*max-width:\s*440px/);
   });
+
+  it('css contains dedicated spacing rules for creator-cta-box', () => {
+    const cssPath = path.resolve(__dirname, '../../src/components/landing/landing.css');
+    const cssContent = fs.readFileSync(cssPath, 'utf8');
+    expect(cssContent).toMatch(/\.ns-landing \.creator-cta-box\s*\{[^}]*padding:\s*22px 24px/);
+    expect(cssContent).toMatch(/\.ns-landing \.creator-cta-content\s*\{[^}]*gap:\s*14px/);
+    expect(cssContent).toMatch(/\.ns-landing \.creator-cta-box \.button\s*\{[^}]*min-height:\s*40px/);
+  });
 });

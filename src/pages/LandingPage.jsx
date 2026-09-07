@@ -132,8 +132,8 @@ export default function LandingPage() {
                           onClick={() => openAuth(true, 'register', 'CREATOR')}
                           className="button button-accent text-xs cursor-pointer"
                         >
-                          <Sparkles size={13} className="mr-1 inline" />
-                          {t('landing.creator.upgradeButton') || 'Register as Creator'}
+                          <Sparkles size={13} aria-hidden="true" />
+                          <span>{t('landing.creator.upgradeButton') || 'Register as Creator'}</span>
                         </button>
                       )}
                     </div>

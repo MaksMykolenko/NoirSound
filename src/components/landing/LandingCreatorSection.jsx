@@ -55,14 +55,14 @@ export default function LandingCreatorSection() {
               ))}
             </ol>
 
-            <div className="creator-cta-box mt-6 p-4 rounded-lg border border-zinc-800 bg-zinc-900/60">
+            <div className="creator-cta-box">
               {isCreatorRegistered ? (
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2 text-emerald-400 font-semibold text-sm">
-                    <CheckCircle2 size={16} />
+                <div className="creator-cta-content">
+                  <div className="creator-cta-status">
+                    <CheckCircle2 size={16} aria-hidden="true" />
                     <span>{t('landing.creator.registeredBadge') || 'Creator Profile Active'}</span>
                   </div>
-                  <p className="text-xs text-zinc-400">
+                  <p className="creator-cta-text">
                     {canUploadTracks
                       ? (t('landing.creator.canUploadNotice') || 'You have upload access enabled! Open the app to publish.')
                       : (t('landing.creator.pendingNotice') || `Registered as ${user.creatorRegistration?.creatorType}. Upload tools will open when the creator rollout begins.`)}
@@ -71,38 +71,39 @@ export default function LandingCreatorSection() {
                     <button
                       type="button"
                       onClick={continueUpload}
-                      className="button button-accent mt-2 inline-flex items-center gap-2 text-xs"
+                      className="button button-accent creator-cta-button"
                     >
-                      {t('landing.publish') || 'Open Studio'} <ArrowUpRight size={14} />
+                      <span>{t('landing.publish') || 'Open Studio'}</span>
+                      <ArrowUpRight size={14} aria-hidden="true" />
                     </button>
                   )}
                 </div>
               ) : user ? (
-                <div className="space-y-2">
-                  <p className="text-xs text-zinc-300">
+                <div className="creator-cta-content">
+                  <p className="creator-cta-text">
                     {t('landing.creator.listenerUpgradePrompt') || 'You are registered as a Listener. Register your creator profile to get ready for publishing.'}
                   </p>
                   <button
                     type="button"
                     onClick={() => openAuth(true, 'register', 'CREATOR')}
-                    className="button button-accent w-full justify-center text-xs font-semibold"
+                    className="button button-accent creator-cta-button"
                   >
-                    <Sparkles size={14} className="mr-1.5" />
-                    {t('landing.creator.upgradeButton') || 'Register as Creator'}
+                    <Sparkles size={14} aria-hidden="true" />
+                    <span>{t('landing.creator.upgradeButton') || 'Register as Creator'}</span>
                   </button>
                 </div>
               ) : (
-                <div className="space-y-2">
-                  <p className="text-xs text-zinc-400">
+                <div className="creator-cta-content">
+                  <p className="creator-cta-text">
                     {t('landing.creator.joinPrompt') || 'Ready to share your music or beats with NoirSound? Register your creator account now.'}
                   </p>
                   <button
                     type="button"
                     onClick={() => openAuth(true, 'register', 'CREATOR')}
-                    className="button button-accent w-full justify-center text-xs font-semibold cursor-pointer"
+                    className="button button-accent creator-cta-button"
                   >
-                    <Sparkles size={14} className="mr-1.5" />
-                    {t('landing.creator.registerButton') || 'Register as Creator'}
+                    <Sparkles size={14} aria-hidden="true" />
+                    <span>{t('landing.creator.registerButton') || 'Register as Creator'}</span>
                   </button>
                 </div>
               )}
