@@ -177,7 +177,7 @@ describe('Google OAuth callback', () => {
         create: vi.fn(async () => ({ id: 'oauth-1' }))
       },
       user: {
-        findFirst: vi.fn(async () => null),
+        findMany: vi.fn(async () => []),
         findUnique: vi.fn(async () => null),
         create: vi.fn(async () => createdUser)
       }
