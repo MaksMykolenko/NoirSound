@@ -38,18 +38,15 @@ if [[ -n "$configured_project" && -n "${COMPOSE_PROJECT_NAME:-}" && "$configured
 fi
 COMPOSE_PROJECT_NAME="$(setting COMPOSE_PROJECT_NAME)"
 OFFSITE_BACKUP_VERIFY_SCRIPT="$(setting OFFSITE_BACKUP_VERIFY_SCRIPT)"
-DRILL_DATABASE_URL="$(setting DRILL_DATABASE_URL)"
-DRILL_S3_BUCKET="$(setting DRILL_S3_BUCKET)"
 [[ "$COMPOSE_PROJECT_NAME" =~ ^[a-z0-9][a-z0-9_-]*$ ]] || fail 'Set the verified existing COMPOSE_PROJECT_NAME explicitly.'
 [[ "$OFFSITE_BACKUP_VERIFY_SCRIPT" = /* && -f "$OFFSITE_BACKUP_VERIFY_SCRIPT" && -x "$OFFSITE_BACKUP_VERIFY_SCRIPT" ]] || fail 'A configured trusted private offsite verifier is required; no default provider is supplied.'
-[[ -n "$DRILL_DATABASE_URL" && -n "$DRILL_S3_BUCKET" ]] || fail 'Explicit isolated DRILL_DATABASE_URL and DRILL_S3_BUCKET are required.'
 for required in DOMAIN FRONTEND_ORIGIN DATABASE_URL POSTGRES_USER POSTGRES_PASSWORD POSTGRES_DB REDIS_URL S3_ENDPOINT S3_BUCKET S3_ACCESS_KEY_ID S3_SECRET_ACCESS_KEY JWT_SECRET COOKIE_SECRET; do
   grep -Eq "^${required}=.+" "$ENV_FILE" || fail "Production environment is missing required key: $required"
 done
 if grep -Ev '^[[:space:]]*(#|$)' "$ENV_FILE" | grep -Eq 'CHANGE_ME|example\.com|__[^[:space:]]*__'; then fail 'Production environment contains placeholders.'; fi
 if [[ -n "${PRODUCTION_DOMAIN:-}" ]]; then [[ "$(setting DOMAIN)" == "$PRODUCTION_DOMAIN" ]] || fail 'Production domain does not match the environment.'; fi
-for command_name in docker curl sha256sum gzip tar; do command -v "$command_name" >/dev/null || fail "Required command unavailable: $command_name"; done
-export COMPOSE_PROJECT_NAME APP_ENV_FILE="$ENV_FILE" NOIRSOUND_ENV_FILE="$ENV_FILE" COMPOSE_FILE DRILL_DATABASE_URL DRILL_S3_BUCKET RELEASE_SHA
+for command_name in docker curl sha256sum gzip tar python3; do command -v "$command_name" >/dev/null || fail "Required command unavailable: $command_name"; done
+export COMPOSE_PROJECT_NAME APP_ENV_FILE="$ENV_FILE" NOIRSOUND_ENV_FILE="$ENV_FILE" COMPOSE_FILE RELEASE_SHA
 compose=(docker compose --project-name "$COMPOSE_PROJECT_NAME" -f "$COMPOSE_FILE" --env-file "$ENV_FILE")
 "${compose[@]}" config --quiet
 # This is an update of an existing stack. Missing/unhealthy dependencies never
@@ -89,7 +86,7 @@ for file in "${pg_archives[@]}" "${storage_archives[@]}" "${manifests[@]}"; do [
 gzip -t "${pg_archives[0]}" || fail 'PostgreSQL archive is unreadable.'
 tar -tzf "${storage_archives[0]}" >/dev/null || fail 'Storage archive is unreadable.'
 (cd "$BACKUP_RUN_DIR" && sha256sum "$(basename "${pg_archives[0]}")" "$(basename "${storage_archives[0]}")" "$(basename "${manifests[0]}")" > SHA256SUMS)
-DRILL_POSTGRES_BACKUP="${pg_archives[0]}" DRILL_STORAGE_BACKUP="${storage_archives[0]}" bash scripts/restore-drill.sh > "$RECORD_DIR/restore-drill.log" 2>&1 || fail 'Isolated restore drill failed; deployment stopped.'
+NOIRSOUND_RESTORE_TEST=1 DRILL_POSTGRES_BACKUP="${pg_archives[0]}" DRILL_STORAGE_BACKUP="${storage_archives[0]}" DRILL_MANIFEST="${manifests[0]}" bash scripts/restore-drill.sh > "$RECORD_DIR/restore-drill.log" 2>&1 || fail 'Isolated restore drill failed; deployment stopped.'
 CHECKSUM_SHA256="$(sha256sum "$BACKUP_RUN_DIR/SHA256SUMS" | awk '{print $1}')"
 RECEIPT="$RECORD_DIR/offsite-receipt.txt"
 # Trusted operator-installed adapter: copy these exact files to the existing
@@ -105,6 +102,8 @@ done
 [[ "$(sha256sum "$BACKUP_RUN_DIR/SHA256SUMS" | awk '{print $1}')" == "$CHECKSUM_SHA256" ]] || fail 'Checksum manifest changed during verification.'
 [[ -z "$(git status --porcelain --untracked-files=all)" && "$(git rev-parse HEAD)" == "$RELEASE_SHA" ]] || fail 'Release source changed during prerequisite checks.'
 
+BUILD_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+export GIT_SHA="$RELEASE_SHA" BUILD_DATE
 OVERRIDE="$RECORD_DIR/release-images.yml"
 printf 'services:\n' > "$OVERRIDE"
 for service in backend worker web; do
@@ -112,8 +111,13 @@ for service in backend worker web; do
   $service:
     image: ${COMPOSE_PROJECT_NAME}-${service}:${RELEASE_SHA}
     build:
+      args:
+        GIT_SHA: "$RELEASE_SHA"
+        BUILD_DATE: "$BUILD_DATE"
       labels:
         org.opencontainers.image.revision: "$RELEASE_SHA"
+        org.opencontainers.image.created: "$BUILD_DATE"
+        org.opencontainers.image.source: "https://github.com/MaksMykolenko/NoirSound"
 IMAGE
 done
 release_compose=("${compose[@]}" -f "$OVERRIDE")
@@ -128,10 +132,12 @@ record_failure() {
   exit "$result"
 }
 trap record_failure EXIT
-"${release_compose[@]}" build backend worker web
+"${release_compose[@]}" build --build-arg "GIT_SHA=$RELEASE_SHA" --build-arg "BUILD_DATE=$BUILD_DATE" backend worker web
 for service in backend worker web; do
   image="${COMPOSE_PROJECT_NAME}-${service}:${RELEASE_SHA}"
   [[ "$(docker image inspect -f '{{index .Config.Labels "org.opencontainers.image.revision"}}' "$image")" == "$RELEASE_SHA" ]] || fail "New $service image has the wrong release identity."
+  [[ "$(docker image inspect -f '{{index .Config.Labels "org.opencontainers.image.created"}}' "$image")" == "$BUILD_DATE" ]] || fail "New $service image has the wrong build date."
+  [[ "$(docker image inspect -f '{{index .Config.Labels "org.opencontainers.image.source"}}' "$image")" == "https://github.com/MaksMykolenko/NoirSound" ]] || fail "New $service image has the wrong source."
   image_id="$(docker image inspect -f '{{.Id}}' "$image")"
   printf '%s %s\n' "$service" "$image_id" >> "$RECORD_DIR/new-images.txt"
 done
@@ -142,21 +148,30 @@ done
     if (!fs.statSync(file).isFile()) throw new Error("Required release input missing: " + file);
   }
 ' > "$RECORD_DIR/image-inputs.log" 2>&1 || fail 'New backend image lacks required schema, migrations, or shared taxonomy.'
+# Fail closed on pending/failed/divergent history. Pending SQL needs separate
+# exact-release review before any schema change; this release expects no new SQL.
+"${release_compose[@]}" run --rm --no-deps --pull never backend npx prisma migrate status > "$RECORD_DIR/migrate-status.log" 2>&1 || fail 'Migration preflight requires explicit SQL/history review; no migration or application update applied.'
 # The override pins this one-off migration container to the NEW backend image.
 "${release_compose[@]}" run --rm --no-deps --pull never backend npx prisma migrate deploy > "$RECORD_DIR/migrate.log" 2>&1 || fail 'Migration failed; application services were not updated. Inspect private migration evidence.'
 "${release_compose[@]}" up -d --no-deps --no-build backend worker web
-HEALTH_URL="${HEALTH_URL:-http://localhost/api/ready}"
+HEALTH_URL="https://$(setting DOMAIN)/api/ready"
+[[ "$HEALTH_URL" =~ ^https://[a-zA-Z0-9.-]+/api/ready$ ]] || fail 'Invalid canonical HTTPS health URL.'
 READINESS_ATTEMPTS="${READINESS_ATTEMPTS:-60}"
 READINESS_SLEEP_SECONDS="${READINESS_SLEEP_SECONDS:-3}"
 [[ "$READINESS_ATTEMPTS" =~ ^[1-9][0-9]*$ && "$READINESS_SLEEP_SECONDS" =~ ^[0-9]+$ ]] || fail 'Invalid readiness retry settings.'
 ready=false
 for ((attempt=0; attempt<READINESS_ATTEMPTS; attempt++)); do
-  if curl --connect-timeout 5 --max-time 10 -fsS "$HEALTH_URL" >/dev/null 2>&1; then ready=true; break; fi
+  http_status="$(curl --connect-timeout 5 --max-time 10 -sS -o "$RECORD_DIR/readiness.json" -w '%{http_code}' "$HEALTH_URL" 2>/dev/null || true)"
+  if [[ "$http_status" == 200 ]] && python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); sys.exit(0 if d.get("status")=="ready" and all(d.get("checks",{}).get(k)=="ok" for k in ["database","redis","storage"]) else 1)' "$RECORD_DIR/readiness.json"; then ready=true; break; fi
   sleep "$READINESS_SLEEP_SECONDS"
 done
 [[ "$ready" == true ]] || fail 'Readiness failed after application update; preserve evidence and assess compatible application rollback.'
 while read -r service expected_image; do
   cid="$("${release_compose[@]}" ps -q "$service")"
   [[ "$(docker inspect -f '{{.Image}}' "$cid")" == "$expected_image" ]] || fail "$service is not running the verified release image."
+  [[ "$(docker inspect -f '{{.State.Status}}' "$cid")" == running ]] || fail "$service failed to remain running."
+  [[ "$(docker inspect -f '{{.RestartCount}}' "$cid")" == 0 ]] || fail "$service restarted after this update."
+  [[ "$(docker inspect -f '{{.State.OOMKilled}}' "$cid")" == false ]] || fail "$service was OOM killed."
 done < "$RECORD_DIR/new-images.txt"
+"${release_compose[@]}" exec -T worker node -e 'const cp=require("node:child_process");for(const bin of ["ffmpeg","ffprobe"])cp.execFileSync(bin,["-version"],{stdio:"ignore"}); const Redis=require("ioredis");const r=new Redis(process.env.REDIS_URL);r.ping().then(v=>{if(v!=="PONG")process.exitCode=1}).catch(()=>{process.exitCode=1}).finally(()=>r.disconnect())' > "$RECORD_DIR/worker-readiness.log" 2>&1 || fail 'Worker readiness failed.'
 printf 'Release %s is running; backup, drill and trusted offsite receipts are in the private release record. Live functional smoke remains required.\n' "$RELEASE_SHA"

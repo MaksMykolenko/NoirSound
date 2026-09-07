@@ -1,0 +1,28 @@
+[Unit]
+Description=NoirSound verified private PostgreSQL and storage backup
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+UMask=0077
+WorkingDirectory=/opt/noirsound/NoirSound
+Environment=NOIRSOUND_ENV_FILE=/opt/noirsound/NoirSound/.env.production
+Environment=COMPOSE_FILE=/opt/noirsound/NoirSound/docker-compose.production.yml
+Environment=NOIRSOUND_BACKUP_DIR=/opt/noirsound/NoirSound/backups
+Environment=NOIRSOUND_BACKUP_LOCK=/opt/noirsound/NoirSound/backups/.operation.lock
+Environment=NOIRSOUND_SOURCE_ROOT=/opt/noirsound/NoirSound
+ExecStart=/bin/bash /opt/noirsound/NoirSound/scripts/backup-all.sh
+TimeoutStartSec=2h
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+# Docker socket access already grants host-level privileges; no misleading
+# filesystem sandbox is declared around Docker's host-side transfer mounts.
+StandardOutput=journal
+StandardError=journal

@@ -2,6 +2,7 @@
 # Shared helpers for NoirSound backup/restore scripts.
 # Sourced by the other scripts. Never prints secrets.
 set -euo pipefail
+umask 077
 
 NOIRSOUND_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BACKUP_DIR="${NOIRSOUND_BACKUP_DIR:-${NOIRSOUND_ROOT}/backups}"
@@ -93,7 +94,7 @@ postgres_client_major() {
   "$command_name" --version | sed -E 's/.* ([0-9]+).*/\1/'
 }
 
-ensure_backup_dir() { mkdir -p "$BACKUP_DIR"; }
+ensure_backup_dir() { mkdir -p "$BACKUP_DIR"; chmod 700 "$BACKUP_DIR"; }
 
 prune_old() {
   local pattern="$1"

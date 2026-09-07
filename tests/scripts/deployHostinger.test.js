@@ -27,17 +27,24 @@ describe('exact release deployment guards (no real infrastructure)', () => {
     esac`);
     script('bin/flock', '[[ "${TEST_LOCKED:-}" != 1 ]]');
     script('bin/sha256sum', 'exec shasum -a 256 "$@"');
-    script('bin/curl', 'exit 0');
+    script('bin/curl', `while [[ $# -gt 0 ]]; do if [[ "$1" == -o ]]; then shift; output="$1"; fi; shift; done
+      printf '{"status":"ready","checks":{"database":"ok","redis":"ok","storage":"ok"}}' > "$output"
+      printf '%s' "\${TEST_HTTP_STATUS:-200}"`);
     script('bin/docker', `printf 'docker %s\\n' "$*" >> "$CALL_LOG"
       case "$*" in
         *' ps -q '*) service="\${!#}"; [[ "\${TEST_MISSING_SERVICE:-}" == "$service" ]] || printf 'cid-%s\\n' "$service" ;;
         'inspect -f '*'.Config.Labels'*) printf '%s\\n' "$COMPOSE_PROJECT_NAME" ;;
         'inspect -f '*'.State.Status'*) printf 'running\\n' ;;
         'inspect -f '*'.State.Health'*) printf '%s\\n' "\${TEST_HEALTH:-healthy}" ;;
+        'inspect -f '*'.RestartCount'*) printf '0\\n' ;;
+        'inspect -f '*'.State.OOMKilled'*) printf 'false\\n' ;;
         'inspect -f '*'.Image'*) if [[ -f "$FIXTURE/updated" ]]; then printf 'sha256:%064d\\n' 2; else printf 'sha256:%064d\\n' 1; fi ;;
+        'image inspect -f '*org.opencontainers.image.created*) printf '%s\\n' "$BUILD_DATE" ;;
+        'image inspect -f '*org.opencontainers.image.source*) printf '%s\\n' 'https://github.com/MaksMykolenko/NoirSound' ;;
         'image inspect -f '*'.Config.Labels'*) printf '%s\\n' "$RELEASE_SHA" ;;
         'image inspect -f '*'.Id'*) printf 'sha256:%064d\\n' 2 ;;
         *' up -d '*) touch "$FIXTURE/updated" ;;
+        *' run --rm --no-deps --pull never backend npx prisma migrate status'*) [[ "\${TEST_PENDING_MIGRATION:-}" != 1 ]] ;;
         *' run --rm --no-deps --pull never backend npx prisma migrate deploy'*) [[ "\${TEST_MIGRATE_FAIL:-}" != 1 ]] ;;
       esac`);
     script('app/scripts/backup-all.sh', `printf 'backup\\n' >> "$CALL_LOG"
@@ -59,7 +66,7 @@ describe('exact release deployment guards (no real infrastructure)', () => {
     const log = join(dir, 'calls'); writeFileSync(log, '');
     const result = spawnSync('bash', [join(dir, 'app/scripts/deploy-hostinger.sh')], {
       encoding: 'utf8', timeout: 15000,
-      env: { ...process.env, PATH: `${join(dir, 'bin')}:${process.env.PATH}`, FIXTURE: dir, CALL_LOG: log, APP_DIR: join(dir, 'app'), RELEASE_SHA: SHA, COMPOSE_PROJECT_NAME: 'verified-existing', OFFSITE_BACKUP_VERIFY_SCRIPT: join(dir, 'bin/offsite-verifier'), DRILL_DATABASE_URL: 'postgresql://fixture:fixture@localhost/owned_drill', DRILL_S3_BUCKET: 'owned-drill', DEPLOY_RECORD_DIR: join(dir, 'records'), ...overrides },
+      env: { ...process.env, PATH: `${join(dir, 'bin')}:${process.env.PATH}`, FIXTURE: dir, CALL_LOG: log, APP_DIR: join(dir, 'app'), RELEASE_SHA: SHA, COMPOSE_PROJECT_NAME: 'verified-existing', OFFSITE_BACKUP_VERIFY_SCRIPT: join(dir, 'bin/offsite-verifier'), READINESS_ATTEMPTS: '1', READINESS_SLEEP_SECONDS: '0', DEPLOY_RECORD_DIR: join(dir, 'records'), ...overrides },
     });
     return { ...result, calls: readFileSync(log, 'utf8') };
   }
@@ -95,10 +102,22 @@ describe('exact release deployment guards (no real infrastructure)', () => {
     expect(result.calls).toContain('migrate deploy');
     expect(result.calls).not.toContain(' up -d ');
   });
+
+  it('does not treat an HTTP redirect as readiness', () => {
+    const result = run({ TEST_HTTP_STATUS: '308' });
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain('Readiness failed');
+  });
+  it('stops before migration or app update when new-image migration status needs review', () => {
+    const result = run({ TEST_PENDING_MIGRATION: '1' });
+    expect(result.status).not.toBe(0);
+    expect(result.calls).not.toContain('migrate deploy');
+    expect(result.calls).not.toContain(' up -d ');
+  });
   it('requires backup → restore → offsite → SHA images → new-image migration → application update', () => {
     const result = run();
     expect(result.status, result.stderr).toBe(0);
-    const positions = ['backup\n', 'restore\n', 'offsite\n', ' build backend worker web', ' run --rm --no-deps --pull never backend npx prisma migrate deploy', ' up -d --no-deps --no-build backend worker web'].map(value => result.calls.indexOf(value));
+    const positions = ['backup\n', 'restore\n', 'offsite\n', ' build --build-arg GIT_SHA=' + SHA, ' run --rm --no-deps --pull never backend npx prisma migrate deploy', ' up -d --no-deps --no-build backend worker web'].map(value => result.calls.indexOf(value));
     expect(positions.every(value => value >= 0)).toBe(true);
     expect(positions).toEqual([...positions].sort((a, b) => a - b));
     expect(result.calls).not.toMatch(/ up -d (postgres|redis|minio)|minio-create-bucket/);

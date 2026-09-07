@@ -2,20 +2,24 @@
 # Set DOMAIN (e.g. noirsound.app) to enable automatic HTTPS via Let's Encrypt.
 # Defaults to :80 for local/staging if DOMAIN is unset.
 #
-# Canonical origin / CSRF note:
-# The SPA calls the API same-origin at /api, and the backend's CSRF guard accepts
-# requests whose Origin host matches the host actually served here. Keep ONE
-# canonical origin so the browser, FRONTEND_ORIGIN, and cookies all agree. If www
-# is also pointed at this server, redirect it to the apex by UNCOMMENTING the
-# block below (only enable it once DOMAIN is set — an empty DOMAIN makes "www."
-# an invalid site address):
-#
-#   www.{$DOMAIN} {
-#       redir https://{$DOMAIN}{uri} permanent
-#   }
-#
+# Production requires DOMAIN=noirsound.co. Keep the apex canonical and obtain
+# a certificate for www as well; both HTTP entry points upgrade automatically.
+www.{$DOMAIN:localhost} {
+	redir https://{$DOMAIN:localhost}{uri} 308
+}
+
 {$DOMAIN::80} {
 	encode zstd gzip
+
+	# These namespaces are operational, never SPA routes. Do not reveal whether
+	# a matching file exists. The ACME challenge path remains available to Caddy.
+	@sensitive {
+		path_regexp sensitive (?i)(^|/)(\.[^/]*|dockerfile[^/]*|docker-compose[^/]*|compose\.(?:ya?ml)|noirsound_[^/]*\.md)(/|$)|^/(backups?|reports?)(/|$)|\.(?:pem|key|p12|pfx|sql|dump|bak|backup|tar|tgz|gz|zip|log|map)$
+		not path /.well-known/*
+	}
+	handle @sensitive {
+		respond 404
+	}
 
 	# Allow audio uploads up to ~60MB (audio cap is 50MB + headroom).
 	request_body {
@@ -31,11 +35,11 @@
 	# Server-rendered metadata for crawler-visible routes (Telegram, WhatsApp,
 	# Discord, X, Facebook read the initial HTML and do not run React). The
 	# backend injects per-route <head> into the built SPA shell and serves the
-	# dynamic sitemap. All OTHER paths (assets, /og/*, /images/*, /robots.txt,
+	# dynamic sitemap and robots policy. All OTHER paths (assets, /og/*, /images/*,
 	# /favicon*, and other client-only routes) fall through to the
 	# static file_server below. `/index.html` is NOT matched here, so the
 	# backend can fetch the shell from this server without looping.
-	@ssr path / /discover /track/* /artist/* /playlist/* /terms /privacy /guidelines /copyright /abuse /creator-rules /sitemap.xml
+	@ssr path / /discover /track/* /artist/* /playlist/* /terms /privacy /guidelines /copyright /abuse /creator-rules /sitemap.xml /robots.txt
 	handle @ssr {
 		reverse_proxy backend:3000
 	}
@@ -63,6 +67,14 @@
 		Referrer-Policy "no-referrer"
 		Permissions-Policy "geolocation=(), microphone=(), camera=()"
 		-Server
+		# Deferred response matching preserves the backend's stricter JSON CSP.
+		# React sets dynamic style attributes; only styles need unsafe-inline.
+		# Theme bootstrapping is a same-origin external script. OAuth is a normal
+		# top-level redirect, not a third-party executable script or iframe.
+	}
+	header {
+		match header Content-Type text/html*
+		Content-Security-Policy "default-src 'self'; script-src 'self' https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https://www.googletagmanager.com https://www.google-analytics.com https://region1.google-analytics.com https://lh3.googleusercontent.com https://lh4.googleusercontent.com https://lh5.googleusercontent.com https://lh6.googleusercontent.com; media-src 'self' blob:; connect-src 'self' https://www.googletagmanager.com https://www.google-analytics.com https://region1.google-analytics.com https://analytics.google.com https://region1.analytics.google.com; font-src 'self' https://fonts.gstatic.com; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self' https://accounts.google.com"
 	}
 }
 
