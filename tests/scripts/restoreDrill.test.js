@@ -7,5 +7,5 @@ it('proves generated restore targets, archive integrity and run-owned cleanup gu
     encoding: 'utf8', timeout: 30000, env: { ...process.env, PYTHONDONTWRITEBYTECODE: '1' },
   });
   expect(result.status, result.stdout + result.stderr).toBe(0);
-  expect(result.stderr).toContain('Ran 28 tests');
+  expect(result.stderr).toContain('Ran 34 tests');
 });

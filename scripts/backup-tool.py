@@ -13,11 +13,12 @@ import os
 from pathlib import Path, PurePosixPath
 import re
 import secrets
-import shutil
+import selectors
 import subprocess
 import sys
 import tarfile
 import tempfile
+import time
 
 ROOT = Path(__file__).resolve().parent.parent
 os.umask(0o077)
@@ -41,6 +42,60 @@ def command(args, *, data=None, label='Client operation', timeout=3600):
     p = subprocess.run(args, input=data, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout)
     need(p.returncode == 0, f'{label} failed (exit {p.returncode}); no success receipt was issued.')
     return p.stdout
+
+def stream_command(args, *, source=None, target=None, label='Archive operation', timeout=3600):
+    """Bounded-memory pipe transport; never expose or leave an unread stderr pipe.
+
+    GzipFile.fileno() points at compressed bytes, so explicitly decompress in
+    fixed chunks before writing stdin. The deadline covers pipe I/O as well as
+    process exit; a timeout or copy failure kills and reaps the local client.
+    """
+    need((source is None) != (target is None), 'Exactly one archive stream required.')
+    deadline = time.monotonic() + timeout
+    def remaining():
+        value = deadline - time.monotonic()
+        need(value > 0, f'{label} timed out; no success receipt was issued.')
+        return value
+    proc = subprocess.Popen(args, stdin=subprocess.PIPE if source is not None else subprocess.DEVNULL,
+                            stdout=subprocess.PIPE if target is not None else subprocess.DEVNULL,
+                            stderr=subprocess.DEVNULL, bufsize=0)
+    pipe = proc.stdin if source is not None else proc.stdout
+    try:
+        os.set_blocking(pipe.fileno(), False)
+        with selectors.DefaultSelector() as selector:
+            selector.register(pipe, selectors.EVENT_WRITE if source is not None else selectors.EVENT_READ)
+            pending = b''
+            while True:
+                if source is not None and not pending:
+                    remaining()
+                    pending = source.read(65536)
+                    if not pending: break
+                need(selector.select(remaining()), f'{label} timed out; no success receipt was issued.')
+                try:
+                    if source is not None:
+                        pending = pending[os.write(pipe.fileno(), pending):]
+                    else:
+                        chunk = os.read(pipe.fileno(), 65536)
+                        if not chunk: break
+                        target.write(chunk)
+                except BlockingIOError:
+                    continue
+                except BrokenPipeError:
+                    # pg_restore --list can finish before EOF. Still validate the
+                    # complete gzip trailer without buffering the remaining dump.
+                    need(proc.wait(timeout=remaining()) == 0, f'{label} failed; no success receipt was issued.')
+                    while source.read(65536): remaining()
+                    break
+        pipe.close()
+        need(proc.wait(timeout=remaining()) == 0, f'{label} failed; no success receipt was issued.')
+    finally:
+        if proc.poll() is None: proc.kill()
+        proc.wait()
+        pipe.close()
+
+def gzip_command(args, archive, *, label):
+    with gzip.open(archive, 'rb') as source:
+        stream_command(args, source=source, label=label)
 
 def load_env():
     path = Path(os.environ.get('NOIRSOUND_ENV_FILE', str(ROOT / '.env.production')))
@@ -276,12 +331,8 @@ def backup(clients, directory, kind='all'):
         partial = Path(str(pg)+'.partial')
         with partial.open('xb') as raw:
             with gzip.GzipFile(fileobj=raw, mode='wb') as compressed:
-                proc = subprocess.Popen(clients.compose + ['exec', '-T', 'postgres', 'pg_dump', '--format=custom', '--no-owner', '--no-privileges', '-U', clients.user, clients.live_db], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                shutil.copyfileobj(proc.stdout, compressed)
-                stderr = proc.stderr.read(); rc = proc.wait()
-                need(rc == 0, 'Database archive export failed; partial retained privately.')
-        with gzip.open(partial, 'rb') as stream:
-            command(clients.compose + ['exec', '-T', 'postgres', 'pg_restore', '--list'], data=stream.read(), label='Database archive readability')
+                stream_command(clients.compose + ['exec', '-T', 'postgres', 'pg_dump', '--format=custom', '--no-owner', '--no-privileges', '-U', clients.user, clients.live_db], target=compressed, label='Database archive export')
+        gzip_command(clients.compose + ['exec', '-T', 'postgres', 'pg_restore', '--list'], partial, label='Database archive readability')
         need(table_counts(clients)==expected_counts,'Source aggregate counts changed during database backup; retry a quiet snapshot.')
         partial.rename(pg); paths.append(pg)
     objects = []
@@ -329,8 +380,7 @@ def restore(clients, directory):
     inventory = meta.get('source_storage_inventory')
     need(isinstance(inventory,list),'Verified source storage inventory is required; take a new backup.')
     verify_storage_snapshot(inventory,inventory,objects)
-    with gzip.open(pg,'rb') as source: dbarchive = source.read()
-    command(clients.compose + ['exec','-T','postgres','pg_restore','--list'], data=dbarchive, label='Archive preflight')
+    gzip_command(clients.compose + ['exec','-T','postgres','pg_restore','--list'], pg, label='Archive preflight')
     run_id = secrets.token_hex(12)
     db, bucket = f'ns_{run_id}_restore_test', f'ns-{run_id}-restore-test'
     validate_targets(run_id, db, bucket, clients.live_db, clients.live_bucket)
@@ -351,7 +401,7 @@ def restore(clients, directory):
         bucket_created = True
         tagged = clients.s3('tag',bucket,run_id)
         need(tagged.get('owner') == run_id, 'Restore bucket ownership attestation failed.')
-        command(clients.compose+['exec','-T','postgres','pg_restore','--exit-on-error','--no-owner','--no-privileges','-U',clients.user,'-d',db],data=dbarchive,label='Isolated database restore')
+        gzip_command(clients.compose+['exec','-T','postgres','pg_restore','--exit-on-error','--no-owner','--no-privileges','-U',clients.user,'-d',db],pg,label='Isolated database restore')
         counts = table_counts(clients,db)
         need(counts==meta.get('table_counts') and len(counts)==len(COUNT_TABLES),'Restored aggregates do not match verified backup snapshot.')
         migrations = json.loads(clients.pg('SELECT COALESCE(json_agg(m),\'[]\'::json) FROM (SELECT migration_name, finished_at, rolled_back_at FROM "_prisma_migrations" ORDER BY started_at) m;',db))

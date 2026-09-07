@@ -1,11 +1,15 @@
 """Destructive-operation guards exercised without Docker or real databases."""
 import gzip
+import hashlib
+import io
 import importlib.util
 import json
 import os
 from pathlib import Path
 import shutil
 import sys
+import time
+import tracemalloc
 import tarfile
 import tempfile
 import unittest
@@ -64,7 +68,7 @@ class RestoreSafety(unittest.TestCase):
         m.write_json(self.manifest,{'archives':{p.name:{'sha256':m.digest(p),'bytes':p.stat().st_size} for p in [self.pg,self.storage]},'storage_objects':m.archive_manifest(self.storage),'source_storage_inventory':FakeClients().inventory,'applied_migrations_observed_at_backup':[],'table_counts':{t:1 for t in m.COUNT_TABLES}})
         self.environment=patch.dict(os.environ,{'NOIRSOUND_RESTORE_TEST':'1','DRILL_POSTGRES_BACKUP':str(self.pg),'DRILL_STORAGE_BACKUP':str(self.storage),'DRILL_MANIFEST':str(self.manifest)},clear=True);self.environment.start()
         self.random=patch.object(m.secrets,'token_hex',return_value=RUN);self.random.start()
-        self.client_command=patch.object(m,'command',return_value=b'archive readable');self.client_command.start()
+        self.client_command=patch.object(m,'gzip_command',return_value=None);self.client_command.start()
         self.c=FakeClients()
     def tearDown(self):
         self.client_command.stop();self.random.stop();self.environment.stop();self.tmp.cleanup()
@@ -207,6 +211,57 @@ class BackupSafety(unittest.TestCase):
     def test_retention_rejects_symlink_archive(self):
         manifest,paths=self.make_pair(1);target=self.directory/'unrelated';paths[0].rename(target);paths[0].symlink_to(target)
         self.assertIsNone(m.verified_archive_pair(manifest));self.assertTrue(target.exists())
+
+class ArchiveStreaming(unittest.TestCase):
+    def setUp(self):
+        self.tmp=tempfile.TemporaryDirectory();self.directory=Path(self.tmp.name)
+    def tearDown(self):self.tmp.cleanup()
+    def test_noisy_export_cannot_deadlock_on_stderr_and_preserves_dump_bytes(self):
+        archive=self.directory/'dump.gz'
+        child="import sys;sys.stderr.buffer.write(b'private-error'*262144);sys.stderr.flush();sys.stdout.buffer.write(b'PGDMP'+b'fixture'*262144)"
+        with gzip.open(archive,'wb') as target:
+            m.stream_command([sys.executable,'-c',child],target=target,timeout=3)
+        self.assertEqual(gzip.decompress(archive.read_bytes()),b'PGDMP'+b'fixture'*262144)
+    def test_large_gzip_is_decompressed_in_bounded_memory_for_each_consumer(self):
+        archive=self.directory/'large.gz';block=b'PGDMP-controlled-fixture-'*2730;expected=hashlib.sha256()
+        with gzip.open(archive,'wb') as output:
+            for _ in range(1024):output.write(block);expected.update(block)
+        child="import hashlib,sys;h=hashlib.sha256();n=0\nwhile True:\n b=sys.stdin.buffer.read(65536)\n if not b:break\n h.update(b);n+=len(b)\nopen(sys.argv[1],'w').write(str(n)+' '+h.hexdigest())"
+        tracemalloc.start()
+        try:
+            for number in range(2):
+                receipt=self.directory/f'consumer-{number}'
+                m.gzip_command([sys.executable,'-c',child,str(receipt)],archive,label='Fixture consumer')
+                self.assertEqual(receipt.read_text(),f'{len(block)*1024} {expected.hexdigest()}')
+            _,peak=tracemalloc.get_traced_memory()
+        finally:tracemalloc.stop()
+        self.assertLess(peak,8*1024*1024,'A whole decompressed dump must never be materialized')
+    def test_stalled_input_and_output_timeout_and_reap_the_client(self):
+        for direction in ['input','output']:
+            with self.subTest(direction=direction):
+                pidfile=self.directory/direction
+                child="import os,sys,time;open(sys.argv[1],'w').write(str(os.getpid()));time.sleep(60)"
+                kwargs={'source':io.BytesIO(b'x'*1048576)} if direction=='input' else {'target':io.BytesIO()}
+                started=time.monotonic()
+                with self.assertRaises(m.BackupError):m.stream_command([sys.executable,'-c',child,str(pidfile)],timeout=0.25,**kwargs)
+                self.assertLess(time.monotonic()-started,2)
+                with self.assertRaises(ProcessLookupError):os.kill(int(pidfile.read_text()),0)
+    def test_client_failure_does_not_expose_raw_stderr(self):
+        child="import sys;sys.stderr.write('fixture-private-secret');sys.exit(7)"
+        with self.assertRaises(m.BackupError) as failure:
+            m.stream_command([sys.executable,'-c',child],source=io.BytesIO(b'PGDMP'),timeout=2)
+        self.assertNotIn('fixture-private-secret',str(failure.exception))
+    def test_early_successful_consumer_still_checks_the_gzip_trailer(self):
+        archive=self.directory/'corrupted.gz'
+        damaged=bytearray(gzip.compress(b'PGDMP'+b'x'*1048576));damaged[-8]^=1;archive.write_bytes(damaged)
+        with self.assertRaises(gzip.BadGzipFile):
+            m.gzip_command([sys.executable,'-c','import sys;sys.stdin.buffer.read(1)'],archive,label='Fixture early reader')
+    def test_failed_database_export_never_publishes_a_complete_archive_or_manifest(self):
+        c=FakeClients();c.compose=[sys.executable,'-c',"import sys;sys.stdout.buffer.write(b'PGDMP-partial');sys.exit(7)"]
+        with self.assertRaises(m.BackupError):m.backup(c,self.directory,'postgres')
+        self.assertEqual(list(self.directory.glob('postgres_*.dump.gz')),[])
+        self.assertEqual(list(self.directory.glob('manifest_*.txt')),[])
+        self.assertEqual(len(list(self.directory.glob('*.partial'))),1)
 
 class StorageBinding(unittest.TestCase):
     def setUp(self):
