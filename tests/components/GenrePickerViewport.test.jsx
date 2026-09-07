@@ -47,9 +47,28 @@ describe('GenrePicker viewport dismissal', () => {
     expect(screen.getByTestId('genre-picker-trigger')).toHaveAttribute('aria-expanded', 'true');
   });
 
-  it('dismisses when an outside scroll actually moves the anchor', () => {
+  it.each([-1, -0.5, 0.5, 1])('keeps the picker open when the anchor settles by %s CSS pixels', (delta) => {
     openPicker();
-    anchorRect = { ...anchorRect, top: 326, bottom: 370 };
+    anchorRect = { ...anchorRect, top: 366 + delta, bottom: 410 + delta };
+    fireEvent.scroll(screen.getByTestId('upload-scroll'));
+    expect(screen.getByTestId('genre-picker-panel')).toBeVisible();
+    expect(screen.getByTestId('genre-picker-trigger')).toHaveAttribute('aria-expanded', 'true');
+  });
+
+  it.each([-40, -2, 2])('dismisses when an outside scroll moves the anchor by %s CSS pixels', (delta) => {
+    openPicker();
+    anchorRect = { ...anchorRect, top: 366 + delta, bottom: 410 + delta };
+    fireEvent.scroll(screen.getByTestId('upload-scroll'));
+    expect(screen.queryByTestId('genre-picker-panel')).not.toBeInTheDocument();
+    expect(screen.getByTestId('genre-picker-trigger')).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  it('measures cumulative movement from the opening anchor instead of resetting the baseline', () => {
+    openPicker();
+    anchorRect = { ...anchorRect, top: 366.75, bottom: 410.75 };
+    fireEvent.scroll(screen.getByTestId('upload-scroll'));
+    expect(screen.getByTestId('genre-picker-panel')).toBeVisible();
+    anchorRect = { ...anchorRect, top: 367.5, bottom: 411.5 };
     fireEvent.scroll(screen.getByTestId('upload-scroll'));
     expect(screen.queryByTestId('genre-picker-panel')).not.toBeInTheDocument();
     expect(screen.getByTestId('genre-picker-trigger')).toHaveAttribute('aria-expanded', 'false');

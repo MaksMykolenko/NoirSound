@@ -6,6 +6,8 @@ import { GENRE_GROUPS } from '../../constants/musicGenres';
 import { getGenreLabel, getGenreGroupLabel, searchGenres } from '../../utils/genreLabels';
 import useDialogFocusTrap, { getOverlayLayer, isTopmostOverlay } from '../../hooks/useDialogFocusTrap';
 
+const ANCHOR_SETTLING_TOLERANCE = 1;
+
 /**
  * Searchable, grouped, single-select genre picker.
  * Stores/returns stable genre KEYS; renders localized labels.
@@ -101,12 +103,12 @@ export default function GenrePicker({
     const onViewportChange = (event) => {
       if (event.type === 'scroll') {
         if (panelRef.current?.contains(event.target)) return;
-        // A scroll completed before activation may be delivered after opening.
-        // Dismiss only when the anchor no longer matches the panel's position.
+        // Opening scroll events can arrive late and settle by one CSS pixel.
+        // Keep the opening baseline so small cumulative scrolls still dismiss.
         const initialRect = anchorRectRef.current;
         const currentRect = rootRef.current?.getBoundingClientRect();
         if (initialRect && currentRect && ['top', 'left', 'width', 'height'].every(
-          (edge) => initialRect[edge] === currentRect[edge]
+          (edge) => Math.abs(initialRect[edge] - currentRect[edge]) <= ANCHOR_SETTLING_TOLERANCE
         )) return;
       }
       setOpen(false);
