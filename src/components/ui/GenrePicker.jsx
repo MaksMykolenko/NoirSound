@@ -32,6 +32,7 @@ export default function GenrePicker({
   const [query, setQuery] = useState('');
   const [position, setPosition] = useState({});
   const rootRef = useRef(null);
+  const anchorRectRef = useRef(null);
   const searchRef = useRef(null);
   const isMobile = typeof window !== 'undefined' && window.matchMedia?.('(max-width: 639px)').matches;
   const close = useCallback(() => setOpen(false), []);
@@ -40,6 +41,7 @@ export default function GenrePicker({
   useLayoutEffect(() => {
     if (!open || !rootRef.current) return;
     const rect = rootRef.current.getBoundingClientRect();
+    anchorRectRef.current = rect;
     const layer = Math.max(
       Number.parseInt(getComputedStyle(document.documentElement).getPropertyValue('--ns-z-context-menu'), 10) || 230,
       getOverlayLayer(rootRef.current) + 1
@@ -85,16 +87,6 @@ export default function GenrePicker({
   // Close on outside pointer + Escape (Escape also returns focus to the trigger).
   useEffect(() => {
     if (!open) return undefined;
-    // Playwright and real browsers may finish scrolling a low trigger into view
-    // just after the click opens the portaled panel. Treat that opening scroll as
-    // part of the activation; later scrolling still dismisses the anchored UI.
-    let viewportChangesArmed = false;
-    let settleFrame;
-    const armFrame = window.requestAnimationFrame(() => {
-      settleFrame = window.requestAnimationFrame(() => {
-        viewportChangesArmed = true;
-      });
-    });
     const onPointer = (e) => {
       if (!rootRef.current?.contains(e.target) && !panelRef.current?.contains(e.target)) setOpen(false);
     };
@@ -107,8 +99,16 @@ export default function GenrePicker({
       }
     };
     const onViewportChange = (event) => {
-      if (!viewportChangesArmed) return;
-      if (event.type === 'scroll' && panelRef.current?.contains(event.target)) return;
+      if (event.type === 'scroll') {
+        if (panelRef.current?.contains(event.target)) return;
+        // A scroll completed before activation may be delivered after opening.
+        // Dismiss only when the anchor no longer matches the panel's position.
+        const initialRect = anchorRectRef.current;
+        const currentRect = rootRef.current?.getBoundingClientRect();
+        if (initialRect && currentRect && ['top', 'left', 'width', 'height'].every(
+          (edge) => initialRect[edge] === currentRect[edge]
+        )) return;
+      }
       setOpen(false);
     };
     document.addEventListener('mousedown', onPointer);
@@ -120,8 +120,6 @@ export default function GenrePicker({
       document.removeEventListener('keydown', onKey);
       window.removeEventListener('resize', onViewportChange);
       window.removeEventListener('scroll', onViewportChange, true);
-      window.cancelAnimationFrame(armFrame);
-      if (settleFrame) window.cancelAnimationFrame(settleFrame);
     };
   }, [open, panelRef]);
 
