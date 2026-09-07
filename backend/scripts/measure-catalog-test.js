@@ -8,31 +8,23 @@ const { spawnSync } = require('node:child_process');
 const { performance } = require('node:perf_hooks');
 const { createHash } = require('node:crypto');
 const { Client, Pool } = require('pg');
+const { assertDatabaseScope, databaseUrl, createOwnedDatabase, dropOwnedDatabase } = require('../../scripts/integration/database-guard.cjs');
 const { Prisma, PrismaClient } = require('@prisma/client');
 const { PrismaPg } = require('@prisma/adapter-pg');
 const { seedCatalogFixture } = require('../tests/fixtures/catalogFixture');
 const { parseCatalogQuery, decodeCatalogCursor, catalogPageQuery, searchCatalog } = require('../src/lib/catalogSearch');
 
 async function main() {
-  const configured = new URL(process.env.DATABASE_URL || 'http://invalid');
-  if (process.env.NODE_ENV === 'production' || configured.hostname !== '127.0.0.1'
-      || !/^noirsound-verify-[a-f0-9]{12}$/.test(process.env.COMPOSE_PROJECT_NAME || '')
-      || !/^\d+$/.test(process.env.NS_TEST_DB_PORT || '')
-      || configured.port !== process.env.NS_TEST_DB_PORT || !configured.pathname.endsWith('_test')) {
-    throw new Error('Use only node scripts/run-integration.mjs performance with its isolated generated environment.');
-  }
-  const databaseName = 'noirsound_catalog_perf_test';
-  const adminUrl = new URL(configured);
-  adminUrl.pathname = '/postgres';
-  adminUrl.search = '';
-  const admin = new Client({ connectionString: adminUrl.toString() });
+  assertDatabaseScope(process.env, process.env.DATABASE_URL, 'api');
+  const configured = new URL(databaseUrl(process.env, 'performance'));
+  const scope = assertDatabaseScope(process.env, configured.toString(), 'performance');
+  const databaseName = scope.name;
+  const admin = new Client({ connectionString: scope.adminUrl });
   await admin.connect();
+  let owned;
   try {
-    const existing = await admin.query('SELECT 1 FROM pg_database WHERE datname=$1', [databaseName]);
-    if (!existing.rowCount) await admin.query('CREATE DATABASE noirsound_catalog_perf_test');
-  } finally { await admin.end(); }
-  configured.pathname = `/${databaseName}`;
-  process.env.DATABASE_URL = configured.toString();
+    owned = await createOwnedDatabase(admin, scope);
+    process.env.DATABASE_URL = configured.toString();
   const migration = spawnSync(path.resolve(__dirname, '../node_modules/.bin/prisma'), ['migrate', 'deploy'], {
     cwd: path.resolve(__dirname, '..'), env: process.env, stdio: 'pipe', encoding: 'utf8',
   });
@@ -117,6 +109,10 @@ async function main() {
     fs.writeFileSync(destination, JSON.stringify(report, null, 2) + '\n');
     console.log(JSON.stringify({ counts, results: results.map(({ plan: _plan, parameterizedSql: _sql, ...entry }) => entry) }, null, 2));
   } finally { await prisma.$disconnect(); }
+  } finally {
+    try { if (owned) await dropOwnedDatabase(admin, owned); }
+    finally { await admin.end(); }
+  }
 }
 
 main().catch(error => { console.error(error.message); process.exitCode = 1; });

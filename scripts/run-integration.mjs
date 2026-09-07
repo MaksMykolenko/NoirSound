@@ -7,6 +7,9 @@ import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import databaseGuard from './integration/database-guard.cjs';
+
+const { assertDatabaseScope, assertDisposablePostgres } = databaseGuard;
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const backend = resolve(root, 'backend');
@@ -15,12 +18,8 @@ const reportDir = resolve(root, 'test-results/integration');
 const runtimeKeys = ['PATH', 'HOME', 'USER', 'LOGNAME', 'TMPDIR', 'TMP', 'TEMP', 'SystemRoot', 'COMSPEC', 'PATHEXT', 'CI', 'PLAYWRIGHT_BROWSERS_PATH', 'npm_config_cache', 'NPM_CONFIG_CACHE'];
 
 export function assertTestEnvironment(env) {
-  if (env.NODE_ENV === 'production') throw new Error('Production is forbidden in the integration runner.');
-  if (!/^noirsound-verify-[a-f0-9]{12}$/.test(env.COMPOSE_PROJECT_NAME || '')) throw new Error('Integration project identity is invalid.');
-  for (const key of ['DATABASE_URL', 'DATABASE_URL_TEST', 'SHADOW_DATABASE_URL']) {
-    const value = new URL(env[key]);
-    if (value.protocol !== 'postgresql:' || value.hostname !== '127.0.0.1' || value.port !== env.NS_TEST_DB_PORT
-        || !/^\/noirsound_[a-z_]+_test$/.test(value.pathname)) throw new Error(`Test database guard rejected ${key}.`);
+  for (const [key, purpose] of [['DATABASE_URL', 'api'], ['DATABASE_URL_TEST', 'backend'], ['SHADOW_DATABASE_URL', 'shadow']]) {
+    assertDatabaseScope(env, env[key], purpose);
   }
   for (const key of ['S3_ENDPOINT', 'S3_PUBLIC_ENDPOINT', 'VITE_API_BASE_URL', 'E2E_BASE_URL']) {
     const value = new URL(env[key]);
@@ -51,6 +50,25 @@ export function summarizeE2E(report) {
   return { ...counts, passed: 86, failed: 0, skipped: 0, interrupted: 0, notRun: 0 };
 }
 
+export function summarizeClosedE2E(report) {
+  let passed = 0;
+  const visit = suite => {
+    for (const spec of suite.specs || []) for (const test of spec.tests || []) {
+      if (spec.file !== 'landing-closed.spec.js' || test.projectName !== 'chromium-closed'
+          || test.expectedStatus !== 'passed' || test.status !== 'expected'
+          || test.results?.length !== 1 || test.results[0].status !== 'passed') {
+        throw new Error('Closed-mode real-service E2E must pass each expected case exactly once.');
+      }
+      passed += 1;
+    }
+    for (const child of suite.suites || []) visit(child);
+  };
+  if (report.errors?.length) throw new Error('Closed-mode E2E reported a global error.');
+  for (const suite of report.suites || []) visit(suite);
+  if (passed !== 8) throw new Error(`Closed-mode E2E coverage changed: ${passed}; expected 8 real-service cases.`);
+  return { real: passed, passed, failed: 0, skipped: 0, retried: 0, interrupted: 0, notRun: 0 };
+}
+
 export function redactIntegrationOutput(value, secrets = []) {
   return secrets.filter(Boolean).reduce((text, secret) => text.replaceAll(secret, '[test-secret]'), String(value))
     .replace(/postgres(?:ql)?:\/\/[^\s"'<>]+/gi, '[redacted-database-url]')
@@ -74,14 +92,17 @@ async function allocatePorts(count) {
 }
 
 async function main(mode) {
-  if (!['all', 'backend', 'security', 'e2e', 'performance', 'preview'].includes(mode)) throw new Error('Usage: node scripts/run-integration.mjs all|backend|security|e2e|performance|preview (after npm ci in root and backend).');
+  if (!['all', 'backend', 'security', 'e2e', 'closed', 'performance', 'preview'].includes(mode)) throw new Error('Usage: node scripts/run-integration.mjs all|backend|security|e2e|closed|performance|preview (after npm ci in root and backend).');
   if (process.env.NODE_ENV === 'production') throw new Error('Do not invoke test verification from a production environment.');
+  for (const key of ['DATABASE_URL', 'DATABASE_URL_TEST', 'SHADOW_DATABASE_URL', 'COMPOSE_PROJECT_NAME', 'NS_TEST_RUN_ID', 'NS_TEST_DATABASE_PROOF']) {
+    if (process.env[key] !== undefined) throw new Error(`Remove inherited ${key}; the harness creates its own disposable identity.`);
+  }
   for (const directory of [root, backend]) {
     const privateEnv = readdirSync(directory).find(name => /^\.env(?:\.|$)/.test(name) && !['.env.example', '.env.production.example'].includes(name));
     if (privateEnv) throw new Error(`Use a clean verification checkout without ${directory === root ? '' : 'backend/'}${privateEnv}.`);
   }
   if (!existsSync(resolve(backend, 'node_modules/.bin/prisma'))) throw new Error('Run npm ci in backend before verification.');
-  if (['all', 'e2e'].includes(mode) && !existsSync(resolve(root, 'node_modules/.bin/playwright'))) throw new Error('Run npm ci in the repository root before verification.');
+  if (['all', 'e2e', 'closed'].includes(mode) && !existsSync(resolve(root, 'node_modules/.bin/playwright'))) throw new Error('Run npm ci in the repository root before verification.');
   if (mode === 'preview' && !existsSync(resolve(root, 'node_modules/.bin/vite'))) throw new Error('Run npm ci in the repository root before local preview.');
   const scratch = mkdtempSync(resolve(tmpdir(), 'noirsound-integration-'));
   mkdirSync(reportDir, { recursive: true });
@@ -90,13 +111,15 @@ async function main(mode) {
   const baseEnv = Object.fromEntries(runtimeKeys.filter(key => process.env[key] !== undefined).map(key => [key, process.env[key]]));
   const dbUser = 'noirsound_verify';
   const dbPassword = token();
-  const database = name => `postgresql://${dbUser}:${dbPassword}@127.0.0.1:${dbPort}/${name}?schema=public`;
+  const runId = randomBytes(6).toString('hex');
+  const database = purpose => `postgresql://${dbUser}:${dbPassword}@127.0.0.1:${dbPort}/noirsound_${runId}_${purpose}_test?schema=public`;
   const env = {
-    ...baseEnv, NODE_ENV: 'development', COMPOSE_PROJECT_NAME: `noirsound-verify-${randomBytes(6).toString('hex')}`,
+    ...baseEnv, NODE_ENV: 'test', COMPOSE_PROJECT_NAME: `noirsound-verify-${runId}`,
+    NS_TEST_RUN_ID: runId, NS_TEST_DISPOSABLE: 'true', NS_TEST_DATABASE_PROOF: token(),
     NS_TEST_DB_USER: dbUser, NS_TEST_DB_PASSWORD: dbPassword, NS_TEST_DB_PORT: String(dbPort),
     NS_TEST_REDIS_PORT: String(redisPort), NS_TEST_STORAGE_PORT: String(storagePort),
     NS_TEST_S3_USER: `verify${randomBytes(6).toString('hex')}`, NS_TEST_S3_PASSWORD: token(),
-    DATABASE_URL: database('noirsound_api_test'), DATABASE_URL_TEST: database('noirsound_backend_test'), SHADOW_DATABASE_URL: database('noirsound_shadow_test'),
+    DATABASE_URL: database('api'), DATABASE_URL_TEST: database('backend'), SHADOW_DATABASE_URL: database('shadow'),
     REDIS_URL: `redis://127.0.0.1:${redisPort}`, S3_ENDPOINT: `http://127.0.0.1:${storagePort}`, S3_PUBLIC_ENDPOINT: `http://127.0.0.1:${storagePort}`,
     S3_BUCKET: 'noirsound-integration-test', S3_REGION: 'us-east-1', S3_FORCE_PATH_STYLE: 'true',
     JWT_SECRET: token(), COOKIE_SECRET: token(), PORT: String(apiPort),
@@ -106,12 +129,13 @@ async function main(mode) {
     APP_SHELL_ORIGIN: `http://127.0.0.1:${webPort}`,
     E2E_MOCK_PORT: String(mockPort), E2E_MOCK_BASE_URL: `http://127.0.0.1:${mockPort}`,
     RATE_LIMIT_MULTIPLIER: '20', E2E_REQUIRE_REAL_SERVICES: 'true', E2E_REUSE_SERVER: 'false',
+    PUBLIC_APP_ENABLED: 'true', VITE_PUBLIC_APP_ENABLED: 'true',
     PLAYWRIGHT_JSON_OUTPUT_NAME: resolve(scratch, 'playwright.json'), PLAYWRIGHT_HTML_OPEN: 'never',
   };
   env.S3_ACCESS_KEY_ID = env.NS_TEST_S3_USER;
   env.S3_SECRET_ACCESS_KEY = env.NS_TEST_S3_PASSWORD;
   assertTestEnvironment(env);
-  const secrets = [dbPassword, env.NS_TEST_S3_USER, env.NS_TEST_S3_PASSWORD, env.JWT_SECRET, env.COOKIE_SECRET];
+  const secrets = [dbPassword, env.NS_TEST_DATABASE_PROOF, env.NS_TEST_S3_USER, env.NS_TEST_S3_PASSWORD, env.JWT_SECRET, env.COOKIE_SECRET];
   const redact = chunk => redactIntegrationOutput(chunk, secrets);
   const children = new Set();
   const composeArgs = ['compose', '--project-name', env.COMPOSE_PROJECT_NAME, '--file', composeFile];
@@ -119,10 +143,12 @@ async function main(mode) {
   let stopping = false;
   let exitSignal = null;
 
-  function command(commandName, args, { cwd = root, environment = env, background = false, label = commandName, quiet = false } = {}) {
+  function command(commandName, args, { cwd = root, environment = env, background = false, label = commandName, quiet = false, capture = false } = {}) {
     const log = createWriteStream(resolve(scratch, `${label.replace(/[^a-z0-9-]/gi, '-')}.log`), { flags: 'a', mode: 0o600 });
     const child = spawn(commandName, args, { cwd, env: environment, stdio: ['ignore', 'pipe', 'pipe'], detached: true });
     children.add(child);
+    let captured = '';
+    if (capture) child.stdout.on('data', chunk => { captured += chunk.toString(); });
     for (const stream of [child.stdout, child.stderr]) {
       let buffered = '';
       const write = value => { const safe = redact(value); log.write(safe); if (!background && !quiet) process.stdout.write(safe); };
@@ -138,7 +164,7 @@ async function main(mode) {
       child.once('error', error => { children.delete(child); log.end(); reject(error); });
       child.once('close', (code, signal) => {
         children.delete(child); log.end();
-        if (code === 0 || (stopping && background)) done();
+        if (code === 0 || child.expectedStop || (stopping && background)) done(capture ? captured : undefined);
         else reject(new Error(`${label} failed (${signal || code}); redacted log: ${scratch}/${label.replace(/[^a-z0-9-]/gi, '-')}.log`));
       });
     });
@@ -157,39 +183,59 @@ async function main(mode) {
     }
     throw new Error('Timed out waiting for isolated test service readiness.');
   }
+  async function stopTestProcess(child) {
+    child.expectedStop = true;
+    await new Promise((done, reject) => {
+      const timer = setTimeout(() => {
+        try { process.kill(-child.pid, 'SIGKILL'); } catch { /* already exited */ }
+        reject(new Error('Test API did not stop within 10 seconds.'));
+      }, 10000);
+      child.once('close', () => { clearTimeout(timer); done(); });
+      try { process.kill(-child.pid, 'SIGTERM'); } catch (error) { clearTimeout(timer); reject(error); }
+    });
+  }
   const signalHandler = signal => {
     exitSignal = signal;
     for (const child of children) { try { process.kill(-child.pid, 'SIGTERM'); } catch { /* already exited */ } }
   };
   process.once('SIGINT', signalHandler); process.once('SIGTERM', signalHandler);
-  const evidence = { mode, project: env.COMPOSE_PROJECT_NAME, startedAt: new Date().toISOString(), status: 'running' };
+  const evidence = { mode, project: env.COMPOSE_PROJECT_NAME, runId, databaseSetup: 'fresh databases + migrate deploy; no reset', startedAt: new Date().toISOString(), status: 'running' };
   console.log(`Integration verification: ${mode}; isolated project ${env.COMPOSE_PROJECT_NAME}.`);
   try {
     await command(process.execPath, ['--test', 'scripts/integration/harness.test.mjs'], { label: 'harness-tests' });
     await command('ffmpeg', ['-version'], { quiet: true, label: 'ffmpeg' });
     await command('ffprobe', ['-version'], { quiet: true, label: 'ffprobe' });
     await command('docker', [...composeArgs, 'config', '--quiet'], { label: 'compose-validation' });
+    const existing = await command('docker', ['ps', '--all', '--filter', `label=com.docker.compose.project=${env.COMPOSE_PROJECT_NAME}`, '--format', '{{.ID}}'], { label: 'project-absence', quiet: true, capture: true });
+    if (existing.trim()) throw new Error('Refusing pre-existing verification project.');
     composeStarted = true;
     await command('docker', [...composeArgs, 'up', '--detach', '--wait', '--wait-timeout', '120'], { label: 'compose-start' });
+    const postgresId = (await command('docker', [...composeArgs, 'ps', '--quiet', 'postgres'], { label: 'postgres-id', quiet: true, capture: true })).trim();
+    if (!/^[a-f0-9]{64}$/.test(postgresId)) throw new Error('Fresh PostgreSQL container not identified.');
+    const postgres = await command('docker', ['inspect', '--format', '{"labels":{{json .Config.Labels}},"tmpfs":{{json .HostConfig.Tmpfs}},"ports":{{json .HostConfig.PortBindings}}}', postgresId], { label: 'postgres-isolation', quiet: true, capture: true });
+    assertDisposablePostgres(env, JSON.parse(postgres));
+    evidence.postgresContainer = postgresId;
+    evidence.postgresIsolation = 'new project; matching labels; tmpfs; generated loopback port';
+    await command(process.execPath, ['scripts/integration/prepare-databases.cjs'], { label: 'database-prepare' });
     await waitUntil(`${env.S3_ENDPOINT}/minio/health/ready`);
     await command(process.execPath, ['scripts/integration/prepare-storage.cjs'], { label: 'storage-prepare' });
     if (mode === 'all') {
       for (const task of ['lint', 'test', 'build', 'check:forbidden']) await command('npm', ['run', task], { label: `frontend-${task}`, environment: { ...env, NODE_ENV: task === 'build' ? 'production' : 'test' } });
+      await command('npm', ['run', 'build'], { label: 'frontend-build-closed', environment: { ...env, NODE_ENV: 'production', VITE_PUBLIC_APP_ENABLED: 'false' } });
       await command('git', ['diff', '--check'], { label: 'diff-check' });
     }
     await command('npx', ['--no-install', 'prisma', 'generate'], { cwd: backend, label: 'prisma-generate' });
     await command('npx', ['--no-install', 'prisma', 'validate'], { cwd: backend, label: 'prisma-validate' });
     if (['all', 'backend'].includes(mode)) await command('npm', ['run', 'test'], { cwd: backend, environment: { ...env, NODE_ENV: 'test' }, label: 'backend-tests' });
     if (['all', 'security'].includes(mode)) {
-      await command('docker', [...composeArgs, 'exec', '-T', 'postgres', 'createdb', '-U', dbUser, 'noirsound_shadow_test'], { label: 'shadow-database' });
       await command('npx', ['--no-install', 'prisma', 'migrate', 'diff', '--from-migrations', 'prisma/migrations', '--to-schema', 'prisma/schema.prisma', '--exit-code'], { cwd: backend, label: 'migration-schema-diff' });
       if (mode === 'security') await command('npm', ['run', 'test:unit'], { cwd: backend, environment: { ...env, NODE_ENV: 'test' }, label: 'backend-security-tests' });
     }
     if (mode === 'performance') await command(process.execPath, ['scripts/measure-catalog-test.js'], { cwd: backend, label: 'catalog-performance' });
-    if (['all', 'e2e', 'preview'].includes(mode)) {
+    if (['all', 'e2e', 'closed', 'preview'].includes(mode)) {
       await command('npx', ['--no-install', 'prisma', 'migrate', 'deploy'], { cwd: backend, label: 'api-migrate' });
       await command(process.execPath, ['prisma/seed.js', 'minimal'], { cwd: backend, label: 'api-seed' });
-      const api = command(process.execPath, ['scripts/integration/start-api.cjs'], { background: true, label: 'api' });
+      let api = command(process.execPath, ['scripts/integration/start-api.cjs'], { background: true, label: 'api' });
       const worker = command(process.execPath, ['src/workers/audioProcessor.js'], { cwd: backend, background: true, label: 'worker' });
       await waitUntil(`${env.VITE_API_BASE_URL}/ready`, [api, worker]);
       if (mode === 'preview') {
@@ -207,11 +253,21 @@ async function main(mode) {
             if (failed) { clearInterval(timer); reject(failed.failure || new Error('A required preview service exited.')); }
           }, 500);
         });
-      } else {
+      } else if (mode !== 'closed') {
         await command('npm', ['run', 'test:e2e', '--', '--workers=1', '--retries=0', '--trace=off', '--reporter=list,json', `--output=${resolve(scratch, 'playwright-results')}`], { label: 'e2e' });
         if ([api, worker].some(child => child.failure || child.exitCode !== null)) throw new Error('A required API/worker service exited during E2E.');
         evidence.e2e = summarizeE2E(JSON.parse(readFileSync(env.PLAYWRIGHT_JSON_OUTPUT_NAME, 'utf8')));
         console.log(`E2E verified: ${JSON.stringify(evidence.e2e)}`);
+      }
+      if (['all', 'e2e', 'closed'].includes(mode)) {
+        await stopTestProcess(api);
+        const closedEnv = { ...env, PUBLIC_APP_ENABLED: 'false', VITE_PUBLIC_APP_ENABLED: 'false', PLAYWRIGHT_JSON_OUTPUT_NAME: resolve(scratch, 'playwright-closed.json') };
+        api = command(process.execPath, ['scripts/integration/start-api.cjs'], { environment: closedEnv, background: true, label: 'api-closed' });
+        await waitUntil(`${env.VITE_API_BASE_URL}/ready`, [api, worker]);
+        await command('npm', ['run', 'test:e2e', '--', '--config=playwright.closed.config.js', '--workers=1', '--retries=0', '--trace=off', '--reporter=list,json', `--output=${resolve(scratch, 'playwright-closed-results')}`], { environment: closedEnv, label: 'e2e-closed' });
+        if ([api, worker].some(child => child.failure || child.exitCode !== null)) throw new Error('A required API/worker service exited during closed E2E.');
+        evidence.closedE2e = summarizeClosedE2E(JSON.parse(readFileSync(closedEnv.PLAYWRIGHT_JSON_OUTPUT_NAME, 'utf8')));
+        console.log(`Closed-mode E2E verified: ${JSON.stringify(evidence.closedE2e)}`);
       }
     }
     if (exitSignal && mode !== 'preview') throw new Error(`Verification interrupted by ${exitSignal}.`);
