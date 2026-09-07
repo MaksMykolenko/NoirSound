@@ -187,7 +187,7 @@
 .ns-landing .closing{position:relative;padding:145px var(--pad) 0;border-top:1px solid #262628;overflow:hidden;min-height:800px}
 .ns-landing .closing>.eyebrow{color:#95959c}
 .ns-landing .closing h2{margin-top:40px;font-size:clamp(64px,9vw,142px);font-weight:540;letter-spacing:-.065em;line-height:.97}
-.ns-landing .closing-outline{color:transparent;-webkit-text-stroke:1px #7e7e84}
+.ns-landing .closing-outline{color:var(--accent);letter-spacing:-.03em;text-shadow:0 0 35px rgba(255,54,93,.38)}
 .ns-landing .closing-actions{display:flex;align-items:center;gap:30px;margin-top:42px}
 .ns-landing .closing-wordmark{font-size:clamp(120px,21vw,400px);font-weight:600;line-height:.8;letter-spacing:-.085em;color:#171719;margin-left:-.055em;margin-top:85px;white-space:nowrap;user-select:none}
 .ns-landing .site-footer{padding:32px var(--pad);border-top:1px solid #262628;display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;font-size:11px;color:#777780;background:#000}
