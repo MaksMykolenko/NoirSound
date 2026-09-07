@@ -102,7 +102,8 @@ export default function GenrePicker({
     };
     const onViewportChange = (event) => {
       if (event.type === 'scroll') {
-        if (panelRef.current?.contains(event.target)) return;
+        const target = event.target;
+        if (typeof Node !== 'undefined' && target instanceof Node && panelRef.current?.contains(target)) return;
         // Opening scroll events can arrive late and settle by one CSS pixel.
         // Keep the opening baseline so small cumulative scrolls still dismiss.
         const initialRect = anchorRectRef.current;

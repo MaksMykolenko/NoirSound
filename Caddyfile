@@ -15,7 +15,7 @@ www.{$DOMAIN:localhost} {
 	# a matching file exists. The ACME challenge path remains available to Caddy.
 	@sensitive {
 		path_regexp sensitive (?i)(^|/)(\.[^/]*|dockerfile[^/]*|docker-compose[^/]*|compose\.(?:ya?ml)|noirsound_[^/]*\.md)(/|$)|^/(backups?|reports?)(/|$)|\.(?:pem|key|p12|pfx|sql|dump|bak|backup|tar|tgz|gz|zip|log|map)$
-		not path /.well-known/*
+		not path /.well-known/acme-challenge/*
 	}
 	handle @sensitive {
 		respond 404

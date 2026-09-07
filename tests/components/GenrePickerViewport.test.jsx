@@ -74,6 +74,21 @@ describe('GenrePicker viewport dismissal', () => {
     expect(screen.getByTestId('genre-picker-trigger')).toHaveAttribute('aria-expanded', 'false');
   });
 
+  it.each([0, 10])('handles a window scroll with anchor movement %s without a non-Node target error', (delta) => {
+    const onError = vi.fn((event) => event.preventDefault());
+    window.addEventListener('error', onError);
+    try {
+      openPicker();
+      anchorRect = { ...anchorRect, top: 366 + delta, bottom: 410 + delta };
+      fireEvent.scroll(window);
+      expect(onError).not.toHaveBeenCalled();
+      if (delta === 0) expect(screen.getByTestId('genre-picker-panel')).toBeVisible();
+      else expect(screen.queryByTestId('genre-picker-panel')).not.toBeInTheDocument();
+    } finally {
+      window.removeEventListener('error', onError);
+    }
+  });
+
   it('dismisses on resize even if the anchor has not moved', () => {
     openPicker();
     fireEvent.resize(window);
