@@ -150,7 +150,9 @@ describe('Creator Registration & Public App Gate API', () => {
       expect(res.body.user.hasArtistProfile).toBe(true); // ArtistProfile prepared
       expect(res.body.user.creatorRegistration).toBeDefined();
       expect(res.body.user.creatorRegistration.creatorType).toBe('BOTH');
-      expect(res.body.user.creatorRegistration.status).toBe('REGISTERED');
+      expect(res.body.user.creatorRegistration).not.toHaveProperty('status');
+      const stored = await app.prisma.creatorRegistration.findUnique({ where: { userId: res.body.user.id } });
+      expect(stored.status).toBe('REGISTERED');
     });
 
     it('allows an authenticated listener to register as a creator via /api/auth/creator-onboarding', async () => {

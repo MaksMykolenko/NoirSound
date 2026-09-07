@@ -1,27 +1,17 @@
 'use strict';
 
 const fp = require('fastify-plugin');
-const jwt = require('jsonwebtoken');
+const { resolveAuthenticatedSession } = require('./sessionResolver');
 
-const PUBLIC_API_PREFIXES = [
-  '/api/ready',
-  '/api/health',
-  '/api/auth',
-  '/api/tracks/showcase',
-  '/api/landing'
-];
-
+// Only explicitly public resources bypass landing mode. Unknown namespace routes
+// remain ordinary 404s; matching a public namespace never grants another API.
 function isPublicRoute(url) {
   const path = url.split('?')[0];
-  if (!path.startsWith('/api')) {
-    return true;
-  }
-  for (const prefix of PUBLIC_API_PREFIXES) {
-    if (path === prefix || path.startsWith(`${prefix}/`)) {
-      return true;
-    }
-  }
-  return false;
+  if (path !== '/api' && !path.startsWith('/api/')) return true;
+  return path === '/api/ready' || path === '/api/health'
+    || path === '/api/auth' || path.startsWith('/api/auth/')
+    || path === '/api/tracks/showcase'
+    || path === '/api/landing' || path.startsWith('/api/landing/');
 }
 
 module.exports = fp(async function publicAppGatePlugin(fastify) {
@@ -38,35 +28,14 @@ module.exports = fp(async function publicAppGatePlugin(fastify) {
 
     // Admin routes pass through to be handled by adminGuard
     const path = request.url.split('?')[0];
-    if (path.startsWith('/api/admin')) {
+    if (path === '/api/admin' || path.startsWith('/api/admin/')) {
       return;
     }
 
-    // For any other application API, check if an admin is accessing it (Admin Bypass)
-    let isAdmin = false;
-    if (request.user && (request.user.role === 'ADMIN' || request.user.role === 'SUPERADMIN')) {
-      isAdmin = true;
-    } else if (request.cookies && request.cookies.token && process.env.JWT_SECRET) {
-      try {
-        const decoded = jwt.verify(request.cookies.token, process.env.JWT_SECRET);
-        if (decoded && decoded.userId) {
-          const user = await fastify.prisma.user.findUnique({
-            where: { id: decoded.userId },
-            select: { id: true, role: true, status: true }
-          });
-          if (user && user.status === 'ACTIVE' && (user.role === 'ADMIN' || user.role === 'SUPERADMIN')) {
-            isAdmin = true;
-            if (!request.user) {
-              request.user = user;
-            }
-          }
-        }
-      } catch {
-        // Token verification failed; treated as unauthenticated
-      }
-    }
-
-    if (isAdmin) {
+    const resolved = await resolveAuthenticatedSession(fastify, request);
+    if (resolved?.user.role === 'ADMIN') {
+      request.user = resolved.user;
+      request.sessionId = resolved.sessionId;
       return;
     }
 

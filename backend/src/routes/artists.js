@@ -6,22 +6,7 @@ const { parseTrackContentType } = require('../lib/trackContentType');
 const { publicArtistWhere, publicTrackWhere } = require('../lib/publicVisibility');
 const { discoverArtists } = require('../lib/catalogSearch');
 
-// Best-effort current-user id from the session cookie, without requiring
-// authentication. Public artist routes stay public either way; when a
-// viewer happens to be signed in we additionally tell them whether they
-// already follow this artist, so the UI never has to guess/hardcode it.
-function optionalUserId(request) {
-  try {
-    const raw = request.headers.cookie || '';
-    const match = /(?:^|;\s*)token=([^;]+)/.exec(raw);
-    if (!match || !process.env.JWT_SECRET) return null;
-    const jwt = require('jsonwebtoken');
-    const decoded = jwt.verify(decodeURIComponent(match[1]), process.env.JWT_SECRET);
-    return decoded?.userId || null;
-  } catch {
-    return null;
-  }
-}
+const { optionalAuthenticatedUserId } = require('../lib/optionalAuth');
 
 async function attachIsFollowing(prisma, artists, viewerId) {
   const list = Array.isArray(artists) ? artists : [artists];
@@ -63,7 +48,7 @@ async function artistsRoutes(fastify, _options) {
           return reply.status(400).send({ error: 'ARTIST_DISCOVERY_QUERY_INVALID', message: 'Artist discovery supports sort=trending and limit from 1 to 24.' });
         }
         const artists = await discoverArtists(fastify.prisma, { contentType: contentTypeResult.value, limit: Number(request.query.limit || 6) });
-        const data = await attachIsFollowing(fastify.prisma, artists, optionalUserId(request));
+        const data = await attachIsFollowing(fastify.prisma, artists, await optionalAuthenticatedUserId(fastify, request));
         reply.header('Cache-Control', 'no-store');
         return { data, meta: { sort: 'trending', windowDays: 7 } };
       }
@@ -87,7 +72,7 @@ async function artistsRoutes(fastify, _options) {
           _count: { select: { followers: true } }
         }
       });
-      const withFollowState = await attachIsFollowing(fastify.prisma, artists, optionalUserId(request));
+      const withFollowState = await attachIsFollowing(fastify.prisma, artists, await optionalAuthenticatedUserId(fastify, request));
       return { data: withFollowState };
     } catch (error) {
       fastify.log.error(error);
@@ -126,7 +111,7 @@ async function artistsRoutes(fastify, _options) {
         fastify.storage,
         { id: artist.userId, ...artist.user }
       );
-      const [withFollowState] = await attachIsFollowing(fastify.prisma, cleanArtist, optionalUserId(request));
+      const [withFollowState] = await attachIsFollowing(fastify.prisma, cleanArtist, await optionalAuthenticatedUserId(fastify, request));
       return { artist: { ...withFollowState, genres: combinedGenres } };
     } catch (error) {
       fastify.log.error(error);

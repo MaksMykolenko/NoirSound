@@ -50,6 +50,8 @@ const {
   MAX_ADMIN_NOTE_LENGTH
 } = require('../lib/creators');
 
+const { creatorAdminView, creatorAdminSelect, creatorSearchConditions } = require('../lib/creatorViews');
+
 const execFileAsync = promisify(execFile);
 const USER_ROLES = ['LISTENER', 'ARTIST', 'ADMIN'];
 const USER_STATUSES = ['ACTIVE', 'SUSPENDED', 'BANNED', 'DELETED'];
@@ -2377,6 +2379,7 @@ async function adminRoutes(fastify) {
     const limit = Math.min(100, Math.max(1, parseInt(limitRaw, 10) || 20));
     const skip = (page - 1) * limit;
 
+    const includePii = canReadPii(request);
     const where = {};
     if (status && status !== 'ALL' && CREATOR_STATUSES.includes(status)) {
       where.status = status;
@@ -2386,12 +2389,7 @@ async function adminRoutes(fastify) {
     }
     if (q && typeof q === 'string' && q.trim().length > 0) {
       const cleanQ = q.trim();
-      where.OR = [
-        { displayName: { contains: cleanQ, mode: 'insensitive' } },
-        { user: { username: { contains: cleanQ, mode: 'insensitive' } } },
-        { user: { displayName: { contains: cleanQ, mode: 'insensitive' } } },
-        { user: { email: { contains: cleanQ, mode: 'insensitive' } } }
-      ];
+      where.OR = creatorSearchConditions(cleanQ, { includePii });
     }
 
     const [totalMatching, rawItems, countsGroup] = await Promise.all([
@@ -2401,22 +2399,7 @@ async function adminRoutes(fastify) {
         skip,
         take: limit,
         orderBy: { createdAt: 'desc' },
-        include: {
-          user: {
-            select: {
-              id: true,
-              username: true,
-              displayName: true,
-              email: true,
-              role: true,
-              status: true,
-              joinedAt: true,
-              artistProfile: {
-                select: { id: true, isHidden: true }
-              }
-            }
-          }
-        }
+        select: creatorAdminSelect({ includePii })
       }),
       fastify.prisma.creatorRegistration.groupBy({
         by: ['status'],
@@ -2435,13 +2418,7 @@ async function adminRoutes(fastify) {
       counts.TOTAL += group._count.status;
     }
 
-    let items = rawItems.map((item) => {
-      const userAccess = summarizeArtistAccess(item.user);
-      return {
-        ...item,
-        userAccess
-      };
-    });
+    let items = rawItems.map((item) => creatorAdminView(item, { includePii }));
 
     if (uploadAccess === 'GRANTED') {
       items = items.filter((i) => i.userAccess.canUploadTracks);
@@ -2465,6 +2442,7 @@ async function adminRoutes(fastify) {
   fastify.get('/creators/export', read(ADMIN_PERMISSIONS.USERS_READ), async (request, reply) => {
     const { q, creatorType, status } = request.query || {};
 
+    const includePii = canReadPii(request);
     const where = {};
     if (status && status !== 'ALL' && CREATOR_STATUSES.includes(status)) {
       where.status = status;
@@ -2474,47 +2452,18 @@ async function adminRoutes(fastify) {
     }
     if (q && typeof q === 'string' && q.trim().length > 0) {
       const cleanQ = q.trim();
-      where.OR = [
-        { displayName: { contains: cleanQ, mode: 'insensitive' } },
-        { user: { username: { contains: cleanQ, mode: 'insensitive' } } },
-        { user: { displayName: { contains: cleanQ, mode: 'insensitive' } } },
-        { user: { email: { contains: cleanQ, mode: 'insensitive' } } }
-      ];
+      where.OR = creatorSearchConditions(cleanQ, { includePii });
     }
 
     const items = await fastify.prisma.creatorRegistration.findMany({
       where,
       take: 1000,
       orderBy: { createdAt: 'desc' },
-      include: {
-        user: {
-          select: {
-            id: true,
-            username: true,
-            displayName: true,
-            email: true,
-            role: true,
-            status: true,
-            artistProfile: {
-              select: { id: true, isHidden: true }
-            }
-          }
-        }
-      }
+      select: creatorAdminSelect({ includePii })
     });
 
-    const enriched = items.map((item) => {
-      const userAccess = summarizeArtistAccess(item.user);
-      return {
-        ...item,
-        user: {
-          ...item.user,
-          canUploadTracks: userAccess.canUploadTracks
-        }
-      };
-    });
-
-    const csvData = formatCreatorsCsv(enriched);
+    const enriched = items.map((item) => creatorAdminView(item, { includePii }));
+    const csvData = formatCreatorsCsv(enriched, { includePii });
 
     await createAudit(fastify.prisma, adminAuditData(request,
       request.user.id,
@@ -2534,25 +2483,13 @@ async function adminRoutes(fastify) {
   // GET /admin/creators/:id — Detail of a creator registration
   fastify.get('/creators/:id', read(ADMIN_PERMISSIONS.USERS_READ), async (request, reply) => {
     const id = request.params.id;
+    const includePii = canReadPii(request);
 
     const registration = await fastify.prisma.creatorRegistration.findFirst({
       where: {
         OR: [{ id }, { userId: id }]
       },
-      include: {
-        user: {
-          select: {
-            id: true,
-            username: true,
-            displayName: true,
-            email: true,
-            role: true,
-            status: true,
-            joinedAt: true,
-            artistProfile: true
-          }
-        }
-      }
+      select: creatorAdminSelect({ includePii })
     });
 
     if (!registration) {
@@ -2571,9 +2508,9 @@ async function adminRoutes(fastify) {
     });
 
     return {
-      creator: registration,
+      creator: creatorAdminView(registration, { includePii }),
       userAccess,
-      auditLogs
+      auditLogs: auditLogs.map((log) => publicAuditRecord(log, { includePii }))
     };
   });
 
@@ -2617,7 +2554,7 @@ async function adminRoutes(fastify) {
       { previousStatus: existing.status, nextStatus: status }
     ));
 
-    return { creator: updated };
+    return { creator: creatorAdminView(updated, { includePii: canReadPii(request) }) };
   });
 
   // PATCH /admin/creators/:id/note — Update admin internal evaluation note
@@ -2655,7 +2592,7 @@ async function adminRoutes(fastify) {
       { noteLength: trimmed ? trimmed.length : 0 }
     ));
 
-    return { creator: updated };
+    return { creator: creatorAdminView(updated, { includePii: canReadPii(request) }) };
   });
 }
 
