@@ -56,7 +56,7 @@
 .ns-landing .text-link .icon{width:17px;height:17px}
 .ns-landing .hero{height:max(850px,100svh);max-height:1160px;position:relative;padding:calc(var(--header) + 84px) var(--pad) 80px;isolation:isolate;overflow:clip;--hero:0}
 .ns-landing .hero-content{position:relative;z-index:3;pointer-events:none}
-.ns-landing .hero-content a{pointer-events:auto}
+.ns-landing .hero-content a,.ns-landing .hero-content button,.ns-landing .hero-buttons{pointer-events:auto}
 .ns-landing .hero-eyebrow{display:flex;align-items:center;gap:12px;margin-bottom:32px;color:#9a9aa1}
 .ns-landing .signal-dot{height:5px;width:5px;background:var(--accent);border-radius:50%;display:inline-block}
 .ns-landing .hero h1{font-size:clamp(90px,10.5vw,181px);line-height:.91;font-weight:560;letter-spacing:-.075em;max-width:80%;transform:translate3d(0,calc(var(--hero) * -50px),0);will-change:transform}
