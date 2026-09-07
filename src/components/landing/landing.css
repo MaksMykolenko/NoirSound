@@ -142,7 +142,7 @@
 .ns-landing .scene-meter>span{display:block;width:100%;height:1px;background:var(--ink);transform-origin:left;transform:scaleX(var(--listen))}
 .ns-landing .interlude{height:clamp(220px,30vw,390px);position:relative;overflow:clip;display:flex;align-items:center;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
 .ns-landing .interlude-text{white-space:nowrap;font-size:clamp(80px,12vw,190px);line-height:1;font-weight:550;letter-spacing:-.07em;transform:translateX(8vw);will-change:transform}
-.ns-landing .interlude-text>span{color:transparent;-webkit-text-stroke:1px #5d5d63}
+.ns-landing .interlude-text>span{color:var(--accent);letter-spacing:-.03em;text-shadow:0 0 35px rgba(255,54,93,.38)}
 .ns-landing .create-scene{position:relative;height:160svh;min-height:1350px}
 .ns-landing .create-sticky{position:sticky;top:0;height:100svh;min-height:890px;max-height:1150px;padding:115px var(--pad) 70px;display:flex;flex-direction:column;justify-content:center;gap:54px;overflow:clip}
 .ns-landing .create-grid{display:grid;grid-template-columns:1fr 1fr;gap:10%;align-items:center}
