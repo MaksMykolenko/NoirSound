@@ -1,12 +1,13 @@
 // @vitest-environment node
 import { beforeEach, afterEach, describe, it, expect } from 'vitest';
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, copyFileSync, rmSync, appendFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, copyFileSync, rmSync, appendFileSync, chmodSync, symlinkSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { spawnSync } from 'node:child_process';
 import { gzipSync } from 'node:zlib';
 
 const SHA = '1'.repeat(40);
+const BACKUP_REFERENCE = '20260907T17481050d4f8eeZ';
 describe('exact release deployment guards (no real infrastructure)', () => {
   let dir;
   beforeEach(() => {
@@ -49,11 +50,18 @@ describe('exact release deployment guards (no real infrastructure)', () => {
       esac`);
     script('app/scripts/backup-all.sh', `printf 'backup\\n' >> "$CALL_LOG"
       if [[ "\${TEST_BACKUP_FAIL:-}" == 1 ]]; then exit 21; fi
-      cp "$FIXTURE/postgres.dump.gz" "$NOIRSOUND_BACKUP_DIR/postgres_fixture.dump.gz"
-      cp "$FIXTURE/storage.tar.gz" "$NOIRSOUND_BACKUP_DIR/storage_fixture.tar.gz"
-      printf 'stub manifest\\n' > "$NOIRSOUND_BACKUP_DIR/manifest_fixture.txt"`);
+      cp "$FIXTURE/postgres.dump.gz" "$NOIRSOUND_BACKUP_DIR/postgres_${BACKUP_REFERENCE}.dump.gz"
+      storage_reference="${BACKUP_REFERENCE}"
+      [[ "\${TEST_MISMATCH_STORAGE:-}" != 1 ]] || storage_reference=20260907T17481150d4f8eeZ
+      cp "$FIXTURE/storage.tar.gz" "$NOIRSOUND_BACKUP_DIR/storage_$storage_reference.tar.gz"
+      printf 'stub manifest\\n' > "$NOIRSOUND_BACKUP_DIR/manifest_${BACKUP_REFERENCE}.txt"
+      if [[ "\${TEST_BACKUP_OFFSITE_RECEIPT:-}" == 1 ]]; then
+        (cd "$NOIRSOUND_BACKUP_DIR" && sha256sum "postgres_${BACKUP_REFERENCE}.dump.gz" "storage_$storage_reference.tar.gz" "manifest_${BACKUP_REFERENCE}.txt" > "manifest_${BACKUP_REFERENCE}.sha256")
+        "$OFFSITE_BACKUP_VERIFY_SCRIPT" "$NOIRSOUND_BACKUP_DIR" "$NOIRSOUND_BACKUP_DIR/manifest_${BACKUP_REFERENCE}.sha256" "$NOIRSOUND_BACKUP_DIR/manifest_${BACKUP_REFERENCE}.offsite.txt"
+      fi`);
     script('app/scripts/restore-drill.sh', `printf 'restore\\n' >> "$CALL_LOG"
       [[ -s "$DRILL_POSTGRES_BACKUP" && -s "$DRILL_STORAGE_BACKUP" ]]
+      [[ "\${DRILL_MANIFEST##*/}" == 'manifest_${BACKUP_REFERENCE}.txt' ]]
       [[ "\${TEST_DRILL_FAIL:-}" != 1 ]]`);
     script('bin/offsite-verifier', `printf 'offsite\\n' >> "$CALL_LOG"
       if [[ "\${TEST_OFFSITE_FAIL:-}" == 1 ]]; then exit 22; fi
@@ -95,6 +103,44 @@ describe('exact release deployment guards (no real infrastructure)', () => {
     expect(result.status, result.stderr).not.toBe(0);
     expect(result.stderr).toContain('conflicting Compose projects');
     expect(result.calls).toBe('');
+  });
+  it.each([0o775, 0o757])('rejects writable offsite hooks before Docker or backup (%i)', mode => {
+    chmodSync(join(dir, 'bin/offsite-verifier'), mode);
+    const result = run();
+    expect(result.status, result.stderr).not.toBe(0);
+    expect(result.stderr).toContain('operator-owned regular executable');
+    expect(result.calls).toBe('');
+  });
+  it('rejects a symlink to an otherwise trusted offsite hook', () => {
+    const link = join(dir, 'bin/offsite-link');
+    symlinkSync(join(dir, 'bin/offsite-verifier'), link);
+    const result = run({ OFFSITE_BACKUP_VERIFY_SCRIPT: link });
+    expect(result.status, result.stderr).not.toBe(0);
+    expect(result.calls).toBe('');
+  });
+  it('rejects a mismatched storage run before restore or application changes', () => {
+    const result = run({ TEST_MISMATCH_STORAGE: '1' });
+    expect(result.status, result.stderr).not.toBe(0);
+    expect(result.stderr).toContain('same backup run');
+    expect(result.calls).not.toMatch(/^restore$|^offsite$| build | up -d |migrate deploy/m);
+  });
+  it.each(['environment', 'file'])('selects the exact integrity manifest when the %s hook creates an offsite receipt sibling', configuration => {
+    const overrides = { TEST_BACKUP_OFFSITE_RECEIPT: '1' };
+    if (configuration === 'file') {
+      appendFileSync(join(dir, 'app/.env.production'), `OFFSITE_BACKUP_VERIFY_SCRIPT=${join(dir, 'bin/offsite-verifier')}\n`);
+      overrides.OFFSITE_BACKUP_VERIFY_SCRIPT = '';
+    }
+    const result = run(overrides);
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.calls.match(/^offsite$/gm)).toHaveLength(2);
+    const record = join(dir, 'records', readdirSync(join(dir, 'records'))[0]);
+    const backup = join(record, 'backup');
+    expect(readdirSync(backup)).toContain(`manifest_${BACKUP_REFERENCE}.offsite.txt`);
+    const checksums = readFileSync(join(backup, 'SHA256SUMS'), 'utf8');
+    expect(checksums.trim().split('\n')).toHaveLength(3);
+    expect(checksums).toContain(`manifest_${BACKUP_REFERENCE}.txt`);
+    expect(checksums).not.toContain('.offsite.txt');
+    expect(result.calls).toContain(' up -d --no-deps --no-build backend worker web');
   });
   it('does not update application services after a migration failure', () => {
     const result = run({ TEST_MIGRATE_FAIL: '1' });

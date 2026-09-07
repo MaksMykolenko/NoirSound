@@ -46,7 +46,17 @@ done
 if grep -Ev '^[[:space:]]*(#|$)' "$ENV_FILE" | grep -Eq 'CHANGE_ME|example\.com|__[^[:space:]]*__'; then fail 'Production environment contains placeholders.'; fi
 if [[ -n "${PRODUCTION_DOMAIN:-}" ]]; then [[ "$(setting DOMAIN)" == "$PRODUCTION_DOMAIN" ]] || fail 'Production domain does not match the environment.'; fi
 for command_name in docker curl sha256sum gzip tar python3; do command -v "$command_name" >/dev/null || fail "Required command unavailable: $command_name"; done
-export COMPOSE_PROJECT_NAME APP_ENV_FILE="$ENV_FILE" NOIRSOUND_ENV_FILE="$ENV_FILE" COMPOSE_FILE RELEASE_SHA
+python3 - "$OFFSITE_BACKUP_VERIFY_SCRIPT" <<'PY' || fail 'Offsite verifier must be an operator-owned regular executable, not a symlink or group/world-writable file.'
+import os, pathlib, sys
+try:
+    path = pathlib.Path(sys.argv[1])
+    trusted = path.is_absolute() and path.is_file() and not path.is_symlink() and os.access(path, os.X_OK) and path.stat().st_uid == os.geteuid() and path.stat().st_mode & 0o022 == 0
+except OSError:
+    trusted = False
+sys.exit(0 if trusted else 1)
+PY
+# A hook selected from the file must also reach backup-all's own trusted verifier.
+export COMPOSE_PROJECT_NAME APP_ENV_FILE="$ENV_FILE" NOIRSOUND_ENV_FILE="$ENV_FILE" COMPOSE_FILE RELEASE_SHA OFFSITE_BACKUP_VERIFY_SCRIPT
 compose=(docker compose --project-name "$COMPOSE_PROJECT_NAME" -f "$COMPOSE_FILE" --env-file "$ENV_FILE")
 "${compose[@]}" config --quiet
 # This is an update of an existing stack. Missing/unhealthy dependencies never
@@ -80,13 +90,19 @@ bash scripts/backup-all.sh > "$RECORD_DIR/backup.log" 2>&1 || fail 'Backup faile
 shopt -s nullglob
 pg_archives=("$BACKUP_RUN_DIR"/postgres_*.dump.gz)
 storage_archives=("$BACKUP_RUN_DIR"/storage_*.tar.gz)
-manifests=("$BACKUP_RUN_DIR"/manifest_*.txt)
-[[ ${#pg_archives[@]} == 1 && ${#storage_archives[@]} == 1 && ${#manifests[@]} == 1 ]] || fail 'Backup must produce one fresh archive pair and manifest in this run directory.'
-for file in "${pg_archives[@]}" "${storage_archives[@]}" "${manifests[@]}"; do [[ -s "$file" ]] || fail 'Backup artifact is empty.'; done
+[[ ${#pg_archives[@]} == 1 && ${#storage_archives[@]} == 1 ]] || fail 'Backup must produce one fresh archive pair in this run directory.'
+pg_name="${pg_archives[0]##*/}"
+[[ "$pg_name" =~ ^postgres_([0-9]{8}T[0-9]{6}[0-9a-f]{8}Z)\.dump\.gz$ ]] || fail 'PostgreSQL backup has no recognized run reference.'
+backup_reference="${BASH_REMATCH[1]}"
+[[ "${storage_archives[0]##*/}" == "storage_${backup_reference}.tar.gz" ]] || fail 'PostgreSQL and storage archives must belong to the same backup run.'
+# The backup's manifest_<reference>.offsite.txt receipt is a valid sibling;
+# derive the integrity manifest from the exact pair instead of a broad *.txt glob.
+manifest="$BACKUP_RUN_DIR/manifest_${backup_reference}.txt"
+for file in "${pg_archives[@]}" "${storage_archives[@]}" "$manifest"; do [[ -f "$file" && ! -L "$file" && -s "$file" ]] || fail 'Backup artifact must be a nonempty regular file, not a symlink.'; done
 gzip -t "${pg_archives[0]}" || fail 'PostgreSQL archive is unreadable.'
 tar -tzf "${storage_archives[0]}" >/dev/null || fail 'Storage archive is unreadable.'
-(cd "$BACKUP_RUN_DIR" && sha256sum "$(basename "${pg_archives[0]}")" "$(basename "${storage_archives[0]}")" "$(basename "${manifests[0]}")" > SHA256SUMS)
-NOIRSOUND_RESTORE_TEST=1 DRILL_POSTGRES_BACKUP="${pg_archives[0]}" DRILL_STORAGE_BACKUP="${storage_archives[0]}" DRILL_MANIFEST="${manifests[0]}" bash scripts/restore-drill.sh > "$RECORD_DIR/restore-drill.log" 2>&1 || fail 'Isolated restore drill failed; deployment stopped.'
+(cd "$BACKUP_RUN_DIR" && sha256sum "$(basename "${pg_archives[0]}")" "$(basename "${storage_archives[0]}")" "$(basename "$manifest")" > SHA256SUMS)
+NOIRSOUND_RESTORE_TEST=1 DRILL_POSTGRES_BACKUP="${pg_archives[0]}" DRILL_STORAGE_BACKUP="${storage_archives[0]}" DRILL_MANIFEST="$manifest" bash scripts/restore-drill.sh > "$RECORD_DIR/restore-drill.log" 2>&1 || fail 'Isolated restore drill failed; deployment stopped.'
 CHECKSUM_SHA256="$(sha256sum "$BACKUP_RUN_DIR/SHA256SUMS" | awk '{print $1}')"
 RECEIPT="$RECORD_DIR/offsite-receipt.txt"
 # Trusted operator-installed adapter: copy these exact files to the existing
