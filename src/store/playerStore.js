@@ -88,17 +88,19 @@ export function qualifyThresholdSeconds(durationSeconds) {
 async function reportQualifyingPlay(track, listenedSeconds, completed) {
   // Landing media is public in closed mode, while application stats remain gated.
   // Playback continues on the same singleton without issuing forbidden writes.
-  if (track.playbackSource === 'landing' && import.meta.env.VITE_PUBLIC_APP_ENABLED === 'false') return;
+  if (track.playbackSource === 'landing' && import.meta.env.VITE_PUBLIC_APP_ENABLED === 'false') return false;
   try {
     await useUserStore.getState().incrementPlayStats(track.id, track.artistId, {
       durationListenedSeconds: Math.round(listenedSeconds),
       completed: !!completed,
     });
+    return true;
   } catch (err) {
     console.warn('Failed to record a qualifying play:', err);
     // Do not flip qualifyReported back off on failure -- retrying mid-listen
     // would risk a duplicate report if the first request actually landed.
     // The next real listen (a fresh track/session) will try again.
+    return false;
   }
 }
 
@@ -142,12 +144,12 @@ export const usePlayerStore = create((set, get) => {
       listenState.qualifyReported = true;
       const track = currentTrack;
       const listenedSeconds = listenState.accumulatedSeconds;
-      reportQualifyingPlay(track, listenedSeconds, isEnded).then(() => {
+      reportQualifyingPlay(track, listenedSeconds, isEnded).then((recorded) => {
         // The recently-played list should only ever reflect a listen the
         // backend actually counted -- never an optimistic click. Adding it
         // here, after the qualifying report, keeps it consistent with
         // GET /me/recently-played (qualified-only).
-        get().addToRecentlyPlayed(track);
+        if (recorded) get().addToRecentlyPlayed(track);
       });
     }
   };
