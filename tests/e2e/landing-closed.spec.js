@@ -77,7 +77,11 @@ for (const creatorType of ['LISTENER', 'ARTIST', 'BEATMAKER', 'BOTH']) {
     }
     await expectGate(page.request);
     const logout = page.waitForResponse(response => response.url().endsWith('/api/auth/logout') && response.request().method() === 'POST');
-    await page.getByRole('button', { name: /sign out/i }).first().click();
+    const userMenu = page.getByRole('button', { name: new RegExp(`@${username}`, 'i') });
+    if (await userMenu.isVisible()) {
+      await userMenu.click();
+    }
+    await page.getByRole('menuitem', { name: /sign out/i }).or(page.getByRole('button', { name: /sign out/i })).first().click();
     expect((await logout).status()).toBe(200);
     expect((await page.request.get(`${API_BASE}/auth/me`)).status()).toBe(401);
     await uiLogin(page, email);

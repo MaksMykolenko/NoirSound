@@ -120,9 +120,13 @@ describe('LandingPage Hero Buttons', () => {
     const upgradeBtn = screen.getByRole('button', { name: /зареєструватися як креатор/i });
     expect(upgradeBtn).toBeDefined();
 
+    // Open user menu to access signOut in header
+    const userMenuBtn = screen.getByRole('button', { name: /@testuser/i });
+    await userEvent.click(userMenuBtn);
+
     // Verify signOut in header is localized to "Вийти"
     expect(screen.queryByText('header.signOut')).toBeNull();
-    const signOutBtn = screen.getByRole('button', { name: /вийти/i });
+    const signOutBtn = screen.getByRole('menuitem', { name: /вийти/i });
     expect(signOutBtn).toBeDefined();
 
     // Verify css contains max-width constraint for landing-user-status
