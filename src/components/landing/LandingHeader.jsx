@@ -147,9 +147,9 @@ export default function LandingHeader({ motion }) {
                 onClick={() => setUserMenuOpen((prev) => !prev)}
                 aria-expanded={userMenuOpen}
                 aria-haspopup="menu"
-                aria-label={`@${user.username}`}
+                aria-label={`@${user.username || user.displayName || 'user'}`}
               >
-                <span className="user-menu-name">@{user.username}</span>
+                <span className="user-menu-name">@{user.username || user.displayName || 'user'}</span>
                 <ChevronDown
                   className={`user-menu-chevron ${userMenuOpen ? 'rotate-180' : ''}`}
                   aria-hidden="true"
@@ -163,7 +163,7 @@ export default function LandingHeader({ motion }) {
                   aria-label={t('landing.account') || 'Account'}
                 >
                   <div className="user-menu-header">
-                    <span className="user-menu-handle">@{user.username}</span>
+                    <span className="user-menu-handle">@{user.username || user.displayName || 'user'}</span>
                     {user.email && <span className="user-menu-email">{user.email}</span>}
                   </div>
 
