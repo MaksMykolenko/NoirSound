@@ -1,6 +1,6 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Activity, ArrowUpRight, ChevronDown, LogOut, Menu, MoveHorizontal, X } from 'lucide-react';
+import { Activity, ArrowUpRight, ChevronDown, LogOut, Menu, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useUserStore } from '../../store/userStore';
 import LanguageSwitcher from '../ui/LanguageSwitcher';
@@ -16,6 +16,7 @@ export default function LandingHeader({ motion }) {
   const logoutUser = useUserStore((s) => s.logoutUser);
   const [menuOpen, setMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [motionFeedback, setMotionFeedback] = useState(0);
   const dialog = useRef(null);
   const trigger = useRef(null);
   const userMenuRef = useRef(null);
@@ -86,6 +87,12 @@ export default function LandingHeader({ motion }) {
     openAuth(true, 'login');
   };
 
+  const handleMotionToggle = () => {
+    if (motion.reduced) return;
+    setMotionFeedback(value => value + 1);
+    motion.toggle();
+  };
+
   const handleCreateAccount = () => {
     close();
     openAuth(true, 'register', 'LISTENER');
@@ -121,13 +128,21 @@ export default function LandingHeader({ motion }) {
           <button
             type="button"
             className="motion-toggle"
-            onClick={motion.toggle}
+            onClick={handleMotionToggle}
             aria-pressed={motion.enabled}
             aria-disabled={motion.reduced}
             title={motion.reduced ? t('landing.reducedMotion') : undefined}
             aria-label={t(`landing.${motion.enabled ? 'disableMotion' : 'enableMotion'}`)}
           >
-            <MoveHorizontal className="icon" aria-hidden="true" />
+            <svg
+              key={motionFeedback}
+              className={`icon motion-toggle-icon${motionFeedback ? ' motion-toggle-icon--clicked' : ''}`}
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path className="motion-toggle-arrow motion-toggle-arrow-left" d="m8 8-4 4 4 4M4 12h8" />
+              <path className="motion-toggle-arrow motion-toggle-arrow-right" d="m16 8 4 4-4 4M12 12h8" />
+            </svg>
             <span>{t(`landing.${motion.enabled ? 'motionOn' : 'motionOff'}`)}</span>
           </button>
 
@@ -151,7 +166,7 @@ export default function LandingHeader({ motion }) {
               >
                 <span className="user-menu-name">@{user.username || user.displayName || 'user'}</span>
                 <ChevronDown
-                  className={`user-menu-chevron ${userMenuOpen ? 'rotate-180' : ''}`}
+                  className="user-menu-chevron"
                   aria-hidden="true"
                 />
               </button>
