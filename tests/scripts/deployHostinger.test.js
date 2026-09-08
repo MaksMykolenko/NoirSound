@@ -259,6 +259,8 @@ describe('worker readiness with the actual ioredis client and isolated TCP fixtu
   it('bounds a connected server that never replies and closes all connections', async () => {
     const result = await runProbe('silent');
     expect(result.status).toBe(1);
+    expect(result.stderr).toBe('');
+    expect(result.commands).toContain('INFO');
     expect(result.signal).toBeNull();
     expect(result.elapsed).toBeLessThan(12000);
   }, 15000);
