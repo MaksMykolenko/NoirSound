@@ -153,7 +153,8 @@ test('returning from admin opens landing and retains the application player shel
   // A direct admin visit has no selected track. The public landing intentionally
   // hides the empty player; entering the application must still restore it.
   await expect(page.getByTestId('desktop-player')).toHaveCount(0);
-  await page.getByRole('link', { name: 'Open NoirSound', exact: true }).filter({ visible: true }).click();
+  await page.getByRole('button', { name: '@demo_listener', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Open NoirSound', exact: true }).click();
   await expect(page).toHaveURL(/\/discover$/);
   await expect(page.locator('footer')).toBeVisible();
   await expect(page.getByTestId('desktop-player')).toBeVisible();
