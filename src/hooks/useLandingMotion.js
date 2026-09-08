@@ -31,7 +31,30 @@ export default function useLandingMotion(rootRef) {
     let stopped = false;
     const $ = (selector) => root.querySelector(selector);
     const all = (selector) => [...root.querySelectorAll(selector)];
+    const heroArt = $('.hero-art');
+    let heroFrame = 0;
+    let heroTime = 0;
+    let heroPosition = 0;
+    let heroTarget = 0;
+    const animateHero = (now) => {
+      heroFrame = 0;
+      if (stopped || !enabled || !heroArt || document.hidden) {
+        heroTime = 0;
+        return;
+      }
+      const elapsed = heroTime ? Math.min(now - heroTime, 64) : 16.7;
+      heroTime = now;
+      heroPosition += (heroTarget - heroPosition) * (1 - Math.exp(-elapsed / 95));
+      const settled = Math.abs(heroTarget - heroPosition) < .00015;
+      if (settled) heroPosition = heroTarget;
+      heroArt.style.setProperty('--hero-art', heroPosition.toFixed(5));
+      if (settled) heroTime = 0;
+      else heroFrame = requestAnimationFrame(animateHero);
+    };
     const reset = () => {
+      cancelAnimationFrame(heroFrame);
+      heroFrame = heroTime = heroPosition = heroTarget = 0;
+      heroArt?.style.removeProperty('--hero-art');
       root.classList.remove('motion-ready');
       for (const el of all('[data-reveal]')) el.classList.add('is-visible');
       for (const el of all('.manifesto > span')) el.style.removeProperty('opacity');
@@ -49,7 +72,14 @@ export default function useLandingMotion(rootRef) {
         $('.site-header')?.classList.toggle('scrolled', y > 25);
         if (!enabled || small) return;
         const hero = $('.hero');
-        if (hero) hero.style.setProperty('--hero', clamp(y / Math.max(hero.offsetHeight, 1)));
+        if (hero) {
+          const progress = clamp(y / Math.max(hero.offsetHeight, 1));
+          hero.style.setProperty('--hero', progress);
+          heroTarget = progress;
+          if (heroArt && !heroFrame && Math.abs(heroTarget - heroPosition) >= .00015) {
+            heroFrame = requestAnimationFrame(animateHero);
+          }
+        }
         const statement = $('#statement')?.getBoundingClientRect();
         if (statement) {
           const p = clamp((vh * .91 - statement.top) / (vh * .65));

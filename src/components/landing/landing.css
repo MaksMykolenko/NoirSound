@@ -97,7 +97,7 @@
 .ns-landing .hero-bottom{margin-top:44px;transform:translate3d(0,calc(var(--hero) * -25px),0)}
 .ns-landing .hero-bottom p{font-size:17px;line-height:1.65;letter-spacing:-.01em;color:#aaa9af}
 .ns-landing .hero-buttons{display:flex;align-items:center;gap:30px;margin-top:27px}
-.ns-landing .hero-art{position:absolute;right:-7%;top:18%;width:min(58vw,870px);aspect-ratio:1;z-index:1;transform:translate3d(0,calc(var(--hero) * -120px),0) rotate(calc(var(--hero) * 9deg));will-change:transform}
+.ns-landing .hero-art{position:absolute;right:-7%;top:18%;width:min(58vw,870px);aspect-ratio:1;z-index:1;perspective:1100px;perspective-origin:50% 45%;transform:translate3d(calc(var(--hero-art,0) * -18px),calc(var(--hero-art,0) * -110px),0) rotate(calc(var(--hero-art,0) * 6deg)) scale(calc(1 + var(--hero-art,0) * .035));will-change:transform}
 .ns-landing .record-sleeve{position:absolute;width:69%;aspect-ratio:1;background:#1c1c1e;top:6%;left:5%;transform:rotate(-13deg);color:#a8a8ac;padding:24px;box-shadow:0 30px 80px #000;border:1px solid #37373c;overflow:hidden}
 .ns-landing .sleeve-top,.ns-landing .sleeve-bottom{position:absolute;z-index:1;font-size:8px;letter-spacing:.14em;line-height:1.5}
 .ns-landing .sleeve-top{top:25px;left:25px}
@@ -474,8 +474,8 @@ to{transform:none;opacity:1}
 .ns-landing .landing-sign-in { font-size:12px; min-height:44px; padding:0 6px; white-space:nowrap; }
 .ns-landing .header-actions { gap:16px; }
 .ns-landing .desktop-nav { margin-right:35px; }
-.ns-landing .record-sleeve { transform:translateY(calc(var(--hero) * 45px)) rotate(calc(-13deg - var(--hero) * 4deg)); }
-.ns-landing .record-wrap { transform:translateY(calc(var(--hero) * -20px)) rotate(-25deg); }
+.ns-landing .record-sleeve { transform:translate3d(calc(var(--hero-art,0) * -38px),calc(var(--hero-art,0) * 32px),0) rotateX(calc(var(--hero-art,0) * 7deg)) rotateY(calc(var(--hero-art,0) * -9deg)) rotateZ(calc(-13deg - var(--hero-art,0) * 8deg)); }
+.ns-landing .record-wrap { transform:translate3d(calc(var(--hero-art,0) * 22px),calc(var(--hero-art,0) * -24px),calc(var(--hero-art,0) * 35px)) rotateX(calc(var(--hero-art,0) * -5deg)) rotateY(calc(var(--hero-art,0) * 7deg)) rotateZ(calc(-25deg + var(--hero-art,0) * 55deg)); }
 .ns-landing .showcase-status { min-height:155px; display:flex; align-items:center; font-size:14px; color:#a9a9b1; line-height:1.6; border-block:1px solid var(--line); }
 .ns-landing .row-text small { overflow-wrap:anywhere; }
 .ns-landing .art-caption h3 { overflow-wrap:anywhere; }
