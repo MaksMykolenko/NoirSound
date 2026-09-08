@@ -181,7 +181,6 @@ export default function LandingPage() {
                 </div>
               </div>
             </div>
-            <span className="hero-art-caption">{t('landing.artCaption')}</span>
           </div>
           <div className="hero-foot">
             <Link className="scroll-cue" to="/#statement">
