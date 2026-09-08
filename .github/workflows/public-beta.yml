@@ -41,6 +41,8 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
+      - name: Install backend dependencies for deployment readiness tests
+        run: npm ci --prefix backend
       - name: Verify integration harness guards
         run: node --test scripts/integration/harness.test.mjs
       - run: npm test

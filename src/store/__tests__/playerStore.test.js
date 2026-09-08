@@ -78,6 +78,25 @@ describe('usePlayerStore in real API mode', () => {
     await flushAsyncWork();
     expect(usePlayerStore.getState().isPlaying).toBe(true);
     expect(playEventCalls(fetchMock)).toHaveLength(mode === 'false' ? 0 : 1);
+    expect(usePlayerStore.getState().recentlyPlayed).toHaveLength(mode === 'false' ? 0 : 1);
+  });
+
+  it('keeps failed qualifying reports out of local history without retrying the same listen', async () => {
+    vi.spyOn(window.HTMLMediaElement.prototype, 'play').mockResolvedValue();
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const fetchMock = vi.fn().mockRejectedValue(new Error('Fixture connection lost'));
+    vi.stubGlobal('fetch', fetchMock);
+    await usePlayerStore.getState().playTrack(track);
+    const audio = __getAudioElementForTests();
+    audio.currentTime = 31;
+    audio.dispatchEvent(new Event('timeupdate'));
+    await flushAsyncWork();
+    expect(usePlayerStore.getState().recentlyPlayed).toEqual([]);
+    audio.currentTime = 45;
+    audio.dispatchEvent(new Event('timeupdate'));
+    await flushAsyncWork();
+    expect(playEventCalls(fetchMock)).toHaveLength(1);
+    expect(usePlayerStore.getState().isPlaying).toBe(true);
   });
 
   it('reports exactly one qualifying play and adds to Recently Played once the threshold is crossed', async () => {

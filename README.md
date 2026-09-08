@@ -30,6 +30,11 @@ npm run dev
 
 Useful commands:
 
+The root test suite includes deployment readiness checks using the backend's
+Redis client. From the repository root, run `npm ci --prefix backend` before
+`npm run test` if backend dependencies are not installed yet. CI installs both
+lockfiles for this suite.
+
 ```bash
 npm run lint
 npm run test

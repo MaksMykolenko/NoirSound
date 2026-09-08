@@ -188,10 +188,12 @@ async function authRoutes(fastify, _options) {
     }
 
     try {
-      const user = await fastify.prisma.user.findFirst({
-        where: { email: { equals: email.trim().toLowerCase(), mode: 'insensitive' } }
+      const users = await fastify.prisma.user.findMany({
+        where: { email: { equals: email.trim().toLowerCase(), mode: 'insensitive' } },
+        take: 2
       });
-
+      // Legacy case-variant rows are preserved; never choose an arbitrary identity.
+      const user = users.length === 1 ? users[0] : null;
       if (!user || !user.passwordHash) {
         return reply.status(401).send({ error: 'Invalid credentials' });
       }

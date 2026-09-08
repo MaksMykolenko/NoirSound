@@ -189,5 +189,9 @@ while read -r service expected_image; do
   [[ "$(docker inspect -f '{{.RestartCount}}' "$cid")" == 0 ]] || fail "$service restarted after this update."
   [[ "$(docker inspect -f '{{.State.OOMKilled}}' "$cid")" == false ]] || fail "$service was OOM killed."
 done < "$RECORD_DIR/new-images.txt"
-"${release_compose[@]}" exec -T worker node -e 'const cp=require("node:child_process");for(const bin of ["ffmpeg","ffprobe"])cp.execFileSync(bin,["-version"],{stdio:"ignore"}); const Redis=require("ioredis");const r=new Redis(process.env.REDIS_URL);r.ping().then(v=>{if(v!=="PONG")process.exitCode=1}).catch(()=>{process.exitCode=1}).finally(()=>r.disconnect())' > "$RECORD_DIR/worker-readiness.log" 2>&1 || fail 'Worker readiness failed.'
+"${release_compose[@]}" exec -T worker node -e 'const cp=require("node:child_process");for(const bin of ["ffmpeg","ffprobe"])cp.execFileSync(bin,["-version"],{stdio:"ignore",timeout:5000});
+const Redis=require("ioredis");const r=new Redis(process.env.REDIS_URL,{lazyConnect:true,connectTimeout:5000,commandTimeout:5000,maxRetriesPerRequest:1,enableOfflineQueue:false,retryStrategy:()=>null});
+r.on("error",()=>{});
+const deadline=setTimeout(()=>{r.disconnect();process.exit(1)},10000);
+(async()=>{try{await r.connect();if(await r.ping()!=="PONG")process.exitCode=1}catch{process.exitCode=1}finally{clearTimeout(deadline);r.disconnect()}})()' > "$RECORD_DIR/worker-readiness.log" 2>&1 || fail 'Worker readiness failed.'
 printf 'Release %s is running; backup, drill and trusted offsite receipts are in the private release record. Live functional smoke remains required.\n' "$RELEASE_SHA"

@@ -91,24 +91,18 @@ async function getArtistAccessState(client, userId) {
 }
 
 /**
- * Idempotently ensure `userId` has an ArtistProfile. Never creates a
- * duplicate: checks first, and additionally treats a unique-constraint
- * violation (P2002 on the concurrent-request race) as success by re-reading
- * the row that won the race, rather than surfacing an error.
+ * Reserve the unique userId with PostgreSQL ON CONFLICT DO NOTHING.
+ * Unlike catching P2002 after create, this keeps an interactive transaction
+ * usable when concurrent callers race. Existing profile fields stay untouched.
  */
 async function ensureArtistProfile(client, userId) {
-  const existing = await client.artistProfile.findUnique({ where: { userId } });
-  if (existing) return { profile: existing, created: false };
-  try {
-    const created = await client.artistProfile.create({ data: defaultArtistProfileData(userId) });
-    return { profile: created, created: true };
-  } catch (error) {
-    if (error && error.code === 'P2002') {
-      const raced = await client.artistProfile.findUnique({ where: { userId } });
-      if (raced) return { profile: raced, created: false };
-    }
-    throw error;
-  }
+  const result = await client.artistProfile.createMany({
+    data: [defaultArtistProfileData(userId)],
+    skipDuplicates: true
+  });
+  const profile = await client.artistProfile.findUnique({ where: { userId } });
+  if (!profile) throw new Error('Artist profile reservation unavailable');
+  return { profile, created: result.count === 1 };
 }
 
 /**

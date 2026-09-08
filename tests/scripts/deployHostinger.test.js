@@ -3,7 +3,8 @@ import { beforeEach, afterEach, describe, it, expect } from 'vitest';
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, copyFileSync, rmSync, appendFileSync, chmodSync, symlinkSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
+import { createServer } from 'node:net';
 import { gzipSync } from 'node:zlib';
 
 const SHA = '1'.repeat(40);
@@ -169,4 +170,98 @@ describe('exact release deployment guards (no real infrastructure)', () => {
     expect(result.calls).not.toMatch(/ up -d (postgres|redis|minio)|minio-create-bucket/);
     expect(result.stdout).toContain(SHA);
   });
+});
+
+
+describe('worker readiness with the actual ioredis client and isolated TCP fixtures', () => {
+  const script = readFileSync(resolve('scripts/deploy-hostinger.sh'), 'utf8');
+  const probe = script.match(/exec -T worker node -e '([\s\S]*?)' > "\$RECORD_DIR\/worker-readiness.log"/)[1];
+  // Parse complete RESP arrays so fragmented/pipelined handshakes are realistic.
+  function takeCommand(buffer) {
+    const end = buffer.indexOf('\r\n');
+    if (end < 0) return null;
+    const count = Number(buffer.subarray(1, end).toString());
+    let offset = end + 2;
+    const args = [];
+    for (let index = 0; index < count; index += 1) {
+      const next = buffer.indexOf('\r\n', offset);
+      if (next < 0) return null;
+      const length = Number(buffer.subarray(offset + 1, next).toString());
+      if (buffer.length < next + 2 + length + 2) return null;
+      args.push(buffer.subarray(next + 2, next + 2 + length).toString());
+      offset = next + 2 + length + 2;
+    }
+    return { args, offset };
+  }
+  async function runProbe(mode, source = probe) {
+    const dir = mkdtempSync(join(tmpdir(), 'noirsound-worker-probe-'));
+    for (const bin of ['ffmpeg', 'ffprobe']) writeFileSync(join(dir, bin), '#!/bin/sh\nexit 0\n', { mode: 0o755 });
+    const sockets = new Set();
+    const commands = [];
+    const server = createServer(socket => {
+      sockets.add(socket);
+      socket.on('close', () => sockets.delete(socket));
+      let buffer = Buffer.alloc(0);
+      socket.on('data', data => {
+        buffer = Buffer.concat([buffer, data]);
+        let parsed;
+        while ((parsed = takeCommand(buffer))) {
+          buffer = buffer.subarray(parsed.offset);
+          const command = parsed.args[0].toUpperCase();
+          commands.push(command);
+          if (mode === 'silent') continue;
+          if (command === 'INFO') {
+            const info = 'redis_version:7.4.11\r\nloading:0\r\n';
+            // Force a real not-ready interval; ping must wait for connect().
+            setTimeout(() => { if (!socket.destroyed) socket.write(`$${Buffer.byteLength(info)}\r\n${info}\r\n`); }, 120);
+          } else socket.write(command === 'PING' ? '+PONG\r\n' : '+OK\r\n');
+        }
+      });
+    });
+    await new Promise(resolveListen => server.listen(0, '127.0.0.1', resolveListen));
+    const port = server.address().port;
+    if (mode === 'unreachable') await new Promise(resolveClose => server.close(resolveClose));
+    const started = Date.now();
+    try {
+      const result = await new Promise((resolveExit, reject) => {
+        const child = spawn(process.execPath, ['-e', source], {
+          cwd: resolve('backend'),
+          env: { ...process.env, PATH: `${dir}:${process.env.PATH}`, REDIS_URL: `redis://127.0.0.1:${port}` },
+          stdio: ['ignore', 'ignore', 'pipe'],
+        });
+        let stderr = '';
+        child.stderr.on('data', data => { stderr += data; });
+        const watchdog = setTimeout(() => { child.kill('SIGKILL'); reject(new Error('Readiness exceeded the independent 13s test watchdog')); }, 13000);
+        child.once('error', error => { clearTimeout(watchdog); reject(error); });
+        child.once('close', (status, signal) => { clearTimeout(watchdog); resolveExit({ status, signal, stderr }); });
+      });
+      return { ...result, commands, elapsed: Date.now() - started };
+    } finally {
+      for (const socket of sockets) socket.destroy();
+      if (server.listening) await new Promise(resolveClose => server.close(resolveClose));
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }
+  it('waits for a delayed healthy connection before pinging with the offline queue disabled', async () => {
+    const result = await runProbe('healthy');
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.commands).toContain('INFO');
+    expect(result.commands.filter(command => command === 'PING')).toHaveLength(1);
+    expect(result.signal).toBeNull();
+    expect(result.elapsed).toBeLessThan(3000);
+  });
+  it('fails an unreachable endpoint promptly without leaking client errors', async () => {
+    const result = await runProbe('unreachable');
+    expect(result.status).toBe(1);
+    expect(result.stderr).toBe('');
+    expect(result.elapsed).toBeLessThan(3000);
+  });
+  it('bounds a connected server that never replies and closes all connections', async () => {
+    const result = await runProbe('silent');
+    expect(result.status).toBe(1);
+    expect(result.stderr).toBe('');
+    expect(result.commands).toContain('INFO');
+    expect(result.signal).toBeNull();
+    expect(result.elapsed).toBeLessThan(12000);
+  }, 15000);
 });

@@ -28,6 +28,9 @@ def request(port,path,host='noirsound.test'):
 try:
     with tempfile.TemporaryDirectory(prefix=prefix) as folder:
         p=Path(folder);(p/'assets').mkdir();(p/'assets/test.js').write_text('window.test=true;');(p/'index.html').write_text('<!doctype html><html><body>SPA shell</body></html>')
+        (p/'.well-known/acme-challenge').mkdir(parents=True)
+        (p/'.well-known/.env').write_text('sensitive-fixture-must-not-be-served')
+        (p/'.well-known/acme-challenge/test-token').write_text('acme-fixture-token')
         source=(root/'Caddyfile').read_text().replace('www.{$DOMAIN:localhost} {','http://www.noirsound.test {').replace('{$DOMAIN::80} {','http://noirsound.test {')
         (p/'Caddyfile').write_text(source)
         (p/'Backend').write_text('''{
@@ -54,10 +57,13 @@ try:
             try:request(port,'/home');break
             except OSError:time.sleep(.1)
         results=[]
-        for path in ['/.env','/.git/config','/docker-compose.production.yml','/backup.sql','/private.pem','/reports/private.md','/backups/db.tar.gz']:
+        for path in ['/.env','/.git/config','/docker-compose.production.yml','/backup.sql','/private.pem','/reports/private.md','/backups/db.tar.gz','/.well-known/.env']:
             status,headers,body=request(port,path);assert status==404,(path,status);assert 'SPA shell' not in body;results.append([path,status])
         for path in ['/home','/admin/reports','/assets/test.js']:
             status,headers,body=request(port,path);assert status==200,(path,status);results.append([path,status])
+        status,_,body=request(port,'/.well-known/acme-challenge/test-token')
+        assert status==200 and body=='acme-fixture-token'
+        results.append(['ACME challenge fixture',status])
         status,headers,body=request(port,'/api/reports');assert status==401;assert headers.get('Content-Security-Policy')=="default-src 'none'; frame-ancestors 'none'";results.append(['/api/reports',status])
         for path in ['/','/home','/admin/reports','/robots.txt','/sitemap.xml']:
             status,headers,body=request(port,path);assert status==200;assert 'script-src' in headers.get('Content-Security-Policy',''),(path,headers)

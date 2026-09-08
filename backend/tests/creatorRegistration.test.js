@@ -1,5 +1,6 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import supertest from 'supertest';
+import pg from 'pg';
 import buildServer from '../src/index';
 import seedModule from '../prisma/seed';
 
@@ -112,6 +113,102 @@ describe('Creator Registration & Public App Gate API', () => {
   });
 
   describe('Registration Flows', () => {
+    it('rejects real legacy case-variant emails without changing either stored account', async () => {
+      const suffix = Date.now().toString(36);
+      const email = `legacy_${suffix}@example.test`;
+      const password = 'Password123!';
+      const registered = await supertest(app.server).post('/api/auth/register').send({
+        email, username: `legacy_${suffix}`, displayName: 'Legacy Identity', password
+      });
+      expect(registered.statusCode).toBe(200);
+      const original = await app.prisma.user.findUnique({ where: { id: registered.body.user.id } });
+      const variant = await app.prisma.user.create({ data: {
+        email: email.toUpperCase(), username: `variant_${suffix}`, displayName: 'Separate Legacy Identity', passwordHash: original.passwordHash
+      } });
+      const sessions = await app.prisma.session.count();
+      const login = await supertest(app.server).post('/api/auth/login').send({ email, password });
+      expect(login.statusCode).toBe(401);
+      expect(login.body).toEqual({ error: 'Invalid credentials' });
+      expect(login.headers['set-cookie']).toBeUndefined();
+      expect(await app.prisma.session.count()).toBe(sessions);
+      expect(await app.prisma.user.findUnique({ where: { id: original.id } })).toEqual(original);
+      expect(await app.prisma.user.findUnique({ where: { id: variant.id } })).toEqual(variant);
+    });
+
+    it('allows concurrent onboarding in real transactions without duplicate profiles or transaction aborts', async () => {
+      const suffix = Date.now().toString(36);
+      const registered = await supertest(app.server).post('/api/auth/register').send({
+        email: `concurrent_${suffix}@example.test`, username: `concurrent_${suffix}`,
+        displayName: 'Concurrent Creator', password: 'Password123!', accountType: 'LISTENER'
+      });
+      expect(registered.statusCode).toBe(200);
+      const userId = registered.body.user.id;
+      const cookie = registered.headers['set-cookie'];
+      const originalTransaction = app.prisma.$transaction.bind(app.prisma);
+      const originalQuery = pg.Client.prototype.query;
+      const profileInserts = [];
+      const querySpy = vi.spyOn(pg.Client.prototype, 'query').mockImplementation(function (...args) {
+        const sql = typeof args[0] === 'string' ? args[0] : args[0]?.text || '';
+        if (/INSERT\s+INTO\s+(?:"public"\.)?"ArtistProfile"/i.test(sql)) profileInserts.push(sql);
+        return originalQuery.apply(this, args);
+      });
+      // Force both old read/create callers to observe the missing profile.
+      // Atomic insertion needs no read barrier: it reaches findUnique only after reservation.
+      let missingReads = 0;
+      let releaseReads;
+      const readsReady = new Promise(resolve => { releaseReads = resolve; });
+      const transactionSpy = vi.spyOn(app.prisma, '$transaction').mockImplementation(callback =>
+        originalTransaction(async tx => {
+          const profile = new Proxy(tx.artistProfile, { get(target, key) {
+            if (key !== 'findUnique') return target[key];
+            return async args => {
+              const result = await target.findUnique(args);
+              if (args.where.userId === userId && !result) {
+                missingReads += 1;
+                if (missingReads === 2) releaseReads();
+                await readsReady;
+              }
+              return result;
+            };
+          } });
+          return callback(new Proxy(tx, { get(target, key) { return key === 'artistProfile' ? profile : target[key]; } }));
+        }));
+      try {
+        const responses = await Promise.all([1, 2].map(() => supertest(app.server)
+          .post('/api/auth/creator-onboarding').set('Cookie', cookie)
+          .send({ creatorType: 'BOTH', displayName: 'Concurrent Creator' })));
+        expect(responses.map(response => response.statusCode)).toEqual([200, 200]);
+        expect(await app.prisma.artistProfile.count({ where: { userId } })).toBe(1);
+        expect(await app.prisma.creatorRegistration.count({ where: { userId } })).toBe(1);
+        expect(await app.prisma.auditLog.count({ where: { actorId: userId, action: 'CREATOR_REGISTERED' } })).toBe(2);
+        expect(profileInserts).toHaveLength(2);
+        expect(profileInserts.every(sql => /ON\s+CONFLICT\s+DO\s+NOTHING/i.test(sql))).toBe(true);
+        console.info('Profile concurrency: two HTTP200 responses, one profile/registration, two audits; PostgreSQL ON CONFLICT DO NOTHING confirmed.');
+      } finally {
+        transactionSpy.mockRestore();
+        querySpy.mockRestore();
+      }
+    });
+
+    it('preserves existing profile fields during concurrent creator onboarding', async () => {
+      const suffix = Date.now().toString(36);
+      const registered = await supertest(app.server).post('/api/auth/register').send({
+        email: `preserved_${suffix}@example.test`, username: `preserved_${suffix}`,
+        displayName: 'Existing Creator', password: 'Password123!', creatorType: 'ARTIST'
+      });
+      expect(registered.statusCode).toBe(200);
+      const userId = registered.body.user.id;
+      const profile = await app.prisma.artistProfile.update({ where: { userId }, data: {
+        monthlyListeners: 42, genres: ['rock'], socialLinks: { website: 'https://example.test/artist' }, isHidden: true
+      } });
+      const responses = await Promise.all([1, 2].map(() => supertest(app.server)
+        .post('/api/auth/creator-onboarding').set('Cookie', registered.headers['set-cookie'])
+        .send({ creatorType: 'BEATMAKER', displayName: 'Existing Creator' })));
+      expect(responses.map(response => response.statusCode)).toEqual([200, 200]);
+      expect(await app.prisma.artistProfile.findUnique({ where: { userId } })).toEqual(profile);
+      expect(responses.every(response => response.body.user.role === 'LISTENER' && !response.body.user.canUploadTracks)).toBe(true);
+    });
+
     it('registers a standard listener without creating CreatorRegistration or ArtistProfile', async () => {
       const suffix = Date.now();
       const res = await supertest(app.server)

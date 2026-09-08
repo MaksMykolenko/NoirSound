@@ -69,9 +69,17 @@ async function resolveGoogleUser(prisma, profile) {
     });
     if (linkedAccount) return linkedAccount.user;
 
-    let user = await tx.user.findFirst({
-      where: { email: { equals: email, mode: 'insensitive' } }
+    const users = await tx.user.findMany({
+      where: { email: { equals: email, mode: 'insensitive' } },
+      take: 2
     });
+    if (users.length > 1) {
+      // A verified email alone cannot disambiguate legacy case-variant accounts.
+      const error = new Error('Ambiguous email identity');
+      error.code = 'AUTH_EMAIL_AMBIGUOUS';
+      throw error;
+    }
+    let user = users[0] || null;
 
     if (user && user.status !== 'ACTIVE') return user;
 
