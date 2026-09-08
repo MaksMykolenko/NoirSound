@@ -39,14 +39,27 @@
 .ns-landing .motion-toggle{display:flex;align-items:center;gap:8px;min-height:44px;color:#85858b;font-size:10px}
 .ns-landing .motion-toggle .icon{width:19px}
 .ns-landing .motion-toggle:hover{color:#fff}
+.ns-landing .motion-toggle-icon{overflow:visible}
+.ns-landing .motion-toggle-arrow-left{--arrow-shift:-3px}
+.ns-landing .motion-toggle-arrow-right{--arrow-shift:3px}
+@keyframes ns-motion-arrow-click{
+  0%,100%{transform:translateX(0)}
+  40%{transform:translateX(var(--arrow-shift))}
+  75%{transform:translateX(calc(var(--arrow-shift) * -.15))}
+}
+@media(prefers-reduced-motion:no-preference){
+  /* Keep explicit click feedback when page motion is switched off. */
+  .ns-landing .motion-toggle .motion-toggle-icon--clicked .motion-toggle-arrow{animation:ns-motion-arrow-click .44s cubic-bezier(.2,.8,.2,1)!important}
+  .ns-landing .user-menu-trigger .user-menu-chevron{transition:transform .28s cubic-bezier(.22,1,.36,1)!important}
+}
 .ns-landing .header-cta{font-size:12px;display:flex;align-items:center;gap:12px;border:1px solid #3c3c3f;border-radius:40px;padding:12px 18px;min-height:44px;transition:background .2s,border .2s}
 .ns-landing .header-cta .icon{width:17px;height:17px}
 .ns-landing .header-cta:hover{background:var(--ink);border-color:var(--ink);color:#000}
 .ns-landing .user-menu-container{position:relative;display:inline-flex}
 .ns-landing .user-menu-trigger{font-size:12px;font-weight:500;display:inline-flex;align-items:center;gap:8px;border:1px solid #3c3c3f;border-radius:40px;padding:10px 18px;min-height:44px;background:transparent;color:var(--ink);cursor:pointer;transition:background .2s,border-color .2s,color .2s;white-space:nowrap}
 .ns-landing .user-menu-trigger:hover,.ns-landing .user-menu-trigger[aria-expanded="true"]{background:#19191c;border-color:#5c5c62;color:#fff}
-.ns-landing .user-menu-chevron{width:14px;height:14px;color:#8e8e93;transition:transform .2s ease;flex-shrink:0}
-.ns-landing .user-menu-chevron.rotate-180{transform:rotate(180deg)}
+.ns-landing .user-menu-chevron{width:14px;height:14px;color:#8e8e93;transform:rotate(0deg);transform-origin:center;flex-shrink:0}
+.ns-landing .user-menu-trigger[aria-expanded="true"] .user-menu-chevron{transform:rotate(180deg)}
 .ns-landing .user-menu-dropdown{position:absolute;top:calc(100% + 8px);right:0;min-width:220px;background:#111113;border:1px solid #2e2e32;border-radius:12px;padding:6px;box-shadow:0 12px 36px rgba(0,0,0,.65),0 0 0 1px rgba(255,255,255,.04);z-index:100;animation:ns-menu-fade-in .15s ease-out}
 @keyframes ns-menu-fade-in{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
 .ns-landing .user-menu-header{padding:8px 10px 10px;border-bottom:1px solid #222226;margin-bottom:4px}
