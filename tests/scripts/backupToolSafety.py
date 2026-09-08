@@ -251,6 +251,16 @@ class ArchiveStreaming(unittest.TestCase):
         with self.assertRaises(m.BackupError) as failure:
             m.stream_command([sys.executable,'-c',child],source=io.BytesIO(b'PGDMP'),timeout=2)
         self.assertNotIn('fixture-private-secret',str(failure.exception))
+    def test_exit_wait_timeouts_are_safe_backup_errors_and_reap_the_client(self):
+        for early_close in [False, True]:
+            with self.subTest(early_close=early_close):
+                pidfile=self.directory/('early-close' if early_close else 'eof')
+                child="import os,sys,time;open(sys.argv[1],'w').write(str(os.getpid()));os.close(0);time.sleep(60)"
+                source=io.BytesIO(b'x'*1048576 if early_close else b'')
+                with self.assertRaises(m.BackupError) as failure:
+                    m.stream_command([sys.executable,'-c',child,str(pidfile)],source=source,timeout=0.5,label='Fixture exit')
+                self.assertEqual(str(failure.exception),'Fixture exit timed out; no success receipt was issued.')
+                with self.assertRaises(ProcessLookupError):os.kill(int(pidfile.read_text()),0)
     def test_early_successful_consumer_still_checks_the_gzip_trailer(self):
         archive=self.directory/'corrupted.gz'
         damaged=bytearray(gzip.compress(b'PGDMP'+b'x'*1048576));damaged[-8]^=1;archive.write_bytes(damaged)

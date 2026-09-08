@@ -88,6 +88,8 @@ def stream_command(args, *, source=None, target=None, label='Archive operation',
                     break
         pipe.close()
         need(proc.wait(timeout=remaining()) == 0, f'{label} failed; no success receipt was issued.')
+    except subprocess.TimeoutExpired:
+        raise BackupError(f'{label} timed out; no success receipt was issued.') from None
     finally:
         if proc.poll() is None: proc.kill()
         proc.wait()
