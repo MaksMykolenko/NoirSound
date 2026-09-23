@@ -8,7 +8,6 @@ import {
 } from 'lucide-react';
 import { useUserStore } from '../../store/userStore';
 import { AdminLoading } from '../../components/admin/AdminUI';
-import LanguageSwitcher from '../../components/ui/LanguageSwitcher';
 import AdminGlobalSearch from '../../components/admin/AdminGlobalSearch';
 import { adminEnvironment } from '../../config/adminEnvironment';
 
@@ -116,7 +115,6 @@ export function AdminShell() {
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <header className="z-[var(--ns-z-header)] flex h-16 shrink-0 items-center gap-3 border-b border-[var(--ns-border-subtle)] bg-[var(--ns-bg-elevated)] px-4 sm:px-6" data-testid="admin-topbar">
           <AdminGlobalSearch />
-          <LanguageSwitcher variant="select" />
           <span className="hidden text-xs font-semibold text-[var(--ns-text-muted)] sm:block">{t(`admin.statusValues.${user.role}`, { defaultValue: user.role })}</span>
         </header>
         <div className={`flex min-h-7 shrink-0 items-center border-b px-4 text-ns-meta font-semibold uppercase tracking-ns-label sm:px-6 ${adminEnvironment.isDemo ? 'border-amber-500/30 bg-amber-500/8 text-amber-300' : 'border-[var(--ns-border-subtle)] bg-[var(--ns-card-soft)] text-[var(--ns-text-muted)]'}`} data-testid="admin-environment-bar">

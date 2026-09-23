@@ -488,11 +488,8 @@ to{transform:none;opacity:1}
 .ns-landing .release-dialog { margin:auto; }
 .ns-landing dialog:not([open]) { display:none; }
 .ns-landing .nav-dialog { padding-top:max(20px,env(safe-area-inset-top,0px)); padding-bottom:max(24px,env(safe-area-inset-bottom,0px)); overflow-y:auto; }
-.ns-landing .nav-dialog .landing-language { margin-top:32px; }
 .ns-landing .site-footer nav { display:flex; gap:20px; flex-wrap:wrap; }
 .ns-landing .site-footer nav a { display:inline-flex; align-items:center; min-height:44px; }
-.ns-landing .landing-language { color:#ddd; background:#151516; border-color:#333; }
-.ns-landing .landing-language option { color:#eee; background:#151516; }
 .ns-landing .no-motion,.ns-landing.no-motion { --hero:0; --listen:0; --create:0; }
 .ns-landing.no-motion .record-wrap,.ns-landing.no-motion .record-sleeve { translate:none; }
 .ns-landing.no-motion .record-sleeve { transform:rotate(-13deg); }

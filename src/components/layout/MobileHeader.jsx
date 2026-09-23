@@ -4,7 +4,6 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { Search, ListMusic } from 'lucide-react';
 import { useUserStore } from '../../store/userStore';
 import BrandLogo from './BrandLogo';
-import LanguageSwitcher from '../ui/LanguageSwitcher';
 
 export default function MobileHeader({ onOpenDrawer }) {
   const { t } = useTranslation();
@@ -19,7 +18,6 @@ export default function MobileHeader({ onOpenDrawer }) {
 
       {/* Action Buttons */}
       <div className="flex items-center gap-1.5 sm:gap-2">
-        <LanguageSwitcher variant="select" />
         {!user && (
           <button
             type="button"

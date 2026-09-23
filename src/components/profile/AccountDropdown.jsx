@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import { User, Settings, LayoutDashboard, LogOut } from 'lucide-react';
 import { useToastStore } from '../../store/toastStore';
 import { useLogout } from '../../hooks/mutations/useAuth';
-import LanguageSwitcher from '../ui/LanguageSwitcher';
 import ThemeSelector from '../settings/ThemeSelector';
 
 export default function AccountDropdown({ isOpen, onClose, anchorRef }) {
@@ -112,12 +111,6 @@ export default function AccountDropdown({ isOpen, onClose, anchorRef }) {
 
       <div className="px-3 py-2">
         <ThemeSelector compact />
-      </div>
-
-      <div className="h-px bg-zinc-900/60 my-1"></div>
-
-      <div className="px-3 py-2">
-        <LanguageSwitcher compact />
       </div>
 
       <div className="h-px bg-zinc-900/60 my-1"></div>

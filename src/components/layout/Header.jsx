@@ -5,7 +5,6 @@ import { ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import { useUserStore } from '../../store/userStore';
 import AccountDropdown from '../profile/AccountDropdown';
 import FallbackAvatar from '../ui/FallbackAvatar';
-import LanguageSwitcher from '../ui/LanguageSwitcher';
 
 export default function Header() {
   const { t } = useTranslation();
@@ -66,7 +65,6 @@ export default function Header() {
 
         {/* User options */}
       <div className="flex items-center gap-2.5 xl:gap-3 shrink-0">
-        <LanguageSwitcher compact />
         {user ? (
           <div className="relative" ref={pillRef}>
             <button

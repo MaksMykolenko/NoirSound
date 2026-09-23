@@ -1,7 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { LEGAL_NAV } from '../../constants/legalContent';
-import LanguageSwitcher from '../ui/LanguageSwitcher';
 
 /**
  * Lightweight footer with legal/policy links. Rendered at the bottom of the
@@ -20,7 +19,6 @@ export default function Footer() {
             </Link>
           ))}
         </div>
-        <LanguageSwitcher compact />
       </div>
       <p className="mt-3 text-zinc-600">
         © {year} NoirSound · Independent music platform · Public beta

@@ -6,7 +6,6 @@ import PageMeta from '../components/meta/PageMeta';
 import LandingHeader, { LandingBrand } from '../components/landing/LandingHeader';
 import LandingListenSection from '../components/landing/LandingListenSection';
 import LandingCreatorSection from '../components/landing/LandingCreatorSection';
-import LanguageSwitcher from '../components/ui/LanguageSwitcher';
 import useLandingMotion from '../hooks/useLandingMotion';
 import { usePlayerStore } from '../store/playerStore';
 import { useUserStore } from '../store/userStore';
@@ -249,7 +248,6 @@ export default function LandingPage() {
           <Link to="/privacy">{t('landing.privacy')}</Link>
           <Link to="/abuse">{t('landing.support')}</Link>
         </nav>
-        <LanguageSwitcher variant="select" className="landing-language" />
         <span className="footer-note">© {new Date().getFullYear()} NoirSound</span>
       </footer>
     </div>

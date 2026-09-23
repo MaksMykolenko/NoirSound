@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import { Activity, ArrowUpRight, ChevronDown, LogOut, Menu, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useUserStore } from '../../store/userStore';
-import LanguageSwitcher from '../ui/LanguageSwitcher';
 
 export function LandingBrand() {
   return <Link className="brand" to="/discover" aria-label="NoirSound"><Activity className="icon brand-icon" aria-hidden="true" /><span>NoirSound<span className="brand-period">.</span></span></Link>;
@@ -288,7 +287,6 @@ export default function LandingHeader({ motion }) {
             </div>
           )}
         </nav>
-        <LanguageSwitcher variant="select" className="landing-language" />
       </dialog>
     </>
   );

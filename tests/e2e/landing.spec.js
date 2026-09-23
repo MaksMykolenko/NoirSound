@@ -233,14 +233,15 @@ test('mobile navigation traps and restores focus, and persisted motion preferenc
   expect(await page.evaluate(() => document.body.style.overflow)).toBe('');
 });
 
-test('landing locale changes preserve authored titles and app theme, and metadata follows refreshed public deep links', async ({ page }) => {
+test('saved landing locales preserve authored titles and app theme, and metadata follows refreshed public deep links', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light-minimal');
   await expect(showcaseRows(page)).toHaveCount(3);
   const titles = await showcaseRows(page).allTextContents();
-  const language = page.getByRole('contentinfo').getByRole('combobox');
   for (const [locale, heading] of [['uk', 'Твоєзвучання.'], ['pl', 'Twojebrzmienie.'], ['ru', 'Твоёзвучание.'], ['en', 'Yoursound.']]) {
-    await language.selectOption(locale);
+    await page.evaluate((value) => localStorage.setItem('noirsound_language', value), locale);
+    await page.reload();
+    await expect(showcaseRows(page)).toHaveCount(3);
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(heading);
     expect(await showcaseRows(page).allTextContents()).toEqual(titles);
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'light-minimal');
