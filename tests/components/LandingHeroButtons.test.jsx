@@ -1,4 +1,5 @@
 import React from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -106,9 +107,11 @@ describe('LandingPage Hero Buttons', () => {
     });
 
     const { container } = render(
-      <MemoryRouter>
-        <LandingPage />
-      </MemoryRouter>
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter>
+          <LandingPage />
+        </MemoryRouter>
+      </QueryClientProvider>
     );
 
     // Verify localized listener notice is displayed, NOT the raw key
