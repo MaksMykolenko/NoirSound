@@ -569,7 +569,15 @@
   "library": {
     "subtitle": "Twoja osobista kolekcja muzyczna i historia odtwarzania.",
     "music": "Muzyka",
-    "beats": "Beaty"
+    "beats": "Beaty",
+    "trackCount_one": "{{count}} utwór",
+    "trackCount_few": "{{count}} utwory",
+    "trackCount_many": "{{count}} utworów",
+    "trackCount_other": "{{count}} utworu",
+    "beatCount_one": "{{count}} bit",
+    "beatCount_few": "{{count}} bity",
+    "beatCount_many": "{{count}} bitów",
+    "beatCount_other": "{{count}} bitu"
   },
   "artist": {
     "music": "Muzyka",

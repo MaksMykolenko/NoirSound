@@ -569,7 +569,11 @@
   "library": {
     "subtitle": "Your account-backed music collection and listening history.",
     "music": "Music",
-    "beats": "Beats"
+    "beats": "Beats",
+    "trackCount_one": "{{count}} track",
+    "trackCount_other": "{{count}} tracks",
+    "beatCount_one": "{{count}} beat",
+    "beatCount_other": "{{count}} beats"
   },
   "artist": {
     "music": "Music",

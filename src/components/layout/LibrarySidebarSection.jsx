@@ -1,12 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Heart, History, ListMusic, Plus, Search, Users } from 'lucide-react';
+import { Heart, History, ListMusic, Plus, Radio, Search, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import {
   createPlaylist,
   getArtists,
   getFollowedArtists,
-  getLikedTracks,
   getMyPlaylists,
 } from '../../api';
 import { isMockMode } from '../../api/mode';
@@ -15,15 +14,17 @@ import { useUserStore } from '../../store/userStore';
 import SidebarArtistItem from '../artists/SidebarArtistItem';
 import CreatePlaylistModal from '../playlists/CreatePlaylistModal';
 import SidebarPlaylistItem from '../playlists/SidebarPlaylistItem';
+import useLikedCollection from '../../hooks/useLikedCollection';
+import { isBeatTrack } from '../../utils/trackContent';
 
 export default function LibrarySidebarSection({ onItemClick }) {
   const navigate = useNavigate();
   const demoMode = isMockMode();
   const { user, setAuthModalOpen } = useUserStore();
-  const { likedTracks, recentlyPlayed } = usePlayerStore();
+  const { recentlyPlayed } = usePlayerStore();
+  const { tracks: likedTracks, loading: likesLoading, error: likesError } = useLikedCollection();
   const [playlists, setPlaylists] = useState([]);
   const [artists, setArtists] = useState([]);
-  const [realLikedCount, setRealLikedCount] = useState(0);
   const [search, setSearch] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [playlistRevision, setPlaylistRevision] = useState(0);
@@ -38,7 +39,6 @@ export default function LibrarySidebarSection({ onItemClick }) {
     if (!user) {
       setPlaylists([]);
       setArtists([]);
-      setRealLikedCount(0);
       return;
     }
     if (demoMode) {
@@ -51,11 +51,10 @@ export default function LibrarySidebarSection({ onItemClick }) {
       return;
     }
 
-    Promise.all([getMyPlaylists(), getFollowedArtists(), getLikedTracks()])
-      .then(([playlistData, artistData, likedData]) => {
+    Promise.all([getMyPlaylists(), getFollowedArtists()])
+      .then(([playlistData, artistData]) => {
         setPlaylists(playlistData);
         setArtists(artistData);
-        setRealLikedCount(likedData.length);
       })
       .catch(() => {});
   }, [demoMode, playlistRevision, user]);
@@ -89,9 +88,11 @@ export default function LibrarySidebarSection({ onItemClick }) {
   };
 
   const { t } = useTranslation();
-  const likedCountText = demoMode
-    ? `${likedTracks.length} demo tracks`
-    : `${realLikedCount} tracks`;
+  const likedBeatsCount = likedTracks.filter(isBeatTrack).length;
+  const likedCollections = [
+    { tab: 'music', label: t('beats.likedMusic'), icon: Heart, count: likedTracks.length - likedBeatsCount, countKey: 'library.trackCount' },
+    { tab: 'beats', label: t('beats.likedBeats'), icon: Radio, count: likedBeatsCount, countKey: 'library.beatCount' },
+  ];
 
   const handleNav = (path) => {
     navigate(path);
@@ -123,22 +124,24 @@ export default function LibrarySidebarSection({ onItemClick }) {
 
       <div className="flex-1 overflow-y-auto px-1 space-y-4 pb-6">
         <div className="space-y-1.5">
-          <button onClick={() => handleNav('/library?tab=liked')} className="flex w-full cursor-pointer items-center gap-3 rounded-lg p-2.5 text-left transition-colors hover:bg-zinc-900/55">
+          {likedCollections.map(({ tab, label, icon: Icon, count, countKey }) => (
+          <button key={tab} data-testid={`library-shortcut-${tab}`} onClick={() => handleNav(`/library?tab=${tab}`)} className="flex w-full cursor-pointer items-center gap-3 rounded-lg p-2.5 text-left transition-colors hover:bg-zinc-900/55">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-brand-red/20 bg-brand-red/10 text-brand-red">
-              <Heart size={15} fill="currentColor" />
+              <Icon size={15} fill={tab === 'music' ? 'currentColor' : 'none'} />
             </span>
             <span className="min-w-0 flex-1 truncate">
-              <strong className="block text-sm text-zinc-200 truncate">{t('nav.likedSongs')}</strong>
-              <small className="block text-ns-label text-zinc-500 truncate">{likedCountText}</small>
+              <strong className="block text-sm text-zinc-200 truncate">{label}</strong>
+              <small className="block text-ns-label text-zinc-500 truncate">{likesLoading || likesError ? '—' : t(countKey, { count })}</small>
             </span>
           </button>
+          ))}
           <button onClick={() => handleNav('/library?tab=recently')} className="flex w-full cursor-pointer items-center gap-3 rounded-lg p-2.5 text-left transition-colors hover:bg-zinc-900/55">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-[var(--ns-border-subtle)] bg-zinc-900 text-brand-red">
               <History size={15} />
             </span>
             <span className="min-w-0 flex-1 truncate">
               <strong className="block text-sm text-zinc-200 truncate">{t('nav.recentlyPlayed')}</strong>
-              <small className="block text-ns-label text-zinc-500 truncate">{recentlyPlayed.length} tracks</small>
+              <small className="block text-ns-label text-zinc-500 truncate">{t('library.trackCount', { count: recentlyPlayed.length })}</small>
             </span>
           </button>
         </div>

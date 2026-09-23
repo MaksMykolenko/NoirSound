@@ -569,7 +569,15 @@
   "library": {
     "subtitle": "Ваша персональна музична колекція та історія прослуховувань.",
     "music": "Музика",
-    "beats": "Біти"
+    "beats": "Біти",
+    "trackCount_one": "{{count}} трек",
+    "trackCount_few": "{{count}} треки",
+    "trackCount_many": "{{count}} треків",
+    "trackCount_other": "{{count}} треку",
+    "beatCount_one": "{{count}} біт",
+    "beatCount_few": "{{count}} біти",
+    "beatCount_many": "{{count}} бітів",
+    "beatCount_other": "{{count}} біта"
   },
   "artist": {
     "music": "Музика",

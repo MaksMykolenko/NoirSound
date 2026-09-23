@@ -569,7 +569,15 @@
   "library": {
     "subtitle": "Ваша персональная коллекция музыки и история прослушиваний.",
     "music": "Музыка",
-    "beats": "Биты"
+    "beats": "Биты",
+    "trackCount_one": "{{count}} трек",
+    "trackCount_few": "{{count}} трека",
+    "trackCount_many": "{{count}} треков",
+    "trackCount_other": "{{count}} трека",
+    "beatCount_one": "{{count}} бит",
+    "beatCount_few": "{{count}} бита",
+    "beatCount_many": "{{count}} битов",
+    "beatCount_other": "{{count}} бита"
   },
   "artist": {
     "music": "Музыка",

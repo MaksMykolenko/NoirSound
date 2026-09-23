@@ -5,9 +5,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   getArtists,
   getFollowedArtists,
-  getLikedTracks,
   getMyPlaylists,
-  getTracks,
   createPlaylist,
   setPlaylistSaved,
 } from '../api';
@@ -24,6 +22,7 @@ import CreatePlaylistModal from '../components/playlists/CreatePlaylistModal';
 import PageMeta from '../components/meta/PageMeta';
 import useScrollableTabs from '../hooks/useScrollableTabs';
 import { isBeatTrack } from '../utils/trackContent';
+import useLikedCollection from '../hooks/useLikedCollection';
 
 export default function Library() {
   const { t } = useTranslation();
@@ -46,19 +45,19 @@ export default function Library() {
 
   const { user, authHydrated, setAuthModalOpen } = useUserStore();
   const {
-    likedTracks,
     recentlyPlayed,
     recentlyPlayedError,
     loadRecentlyPlayed,
   } = usePlayerStore();
 
-  const [tracks, setTracks] = useState([]);
   const [artists, setArtists] = useState([]);
   const [playlists, setPlaylists] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isCreateOpen, setCreateOpen] = useState(false);
   const [playlistRevision, setPlaylistRevision] = useState(0);
+  const { tracks: likedSongs, loading: likesLoading, error: likesError } = useLikedCollection(playlistRevision);
+  const isLikedTab = activeTab === 'music' || activeTab === 'beats';
 
   useEffect(() => {
     const refresh = () => setPlaylistRevision((current) => current + 1);
@@ -68,34 +67,22 @@ export default function Library() {
 
   useEffect(() => {
     if (!user) return;
+    let active = true;
     setLoading(true);
-    if (demoMode) {
-      Promise.all([getTracks(), getArtists(), getMyPlaylists()])
-        .then(([nextTracks, nextArtists, nextPlaylists]) => {
-          setTracks(nextTracks);
-          setArtists(nextArtists);
-          setPlaylists(nextPlaylists);
-          setError(null);
-        })
-        .catch((requestError) => setError(requestError.message))
-        .finally(() => setLoading(false));
-      return;
-    }
-
-    // Real API mode: load user's real collection
-    Promise.all([getLikedTracks(), getFollowedArtists(), getMyPlaylists()])
-      .then(([realLiked, realArtists, realPlaylists]) => {
-        setTracks(realLiked);
-        setArtists(realArtists);
-        setPlaylists(realPlaylists);
+    Promise.all([demoMode ? getArtists() : getFollowedArtists(), getMyPlaylists()])
+      .then(([nextArtists, nextPlaylists]) => {
+        if (!active) return;
+        setArtists(nextArtists);
+        setPlaylists(nextPlaylists);
         setError(null);
       })
-      .catch((requestError) => setError(requestError.message))
-      .finally(() => setLoading(false));
+      .catch((requestError) => { if (active) setError(requestError.message); })
+      .finally(() => { if (active) setLoading(false); });
 
-    loadRecentlyPlayed().catch(() => {
+    if (!demoMode) loadRecentlyPlayed().catch(() => {
       // Player store retains error for recently played tab
     });
+    return () => { active = false; };
   }, [demoMode, loadRecentlyPlayed, playlistRevision, user]);
 
   const handleCreatePlaylist = async (playlistData) => {
@@ -117,12 +104,6 @@ export default function Library() {
     window.dispatchEvent(new CustomEvent('noirsound:playlists-changed'));
   };
 
-  const likedSongs = useMemo(() => {
-    if (demoMode) {
-      return tracks.filter((track) => likedTracks.includes(track.id));
-    }
-    return tracks;
-  }, [demoMode, likedTracks, tracks]);
   const likedMusic = useMemo(() => likedSongs.filter((track) => !isBeatTrack(track)), [likedSongs]);
   const likedBeats = useMemo(() => likedSongs.filter(isBeatTrack), [likedSongs]);
 
@@ -199,13 +180,13 @@ export default function Library() {
       </div>
 
       <div id="library-tab-panel" role="tabpanel" aria-labelledby={`library-tab-${activeTab}`} className="pt-2">
-        {error ? (
+        {error || (isLikedTab && likesError) ? (
           <ErrorState
             title={t('media.libraryUnavailable')}
-            message={error}
+            message={error || likesError}
             onRetry={() => setPlaylistRevision((current) => current + 1)}
           />
-        ) : loading ? (
+        ) : loading || (isLikedTab && likesLoading) ? (
           <LoadingState type={activeTab === 'playlists' || activeTab === 'artists' ? 'grid' : 'list'} count={4} />
         ) : activeTab === 'recently' ? (
           recentlyPlayedError ? (
