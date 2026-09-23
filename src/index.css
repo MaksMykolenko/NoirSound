@@ -710,9 +710,7 @@ main {
   transform: translateY(-30%);
   border-radius: 9999px;
   background: var(--ns-card-solid);
-  box-shadow:
-    0 0 0 4px var(--ns-bg),
-    var(--ns-shadow-md);
+  box-shadow: var(--ns-shadow-md);
 }
 
 .ns-profile-hero__content {

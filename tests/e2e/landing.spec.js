@@ -159,8 +159,8 @@ test('showcase playback survives landing, Discover, track and Home navigation wi
   await expect(page.getByRole('heading', { level: 1, name: target.title })).toBeVisible();
   await expect(page).toHaveURL(new RegExp(`/track/${target.id}$`));
   state = await expectSharedAudio(page, audio, state);
-  await page.getByRole('link', { name: 'NoirSound home', exact: true }).filter({ visible: true }).click();
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Yoursound.');
+  await page.getByRole('link', { name: 'NoirSound Discover', exact: true }).filter({ visible: true }).click();
+  await expect(page).toHaveURL(/\/discover$/);
   state = await expectSharedAudio(page, audio, state);
 
   const queueButton = player.getByRole('button', { name: 'Open play queue' });
@@ -264,8 +264,8 @@ test('landing locale changes preserve authored titles and app theme, and metadat
   await expect(page.getByRole('heading', { level: 1, name: fixture.artistName })).toBeVisible();
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', `https://noirsound.co/artist/${fixture.artistId}`);
   await expect(page.locator('meta[property="og:type"]')).toHaveAttribute('content', 'profile');
-  await page.getByRole('link', { name: 'NoirSound home', exact: true }).filter({ visible: true }).click();
-  await expect(page).toHaveTitle('NoirSound — your sound');
+  await page.getByRole('link', { name: 'NoirSound Discover', exact: true }).filter({ visible: true }).click();
+  await expect(page).toHaveURL(/\/discover$/);
   await expect(page.locator('meta[property="og:type"]')).toHaveAttribute('content', 'website');
   await expect(page.locator('meta[property="og:title"]')).toHaveCount(1);
   await expect(page.locator('meta[name="description"]')).toHaveCount(1);

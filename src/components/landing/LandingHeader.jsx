@@ -6,7 +6,7 @@ import { useUserStore } from '../../store/userStore';
 import LanguageSwitcher from '../ui/LanguageSwitcher';
 
 export function LandingBrand() {
-  return <Link className="brand" to="/#top" aria-label="NoirSound"><Activity className="icon brand-icon" aria-hidden="true" /><span>NoirSound<span className="brand-period">.</span></span></Link>;
+  return <Link className="brand" to="/discover" aria-label="NoirSound"><Activity className="icon brand-icon" aria-hidden="true" /><span>NoirSound<span className="brand-period">.</span></span></Link>;
 }
 
 export default function LandingHeader({ motion }) {
