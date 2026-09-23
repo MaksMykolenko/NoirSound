@@ -182,16 +182,16 @@ export default function FullscreenLyricsPlayer({
           <ArrowLeft size={21} />
         </button>
         <FallbackCover
-          src={currentTrack.coverUrl}
-          title={currentTrack.title}
-          artistName={currentTrack.artistName}
-          genre={currentTrack.genre}
+          src={currentTrack?.coverUrl}
+          title={currentTrack?.title}
+          artistName={currentTrack?.artistName}
+          genre={currentTrack?.genre}
           className="h-11 w-11 shrink-0 rounded border border-[var(--ns-border)] sm:h-12 sm:w-12"
           imageClassName="object-cover"
         />
         <div className="min-w-0">
-          <h1 title={currentTrack.title} className="ns-fullscreen-compact-title truncate font-sans text-sm font-bold text-zinc-100 sm:text-base">{currentTrack.title}</h1>
-          <p title={currentTrack.artistName} className="truncate font-sans tabular-nums text-ns-meta text-zinc-500 sm:text-xs">{currentTrack.artistName}</p>
+          <h1 title={currentTrack?.title} className="ns-fullscreen-compact-title truncate font-sans text-sm font-bold text-zinc-100 sm:text-base">{currentTrack?.title}</h1>
+          <p title={currentTrack?.artistName} className="truncate font-sans tabular-nums text-ns-meta text-zinc-500 sm:text-xs">{currentTrack?.artistName}</p>
           <PlaybackErrorStatus error={playbackError} />
         </div>
       </header>
@@ -200,10 +200,10 @@ export default function FullscreenLyricsPlayer({
         <aside className="hidden min-h-0 w-[min(31vw,28rem)] shrink-0 flex-col overflow-y-auto border-r border-[var(--ns-border-subtle)] p-8 lg:flex xl:p-12">
           <div className="my-auto w-full shrink-0">
           <FallbackCover
-            src={currentTrack.coverUrl}
-            title={currentTrack.title}
-            artistName={currentTrack.artistName}
-            genre={currentTrack.genre}
+            src={currentTrack?.coverUrl}
+            title={currentTrack?.title}
+            artistName={currentTrack?.artistName}
+            genre={currentTrack?.genre}
             className="mx-auto aspect-square w-full max-w-[min(100%,30vh)] shrink-0 rounded-sm border border-[var(--ns-border)] shadow-lg"
             imageClassName="object-cover"
           />

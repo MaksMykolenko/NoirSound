@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigationType, useSearchParams } from 'react-router-dom';
-import { ArrowRight, ArrowUpRight, Play, Sparkles, X } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, Play, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import PageMeta from '../components/meta/PageMeta';
 import LandingHeader, { LandingBrand } from '../components/landing/LandingHeader';
@@ -132,7 +132,7 @@ export default function LandingPage() {
                           onClick={() => openAuth(true, 'register', 'CREATOR')}
                           className="button button-accent text-xs cursor-pointer"
                         >
-                          <Sparkles size={13} aria-hidden="true" />
+                          <ArrowRight size={13} aria-hidden="true" />
                           <span>{t('landing.creator.upgradeButton') || 'Register as Creator'}</span>
                         </button>
                       )}

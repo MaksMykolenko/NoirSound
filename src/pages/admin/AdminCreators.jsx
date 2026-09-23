@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Download, ExternalLink, MessageSquare, ShieldCheck, ShieldAlert, Sparkles } from 'lucide-react';
+import { Download, ExternalLink, MessageSquare, ShieldCheck, ShieldAlert, Radio } from 'lucide-react';
 import {
   getAdminCreators,
   getAdminCreatorsExportUrl,
@@ -228,7 +228,7 @@ export default function AdminCreators() {
                       </td>
                       <td className="p-3">
                         <span className="inline-flex items-center gap-1 rounded bg-zinc-800 px-2 py-0.5 text-[11px] font-medium text-zinc-200">
-                          <Sparkles size={11} className="text-brand-red" />
+                          <Radio size={11} className="text-brand-red" />
                           {item.creatorType}
                         </span>
                       </td>

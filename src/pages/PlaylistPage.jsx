@@ -42,9 +42,10 @@ function formatPlaylistDuration(seconds, t) {
   return formatDurationLong(seconds, t) || t('playlists.durationUnavailable');
 }
 
-function PlaylistCoverArt({ playlist, tracks }) {
+function PlaylistCoverArt({ playlist, tracks = [] }) {
+  if (!playlist) return null;
   const coverTracks = !playlist.coverUrl
-    ? tracks.filter((track) => track.coverUrl).slice(0, 4)
+    ? (tracks || []).filter((track) => track?.coverUrl).slice(0, 4)
     : [];
   if (playlist.coverUrl || coverTracks.length < 2) {
     return (
@@ -68,7 +69,7 @@ function PlaylistCoverArt({ playlist, tracks }) {
     <div className="grid h-full w-full grid-cols-2 grid-rows-2 gap-0.5 overflow-hidden" aria-hidden="true">
       {tiles.map((track, slot) => (
         track ? (
-          <img key={track.id} src={track.coverUrl} alt="" className="h-full w-full object-cover" />
+          <img key={track.id} src={track?.coverUrl} alt="" className="h-full w-full object-cover" />
         ) : (
           <div key={`empty-${slot}`} className="h-full w-full bg-zinc-900" />
         )

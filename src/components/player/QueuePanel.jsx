@@ -8,12 +8,15 @@ import { useTranslation } from 'react-i18next';
 
 function QueueTrackRow({ track, index, currentTrack, playTrack, removeFromQueue, moveQueueItem, queueLength }) {
   const { t } = useTranslation();
-  const isPlayingThis = currentTrack?.id === track.id;
   const { contextMenuProps, openFromButton } = useTrackContextMenu(track, {
-    removeFromQueue: () => removeFromQueue(track.id),
-    moveUp: { disabled: index === 0, action: () => moveQueueItem(track.id, -1) },
-    moveDown: { disabled: index === queueLength - 1, action: () => moveQueueItem(track.id, 1) },
+    removeFromQueue: () => track?.id && removeFromQueue(track.id),
+    moveUp: { disabled: index === 0, action: () => track?.id && moveQueueItem(track.id, -1) },
+    moveDown: { disabled: index === queueLength - 1, action: () => track?.id && moveQueueItem(track.id, 1) },
   });
+
+  if (!track || !track.id) return null;
+
+  const isPlayingThis = currentTrack?.id === track.id;
   return (
     <div
       onContextMenu={contextMenuProps.onContextMenu}
@@ -28,10 +31,10 @@ function QueueTrackRow({ track, index, currentTrack, playTrack, removeFromQueue,
     >
       <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded md:h-10 md:w-10">
         <FallbackCover
-          src={track.coverUrl}
-          title={track.title}
-          artistName={track.artistName}
-          genre={track.genre}
+          src={track?.coverUrl}
+          title={track?.title}
+          artistName={track?.artistName}
+          genre={track?.genre}
           className="w-full h-full"
           imageClassName="object-cover"
         />

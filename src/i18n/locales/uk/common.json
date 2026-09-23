@@ -241,7 +241,7 @@
     "artistMetrics": "Статистика аудиторії артиста",
     "popular": "Популярне",
     "discography": "Дискографія",
-    "viewAll": "Переглянути всі",
+    "viewAll": "Переглянути все",
     "showPopularOnly": "Показати топ-5",
     "artistNoReleasesDesc": "Релізів поки немає.",
     "openRelease": "Відкрити реліз {{title}}",
@@ -316,7 +316,9 @@
     "saved": "Збережено",
     "savedSuccess": "Налаштування профілю успішно збережено!",
     "artist": "Виконавець",
-    "openArtist": "Відкрити виконавця {{name}}"
+    "openArtist": "Відкрити виконавця {{name}}",
+    "backToProfile": "Назад до профілю",
+    "changeAvatar": "Змінити фото й налаштування"
   },
   "stats": {
     "notEnoughData": "Недостатньо даних для статистики",
@@ -529,7 +531,11 @@
     "showingResults": "Показано {{shown}} із {{total}}",
     "nextPageFailed": "Не вдалося завантажити наступні результати. Поточні результати збережено.",
     "sortLiked": "Найбільше вподобань",
-    "allResultsLoaded": "Усі результати завантажено"
+    "allResultsLoaded": "Усі результати завантажено",
+    "playSpotlight": "Слухати зараз",
+    "pauseSpotlight": "Пауза",
+    "viewRelease": "Деталі треку",
+    "spotlightBadge": "Вибір редакції"
   },
   "home": {
     "title": "Знайдіть свій наступний звук",
@@ -1421,7 +1427,25 @@
       "confirmRevokeTitle": "Скасувати доступ артиста",
       "confirmRevokeDesc": "Це поверне роль @{{username}} на LISTENER та приховає профіль артиста.",
       "adminNoteTitle": "Нотатка для"
-    }
+    },
+    "save": "Зберегти",
+    "publishedTracksDesc": "Треки, доступні для прослуховування",
+    "hiddenTracksDesc": "Треки, приховані модераторами",
+    "activeUsersDesc": "Користувачі, активні на платформі",
+    "restrictedUsersDesc": "Користувачі з обмеженнями",
+    "commentsTodayDesc": "Коментарі за сьогодні",
+    "playEventsTodayDesc": "Прослуховування за сьогодні",
+    "reportsReviewDesc": "Скарги, що очікують розгляду",
+    "failedUploadsDesc": "Невдалі спроби завантаження",
+    "processingUploadsDesc": "Завантаження в обробці",
+    "catalogManagement": "Керування каталогом",
+    "commentModeration": "Модерація коментарів",
+    "auditLogsDesc": "Журнали активності системи",
+    "platformConfig": "Конфігурація платформи",
+    "allSystemsReady": "Усі системи працюють нормально",
+    "systemAttention": "Система потребує уваги",
+    "priority": "Пріоритет",
+    "detailedTelemetry": "Детальна телеметрія"
   },
   "lyrics": {
     "title": "Текст пісні",
@@ -1571,6 +1595,52 @@
       "upgradeButton": "Зареєструватися як креатор",
       "joinPrompt": "Готові поділитися своєю музикою чи бітами на NoirSound? Зареєструйте акаунт креатора вже зараз.",
       "registerButton": "Зареєструватися як креатор"
+    }
+  },
+  "redesign": {
+    "clearSearch": "Очистити пошук",
+    "quickVibes": "За настроєм:",
+    "resultCount_one": "{{count}} трек",
+    "resultCount_few": "{{count}} треки",
+    "resultCount_many": "{{count}} треків",
+    "resultCount_other": "{{count}} треку",
+    "genreCount_one": "{{count}} жанр",
+    "genreCount_few": "{{count}} жанри",
+    "genreCount_many": "{{count}} жанрів",
+    "genreCount_other": "{{count}} жанру",
+    "favoriteCount_one": "{{count}} улюблений трек",
+    "favoriteCount_few": "{{count}} улюблені треки",
+    "favoriteCount_many": "{{count}} улюблених треків",
+    "favoriteCount_other": "{{count}} улюбленого треку",
+    "soundIdentity": "Музичний профіль",
+    "fullBreakdown": "Ваші прослуховування докладно",
+    "listenerPreview": "Ваші музичні вподобання",
+    "compact": "Коротко",
+    "expanded": "Докладно",
+    "less": "Менше",
+    "more": "Більше",
+    "sonicProfile": "Ваше звучання",
+    "sonicSummary": "Ваш найчастіше прослуховуваний жанр — {{genre}}. На основі історії прослуховувань.",
+    "startCollecting": "Збирайте улюблену музику",
+    "savedDescription": "Тут зібрані треки, які ви вподобали на NoirSound.",
+    "playLiked": "Слухати вподобане",
+    "statsUnavailable": "Статистика прослуховувань недоступна",
+    "creatorHub": "Кабінет автора",
+    "creatorDescription": "Публікуйте музику й біти та керуйте своїми релізами.",
+    "artistPage": "Сторінка артиста",
+    "shareSound": "Поділіться своєю музикою",
+    "shareDescription": "Створюєте музику чи біти? Публікуйте власні записи на NoirSound.",
+    "publish": "Опублікувати на NoirSound",
+    "accountSettings": "Профіль і налаштування",
+    "editingFor": "Налаштування та профіль @{{username}}",
+    "doneEditing": "Завершити редагування",
+    "vibes": {
+      "night-drive": "Нічна поїздка",
+      "heavy-trap": "Потужний треп",
+      "lofi-focus": "Lo-Fi відпочинок",
+      "cyber-phonk": "Кіберфонк",
+      "melodic-drill": "Мелодійний дрил",
+      "deep-ambient": "Глибокий космос"
     }
   }
 }

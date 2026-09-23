@@ -17,6 +17,7 @@ export function readDiscoverParams(searchParams) {
     group: cleanText(searchParams.get('group')),
     ...Object.fromEntries(BEAT_FILTER_KEYS.map((key) => [key, cleanText(searchParams.get(key))])),
     sort: cleanText(searchParams.get('sort')).toLowerCase() || 'recent',
+    vibe: cleanText(searchParams.get('vibe')),
   };
 }
 
@@ -30,6 +31,7 @@ export default function useDiscoverUrlState() {
       next.delete('browse');
       next.delete('cursor');
       next.delete('page');
+      next.delete('vibe');
       mutate(next);
       return next;
     }, options);
@@ -99,6 +101,21 @@ export default function useDiscoverUrlState() {
     });
   }, [update]);
 
+  // Apply a preset in one router update and discard the previous filters.
+  const setVibePreset = useCallback((preset) => {
+    update((next) => {
+      for (const key of ['q', 'genre', 'group', 'sort', ...BEAT_FILTER_KEYS]) next.delete(key);
+      if (!preset) return;
+      next.set('vibe', preset.id);
+      if (preset.genre) next.set('genre', normalizeGenre(preset.genre) || preset.genre);
+      if (preset.query) next.set('q', preset.query);
+      if (state.contentType === 'BEAT') {
+        if (preset.style) next.set('style', preset.style);
+        if (preset.bpm) next.set('bpm', preset.bpm);
+      }
+    });
+  }, [state.contentType, update]);
+
   const hasFilters = Boolean(state.genre || state.group || BEAT_FILTER_KEYS.some((key) => state[key]) || state.sort !== 'recent');
-  return { ...state, hasFilters, setContentType, setQuery, setGenre, setGroup, setSort, setBeatFilter, clearFilters };
+  return { ...state, hasFilters, setContentType, setQuery, setGenre, setGroup, setSort, setBeatFilter, setVibePreset, clearFilters };
 }

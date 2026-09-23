@@ -155,8 +155,8 @@ test('unsaved profile changes survive switching tabs without sending an update',
   const preview = page.getByAltText('Profile banner preview', { exact: true });
   const previewUrl = await preview.getAttribute('src');
   expect(previewUrl).toMatch(/^blob:/);
-  await page.getByRole('tab', { name: 'Activity', exact: true }).click();
-  await page.getByRole('tab', { name: 'Settings', exact: true }).click();
+  await page.getByRole('button', { name: 'Back to profile', exact: true }).click();
+  await page.getByTestId('profile-avatar-edit-button').click();
   await expect(biography).toHaveValue('Unsaved biography kept while switching tabs');
   await expect(preview).toHaveAttribute('src', previewUrl);
   expect(updates).toEqual([]);

@@ -63,10 +63,10 @@ export function PlayerTrackInfo({
       onKeyDown={contextMenuProps.onKeyDown}
     >
       <FallbackCover
-        src={track.coverUrl}
-        title={track.title}
-        artistName={track.artistName}
-        genre={track.genre}
+        src={track?.coverUrl}
+        title={track?.title}
+        artistName={track?.artistName}
+        genre={track?.genre}
         className="h-14 w-14 shrink-0 animate-fade-in rounded border border-[var(--ns-border-subtle)]"
         imageClassName="object-cover"
       />

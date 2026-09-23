@@ -13,6 +13,7 @@ vi.mock('lucide-react', () => ({
   User: () => <span data-testid="icon-user">User</span>,
   Eye: () => <span data-testid="icon-eye">Eye</span>,
   EyeOff: () => <span data-testid="icon-eyeoff">EyeOff</span>,
+  Music2: () => <span data-testid="icon-music2">Music</span>,
   Music: () => <span data-testid="icon-music">Music</span>,
   Headphones: () => <span data-testid="icon-headphones">Headphones</span>,
   AtSign: () => <span data-testid="icon-atsign">AtSign</span>,

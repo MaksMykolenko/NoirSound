@@ -15,14 +15,17 @@ export default function TrackListItem({ track, index, tracksContext = [], onRemo
   const { t } = useTranslation();
   const { currentTrack, isPlaying, playTrack, togglePlay, likedTracks, toggleLikeTrack,
     queue, addToQueue, removeFromQueue } = usePlayerStore();
+  const { contextMenuProps, openFromButton } = useTrackContextMenu(track, {
+    removeFromPlaylist: onRemoveFromPlaylist ? () => onRemoveFromPlaylist(track) : undefined,
+  });
+
+  if (!track || !track.id) return null;
+
   const isCurrent = currentTrack?.id === track.id;
   const isPlayingThis = isCurrent && isPlaying;
   const isLiked = likedTracks.includes(track.id);
   const inQueue = queue.some((item) => item.id === track.id);
   const canPlay = track.isStreamable ?? Boolean(track.audioUrl);
-  const { contextMenuProps, openFromButton } = useTrackContextMenu(track, {
-    removeFromPlaylist: onRemoveFromPlaylist ? () => onRemoveFromPlaylist(track) : undefined,
-  });
   const handlePlay = () => {
     if (!canPlay) return;
     if (isCurrent) togglePlay();
@@ -35,8 +38,8 @@ export default function TrackListItem({ track, index, tracksContext = [], onRemo
       className={`ns-track-row group ${compact ? 'ns-track-row--compact' : ''}`}>
       <div className="ns-track-row__leading">
         {compact ? <span className="ns-track-row__rank" aria-hidden="true">{index + 1}</span> : (
-          <FallbackCover src={track.coverUrl} title={track.title} artistName={track.artistName}
-            genre={track.genre} className="h-11 w-11 rounded" imageClassName="object-cover" />
+          <FallbackCover src={track?.coverUrl} title={track?.title} artistName={track?.artistName}
+            genre={track?.genre} className="h-11 w-11 rounded" imageClassName="object-cover" />
         )}
         <button type="button" onClick={handlePlay} disabled={!canPlay}
           className={`ns-track-row__play ${isPlayingThis ? 'is-playing' : ''}`}

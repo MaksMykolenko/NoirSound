@@ -155,10 +155,10 @@ function DesktopRow({
               className="shrink-0 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-red/60"
             >
               <FallbackCover
-                src={track.coverUrl}
-                title={track.title}
-                artistName={track.artistName}
-                genre={track.genre}
+                src={track?.coverUrl}
+                title={track?.title}
+                artistName={track?.artistName}
+                genre={track?.genre}
                 className="h-10 w-10 rounded border border-zinc-800/60"
                 imageClassName="object-cover"
               />
@@ -336,10 +336,10 @@ function MobileRow({
       >
         <span className="relative shrink-0">
           <FallbackCover
-            src={track.coverUrl}
-            title={track.title}
-            artistName={track.artistName}
-            genre={track.genre}
+            src={track?.coverUrl}
+            title={track?.title}
+            artistName={track?.artistName}
+            genre={track?.genre}
             className="h-11 w-11 rounded border border-zinc-800/60"
             imageClassName="object-cover"
           />

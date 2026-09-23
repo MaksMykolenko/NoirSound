@@ -503,10 +503,11 @@ export default function ArtistPage() {
           {(artist.genres || []).length > 0 && (
             <div className="mt-5 border-t border-zinc-800/60 pt-4">
               <p className="ns-eyebrow">{t('profile.focusGenres')}</p>
-              <div className="mt-2 flex flex-wrap gap-2">
+              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-2">
                 {artist.genres.map((genre) => (
-                  <span key={genre} className="ns-pill inline-flex border border-zinc-800 bg-zinc-900 px-2.5 py-1 text-ns-label font-medium text-rose-300">
-                    {getLocalizedGenre(genre)}
+                  <span key={genre} className="inline-flex items-center gap-0.5 font-mono text-xs font-semibold text-rose-400 tracking-wider">
+                    <span className="text-rose-500/60 font-bold" aria-hidden="true">#</span>
+                    <span>{getLocalizedGenre(genre)}</span>
                   </span>
                 ))}
               </div>

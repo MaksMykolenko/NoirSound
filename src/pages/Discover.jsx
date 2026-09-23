@@ -16,6 +16,8 @@ import DiscoverRankedList from '../components/discover/DiscoverRankedList';
 import DiscoverSection from '../components/discover/DiscoverSection';
 import DiscoverTaxonomyTiles from '../components/discover/DiscoverTaxonomyTiles';
 import DiscoverTrackRail from '../components/discover/DiscoverTrackRail';
+import DiscoverSpotlight from '../components/discover/DiscoverSpotlight';
+import DiscoverVibeBar from '../components/discover/DiscoverVibeBar';
 import EmptyState from '../components/ui/EmptyState';
 import ErrorState from '../components/ui/ErrorState';
 import GenrePicker from '../components/ui/GenrePicker';
@@ -89,6 +91,8 @@ export default function Discover() {
     setGroup,
     setBeatFilter,
     clearFilters,
+    vibe: activeVibe,
+    setVibePreset,
   } = useDiscoverUrlState();
   const user = useUserStore((state) => state.user);
 
@@ -227,6 +231,13 @@ export default function Discover() {
     ? t('discover.tryChangingBeatFilters')
     : t('discover.tryChangingFilters');
 
+  const spotlightTrack = (trendingTracks.length ? trendingTracks[0] : null) || (newReleases.length ? newReleases[0] : null) || catalogue[0];
+
+  const handleSelectVibe = (vibe) => {
+    setSearchDraft(vibe?.query || '');
+    setVibePreset(vibe);
+  };
+
   const styleOptions = [
     { value: '', label: t('beats.anyStyle') },
     ...BEAT_STYLES.map((value) => ({
@@ -339,22 +350,28 @@ export default function Discover() {
         id="discover-content-panel"
         role="tabpanel"
         aria-labelledby={`discover-tab-${contentType.toLowerCase()}`}
-        className="ns-page-stack"
+        className="ns-page-stack space-y-6"
       >
-      <form role="search" onSubmit={(event) => { event.preventDefault(); setQuery(searchDraft, { replace: true }); }}>
-        <label className="sr-only" htmlFor="discover-search">{t('discover.searchLabel')}</label>
-        <input
-          ref={searchRef}
-          id="discover-search"
-          data-testid="discover-search"
-          type="search"
-          maxLength={120}
-          value={searchDraft}
-          onChange={(event) => setSearchDraft(event.target.value)}
-          placeholder={t('header.searchPlaceholder')}
-          className="ns-field w-full px-4 py-2 text-sm"
+        {/* Editorial Spotlight Banner */}
+        {spotlightTrack && !q && !hasFilters && (
+          <DiscoverSpotlight
+            track={spotlightTrack}
+            tracksContext={trendingTracks.length ? trendingTracks : catalogue}
+          />
+        )}
+
+        {/* Studio Discovery Bar & Quick Vibe Presets */}
+        <DiscoverVibeBar
+          searchDraft={searchDraft}
+          onSearchChange={(value) => { setSearchDraft(value); if (!value) setQuery('', { replace: true }); }}
+          onSearchSubmit={() => setQuery(searchDraft, { replace: true })}
+          searchRef={searchRef}
+          activeVibe={activeVibe}
+          onSelectVibe={handleSelectVibe}
+          totalResults={total}
+          contentType={contentType}
+          onContentTypeChange={setContentType}
         />
-      </form>
       <section className="ns-discover-context" aria-label={t('discover.filters')}>
         {contentType === 'BEAT' ? (
           <>

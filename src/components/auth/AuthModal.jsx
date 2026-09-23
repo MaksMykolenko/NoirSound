@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { X, Mail, Lock, User, AtSign, Loader2, Headphones, Sparkles, Link as LinkIcon } from 'lucide-react';
+import { X, Mail, Lock, User, AtSign, Loader2, Headphones, Music2, Link as LinkIcon } from 'lucide-react';
 import { useLogin, useRegister } from '../../hooks/mutations/useAuth';
 import { onboardCreator } from '../../api/user';
 import { getGoogleAuthorizationUrl } from '../../api/client';
@@ -155,7 +155,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login', init
         if (event.target === event.currentTarget) onClose();
       }}
     >
-      <div 
+      <div
         ref={modalRef}
         role="dialog"
         aria-modal="true"
@@ -163,7 +163,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login', init
         className="relative max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-t-lg border border-[var(--ns-border)] bg-[var(--ns-card-solid)] shadow-[var(--ns-shadow-modal)] mobile-safe-bottom sm:rounded-lg"
         onClick={e => e.stopPropagation()}
       >
-        <button 
+        <button
           onClick={onClose}
           className="ns-icon-button absolute right-4 top-4 cursor-pointer"
           aria-label={t('auth.closeDialog')}
@@ -221,7 +221,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login', init
                     : 'text-zinc-400 hover:text-zinc-200'
                 }`}
               >
-                <Sparkles size={14} />
+                <Music2 size={14} />
                 <span>{t('auth.creatorTab') || 'Creator'}</span>
               </button>
             </div>

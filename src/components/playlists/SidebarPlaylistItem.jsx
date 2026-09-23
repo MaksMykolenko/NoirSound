@@ -16,6 +16,8 @@ export default function SidebarPlaylistItem({ playlist, onToggleSaved, onEdit, o
     onDelete,
   });
 
+  if (!playlist || !playlist.id) return null;
+
   const isActive = location.pathname === `/playlist/${playlist.id}`;
 
   const handlePlayClick = async (e) => {
@@ -61,9 +63,9 @@ export default function SidebarPlaylistItem({ playlist, onToggleSaved, onEdit, o
         {/* Cover Art Thumbnail */}
         <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded border border-zinc-800/60 bg-zinc-950">
           <FallbackCover
-            src={playlist.coverUrl}
-            title={playlist.name}
-            artistName={playlist.creator}
+            src={playlist?.coverUrl}
+            title={playlist?.name}
+            artistName={playlist?.creator}
             genre="Playlist"
             className="w-full h-full"
             imageClassName="object-cover"

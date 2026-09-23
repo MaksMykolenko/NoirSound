@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { ArrowRight } from 'lucide-react';
 import { getCatalogTracks, getArtistsWithTracks } from '../api';
 import HomeHero from '../components/home/HomeHero';
+import HomeQuickPicks from '../components/home/HomeQuickPicks';
 import BrowseByGenre from '../components/home/BrowseByGenre';
 import CreatorCallout from '../components/home/CreatorCallout';
 import BeatsInfoCard from '../components/home/BeatsInfoCard';
@@ -83,23 +84,18 @@ export default function Home() {
       <HomeHero
         onDiscover={() => navigate('/discover')}
         onUpload={() => navigate('/upload')}
+        featuredTrack={newMusicTracks[0] || freshBeats[0] || null}
+        tracksContext={allTracksContext.length > 0 ? allTracksContext : newMusicTracks}
       />
 
       {recentlyPlayed.length > 0 && (
         <section data-testid="home-continue-listening" className="space-y-4">
-          <div>
-            <h2 className="ns-section-title">{t('home.continueListening')}</h2>
-            <p className="mt-1 text-sm text-zinc-500">{t('home.continueListeningDesc')}</p>
-          </div>
-          <div
-            data-testid="home-continue-grid"
-            className="ns-tabs-scroll -mx-4 flex gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:[grid-template-columns:repeat(auto-fill,minmax(min(240px,100%),1fr))] sm:gap-5 sm:px-0"
-          >
-            {recentlyPlayed.slice(0, 8).map((track) => (
-              <div key={track.id} className="w-[min(74vw,18rem)] shrink-0 sm:w-full sm:max-w-[17.5rem] sm:justify-self-start">
-                <TrackCard track={track} tracksContext={recentlyPlayed} />
-              </div>
-            ))}
+          <div data-testid="home-continue-grid">
+            <HomeQuickPicks
+              tracks={recentlyPlayed}
+              title={t('home.continueListening')}
+              subtitle={t('home.continueListeningDesc')}
+            />
           </div>
         </section>
       )}

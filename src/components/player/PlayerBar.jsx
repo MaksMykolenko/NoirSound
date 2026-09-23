@@ -119,10 +119,10 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
               aria-label={t('player.collapsedPlayer')}
             >
               <FallbackCover
-                src={currentTrack.coverUrl}
-                title={currentTrack.title}
-                artistName={currentTrack.artistName}
-                genre={currentTrack.genre}
+                src={currentTrack?.coverUrl}
+                title={currentTrack?.title}
+                artistName={currentTrack?.artistName}
+                genre={currentTrack?.genre}
                 className="w-10 h-10 rounded-lg border border-zinc-900 shrink-0"
                 imageClassName="object-cover"
               />
@@ -285,10 +285,10 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
               {/* Details */}
               <div className="flex items-center space-x-3 min-w-0 flex-1 pr-2">
                 <FallbackCover
-                  src={currentTrack.coverUrl}
-                  title={currentTrack.title}
-                  artistName={currentTrack.artistName}
-                  genre={currentTrack.genre}
+                  src={currentTrack?.coverUrl}
+                  title={currentTrack?.title}
+                  artistName={currentTrack?.artistName}
+                  genre={currentTrack?.genre}
                   className="w-10 h-10 rounded-lg border border-zinc-900 shrink-0"
                   imageClassName="object-cover"
                 />
@@ -350,13 +350,13 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
       )}
 
       {/* Mobile Expanded Player Sheet (Slides up covering screen) */}
-      {mobileSheetOpen && (
+      {mobileSheetOpen && currentTrack && (
         <div
           ref={mobileSheetRef}
           onContextMenu={trackContextMenuProps.onContextMenu}
           role="dialog"
           aria-modal="true"
-          aria-label={`${t('player.nowPlaying')}: ${currentTrack.title}`}
+          aria-label={`${t('player.nowPlaying')}: ${currentTrack?.title || ''}`}
           data-testid="mobile-now-playing-sheet"
           className="ns-mobile-player-sheet fixed inset-0 z-[var(--ns-z-player-sheet)] flex translate-y-0 select-none flex-col justify-between overflow-hidden bg-[var(--ns-bg)] px-5 pb-[calc(1.5rem+var(--ns-safe-area-bottom))] pt-[calc(1.25rem+var(--ns-safe-area-top))] transition-transform duration-300 ease-out sm:px-6 lg:hidden"
         >
@@ -375,7 +375,7 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
                 type="button"
                 onClick={openTrackActions}
                 className="ns-icon-button text-zinc-500"
-                aria-label={t('playlists.moreActionsFor', { title: currentTrack.title })}
+                aria-label={t('playlists.moreActionsFor', { title: currentTrack?.title || '' })}
                 aria-haspopup="menu"
               >
                 <MoreHorizontal size={18} />
@@ -409,10 +409,10 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
           {/* Large cover art */}
           <div className="ns-mobile-player-sheet__artwork my-auto flex min-h-0 max-h-[38vh] flex-1 items-center justify-center py-3 sm:py-6">
             <FallbackCover
-              src={currentTrack.coverUrl}
-              title={currentTrack.title}
-              artistName={currentTrack.artistName}
-              genre={currentTrack.genre}
+              src={currentTrack?.coverUrl}
+              title={currentTrack?.title}
+              artistName={currentTrack?.artistName}
+              genre={currentTrack?.genre}
               className="mobile-player-cover aspect-square h-full max-h-[34vh] w-auto rounded-lg border border-[var(--ns-border)] shadow-2xl"
               imageClassName="object-cover"
             />

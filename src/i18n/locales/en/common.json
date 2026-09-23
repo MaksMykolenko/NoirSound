@@ -316,7 +316,9 @@
     "saved": "Saved",
     "savedSuccess": "Profile updates saved successfully!",
     "artist": "Artist",
-    "openArtist": "Open artist {{name}}"
+    "openArtist": "Open artist {{name}}",
+    "backToProfile": "Back to profile",
+    "changeAvatar": "Change photo and settings"
   },
   "stats": {
     "notEnoughData": "Not enough listening data yet",
@@ -529,7 +531,11 @@
     "showingResults": "Showing {{shown}} of {{total}}",
     "nextPageFailed": "More results could not be loaded. Your current results are still available.",
     "sortLiked": "Most liked",
-    "allResultsLoaded": "All results loaded"
+    "allResultsLoaded": "All results loaded",
+    "playSpotlight": "Listen Now",
+    "pauseSpotlight": "Pause",
+    "viewRelease": "Track Details",
+    "spotlightBadge": "Featured Release"
   },
   "home": {
     "title": "Find your next sound after dark",
@@ -1417,7 +1423,25 @@
       "confirmRevokeTitle": "Revoke Artist Access",
       "confirmRevokeDesc": "This will demote @{{username}} to LISTENER and hide their artist profile.",
       "adminNoteTitle": "Admin Note for"
-    }
+    },
+    "save": "Save",
+    "publishedTracksDesc": "Tracks available to stream",
+    "hiddenTracksDesc": "Tracks hidden by moderators",
+    "activeUsersDesc": "Users active on the platform",
+    "restrictedUsersDesc": "Users with restrictions",
+    "commentsTodayDesc": "Comments posted today",
+    "playEventsTodayDesc": "Stream events recorded today",
+    "reportsReviewDesc": "Reports awaiting review",
+    "failedUploadsDesc": "Failed upload attempts",
+    "processingUploadsDesc": "Uploads currently processing",
+    "catalogManagement": "Catalog Management",
+    "commentModeration": "Comment Moderation",
+    "auditLogsDesc": "System activity records",
+    "platformConfig": "Platform Configuration",
+    "allSystemsReady": "All systems operational",
+    "systemAttention": "System requires attention",
+    "priority": "Priority",
+    "detailedTelemetry": "Detailed telemetry"
   },
   "lyrics": {
     "title": "Lyrics",
@@ -1567,6 +1591,46 @@
       "upgradeButton": "Register as Creator",
       "joinPrompt": "Ready to share your music or beats with NoirSound? Register your creator account now.",
       "registerButton": "Register as Creator"
+    }
+  },
+  "redesign": {
+    "clearSearch": "Clear search",
+    "quickVibes": "Quick Vibes:",
+    "resultCount_one": "{{count}} track",
+    "resultCount_other": "{{count}} tracks",
+    "genreCount_one": "{{count}} genre",
+    "genreCount_other": "{{count}} genres",
+    "favoriteCount_one": "{{count}} Favorite Sound",
+    "favoriteCount_other": "{{count}} Favorite Sounds",
+    "soundIdentity": "Sound Identity",
+    "fullBreakdown": "Your listening in detail",
+    "listenerPreview": "Your listening profile",
+    "compact": "Compact",
+    "expanded": "Expanded",
+    "less": "Less",
+    "more": "More",
+    "sonicProfile": "Sonic Profile",
+    "sonicSummary": "Your most played genre is {{genre}}. Based on your listening history.",
+    "startCollecting": "Start Collecting Music",
+    "savedDescription": "The tracks you like while exploring NoirSound are collected here.",
+    "playLiked": "Play Liked Tracks",
+    "statsUnavailable": "Listening stats unavailable",
+    "creatorHub": "Creator Hub",
+    "creatorDescription": "Publish and manage your music releases, beats, and artist discography.",
+    "artistPage": "Artist Page",
+    "shareSound": "Share Your Sound",
+    "shareDescription": "Make music or beats? Publish your original audio on NoirSound.",
+    "publish": "Publish on NoirSound",
+    "accountSettings": "Profile & Account Settings",
+    "editingFor": "Preferences and profile for @{{username}}",
+    "doneEditing": "Done Editing",
+    "vibes": {
+      "night-drive": "Night Drive",
+      "heavy-trap": "Heavy Trap",
+      "lofi-focus": "Lo-Fi Chill",
+      "cyber-phonk": "Cyber Phonk",
+      "melodic-drill": "Melodic Drill",
+      "deep-ambient": "Deep Space"
     }
   }
 }

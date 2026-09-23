@@ -20,6 +20,9 @@ export default function ArtistReleaseCard({ track, tracksContext, queueSource })
   const playTrack = usePlayerStore((state) => state.playTrack);
   const togglePlay = usePlayerStore((state) => state.togglePlay);
   const { contextMenuProps, openFromButton } = useTrackContextMenu(track);
+
+  if (!track || !track.id) return null;
+
   const isCurrent = currentTrack?.id === track.id;
   const isPlayingThis = isCurrent && isPlaying;
   const canPlay = track.isStreamable ?? Boolean(track.audioUrl);
@@ -52,10 +55,10 @@ export default function ArtistReleaseCard({ track, tracksContext, queueSource })
       <div className="pointer-events-none relative z-[1]">
         <div className="ns-artist-release-card__artwork relative aspect-square overflow-hidden rounded-md">
           <FallbackCover
-            src={track.coverUrl}
-            title={track.title}
-            artistName={track.artistName}
-            genre={track.genre}
+            src={track?.coverUrl}
+            title={track?.title}
+            artistName={track?.artistName}
+            genre={track?.genre}
             className="h-full w-full"
             imageClassName="object-cover"
             loading="lazy"

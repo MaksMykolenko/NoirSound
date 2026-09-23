@@ -60,7 +60,7 @@
   --color-purple-400: var(--ns-accent-secondary);
   --color-purple-500: var(--ns-accent-secondary);
   --color-purple-600: var(--ns-accent-secondary);
-  
+
   --font-sans: var(--ns-font-ui);
   --font-display: var(--ns-font-display);
   --font-mono: var(--ns-font-technical);
@@ -2738,3 +2738,7 @@ body.is-sidebar-resizing * {
   line-height: 1.18;
   text-wrap: pretty;
 }
+
+/* Archive design surfaces retain their contrast in every supported theme. */
+:root { --ns-design-ink: #fff; --ns-design-end: #000; }
+:root[data-theme='light-minimal'] { --ns-design-ink: var(--ns-text); --ns-design-end: var(--ns-card-solid); }

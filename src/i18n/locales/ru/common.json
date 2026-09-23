@@ -241,7 +241,7 @@
     "artistMetrics": "Статистика аудитории артиста",
     "popular": "Популярное",
     "discography": "Дискография",
-    "viewAll": "Посмотреть все",
+    "viewAll": "Посмотреть всё",
     "showPopularOnly": "Показать топ-5",
     "artistNoReleasesDesc": "Релизов пока нет.",
     "openRelease": "Открыть релиз {{title}}",
@@ -316,7 +316,9 @@
     "saved": "Сохранено",
     "savedSuccess": "Изменения профиля сохранены!",
     "artist": "Исполнитель",
-    "openArtist": "Открыть исполнителя {{name}}"
+    "openArtist": "Открыть исполнителя {{name}}",
+    "backToProfile": "Назад к профилю",
+    "changeAvatar": "Изменить фото и настройки"
   },
   "stats": {
     "notEnoughData": "Недостаточно данных для статистики",
@@ -529,7 +531,11 @@
     "showingResults": "Показано {{shown}} из {{total}}",
     "nextPageFailed": "Не удалось загрузить следующие результаты. Текущие результаты сохранены.",
     "sortLiked": "Больше всего лайков",
-    "allResultsLoaded": "Все результаты загружены"
+    "allResultsLoaded": "Все результаты загружены",
+    "playSpotlight": "Слушать сейчас",
+    "pauseSpotlight": "Пауза",
+    "viewRelease": "Детали трека",
+    "spotlightBadge": "Выбор редакции"
   },
   "home": {
     "title": "Найдите своё новое звучание",
@@ -1421,7 +1427,25 @@
       "confirmRevokeTitle": "Отозвать доступ артиста",
       "confirmRevokeDesc": "Это вернет роль @{{username}} на LISTENER.",
       "adminNoteTitle": "Заметка для"
-    }
+    },
+    "save": "Сохранить",
+    "publishedTracksDesc": "Треки, доступные для прослушивания",
+    "hiddenTracksDesc": "Треки, скрытые модераторами",
+    "activeUsersDesc": "Пользователи, активные на платформе",
+    "restrictedUsersDesc": "Пользователи с ограничениями",
+    "commentsTodayDesc": "Комментарии за сегодня",
+    "playEventsTodayDesc": "Прослушивания за сегодня",
+    "reportsReviewDesc": "Жалобы, ожидающие рассмотрения",
+    "failedUploadsDesc": "Неудачные попытки загрузки",
+    "processingUploadsDesc": "Загрузки в обработке",
+    "catalogManagement": "Управление каталогом",
+    "commentModeration": "Модерация комментариев",
+    "auditLogsDesc": "Журналы активности системы",
+    "platformConfig": "Конфигурация платформы",
+    "allSystemsReady": "Все системы работают нормально",
+    "systemAttention": "Система требует внимания",
+    "priority": "Приоритет",
+    "detailedTelemetry": "Подробная телеметрия"
   },
   "lyrics": {
     "title": "Текст песни",
@@ -1571,6 +1595,52 @@
       "upgradeButton": "Зарегистрироваться как креатор",
       "joinPrompt": "Готовы поделиться своей музыкой или битами? Зарегистрируйте аккаунт креатора.",
       "registerButton": "Зарегистрироваться как креатор"
+    }
+  },
+  "redesign": {
+    "clearSearch": "Очистить поиск",
+    "quickVibes": "По настроению:",
+    "resultCount_one": "{{count}} трек",
+    "resultCount_few": "{{count}} трека",
+    "resultCount_many": "{{count}} треков",
+    "resultCount_other": "{{count}} трека",
+    "genreCount_one": "{{count}} жанр",
+    "genreCount_few": "{{count}} жанра",
+    "genreCount_many": "{{count}} жанров",
+    "genreCount_other": "{{count}} жанра",
+    "favoriteCount_one": "{{count}} любимый трек",
+    "favoriteCount_few": "{{count}} любимых трека",
+    "favoriteCount_many": "{{count}} любимых треков",
+    "favoriteCount_other": "{{count}} любимого трека",
+    "soundIdentity": "Музыкальный профиль",
+    "fullBreakdown": "Ваши прослушивания подробно",
+    "listenerPreview": "Ваши музыкальные предпочтения",
+    "compact": "Кратко",
+    "expanded": "Подробно",
+    "less": "Меньше",
+    "more": "Больше",
+    "sonicProfile": "Ваше звучание",
+    "sonicSummary": "Ваш самый прослушиваемый жанр — {{genre}}. На основе истории прослушиваний.",
+    "startCollecting": "Собирайте любимую музыку",
+    "savedDescription": "Здесь собраны треки, которые вы отметили на NoirSound.",
+    "playLiked": "Слушать любимое",
+    "statsUnavailable": "Статистика прослушиваний недоступна",
+    "creatorHub": "Кабинет автора",
+    "creatorDescription": "Публикуйте музыку и биты и управляйте своими релизами.",
+    "artistPage": "Страница артиста",
+    "shareSound": "Поделитесь музыкой",
+    "shareDescription": "Создаёте музыку или биты? Публикуйте свои записи на NoirSound.",
+    "publish": "Опубликовать на NoirSound",
+    "accountSettings": "Профиль и настройки",
+    "editingFor": "Настройки и профиль @{{username}}",
+    "doneEditing": "Завершить редактирование",
+    "vibes": {
+      "night-drive": "Ночная поездка",
+      "heavy-trap": "Мощный трэп",
+      "lofi-focus": "Lo-Fi отдых",
+      "cyber-phonk": "Киберфонк",
+      "melodic-drill": "Мелодичный дрилл",
+      "deep-ambient": "Глубокий космос"
     }
   }
 }

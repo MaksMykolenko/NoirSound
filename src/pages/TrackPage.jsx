@@ -221,10 +221,10 @@ export default function TrackPage() {
             {/* Cover */}
             <div className="mx-auto shrink-0 md:mx-0">
               <FallbackCover
-                src={track.coverUrl}
-                title={track.title}
-                artistName={track.artistName}
-                genre={track.genre}
+                src={track?.coverUrl}
+                title={track?.title}
+                artistName={track?.artistName}
+                genre={track?.genre}
                 className={`h-48 w-48 rounded-md border border-[var(--ns-border)] shadow-sm sm:h-52 sm:w-52 ${isBeat ? 'md:h-64 md:w-64' : 'md:h-56 md:w-56'}`}
                 imageClassName="object-cover"
               />
@@ -233,11 +233,12 @@ export default function TrackPage() {
             {/* Track info + actions + metadata */}
             <div className="min-w-0 space-y-4 text-center md:pr-12 md:text-left">
               <div className={`space-y-2.5 ${track.title.length > 60 ? 'ns-track-detail-title--long' : ''}`}>
-                <div className="flex flex-wrap items-center justify-center gap-2 md:justify-start">
+                <div className="flex flex-wrap items-center justify-center gap-3 md:justify-start">
                   <TrackTypeBadge track={track} />
                   {showGenre && (
-                    <span className="inline-block bg-[var(--ns-accent-soft)] px-2 py-0.5 font-sans tabular-nums text-ns-label font-medium uppercase tracking-ns-label text-rose-300 select-none">
-                      {genreLabel}
+                    <span className="inline-flex items-center gap-0.5 font-mono text-xs font-semibold text-rose-400 tracking-wider">
+                      <span className="text-rose-500/60 font-bold" aria-hidden="true">#</span>
+                      <span>{genreLabel}</span>
                     </span>
                   )}
                 </div>
@@ -468,10 +469,10 @@ export default function TrackPage() {
                   className="group flex w-full cursor-pointer items-center gap-3 border-b border-zinc-900/70 p-3 text-left transition-colors last:border-b-0 hover:bg-zinc-900/40 focus:outline-none focus-visible:bg-zinc-900/50 focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-brand-red/40"
                 >
                   <FallbackCover
-                    src={relTrack.coverUrl}
-                    title={relTrack.title}
-                    artistName={relTrack.artistName}
-                    genre={relTrack.genre}
+                    src={relTrack?.coverUrl}
+                    title={relTrack?.title}
+                    artistName={relTrack?.artistName}
+                    genre={relTrack?.genre}
                     className="h-12 w-12 shrink-0 rounded border border-zinc-800"
                     imageClassName="object-cover"
                   />

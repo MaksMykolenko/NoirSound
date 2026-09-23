@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Edit2, Share2, MapPin, Calendar } from 'lucide-react';
+import { Edit2, Share2, MapPin, Calendar, Heart, ListMusic, UserCheck, Clock } from 'lucide-react';
 import { useToastStore } from '../../store/toastStore';
 import FallbackAvatar from '../ui/FallbackAvatar';
-import { formatDate } from '../../utils/formatLocale';
+import { formatDate, formatNumber } from '../../utils/formatLocale';
 
 function isRenderableBannerUrl(value) {
   if (typeof value !== 'string') return false;
@@ -48,7 +48,9 @@ export default function UserProfileHeader({
   user,
   viewerUserId = null,
   onEditClick,
+  onSettingsClick,
   shareUrl,
+  stats = null,
 }) {
   const { t } = useTranslation();
   const { addToast } = useToastStore();
@@ -105,13 +107,38 @@ export default function UserProfileHeader({
           data-profile-avatar
           data-testid="profile-avatar-overlap"
         >
-          <FallbackAvatar
-            src={user.avatarUrl}
-            name={displayName}
-            className="h-full w-full text-[var(--ns-profile-avatar-size)]"
-            imageClassName="object-cover"
-            semanticFallback
-          />
+          {isOwner && (onSettingsClick || onEditClick) ? (
+            <button
+              type="button"
+              onClick={onSettingsClick || onEditClick}
+              className="group relative block h-full w-full cursor-pointer overflow-hidden rounded-full focus:outline-none focus:ring-2 focus:ring-brand-red focus:ring-offset-2 focus:ring-offset-black"
+              title={t('profile.changeAvatar', 'Change photo & settings')}
+              aria-label={t('profile.changeAvatar', 'Change photo & settings')}
+              data-testid="profile-avatar-edit-button"
+            >
+              <FallbackAvatar
+                src={user.avatarUrl}
+                name={displayName}
+                className="h-full w-full text-[var(--ns-profile-avatar-size)] transition-transform duration-300 group-hover:scale-105"
+                imageClassName="object-cover"
+                semanticFallback
+              />
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 opacity-0 backdrop-blur-[2px] transition-opacity duration-200 group-hover:opacity-100">
+                <Edit2 size={20} className="text-white drop-shadow" />
+                <span className="mt-1 text-[9px] font-bold text-white uppercase tracking-wider font-mono">
+                  {t('profile.editProfile')}
+                </span>
+              </div>
+            </button>
+          ) : (
+            <FallbackAvatar
+              src={user.avatarUrl}
+              name={displayName}
+              className="h-full w-full text-[var(--ns-profile-avatar-size)]"
+              imageClassName="object-cover"
+              semanticFallback
+            />
+          )}
         </div>
       </div>
 
@@ -126,12 +153,14 @@ export default function UserProfileHeader({
                 <p className="break-all font-sans tabular-nums text-ns-label text-zinc-400">@{user.username}</p>
               )}
               {isCreator ? (
-                <span className="rounded border border-brand-purple/20 bg-brand-purple/5 px-2 py-0.5 font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-purple-300">
-                  {t('profile.creator')}
+                <span className="inline-flex items-center gap-0.5 font-mono text-xs font-semibold text-brand-purple tracking-wider">
+                  <span className="text-brand-purple/60">#</span>
+                  <span>{t('profile.creator')}</span>
                 </span>
               ) : (
-                <span className="rounded border border-zinc-700/60 bg-zinc-900 px-2 py-0.5 font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-zinc-400">
-                  {t('profile.listener')}
+                <span className="inline-flex items-center gap-0.5 font-mono text-xs font-semibold text-zinc-400 tracking-wider">
+                  <span className="text-zinc-600">#</span>
+                  <span>{t('profile.listener')}</span>
                 </span>
               )}
             </div>
@@ -151,9 +180,42 @@ export default function UserProfileHeader({
               <span>{t('profile.joined', { date: joinedLabel })}</span>
             </span>
           </div>
+
+          {stats && (
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 pt-2 font-mono text-xs text-zinc-400" data-testid="profile-header-stats">
+              {stats.likedCount !== undefined && stats.likedCount > 0 && (
+                <div className="inline-flex items-center gap-1.5 transition-colors hover:text-zinc-200">
+                  <Heart size={13} className="text-brand-red fill-brand-red/80" />
+                  <span className="font-bold text-zinc-200 tabular-nums">{formatNumber(stats.likedCount)}</span>
+                  <span className="text-zinc-500 font-sans text-[11px]">{t('profile.likedTracks')}</span>
+                </div>
+              )}
+              {stats.playlistsCount !== undefined && stats.playlistsCount > 0 && (
+                <div className="inline-flex items-center gap-1.5 transition-colors hover:text-zinc-200">
+                  <ListMusic size={13} className="text-zinc-400" />
+                  <span className="font-bold text-zinc-200 tabular-nums">{formatNumber(stats.playlistsCount)}</span>
+                  <span className="text-zinc-500 font-sans text-[11px]">{t('profile.playlists')}</span>
+                </div>
+              )}
+              {stats.followingCount !== undefined && stats.followingCount > 0 && (
+                <div className="inline-flex items-center gap-1.5 transition-colors hover:text-zinc-200">
+                  <UserCheck size={13} className="text-zinc-400" />
+                  <span className="font-bold text-zinc-200 tabular-nums">{formatNumber(stats.followingCount)}</span>
+                  <span className="text-zinc-500 font-sans text-[11px]">{t('profile.followedArtists')}</span>
+                </div>
+              )}
+              {stats.listeningTime && (
+                <div className="inline-flex items-center gap-1.5 transition-colors hover:text-zinc-200">
+                  <Clock size={13} className="text-amber-400" />
+                  <span className="font-bold text-zinc-200 tabular-nums">{stats.listeningTime}</span>
+                  <span className="text-zinc-500 font-sans text-[11px]">{t('stats.timeListened')}</span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
-        <div className="ns-profile-hero__actions flex shrink-0 items-center gap-3.5">
+        <div className="ns-profile-hero__actions flex shrink-0 items-center gap-3">
           {isOwner && onEditClick && (
             <button
               type="button"
@@ -164,7 +226,7 @@ export default function UserProfileHeader({
               <span>{t('profile.editProfile')}</span>
             </button>
           )}
-          
+
           <button
             type="button"
             onClick={handleShareClick}

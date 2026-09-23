@@ -1,5 +1,5 @@
 import React, { useId, useState } from 'react';
-import { ArrowUpRight, CheckCircle2, Sparkles, Upload } from 'lucide-react';
+import { ArrowUpRight, CheckCircle2, Upload } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useLandingDraftStore } from '../../store/landingDraftStore';
@@ -88,7 +88,7 @@ export default function LandingCreatorSection() {
                     onClick={() => openAuth(true, 'register', 'CREATOR')}
                     className="button button-accent creator-cta-button"
                   >
-                    <Sparkles size={14} aria-hidden="true" />
+                    <ArrowUpRight size={14} aria-hidden="true" />
                     <span>{t('landing.creator.upgradeButton') || 'Register as Creator'}</span>
                   </button>
                 </div>
@@ -102,7 +102,7 @@ export default function LandingCreatorSection() {
                     onClick={() => openAuth(true, 'register', 'CREATOR')}
                     className="button button-accent creator-cta-button"
                   >
-                    <Sparkles size={14} aria-hidden="true" />
+                    <ArrowUpRight size={14} aria-hidden="true" />
                     <span>{t('landing.creator.registerButton') || 'Register as Creator'}</span>
                   </button>
                 </div>

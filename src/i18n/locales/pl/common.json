@@ -316,7 +316,9 @@
     "saved": "Zapisano",
     "savedSuccess": "Zmiany profilu zostały zapisane!",
     "artist": "Wykonawca",
-    "openArtist": "Otwórz wykonawcę {{name}}"
+    "openArtist": "Otwórz wykonawcę {{name}}",
+    "backToProfile": "Powrót do profilu",
+    "changeAvatar": "Zmień zdjęcie i ustawienia"
   },
   "stats": {
     "notEnoughData": "Brak wystarczających danych słuchania",
@@ -529,7 +531,11 @@
     "showingResults": "Wyświetlono {{shown}} z {{total}}",
     "nextPageFailed": "Nie udało się wczytać kolejnych wyników. Obecne wyniki są nadal dostępne.",
     "sortLiked": "Najwięcej polubień",
-    "allResultsLoaded": "Wczytano wszystkie wyniki"
+    "allResultsLoaded": "Wczytano wszystkie wyniki",
+    "playSpotlight": "Słuchaj teraz",
+    "pauseSpotlight": "Pauza",
+    "viewRelease": "Szczegóły utworu",
+    "spotlightBadge": "Wybór redakcji"
   },
   "home": {
     "title": "Znajdź swoje następne brzmienie",
@@ -1421,7 +1427,25 @@
       "confirmRevokeTitle": "Cofnij dostęp artysty",
       "confirmRevokeDesc": "Zmieni rolę @{{username}} na LISTENER.",
       "adminNoteTitle": "Notatka dla"
-    }
+    },
+    "save": "Zapisz",
+    "publishedTracksDesc": "Utwory dostępne do słuchania",
+    "hiddenTracksDesc": "Utwory ukryte przez moderatorów",
+    "activeUsersDesc": "Użytkownicy aktywni na platformie",
+    "restrictedUsersDesc": "Użytkownicy z ograniczeniami",
+    "commentsTodayDesc": "Komentarze z dzisiaj",
+    "playEventsTodayDesc": "Odtworzenia z dzisiaj",
+    "reportsReviewDesc": "Zgłoszenia oczekujące na sprawdzenie",
+    "failedUploadsDesc": "Nieudane próby przesyłania",
+    "processingUploadsDesc": "Przesyłane pliki w trakcie przetwarzania",
+    "catalogManagement": "Zarządzanie katalogiem",
+    "commentModeration": "Moderacja komentarzy",
+    "auditLogsDesc": "Dzienniki aktywności systemu",
+    "platformConfig": "Konfiguracja platformy",
+    "allSystemsReady": "Wszystkie systemy sprawne",
+    "systemAttention": "System wymaga uwagi",
+    "priority": "Priorytet",
+    "detailedTelemetry": "Szczegółowa telemetria"
   },
   "lyrics": {
     "title": "Tekst utworu",
@@ -1571,6 +1595,52 @@
       "upgradeButton": "Zarejestruj się jako twórca",
       "joinPrompt": "Gotowy dzielić się muzyką lub beatami? Zarejestruj konto twórcy.",
       "registerButton": "Zarejestruj się jako twórca"
+    }
+  },
+  "redesign": {
+    "clearSearch": "Wyczyść wyszukiwanie",
+    "quickVibes": "Według nastroju:",
+    "resultCount_one": "{{count}} utwór",
+    "resultCount_few": "{{count}} utwory",
+    "resultCount_many": "{{count}} utworów",
+    "resultCount_other": "{{count}} utworu",
+    "genreCount_one": "{{count}} gatunek",
+    "genreCount_few": "{{count}} gatunki",
+    "genreCount_many": "{{count}} gatunków",
+    "genreCount_other": "{{count}} gatunku",
+    "favoriteCount_one": "{{count}} ulubiony utwór",
+    "favoriteCount_few": "{{count}} ulubione utwory",
+    "favoriteCount_many": "{{count}} ulubionych utworów",
+    "favoriteCount_other": "{{count}} ulubionego utworu",
+    "soundIdentity": "Profil muzyczny",
+    "fullBreakdown": "Twoje odsłuchy w szczegółach",
+    "listenerPreview": "Twój profil słuchacza",
+    "compact": "Skrót",
+    "expanded": "Szczegóły",
+    "less": "Mniej",
+    "more": "Więcej",
+    "sonicProfile": "Twoje brzmienie",
+    "sonicSummary": "Najczęściej słuchasz gatunku {{genre}}. Na podstawie historii odsłuchów.",
+    "startCollecting": "Zbieraj ulubioną muzykę",
+    "savedDescription": "Tutaj znajdziesz utwory polubione na NoirSound.",
+    "playLiked": "Odtwórz polubione",
+    "statsUnavailable": "Statystyki odsłuchów niedostępne",
+    "creatorHub": "Panel twórcy",
+    "creatorDescription": "Publikuj muzykę i bity oraz zarządzaj swoją dyskografią.",
+    "artistPage": "Strona artysty",
+    "shareSound": "Podziel się muzyką",
+    "shareDescription": "Tworzysz muzykę lub bity? Publikuj własne nagrania na NoirSound.",
+    "publish": "Publikuj na NoirSound",
+    "accountSettings": "Profil i ustawienia konta",
+    "editingFor": "Ustawienia i profil @{{username}}",
+    "doneEditing": "Zakończ edycję",
+    "vibes": {
+      "night-drive": "Nocna jazda",
+      "heavy-trap": "Mocny trap",
+      "lofi-focus": "Relaks Lo-Fi",
+      "cyber-phonk": "Cyber Phonk",
+      "melodic-drill": "Melodyjny drill",
+      "deep-ambient": "Głęboki kosmos"
     }
   }
 }
