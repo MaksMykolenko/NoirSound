@@ -3,10 +3,12 @@ import jwt from 'jsonwebtoken';
 import buildServer from '../src/index.js';
 import sessionModule from '../src/lib/session.js';
 import profileMedia from '../src/lib/profileMedia.js';
+import { readFileSync } from 'node:fs';
 
 const { hashToken } = sessionModule;
 const { bannerKeyFromUploadId, pendingBannerKeyFromUploadId, MAX_BANNER_BYTES } = profileMedia;
 const PNG_HEADER = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+const AVATAR_IMAGE = readFileSync(new URL('../../public/images/artist_avatar.png', import.meta.url));
 
 describe('profile bio and banner routes', () => {
   let app;
@@ -65,6 +67,10 @@ describe('profile bio and banner routes', () => {
         }),
         findFirst: vi.fn(async ({ where }) => {
           if (where.id) {
+            if (where.avatarUrl) {
+              return where.id === userState.id && where.status === userState.status && where.avatarUrl === userState.avatarUrl
+                ? { id: userState.id } : null;
+            }
             const bannerMatches = Array.isArray(where.bannerUrl?.in)
               ? where.bannerUrl.in.includes(userState.bannerUrl)
               : where.bannerUrl === userState.bannerUrl;
@@ -144,6 +150,10 @@ describe('profile bio and banner routes', () => {
     objectHeaders = new Map();
     objectBodies = new Map();
     storage = {
+      putObject: vi.fn(async (key, body, mimeType) => {
+        objectMetadata.set(key, { exists: true, size: body.length, mimeType });
+        objectBodies.set(key, body);
+      }),
       createPresignedPutUrl: vi.fn(async (key) => `https://storage.test/put/${encodeURIComponent(key)}`),
       getPublicOrSignedUrl: vi.fn(async (key) => `https://storage.test/get/${encodeURIComponent(key)}?signature=test`),
       getObjectMetadata: vi.fn(async (key) => objectMetadata.get(key) || { exists: false }),
@@ -221,7 +231,7 @@ describe('profile bio and banner routes', () => {
     expect(storage.createPresignedPutUrl).toHaveBeenCalledWith(pendingKey, 'image/png', 900, 1024);
   });
 
-  it('rejects unsupported, oversized, and direct banner writes while preserving avatar updates', async () => {
+  it('rejects unsupported, oversized, and direct media writes', async () => {
     const unsupported = await app.inject({
       method: 'POST',
       url: '/api/auth/me/banner/init',
@@ -254,9 +264,45 @@ describe('profile bio and banner routes', () => {
       headers: { cookie },
       payload: { avatarUrl: 'https://evil.example/tracker.png' },
     });
-    expect(directAvatar.statusCode).toBe(200);
-    expect(directAvatar.json().user.avatarUrl).toBe('https://evil.example/tracker.png');
-    expect(userState.avatarUrl).toBe('https://evil.example/tracker.png');
+    expect(directAvatar.statusCode).toBe(400);
+    expect(userState.avatarUrl).toBe('https://images.example/avatar.jpg');
+  });
+
+  it('uploads an optimized avatar, restores it from the session, and serves only the active version', async () => {
+    const upload = () => app.inject({ method: 'POST', url: '/api/auth/me/avatar', headers: { cookie, 'content-type': 'image/jpeg' }, payload: AVATAR_IMAGE });
+    const response = await upload();
+    expect(response.statusCode).toBe(200);
+    const url = response.json().user.avatarUrl;
+    expect(url).toMatch(/^\/api\/public\/avatars\/profile-user-1\/.+\.webp$/);
+    expect(response.json().user).not.toHaveProperty('passwordHash');
+    const me = await app.inject({ url: '/api/auth/me', headers: { cookie } });
+    expect(me.json().user.avatarUrl).toBe(url);
+    const image = await app.inject(url);
+    expect(image.statusCode).toBe(200);
+    expect(image.headers['content-type']).toBe('image/webp');
+    expect(image.rawPayload.length).toBeLessThan(AVATAR_IMAGE.length / 3);
+    expect(image.headers['cache-control']).toBe('public, max-age=300');
+    expect((await app.inject(url.replace('profile-user-1', 'other-user'))).statusCode).toBe(404);
+    expect((await upload()).statusCode).toBe(200);
+    expect((await app.inject(url)).statusCode).toBe(404);
+    userState.status = 'SUSPENDED';
+    expect((await app.inject(userState.avatarUrl)).statusCode).toBe(404);
+  });
+
+  it('rejects unauthenticated, cross-origin, oversized, and invalid avatar uploads without changing the profile', async () => {
+    const request = { method: 'POST', url: '/api/auth/me/avatar', headers: { 'content-type': 'image/png' }, payload: AVATAR_IMAGE };
+    expect((await app.inject(request)).statusCode).toBe(401);
+    expect((await app.inject({ ...request, headers: { ...request.headers, cookie, origin: 'https://evil.example' } })).statusCode).toBe(403);
+    expect((await app.inject({ ...request, headers: { ...request.headers, cookie }, payload: Buffer.alloc(MAX_BANNER_BYTES + 1) })).statusCode).toBe(413);
+    expect((await app.inject({ ...request, headers: { ...request.headers, cookie }, payload: Buffer.from('not an image') })).statusCode).toBe(400);
+    expect(userState.avatarUrl).toBe('https://images.example/avatar.jpg');
+  });
+
+  it('keeps the existing avatar when storage fails', async () => {
+    storage.putObject.mockRejectedValueOnce(new Error('Storage unavailable'));
+    const response = await app.inject({ method: 'POST', url: '/api/auth/me/avatar', headers: { cookie, 'content-type': 'image/jpeg' }, payload: AVATAR_IMAGE });
+    expect(response.statusCode).toBe(502);
+    expect(userState.avatarUrl).toBe('https://images.example/avatar.jpg');
   });
 
   it('normalizes bio and rejects values over 500 characters', async () => {

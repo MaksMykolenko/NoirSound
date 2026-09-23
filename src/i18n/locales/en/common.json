@@ -1,6 +1,9 @@
 {
   "loadingPage": "Loading page",
   "errors": {
+    "PROFILE_AVATAR_INVALID": "This photo could not be read. Choose another JPEG, PNG, or WebP image up to 8 MB.",
+    "PROFILE_AVATAR_UPLOAD_FAILED": "Your profile photo could not be saved. Please try again.",
+    "PROFILE_AVATAR_BUSY": "Photo processing is busy. Please try again shortly.",
     "CSRF_VALIDATION_FAILED": "Your secure session expired. Please refresh the page and try again.",
     "RATE_LIMITED": "Too many attempts. Please wait a moment and try again.",
     "PROFILE_BANNER_INVALID": "That file is not a valid JPEG, PNG, or WebP banner.",
@@ -198,6 +201,14 @@
     "removeTrack": "Remove"
   },
   "profile": {
+    "avatar": "Profile photo",
+    "chooseAvatar": "Choose a profile photo",
+    "uploadAvatar": "Upload photo",
+    "replaceAvatar": "Replace photo",
+    "avatarPreview": "Profile photo preview",
+    "avatarHelp": "JPEG, PNG, or WebP up to 8 MB. Save changes to apply your photo.",
+    "avatarInvalidType": "Choose a JPEG, PNG, or WebP image.",
+    "avatarInvalidSize": "Choose an image no larger than 8 MB.",
     "overview": "Overview",
     "likedTracks": "Liked Tracks",
     "playlists": "Playlists",

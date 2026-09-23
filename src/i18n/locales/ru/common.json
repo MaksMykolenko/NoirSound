@@ -1,6 +1,9 @@
 {
   "loadingPage": "Загрузка страницы",
   "errors": {
+    "PROFILE_AVATAR_INVALID": "Не удалось прочитать фото. Выберите другое изображение JPEG, PNG или WebP до 8 МБ.",
+    "PROFILE_AVATAR_UPLOAD_FAILED": "Не удалось сохранить фото профиля. Попробуйте ещё раз.",
+    "PROFILE_AVATAR_BUSY": "Обработка фото сейчас занята. Попробуйте немного позже.",
     "CSRF_VALIDATION_FAILED": "Защищённая сессия устарела. Обновите страницу и попробуйте снова.",
     "RATE_LIMITED": "Слишком много попыток. Подождите немного и попробуйте снова.",
     "PROFILE_BANNER_INVALID": "Этот файл не является корректным баннером JPEG, PNG или WebP.",
@@ -198,6 +201,14 @@
     "removeTrack": "Убрать"
   },
   "profile": {
+    "avatar": "Фото профиля",
+    "chooseAvatar": "Выбрать фото профиля",
+    "uploadAvatar": "Загрузить фото",
+    "replaceAvatar": "Заменить фото",
+    "avatarPreview": "Предпросмотр фото профиля",
+    "avatarHelp": "JPEG, PNG или WebP до 8 МБ. Нажмите «Сохранить изменения», чтобы применить фото.",
+    "avatarInvalidType": "Выберите изображение JPEG, PNG или WebP.",
+    "avatarInvalidSize": "Выберите изображение размером до 8 МБ.",
     "overview": "Обзор",
     "likedTracks": "Любимые",
     "playlists": "Плейлисты",

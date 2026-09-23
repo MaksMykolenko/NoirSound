@@ -17,6 +17,25 @@ const {
  * and never expose private storage object keys or presigned MinIO URLs.
  */
 module.exports = async function publicRoutes(fastify) {
+  fastify.get('/avatars/:userId/:uploadId', async (request, reply) => {
+    const { avatarUrl, avatarKey } = require('../lib/avatarMedia');
+    const { userId, uploadId } = request.params;
+    const key = avatarKey(userId, uploadId);
+    if (!key) return reply.notFound('Avatar not found.');
+    const owner = await fastify.prisma.user.findFirst({
+      where: { id: userId, status: 'ACTIVE', avatarUrl: avatarUrl(userId, uploadId) },
+      select: { id: true },
+    });
+    if (!owner) return reply.notFound('Avatar not found.');
+    try {
+      const stream = await fastify.storage.getObjectStream(key);
+      reply.header('content-type', 'image/webp');
+      reply.header('cache-control', 'public, max-age=300');
+      reply.header('x-content-type-options', 'nosniff');
+      return reply.send(stream);
+    } catch { return reply.notFound('Avatar not found.'); }
+  });
+
   fastify.get('/profile-banners/:userId/:uploadId', {
     config: {
       rateLimit: {

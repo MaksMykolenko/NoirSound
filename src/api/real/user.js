@@ -45,6 +45,15 @@ export async function updateProfile(profileData) {
   return response.user ?? response;
 }
 
+export async function uploadProfileAvatar(file) {
+  const response = await apiFetch('/auth/me/avatar', {
+    method: 'POST',
+    headers: { 'Content-Type': file.type },
+    body: file,
+  });
+  return response.user ?? response;
+}
+
 function putProfileBanner(uploadUrl, file, onProgress) {
   if (typeof XMLHttpRequest === 'undefined') {
     return fetch(uploadUrl, {

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { API_BASE_URL, useMockApi } from '../api/client';
 import { getRecentlyPlayed } from '../api/stats';
-import { setTrackLiked } from '../api/tracks';
+import { getLikedTracks, setTrackLiked } from '../api/tracks';
 import { useUserStore } from './userStore';
 import connectPresenceService from '../services/noirsoundConnect';
 
@@ -15,6 +15,17 @@ function reportPlaybackError(message) {
 
 let audio = null;
 let configureAudio = () => {};
+let likesRequest = null;
+let likesGeneration = 0;
+const pendingLikes = new Set();
+
+function readVolume() {
+  try {
+    const saved = window.localStorage.getItem('noirsound.volume');
+    const value = saved === null || saved.trim() === '' ? NaN : Number(saved);
+    return Number.isFinite(value) && value >= 0 && value <= 1 ? value : 0.5;
+  } catch { return 0.5; }
+}
 
 function ensureAudio() {
   if (!audio && typeof window !== 'undefined') {
@@ -157,6 +168,7 @@ export const usePlayerStore = create((set, get) => {
   // Setup audio listeners
   const setupEventListeners = () => {
     if (!audio) return;
+    audio.volume = get().volume;
     
     // Clear any existing bindings
     audio.onplay = null;
@@ -204,13 +216,15 @@ export const usePlayerStore = create((set, get) => {
     originalQueue: [],
     queueSource: null,
     isPlaying: false,
-    volume: 0.5,
+    volume: readVolume(),
     progress: 0,
     duration: 0,
     repeatMode: 'none', // 'none' | 'all' | 'one'
     shuffle: false,
     playbackError: null,
     likedTracks: useMockApi ? ["1", "2", "5"] : [],
+    likedTracksUserId: null,
+    likedTracksHydrated: false,
     recentlyPlayed: [],
     recentlyPlayedError: null,
     isPlayerCollapsed: readPlayerCollapsed(),
@@ -257,18 +271,49 @@ export const usePlayerStore = create((set, get) => {
       }));
     },
 
+    loadLikedTracks: (userId) => {
+      if (get().likedTracksUserId !== userId || !userId) {
+        likesGeneration += 1;
+        likesRequest = null;
+        set({ likedTracks: [], likedTracksUserId: userId, likedTracksHydrated: false });
+      }
+      if (!userId || get().likedTracksHydrated) return Promise.resolve();
+      if (likesRequest) return likesRequest;
+      const generation = likesGeneration;
+      likesRequest = getLikedTracks().then((tracks) => {
+        if (generation !== likesGeneration) return;
+        set({ likedTracks: [...new Set(tracks.map((track) => track.id))], likedTracksHydrated: true });
+      }).finally(() => {
+        if (generation === likesGeneration) likesRequest = null;
+      });
+      return likesRequest;
+    },
+
     toggleLikeTrack: async (trackId) => {
-      const { likedTracks } = get();
-      const willLike = !likedTracks.includes(trackId);
+      const userId = useUserStore.getState().user?.id;
+      if (!userId) {
+        useUserStore.getState().setAuthModalOpen(true);
+        return;
+      }
+      const pendingKey = `${userId}:${trackId}`;
+      if (pendingLikes.has(pendingKey)) return;
+      pendingLikes.add(pendingKey);
       try {
+        await get().loadLikedTracks(userId);
+        if (useUserStore.getState().user?.id !== userId) return;
+        const generation = likesGeneration;
+        const willLike = !get().likedTracks.includes(trackId);
         await setTrackLiked(trackId, willLike);
-        set({
+        if (generation !== likesGeneration || useUserStore.getState().user?.id !== userId) return;
+        set((state) => ({
           likedTracks: willLike
-            ? [...likedTracks, trackId]
-            : likedTracks.filter((id) => id !== trackId),
-        });
+            ? [...new Set([...state.likedTracks, trackId])]
+            : state.likedTracks.filter((id) => id !== trackId),
+        }));
       } catch {
         // apiFetch reports the real failure. Do not apply a local success state.
+      } finally {
+        pendingLikes.delete(pendingKey);
       }
     },
 
@@ -345,6 +390,8 @@ export const usePlayerStore = create((set, get) => {
         // inflation of play counts, monthly listeners, or listening
         // history.
       } catch (err) {
+        // A quick pause or a new track can cancel an in-flight play request.
+        if (err.name === 'AbortError') return;
         console.error('HTML5 audio playback failed.', err);
         const message = err.message || 'Audio playback failed.';
         set({
@@ -367,6 +414,7 @@ export const usePlayerStore = create((set, get) => {
         audio.play().then(() => {
           connectPresenceService.notifyResume(currentTrack, audio.currentTime);
         }).catch(err => {
+          if (err.name === 'AbortError') return;
           console.error('Toggle play failed.', err);
           const message = err.message || 'Audio playback failed.';
           set({
@@ -401,11 +449,14 @@ export const usePlayerStore = create((set, get) => {
     },
 
     setVolume: (value) => {
+      if (!Number.isFinite(value)) return;
       const rounded = Math.max(0, Math.min(1, value));
       if (audio) {
         audio.volume = rounded;
       }
       set({ volume: rounded });
+      try { window.localStorage.setItem('noirsound.volume', String(rounded)); }
+      catch { /* Keep playback usable when storage is denied. */ }
     },
 
     next: () => {

@@ -9,6 +9,7 @@ import {
   removeProfileBanner,
   register,
   updateProfile,
+  uploadProfileAvatar,
   uploadProfileBanner,
 } from '../api/user';
 import { getListeningStats, recordPlayEvent } from '../api/stats';
@@ -130,6 +131,13 @@ export const useUserStore = create((set) => ({
 
   updateUser: async (updates) => {
     const user = await updateProfile(updates);
+    set({ user });
+    announceProfileChanged(user);
+    return user;
+  },
+
+  uploadAvatar: async (file) => {
+    const user = await uploadProfileAvatar(file);
     set({ user });
     announceProfileChanged(user);
     return user;

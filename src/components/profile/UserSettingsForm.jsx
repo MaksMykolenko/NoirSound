@@ -7,13 +7,14 @@ import LanguageSwitcher from '../ui/LanguageSwitcher';
 import ThemeSelector from '../settings/ThemeSelector';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import ProfileBannerEditor from './ProfileBannerEditor';
+import ProfileAvatarEditor from './ProfileAvatarEditor';
 import DesktopConnectSettings from '../settings/DesktopConnectSettings';
 
 export const PROFILE_BIO_MAX_LENGTH = 500;
 
 export default function UserSettingsForm() {
   const { t } = useTranslation();
-  const { user, updateUser, uploadBanner, removeBanner, addActivity } = useUserStore();
+  const { user, updateUser, uploadAvatar, uploadBanner, removeBanner, addActivity } = useUserStore();
   const { addToast } = useToastStore();
 
   // Local Form state initialized from Zustand
@@ -28,6 +29,7 @@ export default function UserSettingsForm() {
   const [isSaved, setIsSaved] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [pendingBannerFile, setPendingBannerFile] = useState(null);
+  const [pendingAvatarFile, setPendingAvatarFile] = useState(null);
   const [bannerRemovalRequested, setBannerRemovalRequested] = useState(false);
   const [bannerProgress, setBannerProgress] = useState(null);
   const [bannerStatus, setBannerStatus] = useState('');
@@ -74,6 +76,11 @@ export default function UserSettingsForm() {
         location: location.trim(),
       });
 
+      if (pendingAvatarFile) {
+        await uploadAvatar(pendingAvatarFile);
+        setPendingAvatarFile(null);
+      }
+
       if (bannerRemovalRequested) {
         await removeBanner();
         setBannerRemovalRequested(false);
@@ -110,6 +117,17 @@ export default function UserSettingsForm() {
           <span className="font-semibold">{errorMsg}</span>
         </div>
       )}
+
+      <ProfileAvatarEditor
+        user={user}
+        pendingFile={pendingAvatarFile}
+        disabled={isSubmitting}
+        onSelectFile={(file) => {
+          setPendingAvatarFile(file);
+          setErrorMsg('');
+          setIsSaved(false);
+        }}
+      />
 
       <ProfileBannerEditor
         currentBannerUrl={user?.bannerUrl || ''}

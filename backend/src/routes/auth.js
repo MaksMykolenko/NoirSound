@@ -243,13 +243,13 @@ async function authRoutes(fastify, _options) {
     }
   }, async (request, reply) => {
     const body = request.body || {};
-    if (Object.prototype.hasOwnProperty.call(body, 'bannerUrl')) {
+    if (Object.prototype.hasOwnProperty.call(body, 'bannerUrl') || Object.prototype.hasOwnProperty.call(body, 'avatarUrl')) {
       return reply.status(400).send({
         error: 'PROFILE_MEDIA_DIRECT_WRITE_FORBIDDEN',
         message: 'Profile media must be changed through the managed upload endpoints.'
       });
     }
-    const { displayName, username, bio, location, avatarUrl, preferredLanguage } = body;
+    const { displayName, username, bio, location, preferredLanguage } = body;
 
     try {
       const updateData = {};
@@ -265,7 +265,6 @@ async function authRoutes(fastify, _options) {
         updateData.bio = normalizedBio.value;
       }
       if (location !== undefined) updateData.location = location ? location.trim() : null;
-      if (avatarUrl !== undefined) updateData.avatarUrl = avatarUrl;
       if (preferredLanguage !== undefined) {
         const allowed = ['en', 'uk', 'pl', 'ru'];
         if (allowed.includes(preferredLanguage)) {
@@ -295,6 +294,8 @@ async function authRoutes(fastify, _options) {
       return reply.status(500).send({ error: 'Internal Server Error' });
     }
   });
+
+  fastify.register(require('./profileAvatar'), { serializeUser: (user) => serializedUserWithArtistAccess(fastify, user) });
 
   fastify.post('/me/banner/init', {
     preValidation: [fastify.authenticate],

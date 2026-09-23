@@ -23,6 +23,9 @@ module.exports = async function landingRoutes(fastify) {
         }
         const key = kind === 'stream' ? track.processedAudioKey : track.coverImageKey;
         if (!key) return reply.code(404).send({ error: 'LANDING_MEDIA_NOT_FOUND' });
+        if (kind === 'cover') {
+          return await require('../services/images').sendCoverImage(fastify.storage, key, request, reply, fastify.log);
+        }
         // Preserve the private bucket's signed-GET architecture, with a bounded
         // five-minute capability. Redirects support the existing Range/seek flow.
         const url = await fastify.storage.createPresignedGetUrl(key, 300);

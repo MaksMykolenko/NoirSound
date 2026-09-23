@@ -13,23 +13,27 @@ describe('closed landing media boundary', () => {
     const findFirst = vi.fn(async () => track);
     const sign = vi.fn(async () => 'https://noirsound.example/signed-private-object');
     app.decorate('prisma', { track: { findFirst, findMany: vi.fn(async () => []) } });
-    app.decorate('storage', { getObjectMetadata: vi.fn(async () => object), createPresignedGetUrl: sign });
+    app.decorate('storage', {
+      getObjectMetadata: vi.fn(async key => key === 'processed/audio.mp3' ? object : key.startsWith('image-cache/') ? { exists: true, size: 20, mimeType: 'image/webp' } : { exists: true, size: 100, mimeType: 'image/jpeg' }),
+      getObjectStream: vi.fn(async () => Buffer.from('cached-webp')),
+      createPresignedGetUrl: sign,
+    });
     await app.register(gate);
     await app.register(landingRoutes, { prefix: '/api/landing' });
     app.get('/api/tracks/:id/stream', () => ({ unexpected: true }));
     return { findFirst, sign };
   }
-  it.each(['stream', 'cover'])('allows only eligible %s media, signs for five minutes and leaves catalog blocked', async kind => {
+  it.each(['stream', 'cover'])('allows only eligible %s media and leaves catalog blocked', async kind => {
     const { findFirst, sign } = await build();
     const result = await app.inject(`/api/landing/tracks/track-1/${kind}`);
-    expect(result.statusCode).toBe(302);
-    expect(result.headers.location).toBe('https://noirsound.example/signed-private-object');
-    expect(result.headers['cache-control']).toBe('no-store');
+    expect(result.statusCode).toBe(kind === 'stream' ? 302 : 200);
+    expect(result.headers['cache-control']).toBe(kind === 'stream' ? 'no-store' : 'private, max-age=300');
     expect(findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: {
       id: 'track-1', processedAudioKey: { not: null }, NOT: { processedAudioKey: '' },
       status: 'PUBLISHED', isPublic: true, artist: { isHidden: false, user: { status: 'ACTIVE' } }
     } }));
-    expect(sign).toHaveBeenCalledWith(kind === 'stream' ? 'processed/audio.mp3' : 'covers/image.jpg', 300);
+    if (kind === 'stream') expect(sign).toHaveBeenCalledWith('processed/audio.mp3', 300);
+    else expect(sign).not.toHaveBeenCalled();
     expect((await app.inject('/api/tracks/track-1/stream')).statusCode).toBe(403);
   });
   it('never signs a noneligible or missing track', async () => {

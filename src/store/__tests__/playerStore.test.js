@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { usePlayerStore, __getAudioElementForTests, qualifyThresholdSeconds } from '../playerStore';
+import { useUserStore } from '../userStore';
 
 const track = {
   id: 'track-1',
@@ -175,10 +176,22 @@ describe('usePlayerStore in real API mode', () => {
     expect(state.playbackError).toBe('Stream rejected');
   });
 
+  it('does not report an intentional quick pause as a playback error', async () => {
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.spyOn(window.HTMLMediaElement.prototype, 'play')
+      .mockRejectedValue(new DOMException('Playback interrupted by pause', 'AbortError'));
+    await usePlayerStore.getState().playTrack(track);
+    expect(usePlayerStore.getState().playbackError).toBeNull();
+    expect(logged).not.toHaveBeenCalled();
+  });
+
   it('applies a like only after the API succeeds', async () => {
+    const previousUser = useUserStore.getState().user;
+    useUserStore.setState({ user: { id: 'listener-test' } });
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(successResponse()));
     await usePlayerStore.getState().toggleLikeTrack(track.id);
     expect(usePlayerStore.getState().likedTracks).toContain(track.id);
+    useUserStore.setState({ user: previousUser });
   });
 
   it('adds and removes queue items', () => {

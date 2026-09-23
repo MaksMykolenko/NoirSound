@@ -30,6 +30,7 @@ describe('UserSettingsForm', () => {
   let addToast;
   let uploadBanner;
   let removeBanner;
+  let uploadAvatar;
 
   beforeEach(async () => {
     await i18n.changeLanguage('en');
@@ -39,6 +40,7 @@ describe('UserSettingsForm', () => {
     addToast = vi.fn();
     uploadBanner = vi.fn();
     removeBanner = vi.fn();
+    uploadAvatar = vi.fn();
     Object.defineProperties(URL, {
       createObjectURL: {
         configurable: true,
@@ -62,6 +64,7 @@ describe('UserSettingsForm', () => {
       },
       updateUser,
       uploadBanner,
+      uploadAvatar,
       removeBanner,
       addActivity,
     });
@@ -137,6 +140,51 @@ describe('UserSettingsForm', () => {
 
     expect(screen.getByText(i18n.t('profile.displayNameRequired'))).toBeInTheDocument();
     expect(updateUser).not.toHaveBeenCalled();
+  });
+
+  it('previews an avatar and saves it with the profile, updating the shared user immediately', async () => {
+    const user = userEvent.setup();
+    updateUser.mockResolvedValue(useUserStore.getState().user);
+    uploadAvatar.mockImplementation(async () => {
+      const updated = { ...useUserStore.getState().user, avatarUrl: '/api/public/avatars/listener-1/photo.webp' };
+      useUserStore.setState({ user: updated });
+      return updated;
+    });
+    render(<UserSettingsForm />);
+    const file = new File(['png'], 'avatar.png', { type: 'image/png' });
+    await user.upload(screen.getByLabelText('Choose a profile photo'), file);
+    expect(screen.getByAltText('Profile photo preview')).toHaveAttribute('src', 'blob:noirsound-profile-banner');
+    expect(uploadAvatar).not.toHaveBeenCalled();
+    await user.click(screen.getByRole('button', { name: i18n.t('actions.saveChanges') }));
+    await waitFor(() => expect(screen.getByAltText('Profile photo preview')).toHaveAttribute('src', '/api/public/avatars/listener-1/photo.webp'));
+    expect(uploadAvatar).toHaveBeenCalledWith(file);
+    expect(URL.revokeObjectURL).toHaveBeenCalled();
+  });
+
+  it('retains the selected avatar and permits retry after a failed save', async () => {
+    const user = userEvent.setup();
+    updateUser.mockResolvedValue(useUserStore.getState().user);
+    uploadAvatar.mockRejectedValue(new Error('Avatar upload failed.'));
+    render(<UserSettingsForm />);
+    await user.upload(screen.getByLabelText('Choose a profile photo'), new File(['png'], 'avatar.png', { type: 'image/png' }));
+    await user.click(screen.getByRole('button', { name: i18n.t('actions.saveChanges') }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Avatar upload failed.');
+    expect(screen.getByAltText('Profile photo preview')).toHaveAttribute('src', 'blob:noirsound-profile-banner');
+    expect(screen.getByRole('button', { name: i18n.t('actions.saveChanges') })).toBeEnabled();
+    expect(addToast).not.toHaveBeenCalled();
+  });
+
+  it('rejects unsupported and oversized profile photos before staging', async () => {
+    const user = userEvent.setup({ applyAccept: false });
+    render(<UserSettingsForm />);
+    const input = screen.getByLabelText('Choose a profile photo');
+    await user.upload(input, new File(['svg'], 'avatar.svg', { type: 'image/svg+xml' }));
+    expect(screen.getByRole('alert')).toHaveTextContent('Choose a JPEG, PNG, or WebP image.');
+    const oversized = new File(['png'], 'avatar.png', { type: 'image/png' });
+    Object.defineProperty(oversized, 'size', { value: MAX_PROFILE_BANNER_BYTES + 1 });
+    await user.upload(input, oversized);
+    expect(screen.getByRole('alert')).toHaveTextContent('no larger than 8 MB');
+    expect(uploadAvatar).not.toHaveBeenCalled();
   });
 
   it('stages a valid banner and uploads it only through the existing Save action', async () => {

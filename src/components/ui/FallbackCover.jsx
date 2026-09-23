@@ -9,7 +9,7 @@ export default function FallbackCover({
   genre,
   className = '',
   imageClassName = '',
-  loading,
+  loading = 'lazy',
 }) {
   const { t } = useTranslation();
   const [imageFailed, setImageFailed] = useState(false);
@@ -30,6 +30,7 @@ export default function FallbackCover({
         alt={title || 'Track artwork'}
         className={`${className} ${imageClassName}`}
         loading={loading}
+        decoding="async"
         onError={() => setImageFailed(true)}
       />
     );

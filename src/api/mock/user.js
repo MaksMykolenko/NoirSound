@@ -12,6 +12,7 @@ export const demoUser = {
 
 let currentDemoUser = demoUser;
 let demoBannerObjectUrl = null;
+let demoAvatarObjectUrl = null;
 
 function revokeDemoBannerObjectUrl() {
   if (
@@ -66,12 +67,21 @@ export async function register(userData) {
 
 export async function logout() {
   revokeDemoBannerObjectUrl();
+  if (demoAvatarObjectUrl) URL.revokeObjectURL(demoAvatarObjectUrl);
+  demoAvatarObjectUrl = null;
   currentDemoUser = null;
   return { success: true };
 }
 
 export async function updateProfile(profileData) {
   currentDemoUser = { ...(currentDemoUser || demoUser), ...profileData };
+  return currentDemoUser;
+}
+
+export async function uploadProfileAvatar(file) {
+  if (demoAvatarObjectUrl) URL.revokeObjectURL(demoAvatarObjectUrl);
+  demoAvatarObjectUrl = URL.createObjectURL(file);
+  currentDemoUser = { ...(currentDemoUser || demoUser), avatarUrl: demoAvatarObjectUrl };
   return currentDemoUser;
 }
 

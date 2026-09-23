@@ -1,6 +1,9 @@
 {
   "loadingPage": "Завантаження сторінки",
   "errors": {
+    "PROFILE_AVATAR_INVALID": "Не вдалося прочитати фото. Виберіть інше зображення JPEG, PNG або WebP до 8 МБ.",
+    "PROFILE_AVATAR_UPLOAD_FAILED": "Не вдалося зберегти фото профілю. Спробуйте ще раз.",
+    "PROFILE_AVATAR_BUSY": "Обробка фото зараз зайнята. Спробуйте трохи пізніше.",
     "CSRF_VALIDATION_FAILED": "Безпечна сесія застаріла. Оновіть сторінку й спробуйте ще раз.",
     "RATE_LIMITED": "Забагато спроб. Зачекайте трохи й спробуйте ще раз.",
     "PROFILE_BANNER_INVALID": "Цей файл не є дійсним банером JPEG, PNG або WebP.",
@@ -198,6 +201,14 @@
     "removeTrack": "Прибрати"
   },
   "profile": {
+    "avatar": "Фото профілю",
+    "chooseAvatar": "Вибрати фото профілю",
+    "uploadAvatar": "Завантажити фото",
+    "replaceAvatar": "Замінити фото",
+    "avatarPreview": "Попередній перегляд фото профілю",
+    "avatarHelp": "JPEG, PNG або WebP до 8 МБ. Натисніть «Зберегти зміни», щоб застосувати фото.",
+    "avatarInvalidType": "Виберіть зображення JPEG, PNG або WebP.",
+    "avatarInvalidSize": "Виберіть зображення розміром до 8 МБ.",
     "overview": "Огляд",
     "likedTracks": "Улюблені",
     "playlists": "Плейлисти",

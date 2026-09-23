@@ -7,6 +7,7 @@ export default function FallbackAvatar({
   className = '',
   imageClassName = '',
   semanticFallback = false,
+  loading = 'lazy',
 }) {
   const [imageFailed, setImageFailed] = useState(false);
 
@@ -28,6 +29,8 @@ export default function FallbackAvatar({
         src={src}
         alt={name || 'Artist'}
         className={`ns-avatar ${className} ${imageClassName}`}
+        loading={loading}
+        decoding="async"
         onError={() => setImageFailed(true)}
       />
     );

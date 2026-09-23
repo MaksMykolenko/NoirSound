@@ -6,6 +6,8 @@ import PlayerBar from '../player/PlayerBar';
 import QueuePanel from '../player/QueuePanel';
 import FullscreenLyricsPlayer from '../player/FullscreenLyricsPlayer';
 import { usePlayerStore } from '../../store/playerStore';
+import { useUserStore } from '../../store/userStore';
+import usePlaybackKeyboard from '../../hooks/usePlaybackKeyboard';
 import { useAnimatedFavicon } from '../../hooks/useAnimatedFavicon';
 import { PublicPlaybackContext } from './publicPlaybackContext';
 
@@ -13,6 +15,14 @@ import { PublicPlaybackContext } from './publicPlaybackContext';
 // Playback remains owned by the existing store singleton, including its listeners.
 export default function PublicAppShell({ children }) {
   useAnimatedFavicon();
+  usePlaybackKeyboard();
+  const userId = useUserStore((state) => state.user?.id || null);
+  const role = useUserStore((state) => state.user?.role);
+  const loadLikedTracks = usePlayerStore((state) => state.loadLikedTracks);
+  useEffect(() => {
+    const canLoad = import.meta.env.VITE_PUBLIC_APP_ENABLED !== 'false' || role === 'ADMIN';
+    loadLikedTracks(canLoad ? userId : null).catch(() => {});
+  }, [userId, role, loadLikedTracks]);
   const { t } = useTranslation();
   const location = useLocation();
   const isLanding = location.pathname === '/';
