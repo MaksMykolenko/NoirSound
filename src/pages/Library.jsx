@@ -31,6 +31,7 @@ export default function Library() {
   const requestedTab = searchParams.get('tab');
 
   const tabs = [
+    { id: 'liked', label: t('library.allLiked'), icon: Heart },
     { id: 'music', label: t('beats.likedMusic'), icon: Heart },
     { id: 'beats', label: t('beats.likedBeats'), icon: Radio },
     { id: 'playlists', label: t('nav.playlists'), icon: ListMusic },
@@ -38,8 +39,7 @@ export default function Library() {
     { id: 'artists', label: t('nav.followedArtists'), icon: Users },
   ];
 
-  const normalizedRequestedTab = requestedTab === 'liked' ? 'music' : requestedTab;
-  const activeTab = tabs.some((tab) => tab.id === normalizedRequestedTab) ? normalizedRequestedTab : 'music';
+  const activeTab = tabs.some((tab) => tab.id === requestedTab) ? requestedTab : 'liked';
   const tabsRef = useScrollableTabs(activeTab);
   const demoMode = isMockMode();
 
@@ -57,7 +57,7 @@ export default function Library() {
   const [isCreateOpen, setCreateOpen] = useState(false);
   const [playlistRevision, setPlaylistRevision] = useState(0);
   const { tracks: likedSongs, loading: likesLoading, error: likesError } = useLikedCollection(playlistRevision);
-  const isLikedTab = activeTab === 'music' || activeTab === 'beats';
+  const isLikedTab = ['liked', 'music', 'beats'].includes(activeTab);
 
   useEffect(() => {
     const refresh = () => setPlaylistRevision((current) => current + 1);
@@ -106,6 +106,7 @@ export default function Library() {
 
   const likedMusic = useMemo(() => likedSongs.filter((track) => !isBeatTrack(track)), [likedSongs]);
   const likedBeats = useMemo(() => likedSongs.filter(isBeatTrack), [likedSongs]);
+  const visibleLikedTracks = activeTab === 'beats' ? likedBeats : activeTab === 'music' ? likedMusic : likedSongs;
 
   const pageMeta = (
     <PageMeta
@@ -210,18 +211,18 @@ export default function Library() {
               ))}
             </div>
           )
-        ) : activeTab === 'music' || activeTab === 'beats' ? (
-          (activeTab === 'beats' ? likedBeats : likedMusic).length === 0 ? (
+        ) : isLikedTab ? (
+          visibleLikedTracks.length === 0 ? (
             <EmptyState
               iconName="Heart"
               title={activeTab === 'beats' ? t('beats.noLikedBeats') : t('empty.noLikedSongs')}
               description={activeTab === 'beats' ? t('beats.likeBeatsDesc') : t('profile.likeTracksDesc')}
               actionText={t('actions.discoverMusic')}
-              onAction={() => navigate(activeTab === 'beats' ? '/discover?content=BEAT' : '/discover?content=MUSIC')}
+              onAction={() => navigate(activeTab === 'beats' ? '/discover?content=BEAT' : activeTab === 'music' ? '/discover?content=MUSIC' : '/discover')}
             />
           ) : (
             <div className="space-y-1">
-              {(activeTab === 'beats' ? likedBeats : likedMusic).map((track, index, collection) => (
+              {visibleLikedTracks.map((track, index, collection) => (
                 <TrackListItem key={track.id} track={track} index={index} tracksContext={collection} />
               ))}
             </div>

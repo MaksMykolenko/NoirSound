@@ -577,7 +577,8 @@
     "beatCount_one": "{{count}} бит",
     "beatCount_few": "{{count}} бита",
     "beatCount_many": "{{count}} битов",
-    "beatCount_other": "{{count}} бита"
+    "beatCount_other": "{{count}} бита",
+    "allLiked": "Понравившееся"
   },
   "artist": {
     "music": "Музыка",

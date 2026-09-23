@@ -573,7 +573,8 @@
     "trackCount_one": "{{count}} track",
     "trackCount_other": "{{count}} tracks",
     "beatCount_one": "{{count}} beat",
-    "beatCount_other": "{{count}} beats"
+    "beatCount_other": "{{count}} beats",
+    "allLiked": "Liked"
   },
   "artist": {
     "music": "Music",

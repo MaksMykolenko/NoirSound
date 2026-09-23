@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Heart, History, ListMusic, Plus, Radio, Search, Users } from 'lucide-react';
+import { Heart, History, ListMusic, Plus, Search, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import {
   createPlaylist,
@@ -89,10 +89,7 @@ export default function LibrarySidebarSection({ onItemClick }) {
 
   const { t } = useTranslation();
   const likedBeatsCount = likedTracks.filter(isBeatTrack).length;
-  const likedCollections = [
-    { tab: 'music', label: t('beats.likedMusic'), icon: Heart, count: likedTracks.length - likedBeatsCount, countKey: 'library.trackCount' },
-    { tab: 'beats', label: t('beats.likedBeats'), icon: Radio, count: likedBeatsCount, countKey: 'library.beatCount' },
-  ];
+  const likedMusicCount = likedTracks.length - likedBeatsCount;
 
   const handleNav = (path) => {
     navigate(path);
@@ -124,17 +121,18 @@ export default function LibrarySidebarSection({ onItemClick }) {
 
       <div className="flex-1 overflow-y-auto px-1 space-y-4 pb-6">
         <div className="space-y-1.5">
-          {likedCollections.map(({ tab, label, icon: Icon, count, countKey }) => (
-          <button key={tab} data-testid={`library-shortcut-${tab}`} onClick={() => handleNav(`/library?tab=${tab}`)} className="flex w-full cursor-pointer items-center gap-3 rounded-lg p-2.5 text-left transition-colors hover:bg-zinc-900/55">
+          <button data-testid="library-shortcut-liked" onClick={() => handleNav('/library?tab=liked')} className="flex w-full cursor-pointer items-center gap-3 rounded-lg p-2.5 text-left transition-colors hover:bg-zinc-900/55">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-brand-red/20 bg-brand-red/10 text-brand-red">
-              <Icon size={15} fill={tab === 'music' ? 'currentColor' : 'none'} />
+              <Heart size={15} fill="currentColor" />
             </span>
-            <span className="min-w-0 flex-1 truncate">
-              <strong className="block text-sm text-zinc-200 truncate">{label}</strong>
-              <small className="block text-ns-label text-zinc-500 truncate">{likesLoading || likesError ? '—' : t(countKey, { count })}</small>
+            <span className="min-w-0 flex-1">
+              <strong className="block text-sm text-zinc-200 truncate">{t('library.allLiked')}</strong>
+              <small className="mt-0.5 flex flex-wrap gap-x-2 gap-y-0.5 text-ns-label text-zinc-500">
+                <span className="whitespace-nowrap">{t('library.music')}: {likesLoading || likesError ? '—' : likedMusicCount}</span>
+                <span className="whitespace-nowrap">{t('library.beats')}: {likesLoading || likesError ? '—' : likedBeatsCount}</span>
+              </small>
             </span>
           </button>
-          ))}
           <button onClick={() => handleNav('/library?tab=recently')} className="flex w-full cursor-pointer items-center gap-3 rounded-lg p-2.5 text-left transition-colors hover:bg-zinc-900/55">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-[var(--ns-border-subtle)] bg-zinc-900 text-brand-red">
               <History size={15} />

@@ -577,7 +577,8 @@
     "beatCount_one": "{{count}} bit",
     "beatCount_few": "{{count}} bity",
     "beatCount_many": "{{count}} bitów",
-    "beatCount_other": "{{count}} bitu"
+    "beatCount_other": "{{count}} bitu",
+    "allLiked": "Polubione"
   },
   "artist": {
     "music": "Muzyka",
