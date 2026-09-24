@@ -1,7 +1,8 @@
+import { TrackSaveIcon, TrackPlayingIndicator } from '../tracks/TrackVisuals';
 import React, { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ArrowDown, ArrowUp, Heart, MoreHorizontal, Pause, Play } from 'lucide-react';
+import { ArrowDown, ArrowUp, MoreHorizontal, Pause, Play } from 'lucide-react';
 import { usePlayerStore } from '../../store/playerStore';
 import { useTrackContextMenu } from '../../hooks/useEntityContextMenu';
 import FallbackCover from '../ui/FallbackCover';
@@ -9,7 +10,7 @@ import { formatDuration } from '../../utils/formatTime';
 import { formatDate } from '../../utils/formatLocale';
 import { TrackTypeBadge } from '../tracks/TrackContentMeta';
 
-// Desktop columns are "# | Title | Artist | Album / Release | Date added |
+// Desktop columns are "# | Title + Artist | Album / Release | Date added |
 // Duration | Actions" -- sorting is exposed as one shared pill row
 // (used identically on mobile, which has no table) rather than making the
 // <th> cells independently clickable, so there is exactly one place that
@@ -112,7 +113,7 @@ function DesktopRow({
       onKeyDown={contextMenuProps.onKeyDown}
       tabIndex={0}
       aria-current={isCurrent ? 'true' : undefined}
-      className={`group border-b border-zinc-900/60 transition-colors focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand-red/40 ${
+      className={`ns-playlist-track group border-b border-zinc-900/60 transition-colors focus:outline-none focus:ring-1 focus:ring-inset focus:ring-brand-red/40 ${
         isCurrent ? 'bg-brand-red/5' : 'hover:bg-zinc-900/40'
       } ${!isAvailable ? 'opacity-50' : ''}`}
     >
@@ -121,11 +122,7 @@ function DesktopRow({
           <span className="relative flex h-9 items-center justify-center">
             <span className={`font-sans tabular-nums text-ns-label text-zinc-500 ${canPlay ? 'group-hover:opacity-0 group-focus-within:opacity-0' : ''}`}>
               {isCurrent && player.isPlaying ? (
-                <span aria-hidden="true" className="flex h-3 items-end justify-center gap-[2px]">
-                  <span className="h-full w-[2px] animate-bounce bg-brand-red" />
-                  <span className="h-[75%] w-[2px] animate-bounce bg-brand-red" style={{ animationDelay: '0.15s' }} />
-                  <span className="h-[50%] w-[2px] animate-bounce bg-brand-red" style={{ animationDelay: '0.3s' }} />
-                </span>
+                <TrackPlayingIndicator />
               ) : index + 1}
             </span>
             {canPlay && (
@@ -170,7 +167,7 @@ function DesktopRow({
                 onKeyDown={contextMenuProps.onKeyDown}
                 className="flex min-w-0 items-center gap-1.5 focus-visible:outline-none focus-visible:underline"
               >
-                <span className={`truncate text-ns-body-sm font-semibold ${isCurrent ? 'text-brand-red' : 'text-zinc-100'}`}>
+                <span className={`truncate text-ns-body-sm font-medium ${isCurrent ? 'text-brand-red' : 'text-zinc-100'}`}>
                   {track.title}
                 </span>
                 <TrackTypeBadge track={track} />
@@ -183,7 +180,7 @@ function DesktopRow({
                 type="button"
                 onClick={(event) => { event.stopPropagation(); navigate(`/artist/${track.artistId}`); }}
                 title={track.artistName}
-                className="block max-w-full truncate font-sans tabular-nums text-ns-meta text-zinc-500 hover:text-zinc-300 hover:underline xl:hidden"
+                className="block max-w-full truncate font-sans tabular-nums text-ns-meta text-zinc-400 hover:text-zinc-100 hover:underline"
               >
                 {track.artistName}
               </button>
@@ -194,18 +191,6 @@ function DesktopRow({
             <div aria-hidden="true" className="h-10 w-10 shrink-0 rounded-lg border border-zinc-800 bg-zinc-900" />
             <span className="truncate text-[13px] italic text-zinc-600">{t('playlists.trackUnavailable')}</span>
           </div>
-        )}
-      </td>
-      <td className="hidden max-w-[18ch] py-2 pr-4 xl:table-cell">
-        {isAvailable && (
-          <button
-            type="button"
-            onClick={(event) => { event.stopPropagation(); navigate(`/artist/${track.artistId}`); }}
-            title={track.artistName}
-            className="block max-w-full truncate text-left text-ns-label text-zinc-400 hover:text-zinc-200 hover:underline"
-          >
-            {track.artistName}
-          </button>
         )}
       </td>
       <td className="hidden max-w-[18ch] py-2 pr-4 xl:table-cell">
@@ -268,7 +253,7 @@ function DesktopRow({
               aria-label={`${isLiked ? t('trackPage.unlike') : t('trackPage.like')} ${track.title}`}
               className={`ns-media-action ${isLiked ? 'text-brand-red' : 'text-zinc-500 hover:text-zinc-200'}`}
             >
-              <Heart size={14} fill={isLiked ? 'currentColor' : 'none'} />
+              <TrackSaveIcon saved={isLiked} />
             </button>
           )}
           <button
@@ -290,7 +275,7 @@ function MobileRow({
   track, index, queueTracks, source, owner, isCustomOrder, onRemoveTrack, onMoveTrack, pending, t,
 }) {
   const navigate = useNavigate();
-  const { player, isCurrent, isPlayingThis, isAvailable, canPlay } = useRowContext(track);
+  const { player, isCurrent, isPlayingThis, isAvailable, canPlay, isLiked } = useRowContext(track);
   const busy = Boolean(pending);
   const contextMenuOptions = useMemo(() => ({
     removeFromPlaylist: owner && onRemoveTrack ? () => onRemoveTrack(track) : undefined,
@@ -303,7 +288,6 @@ function MobileRow({
   }), [owner, onRemoveTrack, track, isCustomOrder, onMoveTrack, index, busy, queueTracks.length]);
 
   const { contextMenuProps, openFromButton } = useTrackContextMenu(track, contextMenuOptions);
-  const albumInfo = albumCellInfo(track, t);
 
   const handleTap = () => {
     if (!isAvailable) return;
@@ -320,7 +304,7 @@ function MobileRow({
       data-track-id={track.id}
       onContextMenu={contextMenuProps.onContextMenu}
       aria-current={isCurrent ? 'true' : undefined}
-      className={`flex min-h-14 items-center gap-3 border-b border-zinc-900/70 p-2 transition-colors duration-150 last:border-b-0 focus-within:bg-zinc-900/50 ${
+      className={`ns-playlist-track-mobile flex min-h-14 items-center gap-3 border-b border-zinc-900/70 p-2 transition-colors duration-150 last:border-b-0 focus-within:bg-zinc-900/50 ${
         isCurrent ? 'bg-brand-red/5' : 'hover:bg-zinc-900/40'
       } ${!isAvailable ? 'opacity-50' : 'cursor-pointer'}`}
     >
@@ -352,17 +336,16 @@ function MobileRow({
         <span className="min-w-0 flex-1">
           {isAvailable ? (
           <>
-            <span title={track.title} className={`block truncate text-ns-body-sm font-semibold ${isCurrent ? 'text-brand-red' : 'text-zinc-100'}`}>
+            <span title={track.title} className={`block truncate text-ns-body-sm font-medium ${isCurrent ? 'text-brand-red' : 'text-zinc-100'}`}>
               {track.title}
               {track.explicit && <span className="ml-1.5 rounded border border-zinc-700 bg-zinc-800 px-1 align-middle text-ns-meta font-bold text-zinc-400">E</span>}
               {isCurrent && <span className="sr-only">{t('playlists.currentlyPlaying')}</span>}
             </span>
-            <TrackTypeBadge track={track} className="mt-1" />
-            <span title={track.artistName}
-                className="block max-w-full truncate font-sans tabular-nums text-ns-label text-zinc-500">
-              {track.artistName}
-              <span className="text-zinc-600"> • </span>
-              {albumInfo.text}
+            <span className="flex min-w-0 items-center gap-1.5">
+              <TrackTypeBadge track={track} />
+              <span title={track.artistName} className="block min-w-0 truncate text-sm text-zinc-400">
+                {track.artistName}
+              </span>
             </span>
           </>
         ) : (
@@ -370,6 +353,10 @@ function MobileRow({
         )}
         </span>
       </button>
+      {isAvailable && <button type="button" className="ns-media-action" aria-pressed={isLiked}
+        onClick={() => player.toggleLikeTrack(track.id)} aria-label={`${t(isLiked ? 'trackPage.unlike' : 'trackPage.like')} ${track.title}`}>
+        <TrackSaveIcon saved={isLiked} />
+      </button>}
       <button
         type="button"
         onClick={(event) => { event.stopPropagation(); openFromButton(event); }}
@@ -473,7 +460,6 @@ export default function PlaylistTrackTable({
           <tr className="border-b border-zinc-800/60 font-sans tabular-nums text-ns-label uppercase tracking-ns-label text-zinc-500">
             <th scope="col" className="ns-table-number py-2 text-center">#</th>
             <th scope="col" className="py-2 text-left font-bold">{t('playlists.columnTitle')}</th>
-            <th scope="col" className="ns-table-person hidden py-2 pr-4 text-left xl:table-cell">{t('playlists.columnArtist')}</th>
             <th scope="col" className="ns-table-person hidden py-2 pr-4 text-left xl:table-cell">{t('playlists.columnAlbum')}</th>
             <th scope="col" className="ns-table-date hidden py-2 text-left sm:table-cell">{t('playlists.columnDateAdded')}</th>
             <th scope="col" className="ns-table-duration py-2 pr-2 text-right">{t('playlists.columnDuration')}</th>

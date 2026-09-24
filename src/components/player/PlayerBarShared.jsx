@@ -1,9 +1,9 @@
+import { TrackSaveIcon } from '../tracks/TrackVisuals';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import {
   FileText,
-  Heart,
   ListMusic,
   Pause,
   Play,
@@ -58,7 +58,7 @@ export function PlayerTrackInfo({
   return (
     <div
       key={track?.id}
-      className={`ns-player-track-fade flex items-center space-x-3 ${className}`}
+      className={`ns-player-track-info ns-player-track-fade flex items-center ${className}`}
       data-testid="standard-player-track-info"
       onContextMenu={contextMenuProps.onContextMenu}
       onKeyDown={contextMenuProps.onKeyDown}
@@ -72,7 +72,7 @@ export function PlayerTrackInfo({
         imageClassName="object-cover"
       />
       <div className="min-w-0 flex-1">
-        <h4 className="truncate text-ns-card-title font-bold text-zinc-100">
+        <h4 className="truncate text-sm font-medium text-zinc-100">
           <Link
             title={track.title}
             to={`/track/${track.id}`}
@@ -82,9 +82,9 @@ export function PlayerTrackInfo({
             {track.title}
           </Link>
         </h4>
-        <p title={track.artistName} className="text-ns-label text-zinc-350 truncate hover:text-zinc-100 cursor-pointer font-medium">
+        <Link to={`/artist/${track.artistId}`} onClick={onOpenTrack} title={track.artistName} className="block text-xs text-zinc-400 truncate hover:text-zinc-100">
           {track.artistName}
-        </p>
+        </Link>
         <PlaybackErrorStatus error={playbackError} />
       </div>
       <button
@@ -97,7 +97,7 @@ export function PlayerTrackInfo({
         aria-label={t(isLiked ? 'player.unlikeTrack' : 'player.likeTrack', { title: track.title })}
         aria-pressed={isLiked}
       >
-        <Heart size={16} fill={isLiked ? 'currentColor' : 'none'} />
+        <TrackSaveIcon saved={isLiked} />
       </button>
       <button
         type="button"

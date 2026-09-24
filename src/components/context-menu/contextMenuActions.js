@@ -1,9 +1,10 @@
 import {
   ArrowDownToLine,
   CircleUserRound,
+  CircleCheck,
+  CirclePlus,
   Copy,
   FileText,
-  Heart,
   ListEnd,
   ListMusic,
   Pause,
@@ -132,7 +133,7 @@ export function buildTrackContextActions({
       label: isLiked
         ? text(t, 'contextMenu.unlikeTrack', 'Unlike track')
         : text(t, 'contextMenu.likeTrack', 'Like track'),
-      icon: Heart,
+      icon: isLiked ? CircleCheck : CirclePlus,
       checked: isLiked,
       onSelect: () => player.toggleLikeTrack(track.id),
     },

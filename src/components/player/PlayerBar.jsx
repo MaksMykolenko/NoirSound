@@ -1,3 +1,4 @@
+import { TrackSaveIcon } from '../tracks/TrackVisuals';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
@@ -8,7 +9,6 @@ import {
   Volume2,
   VolumeX,
   ListMusic,
-  Heart,
   X,
   Music,
   ChevronDown,
@@ -438,7 +438,8 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
               </div>
               <button
                 onClick={() => toggleLikeTrack(currentTrack.id)}
-                className={`inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-md border transition-colors focus:outline-none ${
+                data-testid="standard-mobile-player-like-button"
+                className={`ns-media-action ${
                   isLiked
                     ? 'bg-rose-500/10 text-brand-red border-brand-red/35'
                     : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-zinc-200'
@@ -447,7 +448,7 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
                 aria-label={t(isLiked ? 'player.unlikeTrack' : 'player.likeTrack', { title: currentTrack.title })}
                 aria-pressed={isLiked}
               >
-                <Heart size={18} fill={isLiked ? 'currentColor' : 'none'} />
+                <TrackSaveIcon saved={isLiked} />
               </button>
             </div>
 

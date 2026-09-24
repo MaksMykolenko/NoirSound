@@ -429,7 +429,7 @@ describe('PlaylistPage — playlist detail table', () => {
       expect(mobileLists[0].querySelectorAll('[data-track-id]')).toHaveLength(4);
     });
 
-    it('keeps mobile rows to play and More while preserving secondary context actions', async () => {
+    it('exposes mobile play, save and More while preserving secondary context actions', async () => {
       getPlaylistById.mockResolvedValue(buildPlaylist({ isOwner: true }));
       const { container } = renderPlaylistPage();
       await screen.findByText('Late Night Circuit');
@@ -441,9 +441,9 @@ describe('PlaylistPage — playlist detail table', () => {
       expect(within(mobileRow).getByRole('button', {
         name: i18n.t('playlists.playFromHere', { title: trackA.title }),
       })).toBeInTheDocument();
-      expect(within(mobileRow).queryByRole('button', {
+      expect(within(mobileRow).getByRole('button', {
         name: likeLabel(trackA.title, false),
-      })).not.toBeInTheDocument();
+      })).toHaveAttribute('aria-pressed', 'false');
 
       fireEvent.click(within(mobileRow).getByRole('button', {
         name: i18n.t('playlists.moreActionsFor', { title: trackA.title }),

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Play, Pause, Heart, Plus, Check, MoreHorizontal } from 'lucide-react';
+import { Play, Pause, Plus, Check, MoreHorizontal } from 'lucide-react';
 import { usePlayerStore } from '../../store/playerStore';
 import { formatDuration } from '../../utils/formatTime';
 import { formatNumber } from '../../utils/formatLocale';
@@ -9,9 +9,10 @@ import FallbackCover from '../ui/FallbackCover';
 import { getLocalizedGenre } from '../../i18n/genreLabels';
 import { useTrackContextMenu } from '../../hooks/useEntityContextMenu';
 import { BeatMetadataInline, TrackTypeBadge } from './TrackContentMeta';
+import { TrackSaveIcon, TrackPlayingIndicator } from './TrackVisuals';
 
 export default function TrackListItem({ track, index, tracksContext = [], onRemoveFromPlaylist,
-  queueSource = null, compact = false, showMobileLike = false }) {
+  queueSource = null, compact = false, showMobileLike = false, role }) {
   const { t } = useTranslation();
   const { currentTrack, isPlaying, playTrack, togglePlay, likedTracks, toggleLikeTrack,
     queue, addToQueue, removeFromQueue } = usePlayerStore();
@@ -25,7 +26,7 @@ export default function TrackListItem({ track, index, tracksContext = [], onRemo
   const isPlayingThis = isCurrent && isPlaying;
   const isLiked = likedTracks.includes(track.id);
   const inQueue = queue.some((item) => item.id === track.id);
-  const canPlay = track.isStreamable ?? Boolean(track.audioUrl);
+  const canPlay = track.isAvailable !== false && (track.isStreamable ?? Boolean(track.audioUrl));
   const handlePlay = () => {
     if (!canPlay) return;
     if (isCurrent) togglePlay();
@@ -33,14 +34,15 @@ export default function TrackListItem({ track, index, tracksContext = [], onRemo
   };
   const genre = getLocalizedGenre(track.genre);
   return (
-    <div onContextMenu={contextMenuProps.onContextMenu} data-track-id={track.id}
+    <div onContextMenu={contextMenuProps.onContextMenu} data-track-id={track.id} role={role}
       aria-current={isCurrent ? 'true' : undefined}
       className={`ns-track-row group ${compact ? 'ns-track-row--compact' : ''}`}>
+      <div className="ns-track-row__number" aria-hidden="true">
+        {isPlayingThis ? <TrackPlayingIndicator /> : Number.isInteger(index) ? index + 1 : null}
+      </div>
       <div className="ns-track-row__leading">
-        {compact ? <span className="ns-track-row__rank" aria-hidden="true">{index + 1}</span> : (
-          <FallbackCover src={track?.coverUrl} title={track?.title} artistName={track?.artistName}
-            genre={track?.genre} className="h-11 w-11 rounded" imageClassName="object-cover" />
-        )}
+        <FallbackCover src={track?.coverUrl} title={track?.title} artistName={track?.artistName}
+          genre={track?.genre} className="h-full w-full rounded" imageClassName="object-cover" />
         <button type="button" onClick={handlePlay} disabled={!canPlay}
           className={`ns-track-row__play ${isPlayingThis ? 'is-playing' : ''}`}
           aria-label={canPlay ? t(isPlayingThis ? 'playlists.pauseTrack' : 'playlists.playTrack', { title: track.title }) : t('trackPage.audioUnavailable')}>
@@ -49,7 +51,7 @@ export default function TrackListItem({ track, index, tracksContext = [], onRemo
       </div>
       <div className="ns-track-row__identity">
         <Link to={`/track/${track.id}`} title={track.title} onKeyDown={contextMenuProps.onKeyDown}
-          className={`ns-track-row__title block truncate font-semibold ${isCurrent ? 'text-brand-red' : ''}`}>
+          className={`ns-track-row__title block truncate ${isCurrent ? 'text-brand-red' : ''}`}>
           {track.title}
           {isCurrent && <span className="sr-only"> — {t('playlists.currentlyPlaying')}</span>}
         </Link>
@@ -60,12 +62,12 @@ export default function TrackListItem({ track, index, tracksContext = [], onRemo
             {track.artistName}
           </Link>
         </div>
-        <BeatMetadataInline track={track} limit={4} />
+        <BeatMetadataInline track={track} limit={2} />
         {!canPlay && <span className="ns-media-meta">{t('trackPage.audioUnavailable')}</span>}
       </div>
       {!compact && <div className="ns-track-row__secondary ns-media-meta">
         <span className="block truncate" title={genre}>{genre}</span>
-        <span className="block tabular-nums">{formatNumber(track.plays || 0)} {t('trackPage.plays')}</span>
+        <span className="block tabular-nums"><span>{formatNumber(track.plays || 0)}</span> {t('trackPage.plays')}</span>
       </div>}
       <span className="ns-track-row__duration ns-media-duration" title={t('trackPage.duration')}>
         {formatDuration(track.duration)}
@@ -74,7 +76,7 @@ export default function TrackListItem({ track, index, tracksContext = [], onRemo
         <button type="button" onClick={() => toggleLikeTrack(track.id)}
           className={`ns-media-action ${showMobileLike ? '' : 'ns-track-row__desktop-action'}`}
           aria-label={`${t(isLiked ? 'trackPage.unlike' : 'trackPage.like')} ${track.title}`} aria-pressed={isLiked}>
-          <Heart size={16} fill={isLiked ? 'currentColor' : 'none'} />
+          <TrackSaveIcon saved={isLiked} />
         </button>
         {canPlay && !compact && <button type="button"
           onClick={() => inQueue ? removeFromQueue(track.id) : addToQueue(track)}

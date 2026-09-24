@@ -1,12 +1,12 @@
 import React from 'react';
 import { usePlayerStore } from '../../store/playerStore';
-import { ArrowDown, ArrowUp, MoreHorizontal, X, Play, Trash2, Music } from 'lucide-react';
+import { MoreHorizontal, X, Play, Pause, Trash2, Music } from 'lucide-react';
 import FallbackCover from '../ui/FallbackCover';
 import { useTrackContextMenu } from '../../hooks/useEntityContextMenu';
 import useDialogFocusTrap from '../../hooks/useDialogFocusTrap';
 import { useTranslation } from 'react-i18next';
 
-function QueueTrackRow({ track, index, currentTrack, playTrack, removeFromQueue, moveQueueItem, queueLength }) {
+function QueueTrackRow({ track, index, currentTrack, isPlaying, togglePlay, playTrack, removeFromQueue, moveQueueItem, queueLength }) {
   const { t } = useTranslation();
   const { contextMenuProps, openFromButton } = useTrackContextMenu(track, {
     removeFromQueue: () => track?.id && removeFromQueue(track.id),
@@ -16,18 +16,16 @@ function QueueTrackRow({ track, index, currentTrack, playTrack, removeFromQueue,
 
   if (!track || !track.id) return null;
 
-  const isPlayingThis = currentTrack?.id === track.id;
+  const isCurrent = currentTrack?.id === track.id;
+  const isPlayingThis = isCurrent && isPlaying;
+  const canPlay = track.isAvailable !== false && (track.isStreamable ?? Boolean(track.audioUrl));
   return (
     <div
       onContextMenu={contextMenuProps.onContextMenu}
       onKeyDown={contextMenuProps.onKeyDown}
       tabIndex={0}
-      aria-current={isPlayingThis ? 'true' : undefined}
-      className={`group grid grid-cols-[2.75rem_minmax(0,1fr)_auto] items-center gap-3 border-b border-[var(--ns-border-subtle)] px-2 py-2.5 transition-colors duration-150 ${
-        isPlayingThis
-          ? 'bg-brand-red/10 shadow-[inset_2px_0_0_var(--ns-accent)]'
-          : 'hover:bg-zinc-900/50 focus-within:bg-zinc-900/50'
-      }`}
+      aria-current={isCurrent ? 'true' : undefined}
+      className="ns-queue-track group grid grid-cols-[2.75rem_minmax(0,1fr)_auto] items-center gap-3 px-2 py-2 transition-colors duration-150"
     >
       <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded md:h-10 md:w-10">
         <FallbackCover
@@ -39,35 +37,23 @@ function QueueTrackRow({ track, index, currentTrack, playTrack, removeFromQueue,
           imageClassName="object-cover"
         />
         <button
-          onClick={() => playTrack(track)}
+          onClick={() => canPlay && (isCurrent ? togglePlay() : playTrack(track))}
+          disabled={!canPlay}
           className="absolute inset-0 flex cursor-pointer items-center justify-center bg-black/60 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100"
-          aria-label={`${t('contextMenu.play')} ${track.title}`}
+          aria-label={t(isPlayingThis ? 'playlists.pauseTrack' : 'playlists.playTrack', { title: track.title })}
         >
-          <Play size={14} className="text-white fill-white" />
+          {isPlayingThis ? <Pause size={16} className="text-white fill-white" /> : <Play size={16} className="text-white fill-white" />}
         </button>
       </div>
       <div className="flex-1 min-w-0">
-        <h5 title={track.title} className={`text-ns-body-sm font-semibold truncate ${isPlayingThis ? 'text-brand-red' : 'text-zinc-200'}`}>
+        <h5 title={track.title} className={`text-ns-body-sm font-semibold truncate ${isCurrent ? 'text-brand-red' : 'text-zinc-200'}`}>
           {track.title}
         </h5>
         <p title={track.artistName} className="text-ns-meta text-zinc-500 truncate">{track.artistName}</p>
       </div>
       <div className="flex items-center shrink-0">
-        <button type="button" onClick={() => moveQueueItem(track.id, -1)} disabled={index === 0} className="ns-media-action !hidden text-zinc-500 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 disabled:opacity-20 lg:!inline-flex" aria-label={`${t('contextMenu.moveUp')}: ${track.title}`}>
-          <ArrowUp size={12} />
-        </button>
-        <button type="button" onClick={() => moveQueueItem(track.id, 1)} disabled={index === queueLength - 1} className="ns-media-action !hidden text-zinc-500 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 disabled:opacity-20 lg:!inline-flex" aria-label={`${t('contextMenu.moveDown')}: ${track.title}`}>
-          <ArrowDown size={12} />
-        </button>
         <button type="button" onClick={openFromButton} className="ns-media-action text-zinc-500" aria-label={`${t('contextMenu.actions')}: ${track.title}`} aria-haspopup="menu">
           <MoreHorizontal size={14} />
-        </button>
-        <button
-          onClick={() => removeFromQueue(track.id)}
-          className="ns-media-action !hidden cursor-pointer text-zinc-500 opacity-0 transition-opacity hover:text-rose-500 group-hover:opacity-100 group-focus-within:opacity-100 lg:!inline-flex"
-          aria-label={`${t('contextMenu.removeFromQueue')}: ${track.title}`}
-        >
-          <X size={12} />
         </button>
       </div>
     </div>
@@ -76,7 +62,7 @@ function QueueTrackRow({ track, index, currentTrack, playTrack, removeFromQueue,
 
 export default function QueuePanel({ isOpen, onClose, surface = 'standard' }) {
   const { t } = useTranslation();
-  const { queue, currentTrack, playTrack, removeFromQueue, setQueue, moveQueueItem, isPlayerCollapsed } = usePlayerStore();
+  const { queue, currentTrack, isPlaying, togglePlay, playTrack, removeFromQueue, setQueue, moveQueueItem, isPlayerCollapsed } = usePlayerStore();
   const dialogRef = useDialogFocusTrap(isOpen, onClose);
 
   if (!isOpen) return null;
@@ -146,6 +132,8 @@ export default function QueuePanel({ isOpen, onClose, surface = 'standard' }) {
               index={index}
               queueLength={queue.length}
               currentTrack={currentTrack}
+              isPlaying={isPlaying}
+              togglePlay={togglePlay}
               playTrack={playTrack}
               removeFromQueue={removeFromQueue}
               moveQueueItem={moveQueueItem}

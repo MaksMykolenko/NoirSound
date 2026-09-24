@@ -36,7 +36,7 @@ function TrackStatusBadge({ status, label }) {
 function TrackRow({ track, onOpen, onEditLyrics, editLyricsLabel, genreFallback, trailing }) {
   if (!track || !track.id) return null;
   return (
-    <div className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 py-3 transition-colors hover:bg-zinc-900/35 sm:px-2">
+    <div className="ns-creator-track-row grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 py-3 transition-colors hover:bg-zinc-900/35 sm:px-2">
       <button type="button" title={track.title} onClick={onOpen} className="flex min-w-0 items-center gap-3 text-left cursor-pointer">
           <FallbackCover
             src={track?.coverUrl}

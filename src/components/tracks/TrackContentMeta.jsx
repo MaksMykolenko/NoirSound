@@ -8,10 +8,9 @@ export function TrackTypeBadge({ track, className = '' }) {
 
   return (
     <span
-      className={`inline-flex shrink-0 items-center gap-0.5 font-mono text-xs font-semibold text-brand-red tracking-wide ${className}`}
+      className={`ns-track-type ${className}`}
       data-testid="beat-badge"
     >
-      <span className="text-brand-red/60 font-bold" aria-hidden="true">#</span>
       <span>{t('content.beat', { defaultValue: 'Beat' })}</span>
     </span>
   );

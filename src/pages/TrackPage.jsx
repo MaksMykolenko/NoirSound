@@ -1,8 +1,9 @@
+import { TrackSaveIcon, TrackPlayingIndicator } from '../components/tracks/TrackVisuals';
 import React, { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import PageMeta from '../components/meta/PageMeta';
 import { useTranslation } from 'react-i18next';
-import { Play, Pause, Heart, Plus, Check, Clock, Headphones, Share2, MoreHorizontal, MessageCircle, ArrowRight } from 'lucide-react';
+import { Play, Pause, Plus, Check, Clock, Headphones, Share2, MoreHorizontal, MessageCircle, ArrowRight } from 'lucide-react';
 import { usePlayerStore } from '../store/playerStore';
 import { useToastStore } from '../store/toastStore';
 import { getTrackById, getCatalogTracks } from '../api';
@@ -184,14 +185,14 @@ export default function TrackPage() {
   };
 
   const iconActionClass = (active) =>
-    `min-h-11 min-w-11 cursor-pointer rounded-md border p-3 transition-colors ${
+    `ns-track-detail-action min-h-11 min-w-11 cursor-pointer rounded-full p-3 transition-colors ${
       active
         ? 'bg-brand-red/12 text-brand-red border-brand-red/35'
         : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-[var(--ns-text-primary)] hover:border-zinc-700'
     }`;
 
   return (
-    <div className="ns-page-stack">
+    <div className="ns-page-stack ns-track-detail">
       <PageMeta
         title={`${track.title} — ${track.artistName} · NoirSound`}
         description={`${showGenre ? `${genreLabel} · ` : ''}${hasDuration ? `${durationStr} · ` : ''}${isBeat ? 'Listen to this beat' : `Listen to ${track.title}`} by ${track.artistName} on NoirSound.`}
@@ -253,17 +254,13 @@ export default function TrackPage() {
                 <div className="flex flex-wrap items-center justify-center gap-3 md:justify-start">
                   <TrackTypeBadge track={track} />
                   {showGenre && (
-                    <span className="inline-flex items-center gap-0.5 font-mono text-xs font-semibold text-rose-400 tracking-wider">
-                      <span className="text-rose-500/60 font-bold" aria-hidden="true">#</span>
+                    <span className="text-sm text-zinc-400">
                       <span>{genreLabel}</span>
                     </span>
                   )}
                   {isPlayingThis && (
                     <span role="status" data-testid="track-now-playing" className="inline-flex items-center gap-1.5 text-xs font-medium text-brand-red">
-                      <span className="relative flex h-2 w-2" aria-hidden="true">
-                        <span className="absolute inline-flex h-full w-full rounded-full bg-brand-red opacity-75 motion-safe:animate-ping" />
-                        <span className="relative inline-flex h-2 w-2 rounded-full bg-brand-red" />
-                      </span>
+                      <TrackPlayingIndicator />
                       {t('player.nowPlaying')}
                     </span>
                   )}
@@ -288,12 +285,12 @@ export default function TrackPage() {
                 <button
                   onClick={handlePlayClick}
                   disabled={!canPlay}
-                  className="ns-button-primary px-6 text-sm flex items-center gap-2.5 cursor-pointer disabled:opacity-45 disabled:cursor-not-allowed"
+                  className="ns-track-main-play"
                 >
                   {isPlayingThis
                     ? <Pause size={16} fill="currentColor" strokeWidth={0} />
                     : <Play size={16} fill="currentColor" strokeWidth={0} className="translate-x-[0.5px]" />}
-                  <span>{!canPlay ? t('trackPage.audioUnavailable') : isPlayingThis ? t('trackPage.pauseTrack') : isBeat ? t('beats.playBeat') : t('trackPage.playTrack')}</span>
+                  <span className="sr-only">{!canPlay ? t('trackPage.audioUnavailable') : isPlayingThis ? t('trackPage.pauseTrack') : isBeat ? t('beats.playBeat') : t('trackPage.playTrack')}</span>
                 </button>
 
                 <button
@@ -303,7 +300,7 @@ export default function TrackPage() {
                   aria-label={isLiked ? t('trackPage.unlike') : t('trackPage.like')}
                   aria-pressed={isLiked}
                 >
-                  <Heart size={16} fill={isLiked ? 'currentColor' : 'none'} />
+                  <TrackSaveIcon saved={isLiked} />
                 </button>
 
                 <button

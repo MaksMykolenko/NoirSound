@@ -141,8 +141,8 @@ describe('Home real API states', () => {
 
     renderHome();
 
-    await screen.findByText(tracks.at(-1).title);
-    const grid = screen.getByTestId('home-release-grid');
+    const grid = await screen.findByTestId('home-release-grid');
+    expect(within(grid).getByText(tracks.at(-1).title)).toBeInTheDocument();
     const cards = grid.querySelectorAll('[data-track-id]');
 
     expect(cards).toHaveLength(count);
