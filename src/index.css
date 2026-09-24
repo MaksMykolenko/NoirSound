@@ -707,6 +707,7 @@ main {
   transform: translate(var(--profile-avatar-x), var(--profile-avatar-y)) scale(var(--profile-avatar-scale));
 }
 .ns-profile-scroll[data-pinned="true"] .ns-profile-scroll__avatar { pointer-events: auto; }
+.ns-profile-scroll[data-moving="true"] .ns-profile-scroll__avatar { will-change: transform; }
 
 .ns-profile-hero__banner-wrap {
   position: relative;
