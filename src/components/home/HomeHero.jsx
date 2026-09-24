@@ -86,16 +86,16 @@ export default function HomeHero({
 
       {/* Right Column: Trending/Featured Spotlight Deck (Desktop) */}
       <div
-        className="relative z-10 hidden xl:flex items-center gap-4 rounded-2xl border border-zinc-800/80 bg-gradient-to-br from-zinc-900/90 via-zinc-950 to-black p-5 shadow-2xl backdrop-blur-xl group shrink-0"
+        className="relative z-10 hidden xl:flex items-center gap-6 rounded-2xl border border-zinc-800/80 bg-gradient-to-br from-zinc-900/90 via-zinc-950 to-black p-5 shadow-2xl backdrop-blur-xl group shrink-0"
         data-testid="home-hero-vinyl-deck"
       >
         {track ? (
           <>
             {/* Left inside card: Track Details & Controls */}
-            <div className="flex flex-col justify-between space-y-3 min-w-0 w-[200px] max-w-[250px]">
+            <div className="flex w-56 min-w-0 flex-col gap-4">
               {/* Trending now badge */}
               <div className="flex items-center gap-1.5">
-                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-400 font-mono">
+                <span className="inline-flex shrink-0 items-center gap-1 text-[11px] font-semibold text-amber-400 font-mono">
                   <Flame size={13} className="text-amber-500 fill-amber-500" />
                   <span>{t('discover.trendingNow', 'Trending now')}</span>
                 </span>
@@ -125,7 +125,7 @@ export default function HomeHero({
                 <div className="mt-1 flex items-center gap-2 text-xs text-zinc-300">
                   <Link
                     to={`/artist/${track.artistId || track.artist?.id || ''}`}
-                    className="font-medium text-zinc-300 hover:text-white hover:underline flex items-center gap-1.5 truncate"
+                    className="font-medium text-zinc-300 hover:text-white hover:underline flex min-w-0 items-center gap-1.5 truncate"
                   >
                     <div className="h-4 w-4 rounded-full overflow-hidden bg-zinc-800 border border-zinc-700 shrink-0">
                       <FallbackCover src={track?.artistAvatarUrl || track?.coverUrl} title={track?.artistName} />
@@ -135,19 +135,19 @@ export default function HomeHero({
                   {track.duration ? (
                     <>
                       <span className="text-zinc-600">•</span>
-                      <span className="text-zinc-500 font-mono text-[11px]">{formatDuration(track.duration)}</span>
+                      <span className="shrink-0 whitespace-nowrap text-zinc-500 font-mono text-[11px]">{formatDuration(track.duration)}</span>
                     </>
                   ) : null}
                 </div>
               </div>
 
               {/* Action buttons: Listen Now, Like, Track Details */}
-              <div className="flex items-center gap-2 pt-1">
+              <div className="grid grid-cols-[minmax(0,1fr)_2.75rem] items-center gap-2 pt-1">
                 <button
                   type="button"
                   onClick={handlePlayClick}
                   disabled={!canPlay}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-brand-red px-3.5 py-1.5 text-xs font-semibold text-white shadow-lg shadow-brand-red/25 transition-all hover:bg-brand-red/90 hover:scale-105 active:scale-95 cursor-pointer"
+                  className="inline-flex min-h-11 items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-brand-red px-3.5 py-2 text-xs font-semibold text-white shadow-lg shadow-brand-red/25 transition-all hover:bg-brand-red/90 hover:scale-105 active:scale-95 cursor-pointer"
                   aria-label={isPlayingThis ? t('discover.pauseSpotlight', 'Pause') : t('discover.playSpotlight', 'Listen Now')}
                 >
                   {isPlayingThis ? (
@@ -171,7 +171,7 @@ export default function HomeHero({
                 <button
                   type="button"
                   onClick={() => toggleLikeTrack?.(track.id)}
-                  className={`flex h-7 w-7 items-center justify-center rounded-full border transition-all cursor-pointer ${
+                  className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full border transition-all cursor-pointer ${
                     isLiked
                       ? 'border-brand-red/50 bg-brand-red/10 text-brand-red'
                       : 'border-zinc-800 bg-zinc-900/80 text-zinc-400 hover:border-zinc-700 hover:text-white'
@@ -184,7 +184,7 @@ export default function HomeHero({
 
                 <Link
                   to={`/track/${track.id}`}
-                  className="inline-flex items-center gap-1 rounded-full border border-zinc-800 bg-zinc-900/60 px-2.5 py-1.5 text-[11px] font-medium text-zinc-300 transition-colors hover:border-zinc-700 hover:text-white"
+                  className="col-span-2 inline-flex min-h-11 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border border-zinc-800 bg-zinc-900/60 px-3.5 py-2 text-[11px] font-medium text-zinc-300 transition-colors hover:border-zinc-700 hover:text-white"
                 >
                   <Disc3 size={12} className="text-zinc-500" />
                   <span>{t('discover.viewRelease', 'Details')}</span>
