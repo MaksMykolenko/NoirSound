@@ -57,7 +57,8 @@ export function PlayerTrackInfo({
   const { contextMenuProps, openFromButton } = useTrackContextMenu(track);
   return (
     <div
-      className={`flex items-center space-x-3 ${className}`}
+      key={track?.id}
+      className={`ns-player-track-fade flex items-center space-x-3 ${className}`}
       data-testid="standard-player-track-info"
       onContextMenu={contextMenuProps.onContextMenu}
       onKeyDown={contextMenuProps.onKeyDown}

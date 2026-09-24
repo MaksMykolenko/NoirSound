@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { User, Settings, LayoutDashboard, LogOut } from 'lucide-react';
 import { useToastStore } from '../../store/toastStore';
 import { useLogout } from '../../hooks/mutations/useAuth';
-import ThemeSelector from '../settings/ThemeSelector';
+import ThemeSwitcher from '../ui/ThemeSwitcher';
 
 export default function AccountDropdown({ isOpen, onClose, anchorRef }) {
   const navigate = useNavigate();
@@ -36,7 +36,8 @@ export default function AccountDropdown({ isOpen, onClose, anchorRef }) {
         return;
       }
       if (e.target.matches('select, input')) return;
-      const items = [...dropdownRef.current.querySelectorAll('[role="menuitem"]')];
+      const items = [...dropdownRef.current.querySelectorAll('[role="menuitem"]')]
+        .filter((item) => item.closest('[role="menu"]') === dropdownRef.current);
       const current = items.indexOf(document.activeElement);
       const next = e.key === 'ArrowDown' ? (current + 1) % items.length
         : e.key === 'ArrowUp' ? (current - 1 + items.length) % items.length
@@ -110,7 +111,7 @@ export default function AccountDropdown({ isOpen, onClose, anchorRef }) {
       <div className="h-px bg-zinc-900/60 my-1"></div>
 
       <div className="px-3 py-2">
-        <ThemeSelector compact />
+        <ThemeSwitcher variant="account" className="w-full" />
       </div>
 
       <div className="h-px bg-zinc-900/60 my-1"></div>

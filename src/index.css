@@ -2321,6 +2321,24 @@ button.ns-pill:hover:not(:disabled) {
   animation: ns-fade-in var(--ns-duration-normal) var(--ns-ease-standard) both;
 }
 
+@keyframes ns-player-track-fade {
+  from { opacity: 0.15; transform: translateY(2px) scale(0.99); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.ns-player-track-fade {
+  animation: ns-player-track-fade 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ns-player-track-fade { animation: none; }
+  .ns-track-cover-play { transition: none; }
+}
+
+@media (hover: none), (pointer: coarse) {
+  .ns-track-cover-play { opacity: 1; background: transparent; }
+}
+
 @keyframes ns-slide-in {
   from {
     opacity: 0;

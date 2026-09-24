@@ -75,6 +75,7 @@ export function mapTrackResponse(backendTrack) {
     title: backendTrack.title?.trim() || 'Untitled track',
     artistId: backendTrack.artistId,
     artistName,
+    artistAvatarUrl: user?.avatarUrl || backendTrack.artistAvatarUrl || null,
     coverUrl: backendTrack.hasCoverImage || backendTrack.coverImageKey
       ? `${API_BASE_URL}/tracks/${backendTrack.id}/cover`
       : backendTrack.coverUrl || null,

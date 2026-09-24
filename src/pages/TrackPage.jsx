@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import PageMeta from '../components/meta/PageMeta';
 import { useTranslation } from 'react-i18next';
-import { Play, Pause, Heart, Plus, Check, Clock, Headphones, Share2, MoreHorizontal, MessageCircle } from 'lucide-react';
+import { Play, Pause, Heart, Plus, Check, Clock, Headphones, Share2, MoreHorizontal, MessageCircle, ArrowRight } from 'lucide-react';
 import { usePlayerStore } from '../store/playerStore';
 import { useToastStore } from '../store/toastStore';
 import { getTrackById, getCatalogTracks } from '../api';
@@ -14,6 +14,7 @@ import ReportButton from '../components/ui/ReportButton';
 import EmptyState from '../components/ui/EmptyState';
 import ErrorState from '../components/ui/ErrorState';
 import FallbackCover from '../components/ui/FallbackCover';
+import FallbackAvatar from '../components/ui/FallbackAvatar';
 import { getLocalizedGenre } from '../i18n/genreLabels';
 import { normalizeGenre } from '../constants/musicGenres';
 import TrackLyricsCard from '../components/lyrics/TrackLyricsCard';
@@ -137,6 +138,7 @@ export default function TrackPage() {
   const canPlay = track.isStreamable ?? Boolean(track.audioUrl);
   const canEditLyrics = user?.role === 'ADMIN' || user?.artistProfileId === track.artistId;
   const isBeat = isBeatTrack(track);
+  const hasDetailSidebar = Boolean(track.artistId) || relatedTracks.length > 0;
 
   const genreLabel = getLocalizedGenre(track.genre);
   const showGenre = Boolean(genreLabel) && genreLabel !== 'No genre';
@@ -219,7 +221,7 @@ export default function TrackPage() {
           </button>
           <>
             {/* Cover */}
-            <div className="mx-auto shrink-0 md:mx-0">
+            <div className="ns-track-cover group relative mx-auto shrink-0 md:mx-0">
               <FallbackCover
                 src={track?.coverUrl}
                 title={track?.title}
@@ -228,6 +230,21 @@ export default function TrackPage() {
                 className={`h-48 w-48 rounded-md border border-[var(--ns-border)] shadow-sm sm:h-52 sm:w-52 ${isBeat ? 'md:h-64 md:w-64' : 'md:h-56 md:w-56'}`}
                 imageClassName="object-cover"
               />
+              {canPlay && (
+                <button
+                  type="button"
+                  onClick={handlePlayClick}
+                  aria-label={t(isPlayingThis ? 'playlists.pauseTrack' : 'playlists.playTrack', { title: track.title })}
+                  data-testid="track-cover-play"
+                  className={`ns-track-cover-play absolute inset-0 flex cursor-pointer items-center justify-center rounded-md bg-black/50 transition-opacity duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-red focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--ns-bg)] ${isPlayingThis ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'}`}
+                >
+                  <span className="flex h-14 w-14 items-center justify-center rounded-full bg-brand-red text-[var(--ns-on-accent)] shadow-xl">
+                    {isPlayingThis
+                      ? <Pause size={24} fill="currentColor" strokeWidth={0} aria-hidden="true" />
+                      : <Play size={24} fill="currentColor" strokeWidth={0} className="translate-x-0.5" aria-hidden="true" />}
+                  </span>
+                </button>
+              )}
             </div>
 
             {/* Track info + actions + metadata */}
@@ -241,6 +258,15 @@ export default function TrackPage() {
                       <span>{genreLabel}</span>
                     </span>
                   )}
+                  {isPlayingThis && (
+                    <span role="status" data-testid="track-now-playing" className="inline-flex items-center gap-1.5 text-xs font-medium text-brand-red">
+                      <span className="relative flex h-2 w-2" aria-hidden="true">
+                        <span className="absolute inline-flex h-full w-full rounded-full bg-brand-red opacity-75 motion-safe:animate-ping" />
+                        <span className="relative inline-flex h-2 w-2 rounded-full bg-brand-red" />
+                      </span>
+                      {t('player.nowPlaying')}
+                    </span>
+                  )}
                 </div>
                 <h1 className="ns-display-title ns-display-title--entity text-zinc-100 ns-track-detail-title">
                   {track.title}
@@ -248,9 +274,12 @@ export default function TrackPage() {
                 <button
                   type="button"
                   onClick={() => navigate(`/artist/${track.artistId}`)}
-                  className="max-w-full break-words text-zinc-400 hover:text-zinc-100 transition-colors font-semibold text-sm cursor-pointer"
+                  className="inline-flex max-w-full items-center gap-2.5 break-words text-zinc-400 hover:text-zinc-100 transition-colors font-semibold text-sm cursor-pointer"
                 >
-                  {track.artistName}
+                  <span className="h-7 w-7 shrink-0 overflow-hidden rounded-full border border-zinc-800" aria-hidden="true">
+                    <FallbackAvatar src={track.artistAvatarUrl} name={track.artistName} className="h-full w-full" imageClassName="object-cover" />
+                  </span>
+                  <span className="min-w-0 break-words">{track.artistName}</span>
                 </button>
               </div>
 
@@ -371,7 +400,7 @@ export default function TrackPage() {
 
         {/* Main track details */}
         <div
-          className={`min-w-0 space-y-6 xl:space-y-8 ${relatedTracks.length > 0 ? 'xl:col-span-8' : 'xl:col-span-12'}`}
+          className={`min-w-0 space-y-6 xl:space-y-8 ${hasDetailSidebar ? 'xl:col-span-8' : 'xl:col-span-12'}`}
           data-testid="track-main-column"
         >
           {(!isBeat || track.hasLyrics) && (
@@ -453,39 +482,61 @@ export default function TrackPage() {
           </section>
         </div>
 
-        {/* Related tracks are a real secondary rail only when data exists. */}
-        {relatedTracks.length > 0 && (
-          <aside
-            className="self-start border-t border-zinc-800/60 pt-6 xl:col-span-4"
-            data-testid="track-related-rail"
-            aria-labelledby="track-related-title"
-          >
-            <h2 id="track-related-title" className="ns-section-title px-1">{isBeat ? t('beats.relatedBeats') : t('trackPage.relatedTracks')}</h2>
-            <div className="mt-4 border-y border-zinc-800/60">
-              {relatedTracks.map((relTrack) => (
-                <Link
-                  key={relTrack.id}
-                  to={`/track/${relTrack.id}`}
-                  className="group flex w-full cursor-pointer items-center gap-3 border-b border-zinc-900/70 p-3 text-left transition-colors last:border-b-0 hover:bg-zinc-900/40 focus:outline-none focus-visible:bg-zinc-900/50 focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-brand-red/40"
-                >
-                  <FallbackCover
-                    src={relTrack?.coverUrl}
-                    title={relTrack?.title}
-                    artistName={relTrack?.artistName}
-                    genre={relTrack?.genre}
-                    className="h-12 w-12 shrink-0 rounded border border-zinc-800"
-                    imageClassName="object-cover"
-                  />
+        {hasDetailSidebar && (
+          <div className="min-w-0 space-y-6 self-start xl:col-span-4">
+            {track.artistId && (
+              <section className="rounded-xl border border-zinc-800 bg-zinc-950 p-5" data-testid="track-artist-card" aria-labelledby="track-artist-card-title">
+                <div className="flex items-center gap-3">
+                  <span className="h-12 w-12 shrink-0 overflow-hidden rounded-full border border-zinc-800" aria-hidden="true">
+                    <FallbackAvatar src={track.artistAvatarUrl} name={track.artistName} className="h-full w-full" imageClassName="object-cover" />
+                  </span>
                   <div className="min-w-0 flex-1">
-                    <h3 className="truncate text-ns-body-sm font-semibold text-zinc-200 group-hover:text-[var(--ns-text-primary)]">
-                      {relTrack.title}
-                    </h3>
-                    <p className="text-ns-meta text-zinc-500 mt-0.5 truncate">{relTrack.artistName}</p>
+                    <h2 id="track-artist-card-title" className="break-words text-sm font-bold text-zinc-100">{track.artistName}</h2>
+                    <p className="mt-0.5 text-xs text-zinc-400">{t(isBeat ? 'discover.producer' : 'discover.artist')}</p>
                   </div>
+                </div>
+                <Link to={`/artist/${track.artistId}`} className="ns-button-secondary mt-4 flex min-h-11 w-full items-center justify-center gap-2 px-3 text-xs font-semibold">
+                  <span>{t('contextMenu.goToArtist')}</span>
+                  <ArrowRight size={13} aria-hidden="true" />
                 </Link>
-              ))}
-            </div>
-          </aside>
+              </section>
+            )}
+
+            {/* Related tracks are a real secondary rail only when data exists. */}
+            {relatedTracks.length > 0 && (
+              <aside
+                className="self-start border-t border-zinc-800/60 pt-6"
+                data-testid="track-related-rail"
+                aria-labelledby="track-related-title"
+              >
+                <h2 id="track-related-title" className="ns-section-title px-1">{isBeat ? t('beats.relatedBeats') : t('trackPage.relatedTracks')}</h2>
+                <div className="mt-4 border-y border-zinc-800/60">
+                  {relatedTracks.map((relTrack) => (
+                    <Link
+                      key={relTrack.id}
+                      to={`/track/${relTrack.id}`}
+                      className="group flex w-full cursor-pointer items-center gap-3 border-b border-zinc-900/70 p-3 text-left transition-colors last:border-b-0 hover:bg-zinc-900/40 focus:outline-none focus-visible:bg-zinc-900/50 focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-brand-red/40"
+                    >
+                      <FallbackCover
+                        src={relTrack?.coverUrl}
+                        title={relTrack?.title}
+                        artistName={relTrack?.artistName}
+                        genre={relTrack?.genre}
+                        className="h-12 w-12 shrink-0 rounded border border-zinc-800"
+                        imageClassName="object-cover"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <h3 className="truncate text-ns-body-sm font-semibold text-zinc-200 group-hover:text-[var(--ns-text-primary)]">
+                          {relTrack.title}
+                        </h3>
+                        <p className="text-ns-meta text-zinc-500 mt-0.5 truncate">{relTrack.artistName}</p>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </aside>
+            )}
+          </div>
         )}
 
       </div>

@@ -72,6 +72,7 @@ export default function Header() {
               className="flex min-h-10 cursor-pointer select-none items-center gap-2.5 rounded-md py-1 pl-3 pr-1 transition-colors hover:bg-surface-hover"
               aria-expanded={isDropdownOpen}
               aria-haspopup="menu"
+              aria-label={t('nav.profile')}
             >
               <span className="text-sm font-semibold text-zinc-300 hidden xl:block">@{user.username}</span>
               <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-brand-red font-bold text-[var(--ns-on-accent)]">

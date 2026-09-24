@@ -1,15 +1,19 @@
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Search, ListMusic } from 'lucide-react';
 import { useUserStore } from '../../store/userStore';
 import BrandLogo from './BrandLogo';
+import AccountDropdown from '../profile/AccountDropdown';
+import FallbackAvatar from '../ui/FallbackAvatar';
 
 export default function MobileHeader({ onOpenDrawer }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const { user, setAuthModalOpen } = useUserStore();
+  const [accountOpen, setAccountOpen] = useState(false);
+  const accountRef = useRef(null);
 
   return (
     <header className="sticky top-0 z-[var(--ns-z-header)] flex h-[var(--ns-mobile-header-height)] shrink-0 select-none items-center justify-between border-b border-[var(--ns-border-subtle)] bg-[var(--ns-bg)] px-4 pt-[var(--ns-safe-area-top)] lg:hidden">
@@ -50,6 +54,21 @@ export default function MobileHeader({ onOpenDrawer }) {
         >
           <ListMusic size={15} />
         </button>
+        {user && (
+          <div className="relative" ref={accountRef}>
+            <button
+              type="button"
+              onClick={() => setAccountOpen((open) => !open)}
+              className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-full hover:bg-surface-hover"
+              aria-label={t('nav.profile')}
+              aria-haspopup="menu"
+              aria-expanded={accountOpen}
+            >
+              <FallbackAvatar src={user.avatarUrl} name={user.displayName || user.username} className="h-8 w-8 overflow-hidden rounded-full" imageClassName="object-cover" />
+            </button>
+            {accountOpen && <AccountDropdown isOpen onClose={() => setAccountOpen(false)} anchorRef={accountRef} />}
+          </div>
+        )}
       </div>
     </header>
   );

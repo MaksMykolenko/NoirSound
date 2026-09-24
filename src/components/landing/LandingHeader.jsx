@@ -192,7 +192,12 @@ export default function LandingHeader({ motion }) {
           )}
           {user ? (
             <div className="mt-4 pt-4 border-t border-zinc-800 flex flex-col gap-2">
-              <span className="text-xs text-zinc-400">@{user.username}</span>
+              <div className="flex items-center gap-2.5">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-red" aria-hidden="true">
+                  <FallbackAvatar src={user.avatarUrl} name={user.displayName || user.username} className="h-full w-full" imageClassName="object-cover" />
+                </span>
+                <span className="min-w-0 break-words text-xs text-zinc-400">@{user.username}</span>
+              </div>
               <button type="button" className="landing-sign-in text-left text-brand-red" onClick={handleSignOut}>
                 {t('header.signOut', { defaultValue: t('header.logout', { defaultValue: 'Sign out' }) })}
               </button>

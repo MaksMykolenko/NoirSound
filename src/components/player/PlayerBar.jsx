@@ -283,7 +283,7 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
                 />
               </div>
               {/* Details */}
-              <div className="flex items-center space-x-3 min-w-0 flex-1 pr-2">
+              <div key={currentTrack?.id} className="ns-player-track-fade flex items-center space-x-3 min-w-0 flex-1 pr-2">
                 <FallbackCover
                   src={currentTrack?.coverUrl}
                   title={currentTrack?.title}
@@ -407,7 +407,7 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
           </div>
 
           {/* Large cover art */}
-          <div className="ns-mobile-player-sheet__artwork my-auto flex min-h-0 max-h-[38vh] flex-1 items-center justify-center py-3 sm:py-6">
+          <div key={`artwork-${currentTrack?.id}`} className="ns-player-track-fade ns-mobile-player-sheet__artwork my-auto flex min-h-0 max-h-[38vh] flex-1 items-center justify-center py-3 sm:py-6">
             <FallbackCover
               src={currentTrack?.coverUrl}
               title={currentTrack?.title}
@@ -422,7 +422,7 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
           <div className="ns-mobile-player-sheet__controls shrink-0 space-y-5">
             {/* Meta + Like */}
             <div className="flex items-center justify-between">
-              <div className="min-w-0 flex-1 pr-4">
+              <div key={`meta-${currentTrack?.id}`} className="ns-player-track-fade min-w-0 flex-1 pr-4">
                 <h2 className="ns-fullscreen-compact-title truncate text-2xl font-bold text-zinc-100">
                   <Link
                     title={currentTrack.title}
