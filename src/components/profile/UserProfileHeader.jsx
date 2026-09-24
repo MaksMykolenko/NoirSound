@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Edit2, Share2, MapPin, Calendar, Heart, ListMusic, UserCheck, Clock } from 'lucide-react';
 import { useToastStore } from '../../store/toastStore';
 import FallbackAvatar from '../ui/FallbackAvatar';
+import ProfileScrollIdentity from './ProfileScrollIdentity';
 import { formatDate, formatNumber } from '../../utils/formatLocale';
 
 function isRenderableBannerUrl(value) {
@@ -54,6 +55,8 @@ export default function UserProfileHeader({
 }) {
   const { t } = useTranslation();
   const { addToast } = useToastStore();
+  const headerRef = useRef(null);
+  const avatarRef = useRef(null);
   const [bannerFailed, setBannerFailed] = useState(false);
   const displayName = user.displayName || user.username || t('profile.listener');
   const joinedLabel = user.joinedAt ? formatDate(user.joinedAt) : t('profile.joinedRecently');
@@ -77,7 +80,8 @@ export default function UserProfileHeader({
   };
 
   return (
-    <section className="ns-profile-hero" data-testid="user-profile-header" data-owner={isOwner || undefined}>
+    <>
+    <section ref={headerRef} className="ns-profile-hero" data-testid="user-profile-header" data-owner={isOwner || undefined}>
       <div className="ns-profile-hero__banner-wrap">
         <div
           className="ns-profile-hero__banner"
@@ -103,6 +107,7 @@ export default function UserProfileHeader({
         </div>
 
         <div
+          ref={avatarRef}
           className="ns-profile-hero__avatar"
           data-profile-avatar
           data-testid="profile-avatar-overlap"
@@ -239,5 +244,8 @@ export default function UserProfileHeader({
         </div>
       </div>
     </section>
+    <ProfileScrollIdentity headerRef={headerRef} avatarRef={avatarRef} user={user} displayName={displayName}
+      onAvatarClick={isOwner ? (onSettingsClick || onEditClick) : undefined} />
+    </>
   );
 }

@@ -667,6 +667,47 @@ main {
   background: color-mix(in srgb, var(--ns-surface) 72%, transparent);
 }
 
+/* Scroll-linked account identity stays inside the app workspace, below navigation. */
+.ns-profile-scroll {
+  position: fixed;
+  top: var(--profile-bar-top, 0px);
+  left: var(--profile-bar-left, 0px);
+  width: var(--profile-bar-width, 0px);
+  height: 64px;
+  z-index: calc(var(--ns-z-header) - 1);
+  pointer-events: none;
+}
+.ns-profile-scroll[data-visible="false"] { visibility: hidden; }
+.ns-profile-scroll__surface {
+  position: absolute;
+  inset: 0;
+  background: var(--ns-bg);
+  border-bottom: 1px solid var(--ns-border-subtle);
+  opacity: var(--profile-scroll-progress, 0);
+}
+.ns-profile-scroll__name {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  height: 100%;
+  flex-direction: column;
+  justify-content: center;
+  padding: 8px 16px 8px var(--profile-label-left, 64px);
+  opacity: var(--profile-label-opacity, 0);
+}
+.ns-profile-scroll__avatar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--ns-card-solid);
+  transform-origin: top left;
+  transform: translate(var(--profile-avatar-x), var(--profile-avatar-y)) scale(var(--profile-avatar-scale));
+}
+.ns-profile-scroll[data-pinned="true"] .ns-profile-scroll__avatar { pointer-events: auto; }
+
 .ns-profile-hero__banner-wrap {
   position: relative;
   overflow: visible;
