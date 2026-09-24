@@ -2747,7 +2747,8 @@ body.is-sidebar-resizing * {
    stay above the title link's hit area. */
 .ns-track-card__body h3 a::after { content: ""; position: absolute; inset: 0; border-radius: var(--ns-radius-card); }
 .ns-track-card__body h3 a:focus-visible::after { outline: 2px solid var(--ns-accent); outline-offset: 2px; }
-.ns-track-card .ns-card-play, .ns-track-card__footer button, .ns-track-card .ns-media-byline a { z-index: 1; }
+.ns-track-card .ns-card-play { z-index: 20; }
+.ns-track-card__footer button, .ns-track-card .ns-media-byline a { z-index: 1; }
 .ns-track-card__footer button, .ns-track-card .ns-media-byline a { position: relative; }
 
 .ns-track-hero .ns-track-detail-title--long .ns-track-detail-title {
