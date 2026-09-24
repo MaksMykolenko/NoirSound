@@ -218,8 +218,7 @@ export default function Profile() {
             {/* Left: Main Musical Stage */}
             <div className="space-y-8 xl:col-span-8">
               {/* Liked Songs Hero Showcase Card */}
-              <div className="relative overflow-hidden rounded-2xl border border-rose-900/30 bg-gradient-to-br from-rose-950/40 via-zinc-900/90 to-zinc-950 p-6 shadow-2xl backdrop-blur-xl group">
-                <div className="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-brand-red/15 blur-3xl" />
+              <div className="relative overflow-hidden rounded-2xl border border-zinc-800/80 bg-[var(--ns-card-solid)] p-6 group">
 
                 <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
                   <div className="space-y-3">
@@ -253,7 +252,7 @@ export default function Profile() {
                           <button
                             type="button"
                             onClick={() => playTrack(likedTracks[0], likedTracks)}
-                            className="inline-flex items-center gap-2 rounded-full bg-brand-red px-5 py-2.5 text-xs font-semibold text-white shadow-lg shadow-brand-red/25 transition-all hover:bg-brand-red/90 hover:scale-105 active:scale-95 cursor-pointer"
+                            className="inline-flex items-center gap-2 rounded-full bg-brand-red px-5 py-2.5 text-xs font-semibold text-white transition-all hover:bg-brand-red/90 hover:scale-105 active:scale-95 cursor-pointer"
                           >
                             <Play size={14} fill="currentColor" />
                             <span>{t('redesign.playLiked')}</span>
@@ -271,7 +270,7 @@ export default function Profile() {
                         <button
                           type="button"
                           onClick={() => navigate('/discover')}
-                          className="inline-flex items-center gap-2 rounded-full bg-brand-red px-5 py-2.5 text-xs font-semibold text-white shadow-lg shadow-brand-red/25 transition-all hover:bg-brand-red/90 hover:scale-105 active:scale-95 cursor-pointer"
+                          className="inline-flex items-center gap-2 rounded-full bg-brand-red px-5 py-2.5 text-xs font-semibold text-white transition-all hover:bg-brand-red/90 hover:scale-105 active:scale-95 cursor-pointer"
                         >
                           <Compass size={14} />
                           <span>{t('actions.discoverMusic')}</span>
@@ -287,15 +286,15 @@ export default function Profile() {
                         <div className="absolute top-0 right-0 h-24 w-24 rounded-lg overflow-hidden border border-zinc-700/60 shadow-md rotate-6 transform translate-x-2">
                           <FallbackCover src={likedTracks[2]?.coverUrl} title={likedTracks[2]?.title} className="h-full w-full object-cover" />
                         </div>
-                        <div className="absolute top-2 right-4 h-24 w-24 rounded-lg overflow-hidden border border-zinc-700/80 shadow-lg -rotate-3 transform">
+                        <div className="absolute top-2 right-4 h-24 w-24 rounded-lg overflow-hidden border border-zinc-700/80 -rotate-3 transform">
                           <FallbackCover src={likedTracks[1]?.coverUrl} title={likedTracks[1]?.title} className="h-full w-full object-cover" />
                         </div>
-                        <div className="absolute top-4 right-8 h-24 w-24 rounded-lg overflow-hidden border border-zinc-600 shadow-2xl">
+                        <div className="absolute top-4 right-8 h-24 w-24 rounded-lg overflow-hidden border border-zinc-600">
                           <FallbackCover src={likedTracks[0]?.coverUrl} title={likedTracks[0]?.title} className="h-full w-full object-cover" />
                         </div>
                       </div>
                     ) : likedTracks.length > 0 ? (
-                      <div className="h-28 w-28 rounded-xl overflow-hidden border border-zinc-700 shadow-xl">
+                      <div className="h-28 w-28 rounded-xl overflow-hidden border border-zinc-700">
                         <FallbackCover src={likedTracks[0]?.coverUrl} title={likedTracks[0]?.title} className="h-full w-full object-cover" />
                       </div>
                     ) : (
@@ -425,7 +424,7 @@ export default function Profile() {
 
               {/* Creator Studio Card / Action Callout */}
               {isCreator ? (
-                <div className="rounded-2xl border border-purple-900/40 bg-gradient-to-br from-purple-950/30 via-zinc-900/80 to-zinc-950 p-5 shadow-xl space-y-3">
+                <div className="rounded-2xl border border-zinc-800/80 bg-[var(--ns-card-solid)] p-5 space-y-3">
                   <div className="flex items-center gap-2 text-purple-300">
                     <Disc size={16} />
                     <h3 className="text-sm font-bold tracking-wide uppercase font-mono">{t('redesign.creatorHub')}</h3>
@@ -453,7 +452,7 @@ export default function Profile() {
                   </div>
                 </div>
               ) : (
-                <div className="rounded-2xl border border-zinc-800/80 bg-gradient-to-br from-zinc-900/80 via-zinc-950 to-[var(--ns-design-end)] p-5 shadow-xl space-y-3">
+                <div className="rounded-2xl border border-zinc-800/80 bg-[var(--ns-card-solid)] p-5 space-y-3">
                   <div className="flex items-center gap-2 text-amber-400">
                     <Flame size={16} />
                     <h3 className="text-sm font-bold tracking-wide uppercase font-mono">{t('redesign.shareSound')}</h3>
@@ -483,7 +482,7 @@ export default function Profile() {
           className={`${activeTab === 'settings' ? 'block animate-in fade-in slide-in-from-bottom-2 duration-300' : 'hidden'} w-full space-y-6`}
         >
           {activeTab === 'settings' && (
-            <div className="rounded-2xl border border-zinc-800/80 bg-gradient-to-r from-zinc-900/95 via-zinc-900/80 to-zinc-950 p-5 shadow-2xl backdrop-blur-xl">
+            <div className="rounded-2xl border border-zinc-800/80 bg-[var(--ns-card-solid)] p-5">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-3.5">
                   <button

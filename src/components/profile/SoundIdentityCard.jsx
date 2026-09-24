@@ -49,15 +49,14 @@ export default function SoundIdentityCard({
   return (
     <div
       data-testid="sound-identity-card"
-      className="relative overflow-hidden rounded-2xl border border-zinc-800/80 bg-gradient-to-b from-zinc-900/95 via-zinc-900/70 to-zinc-950 p-5 shadow-2xl backdrop-blur-xl transition-all duration-300"
+      className="relative overflow-hidden rounded-2xl border border-zinc-800/80 bg-[var(--ns-card-solid)] p-5 transition-all duration-300"
     >
       {/* Background ambient lighting accent */}
-      <div className="pointer-events-none absolute -top-12 -right-12 h-44 w-44 rounded-full bg-brand-red/10 blur-3xl" />
 
       {/* Header: Title + Mode Switcher (Compact / Expanded) */}
       <div className="relative z-10 flex flex-wrap gap-3 items-center justify-between border-b border-zinc-800/70 pb-3.5">
         <div className="flex items-center gap-2.5">
-          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-red/15 text-brand-red border border-brand-red/30 shadow-sm shadow-brand-red/20">
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-red/15 text-brand-red border border-brand-red/30 shadow-sm ">
             <Sparkles size={14} className="fill-brand-red/40 text-brand-red" />
           </span>
           <div>
@@ -92,7 +91,7 @@ export default function SoundIdentityCard({
               aria-pressed={isExpanded}
               className={`rounded-md px-2.5 py-1 text-[10px] font-semibold transition-all cursor-pointer ${
                 isExpanded
-                  ? 'bg-brand-red text-white shadow-sm font-medium shadow-brand-red/30'
+                  ? 'bg-brand-red text-white shadow-sm font-medium '
                   : 'text-zinc-500 hover:text-zinc-300'
               }`}
             >
@@ -203,10 +202,9 @@ export default function SoundIdentityCard({
                   </span>
                 </div>
 
-                {/* Progress bar with smooth gradient and glow */}
                 <div className="h-1.5 w-full bg-zinc-950 rounded-full overflow-hidden border border-zinc-800/60 p-[1px]">
                   <div
-                    className="h-full bg-gradient-to-r from-brand-red via-rose-500 to-rose-400 rounded-full transition-all duration-500"
+                    className="h-full bg-brand-red rounded-full transition-all duration-500"
                     style={{ width: `${item.percent}%` }}
                   />
                 </div>

@@ -24,15 +24,15 @@ function RankedTrack({ track, index, tracks }) {
 
         // Rank styling badges
         const rankBadge = rank === 1 ? (
-          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 font-mono text-xs font-black text-black shadow-md shadow-amber-500/20">
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-400 font-mono text-xs font-black text-black shadow-md ">
             #1
           </span>
         ) : rank === 2 ? (
-          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-zinc-200 to-zinc-400 font-mono text-xs font-black text-black shadow-sm">
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-zinc-300 font-mono text-xs font-black text-black shadow-sm">
             #2
           </span>
         ) : rank === 3 ? (
-          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-amber-700 to-orange-900 font-mono text-xs font-bold text-amber-100 shadow-sm">
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-800 font-mono text-xs font-bold text-amber-100 shadow-sm">
             #3
           </span>
         ) : (

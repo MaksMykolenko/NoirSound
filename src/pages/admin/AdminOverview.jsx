@@ -347,7 +347,7 @@ export default function AdminOverview() {
                     </div>
                     <div className="flex shrink-0 items-center gap-1.5">
                       <span
-                        className={`h-1.5 w-1.5 rounded-full ${isCheckOk ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]' : 'bg-rose-400 shadow-[0_0_6px_rgba(244,63,94,0.8)]'}`}
+                        className={`h-1.5 w-1.5 rounded-full ${isCheckOk ? 'bg-emerald-400' : 'bg-rose-400'}`}
                         aria-hidden="true"
                       />
                       <StatusBadge status={status} />

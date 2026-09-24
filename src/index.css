@@ -500,8 +500,8 @@
   --ns-overlay: rgba(15, 23, 42, 0.48);
   --ns-input-bg: #ffffff;
   --ns-input-focus: #ffffff;
-  --ns-card-gradient-start: rgba(255, 255, 255, 0.99);
-  --ns-card-gradient-end: rgba(244, 246, 250, 0.98);
+  --ns-card-gradient-start: var(--ns-card-solid);
+  --ns-card-gradient-end: var(--ns-card-solid);
   --ns-app-glow-one: rgba(99, 102, 241, 0.07);
   --ns-app-glow-two: rgba(225, 29, 72, 0.05);
   --ns-shadow-color: rgba(30, 41, 59, 0.14);
@@ -1310,7 +1310,6 @@ main {
   inset: -1.5rem;
   background-position: center;
   background-size: cover;
-  filter: blur(16px);
   opacity: 0.2;
   transform: scale(1.05);
 }
@@ -1574,7 +1573,6 @@ main {
   .ns-display-title.ns-artist-display-title {
     font-size: 2.75rem;
   }
-
 
   .ns-artist-hero__content[data-long-title='true'] .ns-artist-display-title {
     font-size: 2.5rem;
@@ -2740,8 +2738,6 @@ body.is-sidebar-resizing * {
 .ns-discover-section + .ns-discover-section { padding-top: var(--ns-space-6); }
 @media (min-width: 1440px) { .ns-discover-lead-grid > .ns-discover-section { padding-top: 0; } }
 @media (max-width: 1023px) { .ns-playlist-table[data-reorder="true"] .ns-table-actions { width: 6rem; } }
-/* The home hero keeps white copy on its deliberately dark artwork backdrop. */
-.ns-home-hero .ns-home-hero-title { color: #fff; }
 
 /* A card retains its broad navigation target, while actions and artist links
    stay above the title link's hit area. */

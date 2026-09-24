@@ -19,7 +19,7 @@ export default function DiscoverTaxonomyTiles({
             aria-pressed={active}
             onClick={() => onSelect?.(active ? '' : item.value)}
             className={`ns-discover-taxonomy-tile ns-discover-taxonomy-tile--${(index % 4) + 1} ${
-              active ? 'is-active ring-1 ring-brand-red shadow-lg shadow-brand-red/20' : ''
+              active ? 'is-active ring-1 ring-brand-red ' : ''
             } relative overflow-hidden transition-all duration-200 hover:scale-[1.02] cursor-pointer`}
           >
             {/* Ambient soundwave SVG in background */}

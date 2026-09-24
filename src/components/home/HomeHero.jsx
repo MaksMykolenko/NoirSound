@@ -40,19 +40,9 @@ export default function HomeHero({
       data-testid="home-hero"
       className="ns-home-hero relative flex min-h-[260px] items-center justify-between overflow-hidden rounded-2xl border border-zinc-800/60 bg-zinc-950 p-6 sm:p-8 sm:min-h-[290px] gap-6"
     >
-      {/* Background imagery and gradients */}
-      <div
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-25"
-        style={{ backgroundImage: "url('/images/hero_noir.png')" }}
-      />
-      <div className="absolute inset-0 bg-gradient-to-r from-black/95 via-black/85 to-zinc-950/90" />
-
-      {/* Atmospheric red ambient glow in corner */}
-      <div className="absolute -top-20 -right-20 w-80 h-80 rounded-full bg-brand-red/15 blur-3xl pointer-events-none" />
-
       {/* Left Column: Heading and CTAs */}
       <div className="relative z-10 w-full min-w-0 max-w-xl">
-        <h1 className="ns-home-hero-title max-w-xl text-white">
+        <h1 className="ns-home-hero-title max-w-xl text-[var(--ns-text-primary)]">
           {t('home.title')}
         </h1>
         <p className="mt-2.5 sm:mt-3 max-w-lg text-sm sm:text-[15px] text-zinc-300 leading-relaxed">
@@ -64,7 +54,7 @@ export default function HomeHero({
             type="button"
             data-testid="home-hero-discover"
             onClick={onDiscover}
-            className="ns-button-primary px-3 sm:px-5 text-ns-label sm:text-sm flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer shadow-lg shadow-brand-red/20"
+            className="ns-button-primary px-3 sm:px-5 text-ns-label sm:text-sm flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer "
           >
             <span>{t('actions.discoverMusic')}</span>
             <ArrowRight size={14} aria-hidden="true" />
@@ -86,7 +76,7 @@ export default function HomeHero({
 
       {/* Right Column: Trending/Featured Spotlight Deck (Desktop) */}
       <div
-        className="relative z-10 hidden xl:flex items-center gap-6 rounded-2xl border border-zinc-800/80 bg-gradient-to-br from-zinc-900/90 via-zinc-950 to-black p-5 shadow-2xl backdrop-blur-xl group shrink-0"
+        className="relative z-10 hidden xl:flex items-center gap-6 rounded-2xl border border-zinc-800/80 bg-[var(--ns-card-solid)] p-5 group shrink-0"
         data-testid="home-hero-vinyl-deck"
       >
         {track ? (
@@ -111,7 +101,7 @@ export default function HomeHero({
 
               {/* Title */}
               <div>
-                <h2 className="text-base sm:text-lg font-bold tracking-tight text-white truncate">
+                <h2 className="text-base sm:text-lg font-bold tracking-tight text-[var(--ns-text-primary)] truncate">
                   <Link
                     to={`/track/${track.id}`}
                     className="block truncate hover:text-brand-red transition-colors"
@@ -147,7 +137,7 @@ export default function HomeHero({
                   type="button"
                   onClick={handlePlayClick}
                   disabled={!canPlay}
-                  className="inline-flex min-h-11 items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-brand-red px-3.5 py-2 text-xs font-semibold text-white shadow-lg shadow-brand-red/25 transition-all hover:bg-brand-red/90 hover:scale-105 active:scale-95 cursor-pointer"
+                  className="inline-flex min-h-11 items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-brand-red px-3.5 py-2 text-xs font-semibold text-white transition-all hover:bg-brand-red/90 hover:scale-105 active:scale-95 cursor-pointer"
                   aria-label={isPlayingThis ? t('discover.pauseSpotlight', 'Pause') : t('discover.playSpotlight', 'Listen Now')}
                 >
                   {isPlayingThis ? (
@@ -197,14 +187,13 @@ export default function HomeHero({
               <div className="relative h-28 w-28 sm:h-32 sm:w-32">
                 {/* Spinning Vinyl Record sliding out behind the sleeve */}
                 <div
-                  className={`absolute top-0 right-0 h-full w-full rounded-full bg-zinc-950 border border-zinc-800 shadow-2xl flex items-center justify-center transition-all duration-700 ease-out ${
+                  className={`absolute top-0 right-0 h-full w-full rounded-full bg-zinc-950 border border-zinc-800 flex items-center justify-center transition-all duration-700 ease-out ${
                     isPlayingThis
                       ? 'translate-x-8 sm:translate-x-10 rotate-180 animate-[spin_6s_linear_infinite]'
                       : 'translate-x-4 sm:translate-x-5 group-hover:translate-x-7'
                   }`}
                   style={{
-                    background: 'radial-gradient(circle, #1a1a1a 0%, #0d0d0d 40%, #050505 70%, #151515 90%, #0a0a0a 100%)',
-                    boxShadow: 'inset 0 0 10px rgba(0,0,0,0.9), 0 8px 20px rgba(0,0,0,0.6)',
+                    background: '#151517',
                   }}
                 >
                   {/* Vinyl Grooves */}
@@ -213,7 +202,7 @@ export default function HomeHero({
                   <div className="absolute inset-5.5 rounded-full border border-zinc-800/60 pointer-events-none" />
 
                   {/* Center Record Label with artwork */}
-                  <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-full overflow-hidden border border-brand-red/30 bg-gradient-to-br from-brand-red/40 via-zinc-900 to-black p-0.5 flex flex-col items-center justify-center text-center shadow-inner relative">
+                  <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-full overflow-hidden border border-brand-red/30 bg-[var(--ns-card-solid)] p-0.5 flex flex-col items-center justify-center text-center shadow-inner relative">
                     <FallbackCover
                       src={track.coverUrl}
                       title={track.title}
@@ -227,7 +216,7 @@ export default function HomeHero({
                 </div>
 
                 {/* Front Cover Sleeve */}
-                <div className="relative z-10 h-full w-full overflow-hidden rounded-xl border border-zinc-800/80 bg-zinc-900 shadow-2xl transition-transform duration-300 group-hover:scale-[1.02]">
+                <div className="relative z-10 h-full w-full overflow-hidden rounded-xl border border-zinc-800/80 bg-zinc-900 transition-transform duration-300 group-hover:scale-[1.02]">
                   <FallbackCover
                     src={track?.coverUrl}
                     title={track?.title}
@@ -236,7 +225,6 @@ export default function HomeHero({
                     className="h-full w-full"
                     imageClassName="object-cover"
                   />
-                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-black/40 via-transparent to-white/10" />
                 </div>
               </div>
             </div>

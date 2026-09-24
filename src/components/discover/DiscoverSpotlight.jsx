@@ -30,16 +30,7 @@ export default function DiscoverSpotlight({ track, tracksContext = [] }) {
   };
 
   return (
-    <div data-testid="discover-spotlight" className="relative overflow-hidden rounded-2xl border border-zinc-800/80 bg-gradient-to-br from-zinc-900/90 via-zinc-950 to-[var(--ns-design-end)] p-6 sm:p-8 shadow-2xl backdrop-blur-xl group">
-      {/* Background ambient radial glow */}
-      <div
-        className="pointer-events-none absolute -right-20 -top-20 h-96 w-96 rounded-full bg-brand-red/15 blur-3xl transition-opacity duration-700 group-hover:opacity-100 opacity-60"
-        aria-hidden="true"
-      />
-      <div
-        className="pointer-events-none absolute -left-20 -bottom-20 h-72 w-72 rounded-full bg-purple-900/10 blur-3xl opacity-40"
-        aria-hidden="true"
-      />
+    <div data-testid="discover-spotlight" className="relative overflow-hidden rounded-2xl border border-zinc-800/80 bg-[var(--ns-card-solid)] p-6 sm:p-8 group">
 
       <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6 md:gap-10">
         {/* Left: Info & Controls */}
@@ -95,7 +86,7 @@ export default function DiscoverSpotlight({ track, tracksContext = [] }) {
               type="button"
               onClick={handlePlay}
               disabled={!canPlay}
-              className="inline-flex items-center gap-2.5 rounded-full bg-brand-red px-6 py-3 font-semibold text-white shadow-lg shadow-brand-red/30 transition-all hover:bg-brand-red/90 hover:scale-105 active:scale-95 cursor-pointer"
+              className="inline-flex items-center gap-2.5 rounded-full bg-brand-red px-6 py-3 font-semibold text-white transition-all hover:bg-brand-red/90 hover:scale-105 active:scale-95 cursor-pointer"
               aria-label={isPlayingThis ? t('discover.pauseSpotlight') : t('discover.playSpotlight')}
             >
               {isPlayingThis ? (
@@ -151,14 +142,13 @@ export default function DiscoverSpotlight({ track, tracksContext = [] }) {
           <div className="relative h-44 w-44 sm:h-52 sm:w-52">
             {/* Spinning Vinyl Record behind the sleeve */}
             <div
-              className={`absolute top-0 right-0 h-full w-full rounded-full bg-zinc-950 border border-zinc-800 shadow-2xl flex items-center justify-center transition-all duration-700 ease-out ${
+              className={`absolute top-0 right-0 h-full w-full rounded-full bg-zinc-950 border border-zinc-800 flex items-center justify-center transition-all duration-700 ease-out ${
                 isPlayingThis
                   ? 'translate-x-12 sm:translate-x-16 rotate-180 animate-[spin_8s_linear_infinite]'
                   : 'translate-x-6 sm:translate-x-8 group-hover:translate-x-10'
               }`}
               style={{
-                background: 'radial-gradient(circle, #1a1a1a 0%, #0d0d0d 40%, #050505 70%, #151515 90%, #0a0a0a 100%)',
-                boxShadow: 'inset 0 0 15px rgba(0,0,0,0.9), 0 10px 25px rgba(0,0,0,0.6)'
+                background: '#151517',
               }}
             >
               {/* Vinyl Grooves */}
@@ -168,7 +158,7 @@ export default function DiscoverSpotlight({ track, tracksContext = [] }) {
               <div className="absolute inset-12 rounded-full border border-zinc-800/70 pointer-events-none" />
 
               {/* Center Record Label */}
-              <div className="relative h-16 w-16 sm:h-20 sm:w-20 rounded-full overflow-hidden border border-brand-red/30 bg-gradient-to-br from-brand-red/40 via-zinc-900 to-[var(--ns-design-end)] p-0.5 flex flex-col items-center justify-center text-center shadow-inner">
+              <div className="relative h-16 w-16 sm:h-20 sm:w-20 rounded-full overflow-hidden border border-brand-red/30 bg-[var(--ns-card-solid)] p-0.5 flex flex-col items-center justify-center text-center shadow-inner">
                 <FallbackCover
                   src={track?.coverUrl}
                   title={track?.title}
@@ -182,7 +172,7 @@ export default function DiscoverSpotlight({ track, tracksContext = [] }) {
             </div>
 
             {/* Front Cover Sleeve */}
-            <div className="relative z-10 h-full w-full overflow-hidden rounded-xl border border-zinc-800/80 bg-zinc-900 shadow-2xl transition-transform duration-300 group-hover:scale-[1.02]">
+            <div className="relative z-10 h-full w-full overflow-hidden rounded-xl border border-zinc-800/80 bg-zinc-900 transition-transform duration-300 group-hover:scale-[1.02]">
               <FallbackCover
                 src={track?.coverUrl}
                 title={track?.title}
@@ -192,7 +182,6 @@ export default function DiscoverSpotlight({ track, tracksContext = [] }) {
                 imageClassName="object-cover"
               />
               {/* Subtle vinyl reflection overlay */}
-              <div className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-black/40 via-transparent to-white/10" />
             </div>
           </div>
         </div>

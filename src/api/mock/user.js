@@ -3,7 +3,7 @@ export const demoUser = {
   displayName: 'NoirSound Demo',
   username: 'demo_listener',
   avatarUrl: '/images/artist_avatar.png',
-  bannerUrl: 'linear-gradient(135deg, #2a0812 0%, #090204 100%)',
+  bannerUrl: '#18181b',
   bio: 'Explicit demo-mode listener profile.',
   location: 'Demo environment',
   joinedAt: '2026',

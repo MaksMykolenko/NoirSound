@@ -82,7 +82,7 @@ export default function DiscoverVibeBar({
               aria-pressed={isActive}
               className={`shrink-0 inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 font-medium transition-all duration-200 cursor-pointer ${
                 isActive
-                  ? 'border border-brand-red bg-brand-red/20 text-white shadow-sm shadow-brand-red/30 scale-105'
+                  ? 'border border-brand-red bg-brand-red/20 text-white shadow-sm scale-105'
                   : 'border border-zinc-800/80 bg-zinc-900/60 text-zinc-400 hover:border-zinc-700 hover:bg-zinc-800/80 hover:text-zinc-200'
               }`}
             >

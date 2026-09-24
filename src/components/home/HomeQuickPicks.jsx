@@ -52,7 +52,7 @@ export default function HomeQuickPicks({ tracks = [], title, subtitle }) {
               key={track.id}
               className={`group relative flex items-center gap-3 overflow-hidden rounded-md border p-1.5 transition-all ${
                 isCurrent
-                  ? 'border-brand-red/50 bg-zinc-900/90 shadow-sm shadow-brand-red/10'
+                  ? 'border-brand-red/50 bg-zinc-900/90 shadow-sm '
                   : 'border-zinc-800/60 bg-zinc-900/40 hover:border-zinc-700/80 hover:bg-zinc-850/80'
               }`}
             >

@@ -35,9 +35,9 @@ export default function TrackCard({ track, tracksContext = [] }) {
       <div className="ns-media-card__artwork ns-track-card__artwork relative aspect-square overflow-hidden rounded-lg">
         {/* Vinyl disk peeking effect on card hover */}
         <div
-          className="pointer-events-none absolute -right-6 top-1/2 -translate-y-1/2 h-4/5 w-4/5 rounded-full bg-zinc-950 border border-zinc-800 shadow-xl opacity-0 transition-all duration-300 group-hover:opacity-90 group-hover:translate-x-3 z-0"
+          className="pointer-events-none absolute -right-6 top-1/2 -translate-y-1/2 h-4/5 w-4/5 rounded-full bg-zinc-950 border border-zinc-800 opacity-0 transition-all duration-300 group-hover:opacity-90 group-hover:translate-x-3 z-0"
           style={{
-            background: 'radial-gradient(circle, #222 0%, #111 40%, #000 80%)'
+            background: '#151517'
           }}
           aria-hidden="true"
         >
