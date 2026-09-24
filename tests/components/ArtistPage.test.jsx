@@ -134,7 +134,7 @@ describe('ArtistPage', () => {
     getArtistById.mockResolvedValue(baseArtist);
     renderArtist();
 
-    await screen.findByText('Static Bloom');
+    await screen.findByRole('heading', { level: 1, name: 'Static Bloom' });
 
     expect(screen.getByRole('button', { name: 'Follow' })).toBeInTheDocument();
   });
@@ -143,7 +143,7 @@ describe('ArtistPage', () => {
     getArtistById.mockResolvedValue(baseArtist);
     renderArtist();
 
-    await screen.findByText('Static Bloom');
+    await screen.findByRole('heading', { level: 1, name: 'Static Bloom' });
 
     expect(screen.getByText('128')).toBeInTheDocument();
     expect(screen.getByText('940')).toBeInTheDocument();
@@ -153,7 +153,7 @@ describe('ArtistPage', () => {
     getArtistById.mockResolvedValue({ ...baseArtist, isFollowing: true });
     renderArtist();
 
-    await screen.findByText('Static Bloom');
+    await screen.findByRole('heading', { level: 1, name: 'Static Bloom' });
 
     expect(screen.getByRole('button', { name: 'Following' })).toBeInTheDocument();
   });
@@ -164,7 +164,7 @@ describe('ArtistPage', () => {
     const user = userEvent.setup();
     renderArtist();
 
-    await screen.findByText('Static Bloom');
+    await screen.findByRole('heading', { level: 1, name: 'Static Bloom' });
     await user.click(screen.getByRole('button', { name: 'Follow' }));
 
     expect(await screen.findByRole('button', { name: 'Following' })).toBeInTheDocument();
@@ -282,7 +282,7 @@ describe('ArtistPage', () => {
     await i18n.changeLanguage('uk');
     renderArtist();
 
-    await screen.findByText('Static Bloom');
+    await screen.findByRole('heading', { level: 1, name: 'Static Bloom' });
     expect(screen.getByText('Hip-Hop')).toBeInTheDocument();
     expect(screen.getByText('Electronic')).toBeInTheDocument();
     expect(screen.queryByText('Хіп-хоп')).not.toBeInTheDocument();

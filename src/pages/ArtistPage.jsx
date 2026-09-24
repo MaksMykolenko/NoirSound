@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -24,6 +24,7 @@ import ArtistReleaseCard from '../components/artists/ArtistReleaseCard';
 import EmptyState from '../components/ui/EmptyState';
 import ErrorState from '../components/ui/ErrorState';
 import FallbackAvatar from '../components/ui/FallbackAvatar';
+import ProfileScrollIdentity from '../components/profile/ProfileScrollIdentity';
 import { sortTracksNewest } from '../utils/presentation';
 import { formatNumber } from '../utils/formatLocale';
 import { getLocalizedGenre } from '../i18n/genreLabels';
@@ -95,6 +96,8 @@ export default function ArtistPage() {
   const setAuthModalOpen = useUserStore((state) => state.setAuthModalOpen);
   const addToast = useToastStore((state) => state.addToast);
   const player = usePlayerStore();
+  const headerRef = useRef(null);
+  const avatarRef = useRef(null);
 
   const [artist, setArtist] = useState(null);
   const [artistTracks, setArtistTracks] = useState([]);
@@ -256,6 +259,7 @@ export default function ArtistPage() {
       />
 
       <section
+        ref={headerRef}
         className="ns-artist-hero"
         data-testid="artist-hero"
         aria-label={artist.name}
@@ -268,7 +272,7 @@ export default function ArtistPage() {
           </div>
         )}
 
-        <div className="ns-artist-hero__artwork ns-avatar-frame">
+        <div ref={avatarRef} className="ns-artist-hero__artwork ns-avatar-frame" data-testid="artist-profile-avatar">
           <FallbackAvatar
             src={artist.avatarUrl}
             name={artist.name}
@@ -359,6 +363,16 @@ export default function ArtistPage() {
           </div>
         </div>
       </section>
+
+      <ProfileScrollIdentity
+        key={artist.id}
+        headerRef={headerRef}
+        avatarRef={avatarRef}
+        user={artist}
+        displayName={artist.name}
+        avatarAnchor="bottom"
+        semanticFallback={false}
+      />
 
       <nav className="ns-tabs-scroll flex gap-1 overflow-x-auto border-b border-zinc-800/70" aria-label={t('profile.creatorSections')}>
         {[

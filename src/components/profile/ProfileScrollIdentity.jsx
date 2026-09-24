@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import FallbackAvatar from '../ui/FallbackAvatar';
 
-export default function ProfileScrollIdentity({ headerRef, avatarRef, user, displayName, onAvatarClick }) {
+export default function ProfileScrollIdentity({ headerRef, avatarRef, user, displayName, onAvatarClick, avatarAnchor = 'top', semanticFallback = true }) {
   const { t } = useTranslation();
   const barRef = useRef(null);
   const [isPinned, setIsPinned] = useState(false);
@@ -31,17 +31,20 @@ export default function ProfileScrollIdentity({ headerRef, avatarRef, user, disp
         const source = avatar.getBoundingClientRect();
         const bounds = header.getBoundingClientRect();
         const scrollBounds = scroller.getBoundingClientRect();
-        const restingTop = source.top - scrollBounds.top + scroller.scrollTop;
+        // Artist artwork starts near the navigation: collapse over its full
+        // height instead of squeezing the transition into the small top gap.
+        const anchorOffset = avatarAnchor === 'bottom' ? source.height : 0;
+        const restingTop = source.top + anchorOffset - scrollBounds.top + scroller.scrollTop;
         // Short mobile banners still leave the full avatar intact at scroll top.
-        const distance = Math.min(Math.max(120, source.width * 1.5), Math.max(1, restingTop - 12 - 24));
-        const rawProgress = Math.min(1, Math.max(0, (scrollBounds.top + 12 + distance - source.top) / distance));
+        const distance = Math.min(Math.max(120, source.width * (avatarAnchor === 'bottom' ? 1 : 1.5)), Math.max(1, restingTop - 12 - 24));
+        const rawProgress = Math.min(1, Math.max(0, (scrollBounds.top + 12 + distance - source.top - anchorOffset) / distance));
         // Smoothstep makes both ends of the scroll-linked morph ease into place.
         const progress = reducedMotion.matches ? Number(rawProgress === 1) : rawProgress * rawProgress * (3 - 2 * rawProgress);
         const sourceX = source.left - bounds.left;
         const sourceY = source.top - scrollBounds.top;
         target = {
           x: sourceX + (12 - sourceX) * progress,
-          y: sourceY + (12 - sourceY) * progress,
+          y: Math.max(12, sourceY + (12 - sourceY) * progress),
           size: source.width + (40 - source.width) * progress,
           progress,
         };
@@ -106,7 +109,7 @@ export default function ProfileScrollIdentity({ headerRef, avatarRef, user, disp
       reducedMotion.removeEventListener('change', schedule);
       avatar.style.visibility = originalVisibility;
     };
-  }, [headerRef, avatarRef]);
+  }, [headerRef, avatarRef, avatarAnchor]);
 
   return (
     <div ref={barRef} className="ns-profile-scroll" data-testid="profile-scroll-identity"
@@ -121,9 +124,9 @@ export default function ProfileScrollIdentity({ headerRef, avatarRef, user, disp
           <button type="button" onClick={onAvatarClick} tabIndex={isPinned ? 0 : -1}
             className="block h-full w-full cursor-pointer overflow-hidden rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-red"
             aria-label={t('profile.changeAvatar', 'Change photo & settings')}>
-            <FallbackAvatar src={user.avatarUrl} name={displayName} className="h-full w-full" imageClassName="object-cover" semanticFallback />
+            <FallbackAvatar src={user.avatarUrl} name={displayName} className="h-full w-full" imageClassName="object-cover" semanticFallback={semanticFallback} />
           </button>
-        ) : <FallbackAvatar src={user.avatarUrl} name={displayName} className="h-full w-full" imageClassName="object-cover" semanticFallback />}
+        ) : <FallbackAvatar src={user.avatarUrl} name={displayName} className="h-full w-full" imageClassName="object-cover" semanticFallback={semanticFallback} />}
       </div>
     </div>
   );
