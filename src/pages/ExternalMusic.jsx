@@ -98,7 +98,7 @@ export default function ExternalMusic() {
   if(!hydrated)return <p role="status">{t('externalMusic.loading')}</p>;
   if(status.error?.status===403)return <p>{t('externalMusic.private')}</p>;
   return <div className="space-y-6 pb-8" data-testid="external-music-page">
-    <h1 className="ns-page-title">{t('externalMusic.title')}</h1><p className="text-sm text-[var(--ns-text-muted)]">{t('externalMusic.betaNote')}</p>
+    <h1 className="ns-page-title">{t('externalMusic.title')}</h1><p className="text-sm text-[var(--ns-text-muted)]">{t(status.data?.public?'externalMusic.publicBetaNote':'externalMusic.betaNote')}</p>
     <div className="flex flex-wrap gap-2">{status.data?.providers.map(p=><span key={p.provider} className="rounded border border-[var(--ns-border-subtle)] px-2 py-1 text-xs">{p.provider}: {enabled?p.status:'DISABLED'}</span>)}</div>
     {error&&<p role="alert" className="rounded border border-rose-800 p-3 text-sm">{t('externalMusic.error')} · {error.code || error.message}<button className={`${button} ml-2`} onClick={()=>{status.refetch();if(enabled){records.refetch();if(id)detail.refetch();}}}>{t('externalMusic.retry')}</button></p>}
     {notice&&<p role="status">{notice}</p>}

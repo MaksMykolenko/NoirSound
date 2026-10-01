@@ -19,7 +19,7 @@ module.exports=async function externalCatalogRoutes(fastify,options) {
   const mutate=adminMutationOptions(fastify,ADMIN_PERMISSIONS.TRACKS_MANAGE);
   fastify.addHook('preHandler',async(request,reply)=>{
     reply.header('cache-control','private, no-store');reply.header('x-robots-tag','noindex, nofollow');
-    if((!C.publicBeta() || request.routeOptions.config.adminPermission) && !C.allowRole(request.user))return reply.code(403).send({error:'EXTERNAL_BETA_FORBIDDEN'});
+    if(!request.url.split('?')[0].endsWith('/status') && (!C.publicBeta() || request.routeOptions.config.adminPermission) && !C.allowRole(request.user))return reply.code(403).send({error:'EXTERNAL_BETA_FORBIDDEN'});
     if(!/\/(status|settings)$/.test(request.url.split('?')[0])&&!await C.betaEnabled(fastify.prisma))return reply.code(403).send({error:'EXTERNAL_BETA_DISABLED'});
   });
   fastify.setErrorHandler((error,request,reply)=>{
@@ -55,7 +55,7 @@ module.exports=async function externalCatalogRoutes(fastify,options) {
     });
     return m;
   }
-  fastify.get('/status',read,async request=>({enabled:await C.betaEnabled(fastify.prisma),public:C.publicBeta(),canManage:C.allowRole(request.user),providers:feed.statuses()}));
+  fastify.get('/status',{...read,preValidation:[async request=>{const session=await resolveAuthenticatedSession(fastify,request);request.user=session?.user || null;request.sessionId=session?.sessionId || null;}]},async request=>{const enabled=await C.canUseBeta(fastify.prisma,request.user);return {enabled,public:C.publicBeta(),canManage:C.allowRole(request.user),providers:enabled?feed.statuses():[]};});
   fastify.get('/embed',{...read,schema:{querystring:{type:'object',additionalProperties:false,properties:{provider:{type:'string',enum:EMBED_PROVIDERS},url:{type:'string',minLength:1,maxLength:1000}},required:['provider','url']}}},async request=>officialEmbed(request.query.provider,request.query.url));
   fastify.patch('/settings',{...mutate,schema:bodySchema({enabled:{type:'boolean'},reason:reasonSchema},['enabled','reason'])},async request=>{
     return fastify.prisma.$transaction(async tx=>{await C.catalogLock(tx);const setting=await tx.externalCatalogSetting.upsert({where:{id:'beta'},create:{id:'beta',enabled:request.body.enabled},update:{enabled:request.body.enabled}});await C.recordAudit(tx,request,'EXTERNAL_BETA_SETTING','beta',request.body.reason,{enabled:setting.enabled});return {enabled:setting.enabled};});

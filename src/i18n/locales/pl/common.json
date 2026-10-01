@@ -1650,6 +1650,7 @@
     "loading": "Ładowanie…",
     "private": "Ta beta jest dostępna tylko dla uprawnionego administratora.",
     "signIn": "Zaloguj się",
+    "publicBetaNote": "Katalog jest dostępny dla wszystkich. Zaloguj się, aby zapisywać polubienia i playlisty. Audius korzysta z odtwarzacza NoirSound.",
     "betaNote": "Prywatny katalog testowy. Audius korzysta z globalnego odtwarzacza NoirSound.",
     "play": "Odtwórz",
     "pause": "Pauza",

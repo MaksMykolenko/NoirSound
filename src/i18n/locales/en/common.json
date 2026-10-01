@@ -1640,6 +1640,7 @@
     "loading": "Loading…",
     "private": "This beta is available only to the permitted admin account.",
     "signIn": "Sign in",
+    "publicBetaNote": "The catalog is open to everyone. Sign in to save likes and playlists. Audius uses the NoirSound player.",
     "betaNote": "Private test catalog. Audius playback uses the global NoirSound player.",
     "play": "Play",
     "pause": "Pause",
