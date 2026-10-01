@@ -1644,6 +1644,8 @@
     }
   },
   "externalMusic": {
+    "providerUnavailable": "Временно недоступны: {{providers}}",
+    "feedTitle": "Музыка с платформ",
     "title": "Внешняя музыка · Beta",
     "loading": "Загрузка…",
     "private": "Beta доступна только разрешённому администратору.",
@@ -1687,9 +1689,9 @@
     "error": "Не удалось выполнить запрос",
     "retry": "Повторить",
     "disabled": "Beta выключена на сервере.",
-    "search": "Поиск Audius",
-    "searchPlaceholder": "Трек, исполнитель или ссылка Audius",
-    "results": "Результаты Audius",
+    "search": "Поиск на платформах",
+    "searchPlaceholder": "Трек или исполнитель",
+    "results": "Результаты с платформ",
     "empty": "Треки не найдены.",
     "previous": "Предыдущая страница",
     "next": "Следующая страница",

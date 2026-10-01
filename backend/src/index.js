@@ -163,7 +163,7 @@ function buildServer(options = {}) {
     prefix: '/api/auth',
     googleOAuthClientFactory: options.googleOAuthClientFactory
   });
-  fastify.register(require('./routes/externalCatalog'), { prefix: '/api/external-catalog', audius: options.audius });
+  fastify.register(require('./routes/externalCatalog'), { prefix: '/api/external-catalog', audius: options.audius, catalogAdapters: options.catalogAdapters });
   fastify.register(require('./routes/tracks'), { prefix: '/api/tracks' });
   fastify.register(require('./routes/landing'), { prefix: '/api/landing' });
   fastify.register(require('./routes/discover'), { prefix: '/api/discover' });

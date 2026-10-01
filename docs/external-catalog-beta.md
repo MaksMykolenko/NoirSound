@@ -212,3 +212,21 @@ service: when the Mac agent is unavailable the offsite gate fails and local
 archives remain. Existing daily local backup configuration is preserved; the
 release hook is selected through the production deploy setting. Starting an
 agent does not replace the separate isolated DB/storage restore drill.
+
+
+## Automatic platform catalog (October 2026)
+
+The private owner sees live platform cards in Discover without entering URLs. Opening, playing, liking or saving a result automatically creates/reuses its private Track identity. The existing player, private playlists and likes are retained. Browsing/search is read-only: it does not mirror entire third-party catalogs or download audio. Cards and details link to each confirmed platform publication. Different recordings/versions are not automatically merged; the existing evidence-backed merge/unmerge flow is retained.
+
+`GET /api/external-catalog/browse?q=&cursor=&limit=20` returns a bounded live page (up to 20 items per configured provider), interleaved in each provider's ranking order, with independent provider status/errors and an opaque query-bound next cursor. Empty query uses Audius weekly trending (top 100), Apple current songs chart, and YouTube most-popular music videos. A query uses official catalog search. No false global totals or exhaustive-catalog claims are made. Failures in one provider do not hide successful results from another.
+
+`POST /api/external-catalog/import` accepts `provider` (AUDIUS default, APPLE_MUSIC or YOUTUBE) and `externalId`. Metadata is fetched again from the official API; clients cannot supply guessed matches, titles or artwork in this flow. Publication identity imports are idempotent. Metadata expires after 24 hours, is refreshed on catalog/detail use and stale playback, and is purged by the bounded sweep. No payload/stream/preview URLs are archived. External plays remain separate from native metrics.
+
+Credentials must be supplied privately in the existing server `.env.production`, followed by the normal attended deploy workflow. Never paste secrets into chat, return them through the status endpoint, commit them, or put them in frontend VITE variables. The existing compose `env_file` already passes server variables:
+
+- `YOUTUBE_API_KEY`: an application key for an enabled YouTube Data API v3 project. Requests use `X-Goog-Api-Key`; no key is sent to the browser. Quota exhaustion is reported as a provider error with no infinite retries. Music videos must be public and embeddable; uploader labels are not guessed recording artists. Playback uses visible official video controls, never extracted audio.
+- `APPLE_MUSIC_DEVELOPER_TOKEN`: a valid application developer JWT. `APPLE_MUSIC_STOREFRONT` defaults to `us`; catalog availability is regional. Playback remains the official Apple embed with account/preview limitations; this does not implement full MusicKit playback.
+- Spotify: **PERMISSION_REQUIRED**, search disabled. [Developer Policy III.5](https://developer.spotify.com/policy) prohibits products integrated with streams or content from another service. A key alone does not authorize this use case.
+- SoundCloud: **PERMISSION_REQUIRED**, search disabled. [API terms, Content and Privacy](https://developers.soundcloud.com/docs/api/terms-of-use) restrict alternative aggregate listening services unless explicitly licensed. No API catalog or API streaming is enabled by merely having a key. Existing administrator-supplied links remain independently reviewable.
+
+Apple/YouTube adapters without credentials are **NOT_CONFIGURED**, never called and never presented as live-tested. Audius public browsing/search does not require invented credentials. Disable the existing beta switch to hide the platform feed and deny import/playback routes. Release rollback uses the previous image revision; no database restore or destructive migration is required by this change.

@@ -1644,6 +1644,8 @@
     }
   },
   "externalMusic": {
+    "providerUnavailable": "Tymczasowo niedostępne: {{providers}}",
+    "feedTitle": "Muzyka z platform",
     "title": "Muzyka zewnętrzna · Beta",
     "loading": "Ładowanie…",
     "private": "Ta beta jest dostępna tylko dla uprawnionego administratora.",
@@ -1687,9 +1689,9 @@
     "error": "Nie udało się wykonać żądania",
     "retry": "Ponów",
     "disabled": "Beta jest wyłączona na serwerze.",
-    "search": "Szukaj w Audius",
-    "searchPlaceholder": "Utwór, artysta lub link Audius",
-    "results": "Wyniki Audius",
+    "search": "Szukaj na platformach",
+    "searchPlaceholder": "Utwór lub wykonawca",
+    "results": "Wyniki z platform",
     "empty": "Nie znaleziono utworów.",
     "previous": "Poprzednia strona",
     "next": "Następna strona",

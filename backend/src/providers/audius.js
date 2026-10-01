@@ -4,7 +4,7 @@ const ORIGIN = 'https://api.audius.co';
 const CAPABILITIES = Object.freeze({search:true,resolve:true,metadata:true,playbackMode:'EXTERNAL_STREAM',publicAccess:true});
 const validId = id => typeof id === 'string' && /^[A-Za-z0-9]{1,32}$/.test(id);
 function createAudiusAdapter({fetchImpl=globalThis.fetch,env=process.env}={}) {
-  let lastStatus = env.AUDIUS_ENABLED === 'false' ? 'DISABLED' : 'NOT_CONFIGURED';
+  let lastStatus = env.AUDIUS_ENABLED === 'false' ? 'DISABLED' : 'PUBLIC_API';
   async function request(path,{method='GET',raw=false}={}) {
     if (env.AUDIUS_ENABLED === 'false') throw new CatalogError('AUDIUS_DISABLED',503);
     const url = new URL(path,ORIGIN);
@@ -44,6 +44,11 @@ function createAudiusAdapter({fetchImpl=globalThis.fetch,env=process.env}={}) {
     if(!Array.isArray(data))throw new CatalogError('AUDIUS_RESPONSE_INVALID',502);
     return data.map(t=>{try{return metadata(t);}catch{return null;}}).filter(Boolean);
   }
+  async function browse(query='',offset=0,limit=20) {
+    const data=await request((query?'/v1/tracks/search?':'/v1/tracks/trending?')+new URLSearchParams({...(query?{query}:{time:'week'}),offset:String(offset),limit:String(limit)}));
+    if(!Array.isArray(data))throw new CatalogError('AUDIUS_RESPONSE_INVALID',502);
+    return {items:data.map(t=>{try{return metadata(t);}catch{return null;}}).filter(Boolean),next:data.length===limit&&offset+limit<(query?1000:100)?offset+limit:null};
+  }
   async function playback(id) {
     if(!validId(id))throw new CatalogError('AUDIUS_ID_INVALID');
     const raw=await request(`/v1/tracks/${id}`);const track=metadata(raw);if(track.availability!=='AVAILABLE')throw new CatalogError('EXTERNAL_TRACK_UNAVAILABLE',409);
@@ -64,6 +69,6 @@ function createAudiusAdapter({fetchImpl=globalThis.fetch,env=process.env}={}) {
     }
     return {track,url:streamUrl,expiresAt:new Date(Date.now()+60000).toISOString(),playbackMode:'EXTERNAL_STREAM',provider:'AUDIUS'};
   }
-  return {capabilities:CAPABILITIES,getTrack,resolve,search,playback,status:()=>lastStatus};
+  return {capabilities:CAPABILITIES,getTrack,resolve,search,browse,playback,status:()=>lastStatus};
 }
 module.exports={createAudiusAdapter,CAPABILITIES};

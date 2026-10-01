@@ -485,7 +485,7 @@ export default function TrackPage() {
           </section>}
           {external && <section className="flex flex-wrap items-center gap-3 border-t border-zinc-800/60 pt-6">
             <TrackSourceIcon track={track} />
-            {track.canonicalUrl && <a href={track.canonicalUrl} target="_blank" rel="noopener noreferrer" className="underline">{t('externalMusic.openPlatform')}</a>}
+            {(track.primarySources || []).filter(source=>source.matchStatus==='CONFIRMED').map(source=><a key={source.id} href={source.canonicalUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 underline"><TrackSourceIcon provider={source.provider}/>{source.provider.replace('_',' ')}</a>)}
             <Link to={`/external-music/${track.recordingId}`} className="text-sm underline">{t('externalMusic.sources')}</Link>
           </section>}
         </div>

@@ -1634,6 +1634,8 @@
     }
   },
   "externalMusic": {
+    "providerUnavailable": "Temporarily unavailable: {{providers}}",
+    "feedTitle": "Music from platforms",
     "title": "External music · Beta",
     "loading": "Loading…",
     "private": "This beta is available only to the permitted admin account.",
@@ -1677,9 +1679,9 @@
     "error": "The request could not be completed",
     "retry": "Retry",
     "disabled": "Beta is disabled on the server.",
-    "search": "Search Audius",
-    "searchPlaceholder": "Track, artist or Audius track URL",
-    "results": "Audius results",
+    "search": "Search platforms",
+    "searchPlaceholder": "Track or artist",
+    "results": "Platform results",
     "empty": "No matching tracks.",
     "previous": "Previous page",
     "next": "Next page",

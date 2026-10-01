@@ -1,5 +1,6 @@
 'use strict';
 const {createAudiusAdapter}=require('../providers/audius');
+const {createCatalogAdapters,createCatalogFeed}=require('../providers/catalogs');
 const {ADMIN_PERMISSIONS,adminReadOptions,adminMutationOptions}=require('../lib/adminGuard');
 const C=require('../lib/externalCatalog');
 const {EMBED_PROVIDERS,officialEmbed}=require('../providers/officialEmbeds');
@@ -8,6 +9,9 @@ const textSchema={type:'string',minLength:1,maxLength:300};
 const bodySchema=(properties,required=[])=>({body:{type:'object',additionalProperties:false,properties,required}});
 module.exports=async function externalCatalogRoutes(fastify,options) {
   const audius=options.audius || createAudiusAdapter();
+  const adapters={AUDIUS:audius,...(options.catalogAdapters || createCatalogAdapters())};
+  const feed=createCatalogFeed(adapters);
+  const providerFor=p=>{const adapter=adapters[p];if(!adapter)C.fail('EXTERNAL_PROVIDER_PERMISSION_REQUIRED',409);return adapter;};
   const read=adminReadOptions(fastify,ADMIN_PERMISSIONS.TRACKS_READ);
   const mutate=adminMutationOptions(fastify,ADMIN_PERMISSIONS.TRACKS_MANAGE);
   fastify.addHook('preHandler',async(request,reply)=>{
@@ -28,12 +32,12 @@ module.exports=async function externalCatalogRoutes(fastify,options) {
   }
   async function refreshSource(source) {
     let m;
-    try {m=await audius.getTrack(source.externalId);}catch(e) {
-      if(['AUDIUS_HTTP_404','AUDIUS_HTTP_403'].includes(e.code)) {
+    try {m=await providerFor(source.provider).getTrack(source.externalId);}catch(e) {
+      if(['AUDIUS_HTTP_404','AUDIUS_HTTP_403','APPLE_MUSIC_HTTP_404','YOUTUBE_HTTP_404','EXTERNAL_TRACK_UNAVAILABLE'].includes(e.code)) {
         await fastify.prisma.$transaction(async tx=>{
           await tx.externalSource.update({where:{id:source.id},data:{availability:'UNAVAILABLE',checkedAt:new Date()}});
           const r=await tx.externalRecording.findUnique({where:{id:source.recordingId}});
-          if(r?.metadataProvenance==='AUDIUS_PUBLIC_API')await tx.track.update({where:{id:r.trackId},data:{title:'Unavailable Audius track',coverUrl:null,primaryArtistName:null}});
+          if(r?.metadataProvenance===`${source.provider}_PUBLIC_API`)await tx.track.update({where:{id:r.trackId},data:{title:'Unavailable external track',coverUrl:null,primaryArtistName:null}});
         });
       }
       throw e;
@@ -41,14 +45,14 @@ module.exports=async function externalCatalogRoutes(fastify,options) {
     await fastify.prisma.$transaction(async tx=>{
       await tx.externalSource.update({where:{id:source.id},data:{availability:m.availability,playbackMode:m.playbackMode,checkedAt:m.checkedAt}});
       const r=await tx.externalRecording.findUnique({where:{id:source.recordingId}});
-      if(r?.metadataProvenance==='AUDIUS_PUBLIC_API') {
+      if(r?.metadataProvenance===`${source.provider}_PUBLIC_API`) {
         await tx.track.update({where:{id:r.trackId},data:{title:m.title,primaryArtistName:m.artistName,coverUrl:m.coverUrl,durationSeconds:m.durationSeconds,duration:m.durationSeconds,explicit:m.explicit}});
         await tx.externalRecording.update({where:{id:r.id},data:{metadataExpiresAt:new Date(Date.now()+86400000)}});
       }
     });
     return m;
   }
-  fastify.get('/status',read,async()=>{ if(process.env.EXTERNAL_CATALOG_ENABLED==='true' && audius.status()==='NOT_CONFIGURED') { try { await audius.search('NoirSound',0,1); } catch {} } return ({enabled:await C.betaEnabled(fastify.prisma),providers:[{provider:'AUDIUS',status:process.env.EXTERNAL_CATALOG_ENABLED !== 'true' ? 'DISABLED' : audius.status(),capabilities:audius.capabilities},...C.PROVIDERS.slice(1).map(provider=>({provider,status:EMBED_PROVIDERS.includes(provider)?'OFFICIAL_EMBED':'LINK_OUT_ONLY',capabilities:{search:false,metadata:false,playbackMode:EMBED_PROVIDERS.includes(provider)?'OFFICIAL_EMBED':'LINK_OUT'}}))]}); });
+  fastify.get('/status',read,async()=>({enabled:await C.betaEnabled(fastify.prisma),providers:feed.statuses()}));
   fastify.get('/embed',{...read,schema:{querystring:{type:'object',additionalProperties:false,properties:{provider:{type:'string',enum:EMBED_PROVIDERS},url:{type:'string',minLength:1,maxLength:1000}},required:['provider','url']}}},async request=>officialEmbed(request.query.provider,request.query.url));
   fastify.patch('/settings',{...mutate,schema:bodySchema({enabled:{type:'boolean'},reason:reasonSchema},['enabled','reason'])},async request=>{
     return fastify.prisma.$transaction(async tx=>{await C.catalogLock(tx);const setting=await tx.externalCatalogSetting.upsert({where:{id:'beta'},create:{id:'beta',enabled:request.body.enabled},update:{enabled:request.body.enabled}});await C.recordAudit(tx,request,'EXTERNAL_BETA_SETTING','beta',request.body.reason,{enabled:setting.enabled});return {enabled:setting.enabled};});
@@ -66,19 +70,40 @@ module.exports=async function externalCatalogRoutes(fastify,options) {
     }
     return {items,pageInfo:{offset,nextOffset:offset+limit,hasNextPage:data.length===limit}};
   });
+  fastify.get('/browse',{...read,config:{...read.config,rateLimit:{max:30,timeWindow:'1 minute'}},schema:{querystring:{type:'object',additionalProperties:false,properties:{q:{type:'string',maxLength:200,default:''},cursor:{type:'string',maxLength:600,default:''},limit:{type:'integer',minimum:1,maximum:20,default:20}}}}},async request=>{
+    const data=await feed.browse(request.query.q.trim(),request.query.cursor,request.query.limit);
+    const found=data.items.length?await fastify.prisma.externalSource.findMany({where:{OR:data.items.map(m=>({provider:m.provider,externalId:m.externalId}))},include:{recording:{include:C.includeRecording}}}):[];
+    const seen=new Set(),items=[];
+    for(const m of data.items){
+      const source=found.find(s=>s.provider===m.provider&&s.externalId===m.externalId);let r=source?.recording;
+      if(r?.mergedIntoId)r=await getRecording(r.mergedIntoId);
+      const key=r?.id || `${m.provider}:${m.externalId}`;if(seen.has(key))continue;seen.add(key);
+      items.push(r?{...C.recordingView(r),imported:true}:{...m,id:key,duration:m.durationSeconds,isAvailable:m.availability==='AVAILABLE',isStreamable:m.playbackMode==='EXTERNAL_STREAM'&&m.availability==='AVAILABLE',playbackSource:'external',previewExternalId:m.externalId,imported:false});
+    }
+    return {...data,items};
+  });
   fastify.get('/preview/:id/playback',read,async request=>{const p=await audius.playback(request.params.id);return {url:p.url,playbackMode:p.playbackMode,provider:p.provider,expiresAt:p.expiresAt};});
-  fastify.post('/import',{...mutate,schema:bodySchema({externalId:{type:'string',pattern:'^[A-Za-z0-9]{1,32}$'},url:{type:'string',maxLength:1000}})},async request=>{
+  fastify.post('/import',{...mutate,schema:bodySchema({provider:{type:'string',enum:['AUDIUS','APPLE_MUSIC','YOUTUBE'],default:'AUDIUS'},externalId:{type:'string',pattern:'^[A-Za-z0-9_-]{1,32}$'},url:{type:'string',maxLength:1000}})},async request=>{
     if(Boolean(request.body.externalId)===Boolean(request.body.url))C.fail('AUDIUS_ID_OR_URL_REQUIRED');
-    const m=request.body.url?await audius.resolve(request.body.url):await audius.getTrack(request.body.externalId);
+    const provider=request.body.provider,adapter=providerFor(provider);
+    if(request.body.url && provider!=='AUDIUS')C.fail('EXTERNAL_PROVIDER_ID_REQUIRED');
+    const m=request.body.url?await adapter.resolve(request.body.url):await adapter.getTrack(request.body.externalId);
     if(m.availability!=='AVAILABLE')C.fail('EXTERNAL_TRACK_UNAVAILABLE',409);
     const record=await fastify.prisma.$transaction(async tx=>{
       await C.catalogLock(tx);
-      const existing=await tx.externalSource.findFirst({where:{OR:[{provider:'AUDIUS',externalId:m.externalId},{canonicalUrl:m.canonicalUrl}]},include:{recording:true}});
-      if(existing)return tx.externalRecording.findUnique({where:{id:existing.recording.mergedIntoId || existing.recordingId},include:C.includeRecording});
+      const existing=await tx.externalSource.findFirst({where:{OR:[{provider,externalId:m.externalId},{canonicalUrl:m.canonicalUrl}]},include:{recording:true}});
+      if(existing){
+        await tx.externalSource.update({where:{id:existing.id},data:{availability:m.availability,playbackMode:m.playbackMode,checkedAt:m.checkedAt}});
+        if(existing.recording.metadataProvenance===m.provenance&&!existing.recording.mergedIntoId){
+          await tx.track.update({where:{id:existing.recording.trackId},data:{title:m.title,primaryArtistName:m.artistName,coverUrl:m.coverUrl,durationSeconds:m.durationSeconds,duration:m.durationSeconds,explicit:m.explicit}});
+          await tx.externalRecording.update({where:{id:existing.recordingId},data:{metadataExpiresAt:new Date(Date.now()+86400000)}});
+        }
+        return tx.externalRecording.findUnique({where:{id:existing.recording.mergedIntoId || existing.recordingId},include:C.includeRecording});
+      }
       const curator=await tx.artistProfile.upsert({where:{userId:request.user.id},create:{userId:request.user.id,genres:[]},update:{}});
       const track=await tx.track.create({data:{title:m.title,primaryArtistName:m.artistName,coverUrl:m.coverUrl,durationSeconds:m.durationSeconds,duration:m.durationSeconds,tags:[],artistId:curator.id,status:'PUBLISHED',isPublic:false,catalogScope:'EXTERNAL_BETA',explicit:m.explicit}});
-      const r=await tx.externalRecording.create({data:{trackId:track.id,curatorId:request.user.id,versionType:m.versionType,isrc:m.isrc,metadataProvenance:m.provenance,metadataExpiresAt:new Date(Date.now()+86400000),sources:{create:{provider:'AUDIUS',externalId:m.externalId,canonicalUrl:m.canonicalUrl,playbackMode:m.playbackMode,availability:m.availability,provenance:m.provenance,checkedAt:m.checkedAt,isPrimary:true,matchStatus:'CONFIRMED'}}},include:C.includeRecording});
-      await C.recordAudit(tx,request,'EXTERNAL_IMPORT',r.id,'Selected Audius import',{provider:'AUDIUS',externalId:m.externalId});return r;
+      const r=await tx.externalRecording.create({data:{trackId:track.id,curatorId:request.user.id,versionType:m.versionType,isrc:m.isrc,metadataProvenance:m.provenance,metadataExpiresAt:new Date(Date.now()+86400000),sources:{create:{provider,externalId:m.externalId,canonicalUrl:m.canonicalUrl,playbackMode:m.playbackMode,availability:m.availability,provenance:m.provenance,checkedAt:m.checkedAt,isPrimary:true,matchStatus:'CONFIRMED'}}},include:C.includeRecording});
+      await C.recordAudit(tx,request,'EXTERNAL_IMPORT',r.id,'Automatic catalog selection',{provider,externalId:m.externalId});return r;
     });
     return {recording:C.recordingView(record)};
   });
@@ -98,8 +123,8 @@ module.exports=async function externalCatalogRoutes(fastify,options) {
     const q=String(request.query.q || '').trim().slice(0,200);
     const records=await fastify.prisma.externalRecording.findMany({where:{mergedIntoId:null,...(q?{track:{title:{contains:q,mode:'insensitive'}}}:{})},include:C.includeRecording,orderBy:{createdAt:'desc'},take:30});
     // Refresh selected catalog entries only, bounded to this page. No raw payload cache.
-    for(const r of records)if(r.metadataProvenance==='AUDIUS_PUBLIC_API' && (!r.metadataExpiresAt || r.metadataExpiresAt<new Date() || r.sources.some(s=>s.availability==='ERROR'))) {
-      const source=r.sources.find(s=>s.provider==='AUDIUS');if(source)try{await refreshSource(source);}catch{}
+    for(const r of records)if(r.metadataProvenance?.endsWith('_PUBLIC_API') && (!r.metadataExpiresAt || r.metadataExpiresAt<new Date() || r.sources.some(s=>s.availability==='ERROR'))) {
+      const source=r.sources.find(s=>s.provenance===r.metadataProvenance && adapters[s.provider]);if(source)try{await refreshSource(source);}catch{}
     }
     const fresh=await fastify.prisma.externalRecording.findMany({where:{id:{in:records.map(r=>r.id)}},include:C.includeRecording,orderBy:{createdAt:'desc'}});
     const views=fresh.map(r=>C.recordingView(r));const explicitVersion=C.versionFromTitle(q)!=='UNKNOWN';
@@ -107,7 +132,7 @@ module.exports=async function externalCatalogRoutes(fastify,options) {
   });
   fastify.get('/recordings/:id',read,async request=>{
     let r=await getRecording(request.params.id);if(r.mergedIntoId)r=await getRecording(r.mergedIntoId);
-    for(const s of r.sources)if(s.provider==='AUDIUS' && (!s.checkedAt || Date.now()-s.checkedAt.getTime()>86400000 || s.availability==='ERROR'))try{await refreshSource(s);}catch{}
+    for(const s of r.sources)if(adapters[s.provider] && (!s.checkedAt || Date.now()-s.checkedAt.getTime()>86400000 || s.availability==='ERROR'))try{await refreshSource(s);}catch{}
     return {recording:C.recordingView(await getRecording(r.id)),versions:(await fastify.prisma.externalRecording.findMany({where:{parentId:r.id,mergedIntoId:null},include:C.includeRecording})).map(r=>C.recordingView(r)),audit:await fastify.prisma.auditLog.findMany({where:{targetType:'EXTERNAL_RECORDING',targetId:r.id},select:{id:true,action:true,reason:true,createdAt:true},orderBy:{createdAt:'desc'},take:30})};
   });
   fastify.patch('/recordings/:id',{...mutate,schema:bodySchema({versionType:{type:'string',enum:C.VERSIONS},versionLabel:{type:'string',maxLength:200},parentId:{anyOf:[textSchema,{type:'null'}]},isrc:{anyOf:[{type:'string',pattern:'^[A-Z]{2}[A-Z0-9]{3}[0-9]{7}$'},{type:'null'}]},reason:reasonSchema},['reason'])},async request=>{
@@ -175,7 +200,10 @@ module.exports=async function externalCatalogRoutes(fastify,options) {
     const r=await getRecording(request.params.id);const source=[...r.sources,...r.members.flatMap(m=>m.sources)].find(s=>s.id===request.query.sourceId);
     if(!source)C.fail('EXTERNAL_SOURCE_NOT_FOUND',404);
     if(source.matchStatus!=='CONFIRMED' || source.officialStatus==='REJECTED' || ['UNAVAILABLE','ERROR'].includes(source.availability))C.fail('EXTERNAL_SOURCE_NOT_PLAYABLE',409);
-    if(EMBED_PROVIDERS.includes(source.provider))return officialEmbed(source.provider,source.canonicalUrl);
+    if(EMBED_PROVIDERS.includes(source.provider)) {
+      if(source.provenance===`${source.provider}_PUBLIC_API`&&(!source.checkedAt||Date.now()-source.checkedAt.getTime()>86400000))await refreshSource(source);
+      return officialEmbed(source.provider,source.canonicalUrl);
+    }
     if(source.playbackMode==='LINK_OUT')return {playbackMode:'LINK_OUT',canonicalUrl:source.canonicalUrl,provider:source.provider};
     if(source.provider!=='AUDIUS')C.fail('EXTERNAL_PROVIDER_UNSUPPORTED');
     try {const p=await audius.playback(source.externalId);await refreshSource(source);return {url:p.url,playbackMode:p.playbackMode,provider:p.provider,expiresAt:p.expiresAt};}
@@ -188,7 +216,7 @@ module.exports=async function externalCatalogRoutes(fastify,options) {
   // Bounded expiry sweep purges stale provider metadata, preserving Track IDs and links.
   let sweep;
   fastify.addHook('onReady',async()=>{
-    const expire=async()=>{try{const rows=await fastify.prisma.externalRecording.findMany({where:{metadataProvenance:'AUDIUS_PUBLIC_API',metadataExpiresAt:{lt:new Date()}},select:{id:true,trackId:true},take:100});for(const r of rows)await fastify.prisma.$transaction([fastify.prisma.externalRecording.update({where:{id:r.id},data:{metadataExpiresAt:null,isrc:null}}),fastify.prisma.track.update({where:{id:r.trackId},data:{title:'Metadata refresh required',primaryArtistName:null,coverUrl:null}}),fastify.prisma.externalSource.updateMany({where:{recordingId:r.id,provider:'AUDIUS'},data:{availability:'UNKNOWN'}})]);}catch{fastify.log.warn('External metadata expiry sweep unavailable');}};
+    const expire=async()=>{try{const rows=await fastify.prisma.externalRecording.findMany({where:{metadataProvenance:{in:['AUDIUS_PUBLIC_API','APPLE_MUSIC_PUBLIC_API','YOUTUBE_PUBLIC_API']},metadataExpiresAt:{lt:new Date()}},select:{id:true,trackId:true},take:100});for(const r of rows)await fastify.prisma.$transaction([fastify.prisma.externalRecording.update({where:{id:r.id},data:{metadataExpiresAt:null,isrc:null}}),fastify.prisma.track.update({where:{id:r.trackId},data:{title:'Metadata refresh required',primaryArtistName:null,coverUrl:null,durationSeconds:0,duration:0,explicit:false}}),fastify.prisma.externalSource.updateMany({where:{recordingId:r.id,provenance:{in:['AUDIUS_PUBLIC_API','APPLE_MUSIC_PUBLIC_API','YOUTUBE_PUBLIC_API']}},data:{availability:'UNKNOWN'}})]);}catch{fastify.log.warn('External metadata expiry sweep unavailable');}};
     await expire();sweep=setInterval(expire,3600000);sweep.unref();
   });
   fastify.addHook('onClose',async()=>clearInterval(sweep));

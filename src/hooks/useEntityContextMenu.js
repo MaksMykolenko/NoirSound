@@ -34,7 +34,8 @@ export function useTrackContextMenu(track, options = {}) {
   const addToast = useToastStore((state) => state.addToast);
   const { openAddToPlaylist, openReport } = useContextMenuController();
   const { t } = useTranslation();
-  return useContextMenu(() => buildTrackContextActions({
+  return useContextMenu(() => {
+    const args={
     track,
     player,
     navigate,
@@ -43,7 +44,17 @@ export function useTrackContextMenu(track, options = {}) {
     openReport,
     t,
     ...options,
-  }), [track, player, navigate, addToast, openAddToPlaylist, openReport, t, options.removeFromQueue, options.removeFromPlaylist, options.moveUp, options.moveDown]);
+    };
+    const actions=buildTrackContextActions(args);
+    if(!track?.previewExternalId || !options.resolveTrack)return actions;
+    return actions.map(action=>!action.onSelect||action.id==='track-play'?action:{...action,onSelect:async()=>{
+      try {
+        const saved=await options.resolveTrack();
+        const selected=buildTrackContextActions({...args,track:saved,player:usePlayerStore.getState()}).find(a=>a.id===action.id);
+        await selected?.onSelect?.();
+      }catch(error){addToast(error.message,'error');}
+    }});
+  }, [track, player, navigate, addToast, openAddToPlaylist, openReport, t, options.removeFromQueue, options.removeFromPlaylist, options.moveUp, options.moveDown,options.resolveTrack]);
 }
 
 export function usePlaylistContextMenu(playlist, options = {}) {

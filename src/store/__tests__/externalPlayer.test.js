@@ -51,5 +51,17 @@ describe('one global player across providers',()=>{
   expect(usePlayerStore.getState().isPlaying).toBe(false);expect(window.HTMLMediaElement.prototype.play.mock.calls.length).toBe(before);
   usePlayerStore.getState().addToQueue(track);expect(usePlayerStore.getState().queue).toEqual([]);usePlayerStore.getState().closePlatformEmbed();
  });
+ it('automatically saves a live card before playing its actual stored identity',async()=>{
+  useUserStore.setState({user:{id:'admin',role:'ADMIN'}});
+  const preview={...external,id:'AUDIUS:owned',recordingId:undefined,selectedSourceId:undefined,provider:'AUDIUS',previewExternalId:'owned'};
+  const f=vi.fn(async url=>res(String(url).endsWith('/import')?{recording:external}:{url:'https://creatornode.audius.co/tracks/cidstream/fixture',playbackMode:'EXTERNAL_STREAM'}));vi.stubGlobal('fetch',f);
+  await usePlayerStore.getState().playTrack(preview,[preview]);expect(usePlayerStore.getState().currentTrack.id).toBe(external.id);expect(usePlayerStore.getState().queue[0].id).toBe(external.id);expect(f.mock.calls[0][1].body).toContain('owned');
+ });
+ it('a delayed automatic import cannot restart music after the user switches to native',async()=>{
+  useUserStore.setState({user:{id:'admin',role:'ADMIN'}});let complete;
+  vi.stubGlobal('fetch',vi.fn(url=>String(url).endsWith('/import')?new Promise(r=>{complete=r;}):Promise.resolve(res({}))));
+  const request=usePlayerStore.getState().playTrack({...external,id:'AUDIUS:owned',recordingId:undefined,provider:'AUDIUS',previewExternalId:'owned'});
+  await usePlayerStore.getState().playTrack(native);complete(res({recording:external}));await request;expect(usePlayerStore.getState().currentTrack.id).toBe(native.id);expect(__getAudioElementForTests().src).toContain('/tracks/native/stream');
+ });
  it('resolver failure can be followed by working native playback',async()=>{vi.spyOn(console,'error').mockImplementation(()=>{});vi.stubGlobal('fetch',vi.fn(async()=>({ok:false,status:502,json:async()=>({error:'AUDIUS_UNAVAILABLE'})})));await usePlayerStore.getState().playTrack(external);expect(usePlayerStore.getState().isPlaying).toBe(false);await usePlayerStore.getState().playTrack(native);expect(usePlayerStore.getState().isPlaying).toBe(true);expect(usePlayerStore.getState().playbackError).toBeNull();});
 });

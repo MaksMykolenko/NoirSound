@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { resolveExternalPlayback, resolvePlatformEmbed, recordExternalPlay } from '../api/externalCatalog';
+import { resolveExternalPlayback, resolvePlatformEmbed, recordExternalPlay, saveCatalogTrack } from '../api/externalCatalog';
 import { API_BASE_URL, useMockApi } from '../api/client';
 import { getRecentlyPlayed } from '../api/stats';
 import { getLikedTracks, setTrackLiked } from '../api/tracks';
@@ -383,6 +383,20 @@ export const usePlayerStore = create((set, get) => {
     },
 
     playTrack: async (track, newQueue = null, queueSource = null) => {
+      if(track?.previewExternalId && !track.recordingId) {
+        const user=useUserStore.getState().user;
+        if(user?.role!=='ADMIN')return;
+        const generation=++playbackGeneration;
+        playbackAbort?.abort();playbackAbort=new AbortController();
+        stopPlatformPlayback();audio?.pause();audio?.removeAttribute?.('src');
+        set({activePlatformEmbed:null,currentTrack:track,isPlaying:false,progress:0,playbackLoading:true,playbackError:null});
+        try {
+          const saved=await saveCatalogTrack(track,playbackAbort.signal);
+          if(generation!==playbackGeneration||useUserStore.getState().user?.id!==user.id||useUserStore.getState().user?.role!=='ADMIN')return;
+          await get().playTrack(saved,newQueue?.map(t=>t.id===track.id?saved:t),queueSource);
+        }catch(error){if(generation===playbackGeneration&&error.name!=='AbortError'){set({playbackLoading:false,playbackError:error.message});reportPlaybackError(error.message);}}
+        return;
+      }
       if (track?.playbackMode === 'OFFICIAL_EMBED') {
         const expectedGeneration = playbackGeneration + 1;
         try { await get().openPlatformEmbed(track.provider, track.canonicalUrl, track); }

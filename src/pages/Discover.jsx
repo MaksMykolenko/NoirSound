@@ -11,6 +11,7 @@ import { useArtistsWithTracks } from '../hooks/queries/useArtists';
 import useDiscoverUrlState from '../hooks/useDiscoverUrlState';
 import { useUserStore } from '../store/userStore';
 import ArtistCard from '../components/artists/ArtistCard';
+import ExternalCatalogFeed from '../components/tracks/ExternalCatalogFeed';
 import DiscoverFilterDropdown from '../components/discover/DiscoverFilterDropdown';
 import DiscoverRankedList from '../components/discover/DiscoverRankedList';
 import DiscoverSection from '../components/discover/DiscoverSection';
@@ -783,6 +784,8 @@ export default function Discover() {
           </>
         )}
       </DiscoverSection>
+
+      {contentType!=='BEAT'&&<ExternalCatalogFeed query={q} excludeIds={catalogue.map(track=>track.id)}/> }
 
       <div className="sr-only" aria-live="polite">
         <SlidersHorizontal size={14} aria-hidden="true" />
