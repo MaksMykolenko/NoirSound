@@ -17,6 +17,7 @@ COPY prisma.config.ts ./
 RUN npx prisma generate
 
 COPY src ./src/
+COPY scripts/verify-reviewed-migrations.cjs ./scripts/verify-reviewed-migrations.cjs
 
 # NOTE: dev deps are intentionally kept so the container can run
 # `prisma migrate deploy` at startup (the Prisma CLI is a dev dependency).

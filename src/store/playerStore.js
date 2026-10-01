@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { resolveExternalPlayback, recordExternalPlay } from '../api/externalCatalog';
 import { API_BASE_URL, useMockApi } from '../api/client';
 import { getRecentlyPlayed } from '../api/stats';
 import { getLikedTracks, setTrackLiked } from '../api/tracks';
@@ -14,6 +15,8 @@ function reportPlaybackError(message) {
 }
 
 let audio = null;
+let playbackGeneration = 0;
+let playbackAbort = null;
 let configureAudio = () => {};
 let likesRequest = null;
 let likesGeneration = 0;
@@ -37,6 +40,7 @@ function ensureAudio() {
 }
 
 function canStreamTrack(track) {
+  if (track?.playbackMode === 'LINK_OUT') return false;
   return track?.isStreamable ?? (useMockApi && Boolean(track?.audioUrl));
 }
 
@@ -101,6 +105,10 @@ async function reportQualifyingPlay(track, listenedSeconds, completed) {
   // Playback continues on the same singleton without issuing forbidden writes.
   if (track.playbackSource === 'landing' && import.meta.env.VITE_PUBLIC_APP_ENABLED === 'false') return false;
   try {
+    if (track.playbackMode === 'EXTERNAL_STREAM') {
+      const result = await recordExternalPlay(track, listenedSeconds, completed);
+      return result?.success === true;
+    }
     await useUserStore.getState().incrementPlayStats(track.id, track.artistId, {
       durationListenedSeconds: Math.round(listenedSeconds),
       completed: !!completed,
@@ -187,7 +195,7 @@ export const usePlayerStore = create((set, get) => {
     };
 
     audio.ondurationchange = () => {
-      if (audio.duration) {
+      if (Number.isFinite(audio.duration) && audio.duration > 0) {
         set({ duration: audio.duration });
       }
     };
@@ -199,7 +207,7 @@ export const usePlayerStore = create((set, get) => {
       get().handleEnded();
     };
     audio.onerror = () => {
-      const message = 'The processed audio stream could not be loaded.';
+      const message = get().currentTrack?.playbackMode === 'EXTERNAL_STREAM' ? 'External audio is unavailable. Retry or open Audius.' : 'The processed audio stream could not be loaded.';
       set({
         isPlaying: false,
         playbackError: message
@@ -222,6 +230,7 @@ export const usePlayerStore = create((set, get) => {
     repeatMode: 'none', // 'none' | 'all' | 'one'
     shuffle: false,
     playbackError: null,
+    playbackLoading: false,
     likedTracks: useMockApi ? ["1", "2", "5"] : [],
     likedTracksUserId: null,
     likedTracksHydrated: false,
@@ -336,8 +345,14 @@ export const usePlayerStore = create((set, get) => {
     },
 
     playTrack: async (track, newQueue = null, queueSource = null) => {
+      const generation = ++playbackGeneration;
+      playbackAbort?.abort();
+      playbackAbort = new AbortController();
       ensureAudio();
       if (!audio) return;
+      audio.pause();
+      audio.removeAttribute?.('src');
+      set({ isPlaying: false, playbackLoading: false });
       const canPlay = canStreamTrack(track);
       if (!canPlay) {
         const message = 'Audio is not available for this release yet.';
@@ -350,7 +365,8 @@ export const usePlayerStore = create((set, get) => {
         currentTrack: track,
         progress: 0,
         duration: track.duration || 0,
-        playbackError: null
+        playbackError: null,
+        playbackLoading: track.playbackMode === 'EXTERNAL_STREAM'
       };
 
       if (newQueue) {
@@ -370,18 +386,24 @@ export const usePlayerStore = create((set, get) => {
       // already listened.
       resetListenState(track);
 
-      if (useMockApi) {
-        audio.src = track.audioUrl;
-      } else if (track.playbackSource === 'landing') {
-        audio.src = `${API_BASE_URL}/landing/tracks/${encodeURIComponent(track.id)}/stream`;
-      } else {
-        audio.src = `${API_BASE_URL}/tracks/${track.id}/stream`;
-      }
       audio.volume = get().volume;
-
       try {
+        if (track.playbackMode === 'EXTERNAL_STREAM') {
+          const resolved = await resolveExternalPlayback(track, playbackAbort.signal);
+          if (generation !== playbackGeneration) return;
+          if (resolved.playbackMode !== 'EXTERNAL_STREAM' || !resolved.url) throw new Error('External audio is unavailable.');
+          audio.src = resolved.url;
+        } else if (useMockApi) {
+          audio.src = track.audioUrl;
+        } else if (track.playbackSource === 'landing') {
+          audio.src = `${API_BASE_URL}/landing/tracks/${encodeURIComponent(track.id)}/stream`;
+        } else {
+          audio.src = `${API_BASE_URL}/tracks/${encodeURIComponent(track.id)}/stream`;
+        }
+        if (generation !== playbackGeneration) return;
         await audio.play();
-        set({ isPlaying: true });
+        if (generation !== playbackGeneration) return;
+        set({ isPlaying: true, playbackLoading: false });
         connectPresenceService.notifyPlay(track, 0);
         // Do NOT report a play or touch recently-played here -- starting
         // playback is not a listen. Both happen only once the qualifying
@@ -390,9 +412,11 @@ export const usePlayerStore = create((set, get) => {
         // inflation of play counts, monthly listeners, or listening
         // history.
       } catch (err) {
+        if (generation !== playbackGeneration) return;
+        set({ playbackLoading: false });
         // A quick pause or a new track can cancel an in-flight play request.
         if (err.name === 'AbortError') return;
-        console.error('HTML5 audio playback failed.', err);
+        console.error('HTML5 audio playback failed.', { code: err.code || err.name });
         const message = err.message || 'Audio playback failed.';
         set({
           isPlaying: false,
@@ -403,6 +427,8 @@ export const usePlayerStore = create((set, get) => {
     },
 
     togglePlay: () => {
+      if (get().playbackLoading) { get().pause(); return; }
+      if (get().currentTrack?.playbackMode === 'EXTERNAL_STREAM' && !audio?.src) { get().playTrack(get().currentTrack); return; }
       const { isPlaying, currentTrack } = get();
       if (!currentTrack) return;
 
@@ -427,6 +453,9 @@ export const usePlayerStore = create((set, get) => {
     },
 
     pause: () => {
+      ++playbackGeneration;
+      playbackAbort?.abort();
+      set({ playbackLoading: false });
       const { currentTrack } = get();
       if (audio) {
         audio.pause();

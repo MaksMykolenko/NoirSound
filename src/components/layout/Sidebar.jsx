@@ -23,6 +23,7 @@ export default function Sidebar() {
       { to: '/dashboard', label: t('header.creatorDashboard'), icon: LayoutDashboard },
     ] : []),
     ...(user?.role === 'ADMIN' ? [
+      { to: '/external-music', label: t('externalMusic.title'), icon: Compass },
       { to: '/admin', label: t('admin.admin'), icon: ShieldAlert },
     ] : []),
   ];

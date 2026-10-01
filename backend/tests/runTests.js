@@ -13,6 +13,7 @@ const DATABASE_TEST_FILES = [
   'tests/catalogSearch.test.js',
   'tests/creatorRegistration.test.js',
   'tests/endpoints.test.js',
+  'tests/externalCatalog.test.js',
   'tests/seedStrategy.test.js',
   'tests/statsQA.test.js',
 ];
@@ -38,7 +39,7 @@ async function main() {
       const owned = await createOwnedDatabase(client, assertDatabaseScope(process.env, url, purpose));
       console.log(`Created owned disposable backend database: ${owned.name}`);
       try {
-        const env = { ...process.env, DATABASE_URL: url, DATABASE_URL_TEST: url };
+        const env = { ...process.env, DATABASE_URL: url, DATABASE_URL_TEST: url, EXTERNAL_CATALOG_DATABASE_TEST: files.includes('tests/externalCatalog.test.js') ? 'true' : 'false' };
         // Fresh databases make a destructive reset unnecessary.
         run(prismaBin, ['migrate', 'deploy'], env);
         run(process.execPath, ['prisma/seed.js', 'demo'], env);

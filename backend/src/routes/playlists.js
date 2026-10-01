@@ -19,7 +19,9 @@ const creatorSelect = {
   artistProfile: { select: { id: true } }
 };
 
+const { canUseBeta, recordingView } = require('../lib/externalCatalog');
 const trackInclude = {
+  externalRecording: { include: { sources: true } },
   artist: {
     include: {
       user: {
@@ -263,7 +265,7 @@ async function playlistsRoutes(fastify) {
         likedTrackIds = new Set(likedRows.map((row) => row.trackId));
       }
       return {
-        playlist: serializePlaylist(playlist, viewer, { includeTracks: true, likedTrackIds })
+        playlist: serializePlaylist(playlist, { ...viewer, externalBeta: await canUseBeta(fastify.prisma, viewer) }, { includeTracks: true, likedTrackIds })
       };
     } catch (error) {
       fastify.log.error(error);
@@ -340,7 +342,9 @@ async function playlistsRoutes(fastify) {
       return apiError(reply, 409, 'PLAYLIST_TRACK_ALREADY_EXISTS', 'Track is already in this playlist.');
     }
 
-    const track = await fastify.prisma.track.findFirst({
+    const externalAllowed = !access.playlist.isPublic && await canUseBeta(fastify.prisma, request.user);
+    const external = externalAllowed ? await fastify.prisma.track.findFirst({ where: { id: trackId, catalogScope: 'EXTERNAL_BETA', status: 'PUBLISHED' }, include: trackInclude }) : null;
+    const track = external || await fastify.prisma.track.findFirst({
       where: {
         id: trackId,
         status: 'PUBLISHED',
@@ -350,7 +354,7 @@ async function playlistsRoutes(fastify) {
       },
       include: trackInclude
     });
-    if (!track) {
+    if (!track || (external && !recordingView({ ...external.externalRecording, track: external }).isStreamable)) {
       return apiError(reply, 404, 'PLAYLIST_TRACK_NOT_FOUND', 'Track is unavailable.');
     }
     try {
@@ -371,7 +375,7 @@ async function playlistsRoutes(fastify) {
       // full, available-track view.
       return reply.status(201).send({
         entry: buildPlaylistTrackEntry({
-          entry, playlist: access.playlist, viewer: request.user, likedTrackIds: null
+          entry, playlist: access.playlist, viewer: { ...request.user, externalBeta: externalAllowed }, likedTrackIds: null
         })
       });
     } catch (error) {

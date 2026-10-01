@@ -135,6 +135,11 @@ function buildPlaylistTrackEntry({ entry, playlist, viewer, likedTrackIds }) {
     addedBy,
   };
 
+  if (track?.catalogScope === 'EXTERNAL_BETA') {
+    if (!viewer?.externalBeta || playlist.isPublic || !track.externalRecording) return { ...base, track: { id: entry.trackId, isAvailable: false } };
+    const view = require('./externalCatalog').recordingView({ ...track.externalRecording, track });
+    return { ...base, track: { ...view, isLiked: Boolean(likedTrackIds?.has(track.id)) } };
+  }
   const available = isTrackAvailable(track);
 
   // Public/non-owner viewers get nothing beyond "this row exists and is

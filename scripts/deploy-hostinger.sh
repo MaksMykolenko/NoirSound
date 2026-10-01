@@ -165,8 +165,12 @@ done
   }
 ' > "$RECORD_DIR/image-inputs.log" 2>&1 || fail 'New backend image lacks required schema, migrations, or shared taxonomy.'
 # Fail closed on pending/failed/divergent history. Pending SQL needs separate
-# exact-release review before any schema change; this release expects no new SQL.
-"${release_compose[@]}" run --rm --no-deps --pull never backend npx prisma migrate status > "$RECORD_DIR/migrate-status.log" 2>&1 || fail 'Migration preflight requires explicit SQL/history review; no migration or application update applied.'
+# exact-release hash review before any schema change.
+if ! "${release_compose[@]}" run --rm --no-deps --pull never backend npx prisma migrate status > "$RECORD_DIR/migrate-status.log" 2>&1; then
+  # The release carries a reviewed hash allowlist. Unknown/edited/failed SQL
+  # still fails closed. Verify live history using the NEW image, read-only.
+  "${release_compose[@]}" run --rm --no-deps --pull never backend node scripts/verify-reviewed-migrations.cjs > "$RECORD_DIR/migrate-review.log" 2>&1 || fail 'Migration preflight requires explicit SQL/history review; no migration or application update applied.'
+fi
 # The override pins this one-off migration container to the NEW backend image.
 "${release_compose[@]}" run --rm --no-deps --pull never backend npx prisma migrate deploy > "$RECORD_DIR/migrate.log" 2>&1 || fail 'Migration failed; application services were not updated. Inspect private migration evidence.'
 "${release_compose[@]}" up -d --no-deps --no-build backend worker web

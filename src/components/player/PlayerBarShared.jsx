@@ -1,3 +1,4 @@
+import { playerTrackHref } from '../../utils/playerTrackPresentation';
 import { TrackSaveIcon } from '../tracks/TrackVisuals';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
@@ -21,6 +22,7 @@ import FallbackCover from '../ui/FallbackCover';
 import { useTrackContextMenu } from '../../hooks/useEntityContextMenu';
 import { isMockMode } from '../../api/mode';
 import { resolvePlaybackErrorMessage } from '../../utils/playbackErrorMessage';
+
 
 export function PlaybackErrorStatus({ error, className = '' }) {
   const { t } = useTranslation();
@@ -75,20 +77,19 @@ export function PlayerTrackInfo({
         <h4 className="truncate text-sm font-medium text-zinc-100">
           <Link
             title={track.title}
-            to={`/track/${track.id}`}
+            to={playerTrackHref(track)}
             onClick={onOpenTrack}
             className="block truncate hover:underline focus-visible:underline focus-visible:outline-none"
           >
             {track.title}
           </Link>
         </h4>
-        <Link to={`/artist/${track.artistId}`} onClick={onOpenTrack} title={track.artistName} className="block text-xs text-zinc-400 truncate hover:text-zinc-100">
-          {track.artistName}
-        </Link>
+        {track.playbackSource === 'external' ? <span className="block truncate text-xs text-zinc-400">{track.artistName} · {track.provider}</span> : <Link to={`/artist/${track.artistId}`} onClick={onOpenTrack} title={track.artistName} className="block text-xs text-zinc-400 truncate hover:text-zinc-100">{track.artistName}</Link>}
         <PlaybackErrorStatus error={playbackError} />
       </div>
       <button
         type="button"
+        disabled={Boolean(track.previewExternalId)}
         onClick={onToggleLike}
         className={`p-2 transition-colors cursor-pointer shrink-0 focus:outline-none focus:text-brand-red ${
           isLiked ? 'text-brand-red' : 'text-zinc-500 hover:text-zinc-300'

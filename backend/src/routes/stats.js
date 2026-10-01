@@ -1,3 +1,4 @@
+const { canUseBeta, recordingView, includeRecording } = require('../lib/externalCatalog');
 const { optionalAuthenticatedUserId } = require('../lib/optionalAuth');
 const { normalizeGenre } = require('../constants/musicGenres');
 const { userOrIpKey } = require('../lib/rateLimitKeys');
@@ -250,7 +251,12 @@ async function statsRoutes(fastify, _options) {
         if (recentlyPlayed.length >= 10) break;
       }
 
-      return { data: recentlyPlayed };
+      if (await canUseBeta(fastify.prisma, request.user)) {
+        const external = await fastify.prisma.externalPlaybackEvent.findMany({ where: { userId: request.user.id }, include: { recording: { include: includeRecording } }, orderBy: { createdAt: 'desc' }, take: 10 });
+        for (const e of external) if (!seenTracks.has(e.recording.trackId)) { seenTracks.add(e.recording.trackId); recentlyPlayed.push({ track: recordingView(e.recording), lastPlayedAt: e.createdAt, source: 'NOIRSOUND_EXTERNAL_PLAYBACK' }); }
+        recentlyPlayed.sort((a,b) => new Date(b.lastPlayedAt)-new Date(a.lastPlayedAt));
+      }
+      return { data: recentlyPlayed.slice(0, 10) };
     } catch (error) {
       fastify.log.error(error);
       return reply.status(500).send({ error: 'Internal Server Error' });
@@ -417,6 +423,12 @@ async function statsRoutes(fastify, _options) {
         }
       });
       const tracks = likes.map((like) => serializePublicTrack(like.track)).filter(Boolean);
+      if (await canUseBeta(fastify.prisma, request.user)) {
+        const extra = await fastify.prisma.trackLike.findMany({ where: { userId: request.user.id, track: { catalogScope: 'EXTERNAL_BETA' } }, include: { track: { include: { externalRecording: { include: { sources: true } } } } } });
+        const ids = [...new Set(extra.filter(x=>x.track.externalRecording).map(x=>x.track.externalRecording.mergedIntoId || x.track.externalRecording.id))];
+        const grouped = await fastify.prisma.externalRecording.findMany({ where: { id: { in: ids } }, include: includeRecording });
+        for (const r of grouped) if (!tracks.some(t=>t.id===r.trackId)) tracks.push(recordingView(r));
+      }
       return { data: tracks };
     } catch (error) {
       fastify.log.error(error);

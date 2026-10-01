@@ -10,13 +10,13 @@ function publicArtistWhere() {
 }
 
 function publicTrackWhere(extra = {}) {
-  return { ...extra, status: 'PUBLISHED', isPublic: true, artist: publicArtistWhere() };
+  return { ...extra, status: 'PUBLISHED', isPublic: true, catalogScope: 'NATIVE', artist: publicArtistWhere() };
 }
 
 // Fixed aliases only, used by catalog SQL together with Track t, ArtistProfile a,
 // and User u. No identifier or SQL fragment originates in request parameters.
 function publicTrackSql() {
-  return Prisma.sql`t.status = 'PUBLISHED' AND t."isPublic" = true
+  return Prisma.sql`t.status = 'PUBLISHED' AND t."isPublic" = true AND t."catalogScope" = 'NATIVE'
     AND a."isHidden" = false AND u.status = 'ACTIVE'`;
 }
 

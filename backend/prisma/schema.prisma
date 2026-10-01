@@ -249,6 +249,8 @@ model Track {
   publishedAt DateTime?
 
   artist     ArtistProfile    @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  catalogScope String @default("NATIVE")
+  externalRecording ExternalRecording?
   audioAsset TrackAudioAsset?
   album      Album?           @relation(fields: [albumId], references: [id])
   albumId    String?
@@ -619,3 +621,67 @@ model CreatorRegistration {
   @@index([createdAt])
 }
 
+
+// Recording grouping never rewrites TrackLike, PlaylistTrack or listening IDs.
+model ExternalRecording {
+  id String @id @default(uuid())
+  trackId String @unique
+  versionType String @default("UNKNOWN")
+  versionLabel String?
+  isrc String?
+  parentId String?
+  mergedIntoId String?
+  curatorId String?
+  metadataProvenance String @default("ADMIN_PROVIDED")
+  metadataExpiresAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  track Track @relation(fields: [trackId], references: [id], onDelete: Restrict)
+  parent ExternalRecording? @relation("RecordingVersions", fields: [parentId], references: [id], onDelete: Restrict)
+  versions ExternalRecording[] @relation("RecordingVersions")
+  mergedInto ExternalRecording? @relation("RecordingMerge", fields: [mergedIntoId], references: [id], onDelete: Restrict)
+  members ExternalRecording[] @relation("RecordingMerge")
+  sources ExternalSource[]
+  events ExternalPlaybackEvent[]
+  @@index([mergedIntoId])
+}
+
+model ExternalSource {
+  id String @id @default(uuid())
+  provider String
+  externalId String?
+  canonicalUrl String @unique
+  recordingId String
+  playbackMode String @default("LINK_OUT")
+  availability String @default("UNKNOWN")
+  matchStatus String @default("UNVERIFIED")
+  officialStatus String @default("UNVERIFIED")
+  isPrimary Boolean @default(false)
+  provenance String
+  verificationEvidence String?
+  checkedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  recording ExternalRecording @relation(fields: [recordingId], references: [id], onDelete: Restrict)
+  @@unique([provider, externalId])
+  @@index([recordingId])
+}
+
+model ExternalPlaybackEvent {
+  id String @id @default(uuid())
+  recordingId String
+  userId String
+  provider String
+  durationListenedSeconds Int
+  completed Boolean @default(false)
+  createdAt DateTime @default(now())
+  recording ExternalRecording @relation(fields: [recordingId], references: [id], onDelete: Restrict)
+  @@index([userId, createdAt])
+}
+
+// Persisted switch: admin can disable beta without a deploy or restart.
+model ExternalCatalogSetting {
+  id String @id @default("beta")
+  enabled Boolean @default(false)
+  updatedAt DateTime @updatedAt
+}

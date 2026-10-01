@@ -1,3 +1,4 @@
+import { playerArtistLabel } from '../../utils/playerTrackPresentation';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
@@ -191,7 +192,7 @@ export default function FullscreenLyricsPlayer({
         />
         <div className="min-w-0">
           <h1 title={currentTrack?.title} className="ns-fullscreen-compact-title truncate font-sans text-sm font-bold text-zinc-100 sm:text-base">{currentTrack?.title}</h1>
-          <p title={currentTrack?.artistName} className="truncate font-sans tabular-nums text-ns-meta text-zinc-500 sm:text-xs">{currentTrack?.artistName}</p>
+          <p title={currentTrack?.artistName} className="truncate font-sans tabular-nums text-ns-meta text-zinc-500 sm:text-xs">{playerArtistLabel(currentTrack)}</p>
           <PlaybackErrorStatus error={playbackError} />
         </div>
       </header>
@@ -210,7 +211,7 @@ export default function FullscreenLyricsPlayer({
           <div className="mt-6">
             <p className="font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-brand-red">{t('player.nowPlaying')}</p>
             <h2 className={`break-words ns-display-title ns-display-title--fullscreen mt-2 text-zinc-100 ${longTitleClass}`}>{currentTrack.title}</h2>
-            <p className="mt-1 font-sans tabular-nums text-sm text-zinc-500">{currentTrack.artistName}</p>
+            <p className="mt-1 font-sans tabular-nums text-sm text-zinc-500">{playerArtistLabel(currentTrack)}</p>
           </div>
           </div>
         </aside>
@@ -222,7 +223,7 @@ export default function FullscreenLyricsPlayer({
           <div className="ns-fullscreen-mobile-display mb-8 lg:hidden">
             <p className="font-sans text-ns-meta font-medium uppercase tracking-ns-label text-brand-red">{t('player.nowPlaying')}</p>
             <h2 className={`break-words ns-display-title ns-display-title--fullscreen mt-1 text-zinc-100 ${longTitleClass}`}>{currentTrack.title}</h2>
-            <p className="mt-1 font-sans text-sm text-zinc-500">{currentTrack.artistName}</p>
+            <p className="mt-1 font-sans text-sm text-zinc-500">{playerArtistLabel(currentTrack)}</p>
           </div>
           {loading ? (
             <div className="mx-auto max-w-4xl space-y-5 animate-pulse" role="status" aria-label={t('lyrics.loading')}>

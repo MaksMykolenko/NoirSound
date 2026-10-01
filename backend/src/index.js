@@ -79,6 +79,7 @@ function buildServer(options = {}) {
   fastify.register(require('./plugins/auth'));
   fastify.register(require('./plugins/csrf'));
   fastify.register(require('./lib/publicAppGate'));
+  fastify.register(require('./plugins/externalCatalogGuard'));
   fastify.decorate('storage', storage);
   fastify.decorate('audioQueue', audioQueue);
 
@@ -162,6 +163,7 @@ function buildServer(options = {}) {
     prefix: '/api/auth',
     googleOAuthClientFactory: options.googleOAuthClientFactory
   });
+  fastify.register(require('./routes/externalCatalog'), { prefix: '/api/external-catalog', audius: options.audius });
   fastify.register(require('./routes/tracks'), { prefix: '/api/tracks' });
   fastify.register(require('./routes/landing'), { prefix: '/api/landing' });
   fastify.register(require('./routes/discover'), { prefix: '/api/discover' });

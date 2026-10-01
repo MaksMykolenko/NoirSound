@@ -25,6 +25,7 @@ const queryClient = new QueryClient({
 // Lazy load pages for performance
 const Home = lazy(() => import('./pages/Home'));
 const LandingPage = lazy(() => import('./pages/LandingPage'));
+const ExternalMusic = lazy(() => import('./pages/ExternalMusic'));
 const Discover = lazy(() => import('./pages/Discover'));
 const TrackPage = lazy(() => import('./pages/TrackPage'));
 const ArtistPage = lazy(() => import('./pages/ArtistPage'));
@@ -165,6 +166,8 @@ export default function App() {
                 <Route element={<PublicAppGate />}>
                   <Route path="/home" element={<Home />} />
                   <Route path="/discover" element={<Discover />} />
+                  <Route path="/external-music" element={<ExternalMusic />} />
+                  <Route path="/external-music/:id" element={<ExternalMusic />} />
                   <Route path="/track/:id" element={<TrackPage />} />
                   <Route path="/artist/:id" element={<ArtistPage />} />
                   <Route path="/library" element={<Library />} />

@@ -85,6 +85,15 @@ module.exports = async function pages(fastify) {
 
   fastify.get('/', async (request, reply) => sendPage(request, reply, homeMeta(baseUrl(request)), true));
 
+  const externalPage = async (request, reply) => {
+    reply.header('cache-control', 'private, no-store').header('x-robots-tag', 'noindex, nofollow');
+    const user = await require('../lib/externalCatalog').requestBetaUser(fastify, request);
+    if (!user) return reply.redirect('/?notice=external-beta-private', 302);
+    return sendPage(request, reply, { title: 'External music · Beta | NoirSound', robots: 'noindex, nofollow' });
+  };
+  fastify.get('/external-music', externalPage);
+  fastify.get('/external-music/:id', externalPage);
+
   fastify.get('/discover', async (request, reply) =>
     sendPage(request, reply, discoverMeta(baseUrl(request), request.query.content)));
 

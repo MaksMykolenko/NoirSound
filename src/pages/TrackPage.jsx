@@ -72,6 +72,7 @@ export default function TrackPage() {
         setError(null);
         const nextTrack = await getTrackById(id);
         if (controller.signal.aborted) return;
+        if (nextTrack.playbackSource === 'external') { navigate(`/external-music/${nextTrack.recordingId}`, { replace: true }); return; }
         setTrack(nextTrack);
         const genre = normalizeGenre(nextTrack.genre);
         let related = [];
@@ -97,7 +98,7 @@ export default function TrackPage() {
     };
     fetchData();
     return () => controller.abort();
-  }, [id, user?.id]);
+  }, [id, user?.id, navigate]);
 
   if (loading) {
     return (

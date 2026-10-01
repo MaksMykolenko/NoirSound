@@ -47,6 +47,7 @@ describe('exact release deployment guards (no real infrastructure)', () => {
         'image inspect -f '*'.Id'*) printf 'sha256:%064d\\n' 2 ;;
         *' up -d '*) touch "$FIXTURE/updated" ;;
         *' run --rm --no-deps --pull never backend npx prisma migrate status'*) [[ "\${TEST_PENDING_MIGRATION:-}" != 1 ]] ;;
+        *' run --rm --no-deps --pull never backend node scripts/verify-reviewed-migrations.cjs'*) [[ "\${TEST_REVIEWED_MIGRATION:-}" == 1 ]] ;;
         *' run --rm --no-deps --pull never backend npx prisma migrate deploy'*) [[ "\${TEST_MIGRATE_FAIL:-}" != 1 ]] ;;
       esac`);
     script('app/scripts/backup-all.sh', `printf 'backup\\n' >> "$CALL_LOG"
@@ -155,6 +156,13 @@ describe('exact release deployment guards (no real infrastructure)', () => {
     expect(result.status).not.toBe(0);
     expect(result.stderr).toContain('Readiness failed');
   });
+  it('permits exact reviewed additive SQL after successful history verification', () => {
+    const result = run({ TEST_PENDING_MIGRATION: '1', TEST_REVIEWED_MIGRATION: '1' });
+    expect(result.status).toBe(0);
+    expect(result.calls).toContain('verify-reviewed-migrations.cjs');
+    expect(result.calls).toContain('migrate deploy');
+  });
+
   it('stops before migration or app update when new-image migration status needs review', () => {
     const result = run({ TEST_PENDING_MIGRATION: '1' });
     expect(result.status).not.toBe(0);
