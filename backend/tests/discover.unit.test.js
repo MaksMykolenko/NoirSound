@@ -140,6 +140,7 @@ describe('Discover public catalogue route', () => {
     expect(response.statusCode).toBe(200);
     expect(built.findMany).toHaveBeenCalledWith(expect.objectContaining({
       where: {
+        catalogScope: 'NATIVE',
         status: 'PUBLISHED',
         isPublic: true,
         contentType: 'MUSIC',
@@ -179,6 +180,7 @@ describe('Discover public catalogue route', () => {
         qualified: true,
         createdAt: { gte: new Date('2026-08-22T12:00:00.000Z') },
         track: {
+          catalogScope: 'NATIVE',
           status: 'PUBLISHED',
           isPublic: true,
           artist: { isHidden: false, user: { status: 'ACTIVE' } },

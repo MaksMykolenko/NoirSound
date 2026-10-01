@@ -35,7 +35,7 @@ describe('landing showcase HTTP contract', () => {
     for (const contentType of ['MUSIC', 'BEAT']) {
       expect(handles.findMany).toHaveBeenCalledWith(expect.objectContaining({
         where: {
-          contentType, status: 'PUBLISHED', isPublic: true,
+          catalogScope: 'NATIVE', contentType, status: 'PUBLISHED', isPublic: true,
           artist: { isHidden: false, user: { status: 'ACTIVE' } },
           processedAudioKey: { not: null }, NOT: { processedAudioKey: '' }
         }, take: 12

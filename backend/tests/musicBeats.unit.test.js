@@ -386,6 +386,7 @@ describe('public Music / Beats track routes', () => {
     expect(response.json().data[0].contentType).toBe(contentType);
     expect(findMany).toHaveBeenCalledWith(expect.objectContaining({
       where: {
+        catalogScope: 'NATIVE',
         status: 'PUBLISHED',
         isPublic: true,
         contentType,

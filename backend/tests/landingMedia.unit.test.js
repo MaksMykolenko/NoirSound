@@ -29,7 +29,7 @@ describe('closed landing media boundary', () => {
     expect(result.statusCode).toBe(kind === 'stream' ? 302 : 200);
     expect(result.headers['cache-control']).toBe(kind === 'stream' ? 'no-store' : 'private, max-age=300');
     expect(findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: {
-      id: 'track-1', processedAudioKey: { not: null }, NOT: { processedAudioKey: '' },
+      catalogScope: 'NATIVE', id: 'track-1', processedAudioKey: { not: null }, NOT: { processedAudioKey: '' },
       status: 'PUBLISHED', isPublic: true, artist: { isHidden: false, user: { status: 'ACTIVE' } }
     } }));
     if (kind === 'stream') expect(sign).toHaveBeenCalledWith('processed/audio.mp3', 300);
