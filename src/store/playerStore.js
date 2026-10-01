@@ -393,7 +393,8 @@ export const usePlayerStore = create((set, get) => {
         try {
           const saved=await saveCatalogTrack(track,playbackAbort.signal);
           if(generation!==playbackGeneration||useUserStore.getState().user?.id!==user.id||useUserStore.getState().user?.role!=='ADMIN')return;
-          await get().playTrack(saved,newQueue?.map(t=>t.id===track.id?saved:t),queueSource);
+          const context=newQueue || (get().queue.some(t=>t.id===track.id)?get().queue:null);
+          await get().playTrack(saved,context?.map(t=>t.id===track.id?saved:t),queueSource || get().queueSource);
         }catch(error){if(generation===playbackGeneration&&error.name!=='AbortError'){set({playbackLoading:false,playbackError:error.message});reportPlaybackError(error.message);}}
         return;
       }

@@ -63,5 +63,13 @@ describe('one global player across providers',()=>{
   const request=usePlayerStore.getState().playTrack({...external,id:'AUDIUS:owned',recordingId:undefined,provider:'AUDIUS',previewExternalId:'owned'});
   await usePlayerStore.getState().playTrack(native);complete(res({recording:external}));await request;expect(usePlayerStore.getState().currentTrack.id).toBe(native.id);expect(__getAudioElementForTests().src).toContain('/tracks/native/stream');
  });
+ it('replaces a queued preview identity when playback reaches it, so Next advances correctly',async()=>{
+  useUserStore.setState({user:{id:'admin',role:'ADMIN'}});
+  const preview={...external,id:'AUDIUS:queued',recordingId:undefined,provider:'AUDIUS',previewExternalId:'queued'};
+  usePlayerStore.setState({queue:[native,preview],originalQueue:[native,preview],currentTrack:native,queueSource:'external-catalog'});
+  vi.stubGlobal('fetch',vi.fn(async url=>res(String(url).endsWith('/import')?{recording:external}:{url:'https://creatornode.audius.co/tracks/cidstream/fixture',playbackMode:'EXTERNAL_STREAM'})));
+  await usePlayerStore.getState().playTrack(preview);
+  expect(usePlayerStore.getState().queue.map(t=>t.id)).toEqual([native.id,external.id]);expect(usePlayerStore.getState().originalQueue.map(t=>t.id)).toEqual([native.id,external.id]);expect(usePlayerStore.getState().queueSource).toBe('external-catalog');
+ });
  it('resolver failure can be followed by working native playback',async()=>{vi.spyOn(console,'error').mockImplementation(()=>{});vi.stubGlobal('fetch',vi.fn(async()=>({ok:false,status:502,json:async()=>({error:'AUDIUS_UNAVAILABLE'})})));await usePlayerStore.getState().playTrack(external);expect(usePlayerStore.getState().isPlaying).toBe(false);await usePlayerStore.getState().playTrack(native);expect(usePlayerStore.getState().isPlaying).toBe(true);expect(usePlayerStore.getState().playbackError).toBeNull();});
 });
