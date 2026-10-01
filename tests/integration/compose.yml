@@ -25,7 +25,10 @@ services:
       timeout: 3s
       retries: 30
   minio:
-    image: minio/minio:latest
+    image: nsverify-minio:07c3a429bfed
+    build:
+      context: .
+      dockerfile: minio.Dockerfile
     environment:
       MINIO_ROOT_USER: ${NS_TEST_S3_USER:?generated test user required}
       MINIO_ROOT_PASSWORD: ${NS_TEST_S3_PASSWORD:?generated test password required}

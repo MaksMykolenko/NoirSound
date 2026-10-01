@@ -209,7 +209,7 @@ async function main(mode) {
     const existing = await command('docker', ['ps', '--all', '--filter', `label=com.docker.compose.project=${env.COMPOSE_PROJECT_NAME}`, '--format', '{{.ID}}'], { label: 'project-absence', quiet: true, capture: true });
     if (existing.trim()) throw new Error('Refusing pre-existing verification project.');
     composeStarted = true;
-    await command('docker', [...composeArgs, 'up', '--detach', '--wait', '--wait-timeout', '120'], { label: 'compose-start' });
+    await command('docker', [...composeArgs, 'up', '--build', '--detach', '--wait', '--wait-timeout', '120'], { label: 'compose-start' });
     const postgresId = (await command('docker', [...composeArgs, 'ps', '--quiet', 'postgres'], { label: 'postgres-id', quiet: true, capture: true })).trim();
     if (!/^[a-f0-9]{64}$/.test(postgresId)) throw new Error('Fresh PostgreSQL container not identified.');
     const postgres = await command('docker', ['inspect', '--format', '{"labels":{{json .Config.Labels}},"tmpfs":{{json .HostConfig.Tmpfs}},"ports":{{json .HostConfig.PortBindings}}}', postgresId], { label: 'postgres-isolation', quiet: true, capture: true });

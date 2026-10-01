@@ -75,7 +75,8 @@ jobs:
           cache: npm
           cache-dependency-path: backend/package-lock.json
       - name: Install ffmpeg
-        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+        timeout-minutes: 8
+        run: bash scripts/ci/install-ffmpeg.sh
       - name: Install backend dependencies
         run: npm ci --prefix backend
       - name: Run isolated backend migration, seed, and test suite
@@ -99,7 +100,8 @@ jobs:
           cache: npm
           cache-dependency-path: backend/package-lock.json
       - name: Install ffmpeg
-        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+        timeout-minutes: 8
+        run: bash scripts/ci/install-ffmpeg.sh
       - name: Install backend dependencies
         run: npm ci --prefix backend
       - name: Check schema migrations and isolated security tests
@@ -125,7 +127,8 @@ jobs:
             package-lock.json
             backend/package-lock.json
       - name: Install ffmpeg
-        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+        timeout-minutes: 8
+        run: bash scripts/ci/install-ffmpeg.sh
       - name: Install dependencies from lockfiles
         run: |
           npm ci
