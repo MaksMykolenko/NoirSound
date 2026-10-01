@@ -45,6 +45,8 @@ jobs:
         run: npm ci --prefix backend
       - name: Verify integration harness guards
         run: node --test scripts/integration/harness.test.mjs
+      - name: Verify private offsite receipt boundaries
+        run: python3 -m unittest discover -s tests/integration -p offsite_verifier_test.py
       - run: npm test
 
   frontend-build:

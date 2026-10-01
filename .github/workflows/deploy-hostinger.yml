@@ -75,5 +75,6 @@ jobs:
           [[ "$(git rev-parse "$RELEASE_SHA^{commit}")" == "$RELEASE_SHA" ]]
           git checkout --detach "$RELEASE_SHA"
           [[ "$(git rev-parse HEAD)" == "$RELEASE_SHA" ]]
+          export OFFSITE_BACKUP_VERIFY_SCRIPT="${APP_DIR%/*}/operations/offsite-user-device.py"
           ENV_FILE="$APP_DIR/.env.production" COMPOSE_FILE="$APP_DIR/docker-compose.production.yml" bash scripts/deploy-hostinger.sh
           REMOTE

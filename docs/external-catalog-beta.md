@@ -132,3 +132,44 @@ A fresh existing-system backup completed on 2026-10-01 at 16:14 UTC, reference
 root, files mode 0600). PostgreSQL gzip and storage tar readability passed.
 This fresh pair has not been independently restored/offsite-verified by this run.
 Production source and all running image references remained unchanged.
+
+
+## CI and existing user-device offsite transport
+
+Integration MinIO alone is built from official signed `RELEASE.2025-09-07T16-13-09Z`,
+commit `07c3a429bfed433e49018cb0f78a52145d4bedeb`, with source SHA256 and official
+Go/Alpine base digests in `tests/integration/minio.Dockerfile`. Production MinIO
+is untouched. The harness verifies readiness, a private bucket, PUT/DELETE and
+an independent presigned GET through the storage proxy. FFmpeg uses the runner's
+existing executable when available, otherwise Ubuntu official HTTPS archive with two bounded APT attempts and no
+recommended GUI packages, connection timeouts and an eight-minute step limit.
+
+The previously approved offsite destination is the user's Mac directory
+`~/.codex/private-backups/noirsound` (0700; individual files 0600). The operator
+installs `scripts/offsite-user-device.py` as root:root 0700 at
+`/opt/noirsound/operations/offsite-user-device.py`, creates the private root-owned
+0700 queue `/opt/noirsound/offsite-verification`, and the deploy workflow exports
+`OFFSITE_BACKUP_VERIFY_SCRIPT` to that executable only for the release process. No new service, storage provider
+or inbound port is needed. The Mac agent uses the existing pinned-host SSH key:
+
+```sh
+python3 scripts/offsite-user-device.py agent --host root@46.202.143.125 \
+  --identity ~/.ssh/noirsound_hostinger \
+  --destination ~/.codex/private-backups/noirsound --minutes 180
+```
+
+Keep this agent running while the existing deploy workflow performs its gates.
+Each verifier call publishes a fresh random request valid for fifteen minutes.
+The SSH-authenticated agent copies only the exact three checksum-listed files
+and checksum manifest to a new private directory, flushes them to disk, then
+independently reopens and hashes all copies and checks their ownership/modes.
+The server accepts only a matching nonce, release, checksum and complete file
+proof, rechecks the unchanged sources, and creates the exact six-field receipt
+expected by both backup-all and deployment. Old receipts, stale jobs, public
+files, symlinks, cross-run sets and absent/offline devices fail closed.
+
+This is an attended user-device transport. It is not an unattended cloud backup
+service: when the Mac agent is unavailable the offsite gate fails and local
+archives remain. Existing daily local backup configuration is preserved; the
+release hook is selected through the production deploy setting. Starting an
+agent does not replace the separate isolated DB/storage restore drill.
