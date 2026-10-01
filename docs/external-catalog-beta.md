@@ -19,6 +19,10 @@ Each play checks current metadata and availability and resolves a fresh signed
 stream route. The provider-signed audio CID is checked before using the fixed
 Audius content gateway; the gateway is probed before the URL reaches the player.
 The server never downloads/proxies audio or writes it to MinIO/transcoding.
+The browser follows the gateway's GET redirect to Audius's verified R2 delivery
+origin, explicitly allowed only in `media-src`. The gateway's HEAD response does
+not expose that redirect. No wildcard Cloudflare storage origins are allowed;
+a provider CDN origin change requires review and a CSP update.
 
 Spotify, SoundCloud, Apple Music and YouTube support administrator-supplied
 HTTPS recording links only. No API/catalog/streaming/embeds are connected.

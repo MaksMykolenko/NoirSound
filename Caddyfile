@@ -74,7 +74,9 @@ www.{$DOMAIN:localhost} {
 	}
 	header {
 		match header Content-Type text/html*
-		Content-Security-Policy "default-src 'self'; script-src 'self' https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https://creatornode.audius.co https://www.googletagmanager.com https://www.google-analytics.com https://region1.google-analytics.com https://lh3.googleusercontent.com https://lh4.googleusercontent.com https://lh5.googleusercontent.com https://lh6.googleusercontent.com; media-src 'self' blob: https://api.audius.co https://creatornode.audius.co; connect-src 'self' https://www.googletagmanager.com https://www.google-analytics.com https://region1.google-analytics.com https://analytics.google.com https://region1.analytics.google.com; font-src 'self' https://fonts.gstatic.com; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self' https://accounts.google.com"
+		# The Audius gateway's GET redirects to this verified delivery origin;
+		# HEAD returns audio headers directly. Keep the CDN allowlist exact.
+		Content-Security-Policy "default-src 'self'; script-src 'self' https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https://creatornode.audius.co https://www.googletagmanager.com https://www.google-analytics.com https://region1.google-analytics.com https://lh3.googleusercontent.com https://lh4.googleusercontent.com https://lh5.googleusercontent.com https://lh6.googleusercontent.com; media-src 'self' blob: https://api.audius.co https://creatornode.audius.co https://validator.eeba4a6ca56a0d87af802270217c2a51.r2.cloudflarestorage.com; connect-src 'self' https://www.googletagmanager.com https://www.google-analytics.com https://region1.google-analytics.com https://analytics.google.com https://region1.analytics.google.com; font-src 'self' https://fonts.gstatic.com; frame-src 'none'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self' https://accounts.google.com"
 	}
 }
 

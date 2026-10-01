@@ -67,6 +67,9 @@ try:
         status,headers,body=request(port,'/api/reports');assert status==401;assert headers.get('Content-Security-Policy')=="default-src 'none'; frame-ancestors 'none'";results.append(['/api/reports',status])
         for path in ['/','/home','/admin/reports','/robots.txt','/sitemap.xml']:
             status,headers,body=request(port,path);assert status==200;assert 'script-src' in headers.get('Content-Security-Policy',''),(path,headers)
+            directives={parts[0]:parts[1:] for directive in headers['Content-Security-Policy'].split(';') if (parts:=directive.split())}
+            assert set(directives['media-src'])=={"'self'",'blob:','https://api.audius.co','https://creatornode.audius.co','https://validator.eeba4a6ca56a0d87af802270217c2a51.r2.cloudflarestorage.com'}
+            assert directives['frame-src']==["'none'"] and directives['object-src']==["'none'"]
         status,headers,body=request(port,'/creator-rules?from=test','www.noirsound.test');assert status==308;assert headers.get('Location')=='https://noirsound.test/creator-rules?from=test';results.append(['www preserve path/query',status])
         # A legitimate media path reaches its upstream (absent fixture upstream
         # yields502). It must not be intercepted by the sensitive-file404 rule.
