@@ -55,7 +55,7 @@ describe.skipIf(process.env.EXTERNAL_CATALOG_DATABASE_TEST!=='true')('external c
   const detail=await app.inject({url:`/api/tracks/${track.id}`,headers:{cookie}});expect(detail.statusCode).toBe(200);expect(detail.json().track.provider).toBe('SOUNDCLOUD');
   const playback=await req(`/recordings/${track.recordingId}/playback?sourceId=${track.selectedSourceId}`,null,'GET');expect(playback.status).toBe(200);expect(new URL(playback.body.embedUrl).origin).toBe('https://w.soundcloud.com');
   const events=await db.playEvent.count();const userId=userIds[0];const playlist=await db.playlist.create({data:{name:'Owned normal-card fixture',creatorId:userId,isPublic:false}});
-  const add=await app.inject({method:'POST',url:`/api/playlists/${playlist.id}/tracks`,headers:{cookie,origin:'http://localhost:3000'},payload:{trackId:track.id}});expect(add.statusCode,add.body).toBe(200);
+  const add=await app.inject({method:'POST',url:`/api/playlists/${playlist.id}/tracks`,headers:{cookie,origin:'http://localhost:3000'},payload:{trackId:track.id}});expect(add.statusCode,add.body).toBe(201);expect(add.json().entry.track).toMatchObject({id:track.id,provider:'SOUNDCLOUD',playbackMode:'OFFICIAL_EMBED'});
   const publicList=await db.playlist.create({data:{name:'Owned public fixture',creatorId:userId,isPublic:true}});
   expect((await app.inject({method:'POST',url:`/api/playlists/${publicList.id}/tracks`,headers:{cookie,origin:'http://localhost:3000'},payload:{trackId:track.id}})).statusCode).toBe(404);
   expect(await db.playEvent.count()).toBe(events);
