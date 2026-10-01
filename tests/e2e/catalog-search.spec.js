@@ -166,8 +166,14 @@ test('later-page playback, likes and playlist actions persist without pagination
   await expect(page.getByRole('menuitem', { name: 'Add to playlist', exact: true })).toBeVisible();
   await page.keyboard.press('Escape');
 
-  await lateRow.getByRole('button', { name: `Like ${track.title}`, exact: true }).click();
-  await expect(lateRow.getByRole('button', { name: `Unlike ${track.title}`, exact: true })).toHaveAttribute('aria-pressed', 'true');
+  if (isMobile) {
+    // The shipped compact mobile row exposes save through its context menu.
+    await lateRow.getByRole('button', { name: `More actions for ${track.title}`, exact: true }).click();
+    await page.getByRole('menuitem', { name: 'Like track', exact: true }).click();
+  } else {
+    await lateRow.getByRole('button', { name: `Like ${track.title}`, exact: true }).click();
+  }
+  await expect(lateRow.getByRole('button', { name: `Unlike ${track.title}`, exact: true, includeHidden: isMobile })).toHaveAttribute('aria-pressed', 'true');
   const liked = await page.request.get(`${API_BASE}/me/liked-tracks`);
   expect(liked.ok()).toBe(true);
   expect((await liked.json()).data.some(item => item.id === trackId)).toBe(true);

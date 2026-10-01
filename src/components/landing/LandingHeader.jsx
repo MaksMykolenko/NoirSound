@@ -72,7 +72,8 @@ export default function LandingHeader({ motion }) {
 
   const containFocus = (event) => {
     if (event.key !== 'Tab') return;
-    const controls = [...event.currentTarget.querySelectorAll('button:not([disabled]), a[href], select')];
+    const controls = [...event.currentTarget.querySelectorAll('button:not([disabled]), a[href], select')]
+      .filter(control => control.tabIndex >= 0 && control.getClientRects().length > 0);
     const first = controls[0];
     const last = controls.at(-1);
     if (event.shiftKey && document.activeElement === first) {

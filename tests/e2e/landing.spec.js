@@ -167,7 +167,7 @@ test('showcase playback survives landing, Discover, track and Home navigation wi
   await queueButton.click();
   const queue = page.getByRole('dialog', { name: 'Play Queue' });
   await expect(queue).toBeVisible();
-  await expect(queue.getByRole('button', { name: `Play ${target.title}`, exact: true })).toBeVisible();
+  await expect(queue.getByRole('button', { name: `Pause ${target.title}`, exact: true })).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(queue).toBeHidden();
   await expect(queueButton).toBeFocused();
@@ -270,6 +270,6 @@ test('saved landing locales preserve authored titles and app theme, and metadata
   await expect(page.locator('meta[property="og:type"]')).toHaveAttribute('content', 'website');
   await expect(page.locator('meta[property="og:title"]')).toHaveCount(1);
   await expect(page.locator('meta[name="description"]')).toHaveCount(1);
-  await page.getByRole('contentinfo').getByRole('link', { name: 'Privacy', exact: true }).click();
+  await page.locator('footer').getByRole('link', { name: 'Privacy', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Privacy Policy', exact: true })).toBeVisible();
 });

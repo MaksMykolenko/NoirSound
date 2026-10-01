@@ -137,7 +137,7 @@ jobs:
           npm ci --prefix backend
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
-      - name: Run 86 open-mode and 8 closed-mode functional cases with isolated services
+      - name: Run 88 open-mode and 8 closed-mode functional cases with isolated services
         run: node scripts/run-integration.mjs e2e
       - uses: actions/upload-artifact@v4
         if: always()
