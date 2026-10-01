@@ -1,6 +1,13 @@
 # External music Beta
 
-The private route is `/external-music`; details use `/external-music/<recording-id>`.
+Imported tracks use the normal `/track/<track-id>` page, Home/Discover catalogue,
+likes and private playlist rows, with a compact platform icon. Source administration
+remains at `/external-music/<recording-id>` and imports at `/external-music`.
+The unified catalogue extension is private: the server derives the curator scope
+from the current owner session, allowlist, environment and persisted beta gate.
+Guests and listeners still see only the ordinary public native catalogue.
+Catalogue counts/facets/cursors use that same scope; cursors cannot cross owners
+or survive a change to public scope. Merge members do not become duplicate cards.
 It uses NoirSound's existing global player, TrackLike and private PlaylistTrack
 relations. A Track bridge with `catalogScope=EXTERNAL_BETA`, `isPublic=false`
 and the importing administrator as curator preserves the legacy required artist
@@ -27,9 +34,17 @@ a provider CDN origin change requires review and a CSP update.
 SoundCloud, Apple Music and YouTube support official visible players through
 `GET /api/external-catalog/embed?provider=...&url=...`. The same administrator
 allowlist, environment gate and persisted beta switch protect this endpoint.
-Paste a public track/video link in “Listen by link”, or open a saved source's
-player. The server only validates and canonicalizes the URL; it performs no
-third-party fetch and creates no catalog rows. Search/import remain Audius-only.
+Select a platform in “Add a track by link” and provide the public recording URL,
+permitted title/artist metadata, provenance and audit reason. The existing
+`POST /recordings` endpoint validates the URL and atomically saves a private Track
+bridge and its origin; repeated canonical URLs return the existing recording.
+No provider metadata is guessed or scraped. Audius alone provides automatic
+search/metadata import; no new provider credentials are invented.
+Saved confirmed SoundCloud/Apple Music/YouTube sources resolve official embeds
+through the same recording/source playback endpoint used by ordinary cards.
+Manual links attached to an existing recording remain unplayable as matched
+recordings until confirmation with evidence. Spotify remains a source link.
+The standalone embed resolver performs no third-party fetch and writes no rows.
 
 The existing global player owns one active platform frame. Opening one pauses
 and clears the native/Audius audio source; switching back synchronously blanks
@@ -39,7 +54,7 @@ and on window focus. YouTube remains visible with controls and a viewport of
 at least 200 by 200 pixels. Controls live in the official player; no fictional
 NoirSound progress, playback state, queue entries or listen statistics are emitted.
 
-Apple Music supports a 30-second preview without sign-in; full listening depends
+Apple Music supports a preview without sign-in; full listening depends
 on the platform account/subscription. SoundCloud and YouTube honor publisher,
 region and embed restrictions; the original-platform link stays available.
 Opening a widget explicitly connects to that platform, which may use cookies.
@@ -50,9 +65,10 @@ remains `default-src 'none'; frame-ancestors 'none'`.
 Spotify stays LINK_OUT_ONLY: its widget terms Section IV.2.f prohibit integrating
 Spotify with streams from another service. No Spotify widget/SDK/catalog content
 is incorporated into this multi-platform player. Existing source links, matching
-verification and private catalog relations are preserved. Stored LINK_OUT rows
-remain links; an explicit separate widget action is available for supported
-providers and does not assert that an unverified source is the same recording.
+verification and private catalog relations are preserved. Stored source modes remain intact; the normal track view advertises
+OFFICIAL_EMBED only for supported, confirmed, non-rejected available/unknown
+sources. Embeds remain outside audio queues/native play statistics. Source
+icons describe provenance, never a claim of official artist verification.
 
 References reviewed 2026-10-01:
 - https://docs.audius.co/sdk/

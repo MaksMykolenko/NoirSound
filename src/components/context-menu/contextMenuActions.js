@@ -26,6 +26,8 @@ import {
   Flag,
 } from 'lucide-react';
 
+import { canPlayTrack, canQueueTrack } from '../../utils/trackPlayback';
+
 export const menuSeparator = (id) => ({ id, type: 'separator' });
 const text = (t, key, fallback, options = {}) => (
   t ? t(key, { defaultValue: fallback, ...options }) : fallback
@@ -65,7 +67,7 @@ export function buildTrackContextActions({
   t,
 }) {
   if (!track) return [];
-  const canPlay = track.isStreamable ?? Boolean(track.audioUrl);
+  const canPlay = canPlayTrack(track);
   const isBeat = track.contentType === 'BEAT';
   const isCurrent = player.currentTrack?.id === track.id;
   const isLiked = (player.likedTracks || []).includes(track.id);
@@ -80,13 +82,13 @@ export function buildTrackContextActions({
           : text(t, 'contextMenu.play', 'Play'),
       icon: isCurrent && player.isPlaying ? Pause : Play,
       disabled: !canPlay || typeof player.playNext !== 'function',
-      onSelect: () => (isCurrent ? player.togglePlay() : player.playTrack(track)),
+      onSelect: () => (isCurrent && track.playbackMode !== 'OFFICIAL_EMBED' ? player.togglePlay() : player.playTrack(track)),
     },
     {
       id: 'track-play-next',
       label: text(t, 'contextMenu.playNext', 'Play next'),
       icon: ListEnd,
-      disabled: !canPlay,
+      disabled: !canQueueTrack(track),
       onSelect: () => player.playNext?.(track),
     },
     {
@@ -95,7 +97,7 @@ export function buildTrackContextActions({
         ? text(t, 'contextMenu.alreadyInQueue', 'Already in queue')
         : text(t, 'contextMenu.addToQueue', 'Add to queue'),
       icon: ArrowDownToLine,
-      disabled: !canPlay || inQueue,
+      disabled: !canQueueTrack(track) || inQueue,
       checked: inQueue,
       onSelect: () => player.addToQueue?.(track),
     },

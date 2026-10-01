@@ -1,5 +1,6 @@
 import { playerTrackHref, playerArtistLabel } from '../../utils/playerTrackPresentation';
 import { TrackSaveIcon } from '../tracks/TrackVisuals';
+import TrackSourceIcon from '../tracks/TrackSourceIcon';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
@@ -142,7 +143,7 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
                     {currentTrack.title}
                   </Link>
                 </h5>
-                <p title={currentTrack.artistName} className="text-ns-label text-zinc-400 truncate mt-0.5 font-medium">{playerArtistLabel(currentTrack)}</p>
+                <p title={currentTrack.artistName} className="text-ns-label text-zinc-400 truncate mt-0.5 font-medium">{playerArtistLabel(currentTrack)} <TrackSourceIcon track={currentTrack} /></p>
               </div>
               <div className="flex items-center space-x-2 shrink-0">
                 {lyricsAvailable && (
@@ -312,7 +313,7 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
                   {playbackError ? (
                     <PlaybackErrorStatus error={playbackError} className="mt-0.5" />
                   ) : (
-                    <p title={currentTrack.artistName} className="text-ns-label text-zinc-400 truncate mt-0.5 font-medium">{playerArtistLabel(currentTrack)}</p>
+                    <p title={currentTrack.artistName} className="text-ns-label text-zinc-400 truncate mt-0.5 font-medium">{playerArtistLabel(currentTrack)} <TrackSourceIcon track={currentTrack} /></p>
                   )}
                 </div>
               </div>
@@ -438,7 +439,7 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
                     {currentTrack.title}
                   </Link>
                 </h2>
-                <p title={currentTrack.artistName} className="mt-1 truncate text-sm font-medium text-zinc-400">{playerArtistLabel(currentTrack)}</p>
+                <p title={currentTrack.artistName} className="mt-1 truncate text-sm font-medium text-zinc-400">{playerArtistLabel(currentTrack)} <TrackSourceIcon track={currentTrack} /></p>
                 <PlaybackErrorStatus error={playbackError} className="mt-1" />
               </div>
               <button

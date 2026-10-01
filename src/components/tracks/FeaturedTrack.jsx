@@ -1,4 +1,6 @@
 import React from 'react';
+import TrackSourceIcon from './TrackSourceIcon';
+import { canPlayTrack } from '../../utils/trackPlayback';
 import { Link } from 'react-router-dom';
 import { Play, Pause, MoreHorizontal, ArrowRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -18,10 +20,10 @@ export default function FeaturedTrack({ track, tracksContext = [], compact = fal
   const active = currentTrack?.id === track.id;
   const playing = active && isPlaying;
   const saved = likedTracks.includes(track.id);
-  const canPlay = track.isAvailable !== false && (track.isStreamable ?? Boolean(track.audioUrl));
+  const canPlay = canPlayTrack(track);
   const handlePlay = () => {
     if (!canPlay) return;
-    if (active) togglePlay();
+    if (active && track.playbackMode !== 'OFFICIAL_EMBED') togglePlay();
     else playTrack(track, tracksContext.length ? tracksContext : [track]);
   };
 
@@ -40,7 +42,8 @@ export default function FeaturedTrack({ track, tracksContext = [], compact = fal
           onKeyDown={contextMenuProps.onKeyDown}>{track.title}</Link></h2>
         <div className="ns-media-byline">
           <TrackTypeBadge track={track} />
-          <Link to={`/artist/${track.artistId}`} title={track.artistName}>{track.artistName}</Link>
+          <TrackSourceIcon track={track} />
+          {track.artistId ? <Link to={`/artist/${track.artistId}`} title={track.artistName}>{track.artistName}</Link> : <span>{track.artistName}</span>}
           <span>·</span><span>{formatDuration(track.duration)}</span>
         </div>
         <BeatMetadataInline track={track} limit={2} />

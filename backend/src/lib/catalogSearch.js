@@ -5,6 +5,7 @@ const { Prisma } = require('@prisma/client');
 const { MUSIC_GENRES, GENRE_GROUPS, GROUP_LABELS, getGenresByGroup, getGroupOf, getGenreFilterValues, normalizeGenre } = require('../constants/musicGenres');
 const { normalizeBeatKey, publicBeatMetadata } = require('./beatMetadata');
 const { publicTrackSql } = require('./publicVisibility');
+const { includeRecording, recordingView } = require('./externalCatalog');
 
 const SORTS = Object.freeze(['recent', 'played', 'liked', 'trending']);
 const BPM_RANGES = Object.freeze({ 'under-90': [40, 89], '90-119': [90, 119], '120-149': [120, 149], '150-plus': [150, 240] });
@@ -65,7 +66,7 @@ function queryFingerprint(filters) {
   return createHash('sha256').update(JSON.stringify([
     filters.q?.toLowerCase() || null, filters.contentType, filters.genre, filters.group,
     filters.style?.toLowerCase() || null, filters.mood?.toLowerCase() || null,
-    filters.key, filters.bpmMin, filters.bpmMax, filters.sort,
+    filters.key, filters.bpmMin, filters.bpmMax, filters.sort, filters.externalUserId || null,
   ])).digest('hex');
 }
 
@@ -94,7 +95,13 @@ function escapedContains(value) {
 }
 
 function catalogWhere(filters, omit = null) {
-  const parts = [publicTrackSql()];
+  const visibility = filters.externalUserId ? Prisma.sql`(${publicTrackSql()} OR (
+    t."catalogScope" = 'EXTERNAL_BETA' AND t.status = 'PUBLISHED' AND t."isPublic" = false
+    AND EXISTS (SELECT 1 FROM "ExternalRecording" er WHERE er."trackId" = t.id
+      AND er."curatorId" = ${filters.externalUserId} AND er."mergedIntoId" IS NULL
+      AND (er."metadataExpiresAt" IS NULL OR er."metadataExpiresAt" > CURRENT_TIMESTAMP))
+  ))` : publicTrackSql();
+  const parts = [visibility];
   if (filters.contentType) parts.push(Prisma.sql`t."contentType" = ${filters.contentType}::"TrackContentType"`);
   if (filters.q) {
     const pattern = escapedContains(filters.q);
@@ -105,7 +112,7 @@ function catalogWhere(filters, omit = null) {
       .some(value => value.normalize('NFC').replace(/\s+/gu, ' ').toLowerCase().includes(filters.q.toLowerCase())))
       .map(item => item.key);
     const genreMatch = searchGenres.length ? Prisma.sql`OR lower(t.genre) IN (${Prisma.join(getGenreFilterValues(searchGenres))})` : Prisma.empty;
-    parts.push(Prisma.sql`(t.title ILIKE ${pattern} OR u."displayName" ILIKE ${pattern} OR u.username ILIKE ${pattern}
+    parts.push(Prisma.sql`(t.title ILIKE ${pattern} OR (t."catalogScope" = 'NATIVE' AND (u."displayName" ILIKE ${pattern} OR u.username ILIKE ${pattern}))
       OR t."primaryArtistName" ILIKE ${pattern} OR t."beatStyle" ILIKE ${pattern} OR t."beatMood" ILIKE ${pattern}
       OR t.genre ILIKE ${pattern}
       OR EXISTS (SELECT 1 FROM unnest(t.tags) AS tag WHERE tag ILIKE ${pattern})
@@ -132,10 +139,11 @@ function rankSql(sort) {
   return Prisma.sql`0`;
 }
 
-function dateAfterCursor(cursor) {
-  if (cursor.date === null) return Prisma.sql`(t."publishedAt" IS NULL AND t.id > ${cursor.id})`;
+const catalogDate = filters => filters.externalUserId ? Prisma.sql`(CASE WHEN t."catalogScope" = 'EXTERNAL_BETA' THEN t."createdAt" ELSE t."publishedAt" END)` : Prisma.sql`t."publishedAt"`;
+function dateAfterCursor(cursor, filters) {
+  if (cursor.date === null) return Prisma.sql`(${catalogDate(filters)} IS NULL AND t.id > ${cursor.id})`;
   const date = new Date(cursor.date);
-  return Prisma.sql`(t."publishedAt" < ${date} OR t."publishedAt" IS NULL OR (t."publishedAt" = ${date} AND t.id > ${cursor.id}))`;
+  return Prisma.sql`(${catalogDate(filters)} < ${date} OR ${catalogDate(filters)} IS NULL OR (${catalogDate(filters)} = ${date} AND t.id > ${cursor.id}))`;
 }
 
 function catalogPageQuery(filters, cursor, asOf) {
@@ -145,10 +153,10 @@ function catalogPageQuery(filters, cursor, asOf) {
     WHERE p.qualified = true AND p."createdAt" >= ${new Date(asOf.getTime() - WEEK_MS)} AND p."createdAt" <= ${asOf}
     GROUP BY p."trackId"
   ) weekly ON weekly."trackId" = t.id` : Prisma.empty;
-  const after = !cursor ? Prisma.empty : Prisma.sql`AND ${filters.sort === 'recent' ? dateAfterCursor(cursor) : Prisma.sql`(${rank} < ${cursor.rank} OR (${rank} = ${cursor.rank} AND ${dateAfterCursor(cursor)}))`}`;
-  const order = filters.sort === 'recent' ? Prisma.sql`t."publishedAt" DESC NULLS LAST, t.id ASC` : Prisma.sql`${rank} DESC, t."publishedAt" DESC NULLS LAST, t.id ASC`;
+  const after = !cursor ? Prisma.empty : Prisma.sql`AND ${filters.sort === 'recent' ? dateAfterCursor(cursor, filters) : Prisma.sql`(${rank} < ${cursor.rank} OR (${rank} = ${cursor.rank} AND ${dateAfterCursor(cursor, filters)}))`}`;
+  const order = filters.sort === 'recent' ? Prisma.sql`${catalogDate(filters)} DESC NULLS LAST, t.id ASC` : Prisma.sql`${rank} DESC, ${catalogDate(filters)} DESC NULLS LAST, t.id ASC`;
   return Prisma.sql`SELECT t.id, t.title, t.slug, t."artistId", t."coverUrl", t.genre, t.tags,
-    t.duration, t."durationSeconds", t.plays, t.likes, t."releaseDate", t."createdAt", t."publishedAt", t.status,
+    t.duration, t."durationSeconds", t.plays, t.likes, t."releaseDate", t."createdAt", ${catalogDate(filters)} AS "publishedAt", t."catalogScope", t.status,
     t."primaryArtistName", t."featuredArtists", t.explicit, t."contentType", t."beatBpm", t."beatKey", t."beatStyle", t."beatMood", t."beatLicenseType", t."beatContactEnabled",
     (t."coverImageKey" IS NOT NULL AND t."coverImageKey" <> '') AS "hasCoverImage",
     (t."processedAudioKey" IS NOT NULL AND t."processedAudioKey" <> '') AS "isStreamable",
@@ -227,8 +235,11 @@ async function searchCatalog(prisma, filters, decoded) {
     ]);
     const hasNextPage = rows.length > filters.limit;
     const items = rows.slice(0, filters.limit);
+    const externalIds = items.filter(row => row.catalogScope === 'EXTERNAL_BETA').map(row => row.id);
+    const recordings = externalIds.length ? await tx.externalRecording.findMany({where:{trackId:{in:externalIds},curatorId:filters.externalUserId,mergedIntoId:null},include:includeRecording}) : [];
+    const external = new Map(recordings.map(record => [record.trackId, recordingView(record)]));
     return {
-      items: items.map(serializeCatalogTrack), total: totalRows[0].total,
+      items: items.map(row => external.has(row.id) ? {...serializeCatalogTrack(row), ...external.get(row.id), artist:null} : serializeCatalogTrack(row)), total: totalRows[0].total,
       pageInfo: { nextCursor: hasNextPage ? encodeCatalogCursor(filters, items[items.length - 1], decoded.asOf) : null, hasNextPage, pageSize: filters.limit },
       facets: buildFacets(facetRows),
       meta: { sort: filters.sort, ...(filters.sort === 'trending' ? { trendingWindowDays: 7 } : {}), rankingAsOf: decoded.asOf.toISOString() },

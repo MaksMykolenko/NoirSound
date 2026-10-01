@@ -22,7 +22,7 @@ export default function AddToPlaylistModal({ track, onClose }) {
     setLoading(true);
     getMyPlaylists()
       .then((data) => {
-        if (active) setPlaylists(data.filter((playlist) => playlist.isOwner || playlist.canEdit));
+        if (active) setPlaylists(data.filter((playlist) => (playlist.isOwner || playlist.canEdit) && (track.playbackSource !== 'external' || !playlist.isPublic)));
       })
       .catch((requestError) => {
         if (active) setError(requestError.message || 'Playlists could not be loaded.');
@@ -31,7 +31,7 @@ export default function AddToPlaylistModal({ track, onClose }) {
         if (active) setLoading(false);
       });
     return () => { active = false; };
-  }, []);
+  }, [track.playbackSource]);
 
   const addTrack = async (playlist) => {
     setError('');

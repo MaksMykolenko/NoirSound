@@ -2,47 +2,28 @@ import React, { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Play, Pause, Plus, ExternalLink, Heart } from 'lucide-react';
+import { Plus, ExternalLink, Heart } from 'lucide-react';
 import { catalogRequest, catalogMutation } from '../api/externalCatalog';
 import { useUserStore } from '../store/userStore';
 import { usePlayerStore } from '../store/playerStore';
 import { getMyPlaylists, addTrackToPlaylist } from '../api/playlists';
-import FallbackCover from '../components/ui/FallbackCover';
+import TrackCard from '../components/tracks/TrackCard';
 const PROVIDERS=['AUDIUS','SPOTIFY','SOUNDCLOUD','APPLE_MUSIC','YOUTUBE'];
 const VERSIONS=['UNKNOWN','ORIGINAL','REMIX','LIVE','ACOUSTIC','INSTRUMENTAL','RADIO_EDIT','CLEAN','EXPLICIT','NIGHTCORE','SPED_UP','SLOWED','OTHER'];
 const field='w-full rounded border border-[var(--ns-border-subtle)] bg-[var(--ns-surface)] p-2 text-sm';
 const button='inline-flex items-center justify-center gap-2 rounded border border-[var(--ns-border-subtle)] px-3 py-2 text-sm hover:bg-[var(--ns-surface-raised)] disabled:opacity-40';
 const EMBED_PROVIDERS=['SOUNDCLOUD','APPLE_MUSIC','YOUTUBE'];
-function PlatformPlayerForm() {
-  const {t}=useTranslation();const [provider,setProvider]=useState('YOUTUBE'),[url,setUrl]=useState('');
-  const open=usePlayerStore(s=>s.openPlatformEmbed);
-  const request=useMutation({mutationFn:()=>open(provider,url.trim())});
-  return <section className="space-y-3 rounded border border-[var(--ns-border-subtle)] p-4" aria-label={t('externalMusic.listenByLink')}>
-    <h2 className="font-semibold">{t('externalMusic.listenByLink')}</h2><p className="text-sm text-[var(--ns-text-muted)]">{t('externalMusic.platformsNote')}</p>
-    <form className="flex flex-wrap gap-2" onSubmit={e=>{e.preventDefault();request.mutate();}}>
-      <select aria-label={t('externalMusic.playerProvider')} className={`${field} sm:max-w-44`} value={provider} onChange={e=>setProvider(e.target.value)}>{EMBED_PROVIDERS.map(p=><option key={p}>{p}</option>)}</select>
-      <input aria-label={t('externalMusic.playerUrl')} className={`${field} min-w-0 sm:flex-1`} value={url} onChange={e=>setUrl(e.target.value)} placeholder="https://…" type="url" maxLength={1000} required/>
-      <button className={button} disabled={request.isPending}>{t('externalMusic.openPlayer')}</button>
-    </form>{request.error&&request.error.name!=='AbortError'&&<p role="alert" className="text-sm text-rose-400">{t('externalMusic.error')} · {request.error.code || request.error.message}</p>}
-  </section>;
-}
 function PlatformSourceButton({source}) {
   const {t}=useTranslation();const open=usePlayerStore(s=>s.openPlatformEmbed);
   const request=useMutation({mutationFn:()=>open(source.provider,source.canonicalUrl)});
   return <><button className={button} disabled={request.isPending||source.matchStatus==='REJECTED'||source.officialStatus==='REJECTED'} onClick={()=>request.mutate()}>{t('externalMusic.openPlayer')}</button>{request.error&&request.error.name!=='AbortError'&&<span role="alert" className="text-sm text-rose-400">{t('externalMusic.error')} · {request.error.code || request.error.message}</span>}</>;
 }
 function MusicCard({track,onImport,busy}) {
-  const {t}=useTranslation();const playTrack=usePlayerStore(s=>s.playTrack),pause=usePlayerStore(s=>s.pause),current=usePlayerStore(s=>s.currentTrack),playing=usePlayerStore(s=>s.isPlaying),loading=usePlayerStore(s=>s.playbackLoading);
-  const active=current?.id===track.id;
-  return <article className="flex min-w-0 gap-3 rounded border border-[var(--ns-border-subtle)] bg-[var(--ns-surface)] p-3" data-testid="external-result">
-    <FallbackCover src={track.coverUrl} title={track.title} artistName={track.artistName} className="h-16 w-16 shrink-0 rounded" />
-    <div className="min-w-0 flex-1"><h2 className="truncate font-semibold">{track.recordingId?<Link to={`/external-music/${track.recordingId}`}>{track.title}</Link>:track.title}</h2><p className="truncate text-sm text-[var(--ns-text-muted)]">{track.artistName} · {track.provider || 'Audius'}</p><p className="text-xs text-[var(--ns-text-muted)]">{t(`externalMusic.versions.${track.versionType || 'UNKNOWN'}`)} · {t('externalMusic.unverified')}</p>
-      <div className="mt-2 flex flex-wrap gap-2"><button className={button} disabled={!track.isStreamable || busy || (active&&loading)} onClick={()=>active&&playing?pause():playTrack(track,[track],'external-catalog')} aria-label={t(active&&playing?'externalMusic.pause':'externalMusic.play')}>{active&&playing?<Pause size={16}/>:<Play size={16}/>} {active&&loading?t('externalMusic.loading'):t(active&&playing?'externalMusic.pause':track.isStreamable?'externalMusic.play':'externalMusic.unavailable')}</button>
-      {!track.recordingId&&<button className={button} onClick={()=>onImport(track)} disabled={busy || !track.isStreamable}><Plus size={16}/>{t('externalMusic.add')}</button>}
-      {track.canonicalUrl&&<a className={button} href={track.canonicalUrl} target="_blank" rel="noopener noreferrer"><ExternalLink size={16}/>Audius</a>}</div>
-      {track.otherVersions?.length>0&&<details className="mt-2"><summary className="cursor-pointer text-sm">{t('externalMusic.otherVersions')}</summary>{track.otherVersions.map(v=><Link key={v.recordingId} className="block py-1 text-sm underline" to={`/external-music/${v.recordingId}`}>{v.title}</Link>)}</details>}
-    </div>
-  </article>;
+  const {t}=useTranslation();
+  return <div data-testid="external-result" className="min-w-0">
+    <TrackCard track={track} tracksContext={[track]} queueSource="external-catalog" />
+    {!track.recordingId&&<button className={`${button} mt-2 w-full`} onClick={()=>onImport(track)} disabled={busy || !track.isStreamable}><Plus size={16}/>{t('externalMusic.add')}</button>}
+  </div>;
 }
 function SourceEditor({source,run,pending}) {
   const {t}=useTranslation();const [url,setUrl]=useState(source.canonicalUrl),[match,setMatch]=useState(source.matchStatus),[official,setOfficial]=useState(source.officialStatus),[primary,setPrimary]=useState(source.isPrimary),[evidence,setEvidence]=useState(''),[reason,setReason]=useState('');
@@ -62,8 +43,8 @@ function RecordingDetail({recording,versions,audit,records,run,pending}) {
   return <div className="space-y-5">
     <Link className="text-sm underline" to="/external-music">{t('externalMusic.back')}</Link>
     <MusicCard track={recording} busy={pending}/>
-    <div className="flex flex-wrap gap-2"><button className={button} onClick={()=>toggleLike(recording.id)} disabled={!recording.isStreamable}><Heart size={16} fill={likes.includes(recording.id)?'currentColor':'none'}/>{t('externalMusic.like')}</button>
-      <select aria-label={t('externalMusic.playlist')} className={`${field} max-w-xs`} value={playlistId} onChange={e=>setPlaylist(e.target.value)}><option value="">{t('externalMusic.playlist')}</option>{playlists.data?.filter(p=>!p.isPublic).map(p=><option key={p.id} value={p.id}>{p.name || p.title}</option>)}</select><button className={button} disabled={!playlistId||!recording.isStreamable||pending} onClick={()=>run(null,{playlistId,trackId:recording.id})}>{t('externalMusic.add')}</button>
+    <div className="flex flex-wrap gap-2"><button className={button} onClick={()=>toggleLike(recording.id)} disabled={!recording.canSave}><Heart size={16} fill={likes.includes(recording.id)?'currentColor':'none'}/>{t('externalMusic.like')}</button>
+      <select aria-label={t('externalMusic.playlist')} className={`${field} max-w-xs`} value={playlistId} onChange={e=>setPlaylist(e.target.value)}><option value="">{t('externalMusic.playlist')}</option>{playlists.data?.filter(p=>!p.isPublic).map(p=><option key={p.id} value={p.id}>{p.name || p.title}</option>)}</select><button className={button} disabled={!playlistId||!recording.canSave||pending} onClick={()=>run(null,{playlistId,trackId:recording.id})}>{t('externalMusic.add')}</button>
     </div>
     <p className="text-sm text-[var(--ns-text-muted)]">{t('externalMusic.linkOutNote')}</p>
     <section className="space-y-3" aria-label={t('externalMusic.sources')}><h2 className="font-semibold">{t('externalMusic.sources')}</h2>{recording.sources.map(s=><div key={s.id} className="rounded border border-[var(--ns-border-subtle)] p-3">
@@ -89,8 +70,10 @@ function RecordingDetail({recording,versions,audit,records,run,pending}) {
   </div>;
 }
 function NewRecording({run,pending}) {
-  const {t}=useTranslation();const [title,setTitle]=useState(''),[artistName,setArtist]=useState(''),[provenance,setProvenance]=useState(''),[nativeTrackId,setNative]=useState(''),[reason,setReason]=useState('');
-  return <details><summary className="cursor-pointer font-semibold">{t('externalMusic.createRecord')}</summary><form className="mt-3 grid gap-2 sm:grid-cols-2" onSubmit={e=>{e.preventDefault();run('/recordings',nativeTrackId?{nativeTrackId,reason}:{title,artistName,provenance,reason});}}>
+  const {t}=useTranslation();const [provider,setProvider]=useState('SOUNDCLOUD'),[url,setUrl]=useState('');
+  const [title,setTitle]=useState(''),[artistName,setArtist]=useState(''),[provenance,setProvenance]=useState(''),[nativeTrackId,setNative]=useState(''),[reason,setReason]=useState('');
+  return <details open><summary className="cursor-pointer font-semibold">{t('externalMusic.createRecord')}</summary><form className="mt-3 grid gap-2 sm:grid-cols-2" onSubmit={e=>{e.preventDefault();run('/recordings',nativeTrackId?{nativeTrackId,reason}:{title,artistName,provenance,reason,...(url?{provider,url}: {})});}}>
+    {!nativeTrackId&&<><select aria-label={t('externalMusic.provider')} className={field} value={provider} onChange={e=>setProvider(e.target.value)}>{PROVIDERS.slice(1).map(p=><option key={p}>{p}</option>)}</select><input className={field} aria-label={t('externalMusic.playerUrl')} placeholder="https://…" value={url} onChange={e=>setUrl(e.target.value)} type="url" maxLength={1000} required/></>}
     <input className={field} aria-label={t('externalMusic.trackTitle')} placeholder={t('externalMusic.trackTitle')} value={title} onChange={e=>setTitle(e.target.value)} required={!nativeTrackId}/><input className={field} aria-label={t('externalMusic.artist')} placeholder={t('externalMusic.artist')} value={artistName} onChange={e=>setArtist(e.target.value)} required={!nativeTrackId}/>
     <input className={field} aria-label={t('externalMusic.provenance')} placeholder={t('externalMusic.provenance')} value={provenance} onChange={e=>setProvenance(e.target.value)} minLength={3} required={!nativeTrackId}/><input className={field} aria-label={t('externalMusic.nativeId')} placeholder={t('externalMusic.nativeId')} value={nativeTrackId} onChange={e=>setNative(e.target.value)}/>
     <input className={field} aria-label={t('externalMusic.reason')} placeholder={t('externalMusic.reason')} value={reason} onChange={e=>setReason(e.target.value)} minLength={3} required/><button className={button} disabled={pending}>{t('externalMusic.add')}</button>
@@ -104,7 +87,7 @@ export default function ExternalMusic() {
   const records=useQuery({queryKey:['external-recordings',user?.id],queryFn:({signal})=>catalogRequest('/recordings',{signal}),enabled,retry:false});
   const search=useQuery({queryKey:['external-search',user?.id,q,offset],queryFn:({signal})=>catalogRequest('/search?'+new URLSearchParams({q,offset:String(offset),limit:'20'}),{signal}),enabled:enabled&&Boolean(q),retry:false,staleTime:0,gcTime:60000});
   const detail=useQuery({queryKey:['external-recording',user?.id,id],queryFn:({signal})=>catalogRequest(`/recordings/${encodeURIComponent(id)}`,{signal}),enabled:enabled&&Boolean(id),retry:false});
-  const mutation=useMutation({mutationFn:({path,body,method})=>path===null?addTrackToPlaylist(body.playlistId,body.trackId):catalogMutation(path,body,method),onSuccess:(result)=>{if(result?.enabled===false)usePlayerStore.getState().closePlatformEmbed();setNotice(t('externalMusic.saved'));client.invalidateQueries({queryKey:['external-recordings']});client.invalidateQueries({queryKey:['external-recording']});client.invalidateQueries({queryKey:['external-search']});client.invalidateQueries({queryKey:['external-status']});},onError:()=>setNotice('')});
+  const mutation=useMutation({mutationFn:({path,body,method})=>path===null?addTrackToPlaylist(body.playlistId,body.trackId):catalogMutation(path,body,method),onSuccess:(result)=>{if(result?.enabled===false)usePlayerStore.getState().closePlatformEmbed();setNotice(t('externalMusic.saved'));client.invalidateQueries({queryKey:['external-recordings']});client.invalidateQueries({queryKey:['external-recording']});client.invalidateQueries({queryKey:['external-search']});client.invalidateQueries({queryKey:['external-status']});client.removeQueries({queryKey:['tracks','catalog']});client.removeQueries({queryKey:['tracks','catalog-selection']});window.dispatchEvent(new CustomEvent('noirsound:playlists-changed'));},onError:()=>setNotice('')});
   const run=(path,body,method='POST')=>{setNotice('');mutation.mutate({path,body,method});};
   const error=mutation.error || detail.error || search.error || records.error || status.error;
   if(!hydrated)return <p role="status">{t('externalMusic.loading')}</p>;
@@ -118,10 +101,10 @@ export default function ExternalMusic() {
     {status.data&&!enabled&&<p role="status">{t('externalMusic.disabled')}</p>}
     {enabled&&id&&<>{detail.isPending?<p role="status">{t('externalMusic.loading')}</p>:detail.data&&<RecordingDetail key={detail.data.recording.recordingId} {...detail.data} records={records.data?.items || []} run={run} pending={mutation.isPending}/>}</>}
     {enabled&&!id&&<>
-      <PlatformPlayerForm/>
+
       <form role="search" className="flex gap-2" onSubmit={e=>{e.preventDefault();setQuery(input.trim());setOffset(0);}}><input aria-label={t('externalMusic.search')} className={field} placeholder={t('externalMusic.searchPlaceholder')} value={input} onChange={e=>setInput(e.target.value)} maxLength={200} required/><button className={button}>{t('externalMusic.search')}</button></form>
-      {q&&<section className="space-y-3" aria-label={t('externalMusic.results')}><h2 className="font-semibold">{t('externalMusic.results')}</h2>{search.isFetching&&<p role="status">{t('externalMusic.loading')}</p>}{search.data?.items.length===0&&<p>{t('externalMusic.empty')}</p>}<div className="grid gap-3 xl:grid-cols-2">{search.data?.items.map(track=><MusicCard key={track.id} track={track} busy={mutation.isPending} onImport={t=>run('/import',{externalId:t.externalId})}/>)}</div><div className="flex gap-2"><button className={button} disabled={offset===0||search.isFetching} onClick={()=>setOffset(Math.max(0,offset-20))}>{t('externalMusic.previous')}</button><button className={button} disabled={!search.data?.pageInfo.hasNextPage||search.isFetching} onClick={()=>setOffset(offset+20)}>{t('externalMusic.next')}</button></div></section>}
-      <section className="space-y-3"><h2 className="font-semibold">{t('externalMusic.catalog')}</h2>{records.isPending&&<p role="status">{t('externalMusic.loading')}</p>}{records.data?.items.length===0&&<p>{t('externalMusic.emptyCatalog')}</p>}<div className="grid gap-3 xl:grid-cols-2">{records.data?.items.map(track=><MusicCard key={track.id} track={track} busy={mutation.isPending}/>)}</div></section><NewRecording run={run} pending={mutation.isPending}/>
+      {q&&<section className="space-y-3" aria-label={t('externalMusic.results')}><h2 className="font-semibold">{t('externalMusic.results')}</h2>{search.isFetching&&<p role="status">{t('externalMusic.loading')}</p>}{search.data?.items.length===0&&<p>{t('externalMusic.empty')}</p>}<div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">{search.data?.items.map(track=><MusicCard key={track.id} track={track} busy={mutation.isPending} onImport={t=>run('/import',{externalId:t.externalId})}/>)}</div><div className="flex gap-2"><button className={button} disabled={offset===0||search.isFetching} onClick={()=>setOffset(Math.max(0,offset-20))}>{t('externalMusic.previous')}</button><button className={button} disabled={!search.data?.pageInfo.hasNextPage||search.isFetching} onClick={()=>setOffset(offset+20)}>{t('externalMusic.next')}</button></div></section>}
+      <section className="space-y-3"><h2 className="font-semibold">{t('externalMusic.catalog')}</h2>{records.isPending&&<p role="status">{t('externalMusic.loading')}</p>}{records.data?.items.length===0&&<p>{t('externalMusic.emptyCatalog')}</p>}<div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">{records.data?.items.map(track=><MusicCard key={track.id} track={track} busy={mutation.isPending}/>)}</div></section><NewRecording run={run} pending={mutation.isPending}/>
     </>}
     {status.data&&<form className="flex flex-wrap gap-2 border-t border-[var(--ns-border-subtle)] pt-4" onSubmit={e=>{e.preventDefault();const reason=new FormData(e.currentTarget).get('reason');run('/settings',{enabled:!status.data.enabled,reason},'PATCH');}}><input name="reason" aria-label={t('externalMusic.reason')} className={`${field} max-w-sm`} placeholder={t('externalMusic.reason')} minLength={3} maxLength={1000} required/><button className={button} disabled={mutation.isPending}>{t(status.data.enabled?'externalMusic.disable':'externalMusic.enable')}</button></form>}
   </div>;

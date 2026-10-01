@@ -6,6 +6,21 @@ const {createAudiusAdapter}=provider;
 const sample={id:'D7KyD',title:'Test fixture',permalink:'/fixture/test-fixture',duration:120,user:{name:'Fixture artist'},is_streamable:true,is_available:true,is_delete:false,is_unlisted:false,is_stream_gated:false,allowed_api_keys:[]};
 const response=d=>new Response(JSON.stringify({data:d}),{headers:{'content-type':'application/json'}});
 const rec=(id,version='UNKNOWN')=>({id,trackId:id,versionType:version,track:{catalogScope:'EXTERNAL_BETA',title:'Fixture title',primaryArtistName:'Fixture artist',durationSeconds:120,explicit:false},sources:[],members:[]});
+describe('ordinary external track capabilities',()=>{
+ it.each(['SOUNDCLOUD','APPLE_MUSIC','YOUTUBE'])('confirmed %s links use official controls without advertising a stream',provider=>{
+  const a=rec('embed');a.sources=[{id:'source',provider,playbackMode:'LINK_OUT',availability:'UNKNOWN',matchStatus:'CONFIRMED',officialStatus:'UNVERIFIED'}];
+  expect(recordingView(a)).toMatchObject({artistId:null,provider,selectedSourceId:'source',playbackMode:'OFFICIAL_EMBED',isAvailable:true,isStreamable:false,canSave:true});
+ });
+ it.each(['UNVERIFIED','REJECTED'])('a %s match cannot become playable through an ordinary card',matchStatus=>{
+  const a=rec('embed');a.sources=[{provider:'YOUTUBE',playbackMode:'LINK_OUT',matchStatus,availability:'UNKNOWN'}];expect(recordingView(a).playbackMode).toBe('LINK_OUT');
+ });
+ it('Spotify retains its source and can be saved, without entering audio playback',()=>{
+  const a=rec('spotify');a.sources=[{provider:'SPOTIFY',playbackMode:'LINK_OUT',matchStatus:'CONFIRMED'}];expect(recordingView(a)).toMatchObject({provider:'SPOTIFY',canSave:true,isAvailable:true,isStreamable:false,playbackMode:'LINK_OUT'});
+ });
+ it('removed publications cannot become official embeds',()=>{
+  const a=rec('removed');a.sources=[{provider:'YOUTUBE',playbackMode:'LINK_OUT',matchStatus:'CONFIRMED',availability:'UNAVAILABLE'}];expect(recordingView(a).playbackMode).toBe('LINK_OUT');
+ });
+});
 describe('external catalog URL boundaries and conservative identity',()=>{
  it.each(['https://open.spotify.com.evil.test/track/1234567890123456789012','http://open.spotify.com/track/1234567890123456789012','https://user@open.spotify.com/track/1234567890123456789012','https://127.0.0.1/track/1234567890123456789012','https://open.spotify.com:444/track/1234567890123456789012','https://open.spotify.com/album/1234567890123456789012','https://open.spotify.com/track/%2e%2e'])('rejects unsafe/nonrecording URL %s',url=>expect(()=>platformUrl('SPOTIFY',url)).toThrow());
  it('canonicalizes YouTube aliases and drops tracking without fetching',()=>expect(platformUrl('YOUTUBE','https://youtu.be/abcdefghijk?si=tracker')).toEqual(platformUrl('YOUTUBE','https://www.youtube.com/watch?v=abcdefghijk&t=30')));

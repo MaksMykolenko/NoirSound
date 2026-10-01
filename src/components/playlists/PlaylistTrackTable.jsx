@@ -1,4 +1,6 @@
 import { TrackSaveIcon, TrackPlayingIndicator } from '../tracks/TrackVisuals';
+import TrackSourceIcon from '../tracks/TrackSourceIcon';
+import { canPlayTrack } from '../../utils/trackPlayback';
 import React, { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -71,7 +73,7 @@ function useRowContext(track) {
   const player = usePlayerStore();
   const isCurrent = player.currentTrack?.id === track.id;
   const isAvailable = track.isAvailable !== false;
-  const canPlay = isAvailable && (track.isStreamable ?? Boolean(track.audioUrl));
+  const canPlay = canPlayTrack(track);
   const isLiked = player.likedTracks.includes(track.id);
   return { player, isCurrent, isPlayingThis: isCurrent && player.isPlaying, isAvailable, canPlay, isLiked };
 }
@@ -97,7 +99,7 @@ function DesktopRow({
   const handlePlay = (event) => {
     event.stopPropagation();
     if (!canPlay) return;
-    if (isCurrent) player.togglePlay();
+    if (isCurrent && track.playbackMode !== 'OFFICIAL_EMBED') player.togglePlay();
     else player.playTrack(track, queueTracks.filter((item) => item.isAvailable !== false), source);
   };
   const albumInfo = albumCellInfo(track, t);
@@ -171,6 +173,7 @@ function DesktopRow({
                   {track.title}
                 </span>
                 <TrackTypeBadge track={track} />
+                <TrackSourceIcon track={track} />
                 {track.explicit && (
                   <span className="shrink-0 rounded border border-zinc-700 bg-zinc-800 px-1 text-ns-meta font-bold uppercase tracking-ns-label text-zinc-400">E</span>
                 )}
@@ -178,6 +181,7 @@ function DesktopRow({
               </Link>
               <button
                 type="button"
+                disabled={!track.artistId}
                 onClick={(event) => { event.stopPropagation(); navigate(`/artist/${track.artistId}`); }}
                 title={track.artistName}
                 className="block max-w-full truncate font-sans tabular-nums text-ns-meta text-zinc-400 hover:text-zinc-100 hover:underline"
@@ -292,7 +296,7 @@ function MobileRow({
   const handleTap = () => {
     if (!isAvailable) return;
     if (canPlay) {
-      if (isCurrent) player.togglePlay();
+      if (isCurrent && track.playbackMode !== 'OFFICIAL_EMBED') player.togglePlay();
       else player.playTrack(track, queueTracks.filter((item) => item.isAvailable !== false), source);
       return;
     }
@@ -343,6 +347,7 @@ function MobileRow({
             </span>
             <span className="flex min-w-0 items-center gap-1.5">
               <TrackTypeBadge track={track} />
+                <TrackSourceIcon track={track} />
               <span title={track.artistName} className="block min-w-0 truncate text-sm text-zinc-400">
                 {track.artistName}
               </span>

@@ -40,5 +40,16 @@ describe('one global player across providers',()=>{
   vi.stubGlobal('fetch',vi.fn(async()=>res({provider:'YOUTUBE',playbackMode:'OFFICIAL_EMBED',embedUrl:'https://evil.example/embed/abcdefghijk'})));
   await expect(usePlayerStore.getState().openPlatformEmbed('YOUTUBE','https://youtu.be/abcdefghijk')).rejects.toThrow('EXTERNAL_EMBED_UNSUPPORTED');
  });
+ it('a saved platform track retains its identity and resolves its stored source without entering the audio queue',async()=>{
+  useUserStore.setState({user:{id:'admin',role:'ADMIN'}});
+  const track={...external,provider:'YOUTUBE',playbackMode:'OFFICIAL_EMBED',isStreamable:false,isAvailable:true,artistName:'Fixture artist'};
+  const f=vi.fn(async()=>res({provider:'YOUTUBE',playbackMode:'OFFICIAL_EMBED',embedUrl:'https://www.youtube-nocookie.com/embed/abcdefghijk',canonicalUrl:'https://www.youtube.com/watch?v=abcdefghijk'}));vi.stubGlobal('fetch',f);
+  const before=window.HTMLMediaElement.prototype.play.mock.calls.length;
+  await usePlayerStore.getState().playTrack(track,[track,native]);
+  expect(String(f.mock.calls[0][0])).toContain('/recordings/record/playback?sourceId=source');
+  expect(usePlayerStore.getState().currentTrack).toEqual(track);expect(usePlayerStore.getState().activePlatformEmbed.track).toEqual(track);
+  expect(usePlayerStore.getState().isPlaying).toBe(false);expect(window.HTMLMediaElement.prototype.play.mock.calls.length).toBe(before);
+  usePlayerStore.getState().addToQueue(track);expect(usePlayerStore.getState().queue).toEqual([]);usePlayerStore.getState().closePlatformEmbed();
+ });
  it('resolver failure can be followed by working native playback',async()=>{vi.spyOn(console,'error').mockImplementation(()=>{});vi.stubGlobal('fetch',vi.fn(async()=>({ok:false,status:502,json:async()=>({error:'AUDIUS_UNAVAILABLE'})})));await usePlayerStore.getState().playTrack(external);expect(usePlayerStore.getState().isPlaying).toBe(false);await usePlayerStore.getState().playTrack(native);expect(usePlayerStore.getState().isPlaying).toBe(true);expect(usePlayerStore.getState().playbackError).toBeNull();});
 });

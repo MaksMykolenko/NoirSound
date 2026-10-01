@@ -1,4 +1,6 @@
 import React from 'react';
+import TrackSourceIcon from './TrackSourceIcon';
+import { canPlayTrack, canQueueTrack } from '../../utils/trackPlayback';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Play, Pause, Plus, Check, MoreHorizontal } from 'lucide-react';
@@ -26,10 +28,10 @@ export default function TrackListItem({ track, index, tracksContext = [], onRemo
   const isPlayingThis = isCurrent && isPlaying;
   const isLiked = likedTracks.includes(track.id);
   const inQueue = queue.some((item) => item.id === track.id);
-  const canPlay = track.isAvailable !== false && (track.isStreamable ?? Boolean(track.audioUrl));
+  const canPlay = canPlayTrack(track);
   const handlePlay = () => {
     if (!canPlay) return;
-    if (isCurrent) togglePlay();
+    if (isCurrent && track.playbackMode !== 'OFFICIAL_EMBED') togglePlay();
     else playTrack(track, tracksContext.length ? tracksContext : [track], queueSource);
   };
   const genre = getLocalizedGenre(track.genre);
@@ -56,18 +58,17 @@ export default function TrackListItem({ track, index, tracksContext = [], onRemo
           {isCurrent && <span className="sr-only"> — {t('playlists.currentlyPlaying')}</span>}
         </Link>
         <div className="ns-media-byline">
+          <TrackSourceIcon track={track} />
           <TrackTypeBadge track={track} />
           {track.explicit && <span className="ns-explicit-badge" title={t('media.explicit')}>E</span>}
-          <Link to={`/artist/${track.artistId}`} className="min-w-0 truncate hover:underline" title={track.artistName}>
-            {track.artistName}
-          </Link>
+          <ArtistLabel track={track} />
         </div>
         <BeatMetadataInline track={track} limit={2} />
         {!canPlay && <span className="ns-media-meta">{t('trackPage.audioUnavailable')}</span>}
       </div>
       {!compact && <div className="ns-track-row__secondary ns-media-meta">
         <span className="block truncate" title={genre}>{genre}</span>
-        <span className="block tabular-nums"><span>{formatNumber(track.plays || 0)}</span> {t('trackPage.plays')}</span>
+        {track.playbackSource !== 'external' && <span className="block tabular-nums"><span>{formatNumber(track.plays || 0)}</span> {t('trackPage.plays')}</span>}
       </div>}
       <span className="ns-track-row__duration ns-media-duration" title={t('trackPage.duration')}>
         {formatDuration(track.duration)}
@@ -78,7 +79,7 @@ export default function TrackListItem({ track, index, tracksContext = [], onRemo
           aria-label={`${t(isLiked ? 'trackPage.unlike' : 'trackPage.like')} ${track.title}`} aria-pressed={isLiked}>
           <TrackSaveIcon saved={isLiked} />
         </button>
-        {canPlay && !compact && <button type="button"
+        {canQueueTrack(track) && !compact && <button type="button"
           onClick={() => inQueue ? removeFromQueue(track.id) : addToQueue(track)}
           className="ns-media-action ns-track-row__desktop-action" aria-pressed={inQueue}
           aria-label={t(inQueue ? 'media.removeFromQueue' : 'media.addToQueue', { title: track.title })}>
@@ -91,4 +92,8 @@ export default function TrackListItem({ track, index, tracksContext = [], onRemo
       </div>
     </div>
   );
+}
+
+function ArtistLabel({track}) {
+  return track.artistId ? <Link to={`/artist/${track.artistId}`} className="min-w-0 truncate hover:underline" title={track.artistName}>{track.artistName}</Link> : <span className="min-w-0 truncate" title={track.artistName}>{track.artistName}</span>;
 }

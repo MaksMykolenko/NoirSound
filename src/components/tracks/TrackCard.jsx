@@ -1,4 +1,6 @@
 import React from 'react';
+import TrackSourceIcon from './TrackSourceIcon';
+import { canPlayTrack } from '../../utils/trackPlayback';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Play, Pause, MoreHorizontal } from 'lucide-react';
@@ -6,6 +8,7 @@ import { usePlayerStore } from '../../store/playerStore';
 import { formatDuration } from '../../utils/formatTime';
 import { getLocalizedGenre } from '../../i18n/genreLabels';
 import FallbackCover from '../ui/FallbackCover';
+import { playerTrackHref } from '../../utils/playerTrackPresentation';
 import { useTrackContextMenu } from '../../hooks/useEntityContextMenu';
 import { BeatMetadataInline, TrackTypeBadge } from './TrackContentMeta';
 import { TrackSaveIcon, TrackPlayingIndicator } from './TrackVisuals';
@@ -18,11 +21,11 @@ export default function TrackCard({ track, tracksContext = [], queueSource = nul
   const isCurrent = currentTrack?.id === track.id;
   const isPlayingThis = isCurrent && isPlaying;
   const isLiked = likedTracks.includes(track.id);
-  const canPlay = track.isAvailable !== false && (track.isStreamable ?? Boolean(track.audioUrl));
+  const canPlay = canPlayTrack(track);
   const handlePlay = (event) => {
     event.stopPropagation();
     if (!canPlay) return;
-    if (isCurrent) togglePlay();
+    if (isCurrent && track.playbackMode !== 'OFFICIAL_EMBED') togglePlay();
     else playTrack(track, tracksContext.length ? tracksContext : [track], queueSource);
   };
   return (
@@ -30,19 +33,19 @@ export default function TrackCard({ track, tracksContext = [], queueSource = nul
       aria-current={isCurrent ? 'true' : undefined}
       className={`ns-media-card ns-track-card group ${variant === 'release' ? 'ns-artist-release-card' : ''}`}>
       <div className="ns-media-card__artwork ns-track-card__artwork">
-        <Link to={`/track/${track.id}`} onKeyDown={contextMenuProps.onKeyDown}
+        <Link to={playerTrackHref(track)} onKeyDown={contextMenuProps.onKeyDown}
           aria-label={variant === 'release' ? t('profile.openRelease', { title: track.title }) : t('media.openTrack', { title: track.title, artist: track.artistName })}
           className="block h-full w-full">
           <FallbackCover src={track.coverUrl} title={track.title} artistName={track.artistName}
             genre={track.genre} className="h-full w-full" imageClassName="object-cover" loading="lazy" />
         </Link>
         <div className="ns-track-card__actions">
-          <button type="button" onClick={() => toggleLikeTrack(track.id)}
+          <button type="button" disabled={Boolean(track.previewExternalId)} onClick={() => toggleLikeTrack(track.id)}
             className="ns-media-action ns-media-action--card" aria-pressed={isLiked}
             aria-label={`${t(isLiked ? 'trackPage.unlike' : 'trackPage.like')} ${track.title}`}>
             <TrackSaveIcon saved={isLiked} />
           </button>
-          <button type="button" onClick={openFromButton} className="ns-media-action ns-media-action--card"
+          <button type="button" disabled={Boolean(track.previewExternalId)} onClick={openFromButton} className="ns-media-action ns-media-action--card"
             aria-label={t('playlists.moreActionsFor', { title: track.title })} aria-haspopup="menu">
             <MoreHorizontal size={20} />
           </button>
@@ -56,12 +59,13 @@ export default function TrackCard({ track, tracksContext = [], queueSource = nul
       </div>
       <div className="ns-track-card__body">
         <h3 className="ns-card-title min-w-0">
-          <Link to={`/track/${track.id}`} onKeyDown={contextMenuProps.onKeyDown} title={track.title}
+          <Link to={playerTrackHref(track)} onKeyDown={contextMenuProps.onKeyDown} title={track.title}
             className={`block truncate ${isCurrent ? 'text-brand-red' : ''}`}>{track.title}</Link>
         </h3>
         <div className="ns-media-byline">
+          <TrackSourceIcon track={track} />
           {track.explicit && <span className="ns-explicit-badge" title={t('media.explicit')}>E</span>}
-          <Link to={`/artist/${track.artistId}`} className="min-w-0 truncate hover:underline" title={track.artistName}>{track.artistName}</Link>
+          <ArtistLabel track={track} />
         </div>
         <div className="ns-track-card__details">
           <TrackTypeBadge track={track} />
@@ -69,8 +73,12 @@ export default function TrackCard({ track, tracksContext = [], queueSource = nul
           {variant === 'release' && releaseYear !== null && <p>{releaseYear}</p>}
         </div>
         <span className="sr-only">{getLocalizedGenre(track.genre)} · {formatDuration(track.duration)}</span>
-        {!canPlay && <span className="ns-media-meta">{t('trackPage.audioUnavailable')}</span>}
+        {!canPlay && <span className="ns-media-meta">{t(track.playbackMode === 'LINK_OUT' ? 'externalMusic.linkOutNote' : 'trackPage.audioUnavailable')}</span>}
       </div>
     </article>
   );
+}
+
+function ArtistLabel({track}) {
+  return track.artistId ? <Link to={`/artist/${track.artistId}`} className="min-w-0 truncate hover:underline" title={track.artistName}>{track.artistName}</Link> : <span className="min-w-0 truncate" title={track.artistName}>{track.artistName}</span>;
 }

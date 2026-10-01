@@ -1678,7 +1678,7 @@
     "mergeTarget": "Wybierz to samo nagranie",
     "unmerge": "Rozdziel",
     "audit": "Historia działań",
-    "createRecord": "Utwórz z dozwolonych metadanych lub własnego utworu",
+    "createRecord": "Dodaj utwór przez link",
     "trackTitle": "Tytuł utworu",
     "artist": "Wykonawca",
     "provenance": "Pochodzenie i zgoda na metadane",
@@ -1720,7 +1720,7 @@
     "officialPlayer": "Oficjalny odtwarzacz",
     "closePlayer": "Zamknij odtwarzacz",
     "openPlatform": "Otwórz na platformie",
-    "applePlaybackNote": "Bez logowania do Apple Music dostępny jest 30-sekundowy fragment. Pełne odtwarzanie zależy od logowania i subskrypcji Apple Music.",
+    "applePlaybackNote": "Bez logowania do Apple Music dostępny jest fragment. Pełne odtwarzanie zależy od logowania i subskrypcji Apple Music.",
     "embedPlaybackNote": "Naciśnij Play w odtwarzaczu platformy. Dostępność zależy od autora, regionu i ustawień platformy.",
     "embedPrivacyNote": "Otwarcie odtwarzacza łączy z platformą, która może używać cookies. NoirSound nie dolicza tych odtworzeń do swoich statystyk."
   }

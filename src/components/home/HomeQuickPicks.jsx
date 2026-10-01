@@ -1,4 +1,6 @@
 import React from 'react';
+import TrackSourceIcon from '../tracks/TrackSourceIcon';
+import { canPlayTrack } from '../../utils/trackPlayback';
 import { Link } from 'react-router-dom';
 import { Play, Pause } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -12,10 +14,10 @@ function QuickPick({ track, tracks }) {
   const { contextMenuProps } = useTrackContextMenu(track);
   const active = currentTrack?.id === track.id;
   const playing = active && isPlaying;
-  const canPlay = track.isAvailable !== false && (track.isStreamable ?? Boolean(track.audioUrl));
+  const canPlay = canPlayTrack(track);
   const handlePlay = () => {
     if (!canPlay) return;
-    if (active) togglePlay();
+    if (active && track.playbackMode !== 'OFFICIAL_EMBED') togglePlay();
     else playTrack(track, tracks);
   };
 
@@ -30,8 +32,7 @@ function QuickPick({ track, tracks }) {
       <div className="ns-quick-track__body">
         <Link to={`/track/${track.id}`} title={track.title} onKeyDown={contextMenuProps.onKeyDown}
           className={`ns-quick-track__title ${active ? 'text-brand-red' : ''}`}>{track.title}</Link>
-        <Link to={`/artist/${track.artistId}`} title={track.artistName}
-          className="ns-quick-track__artist">{track.artistName}</Link>
+        <div className="flex min-w-0 items-center gap-1.5"><TrackSourceIcon track={track}/>{track.artistId ? <Link to={`/artist/${track.artistId}`} title={track.artistName} className="ns-quick-track__artist">{track.artistName}</Link> : <span className="ns-quick-track__artist truncate">{track.artistName}</span>}</div>
       </div>
       <button type="button" className="ns-quick-track__play" disabled={!canPlay} onClick={handlePlay}
         aria-label={canPlay ? t(playing ? 'playlists.pauseTrack' : 'playlists.playTrack', { title: track.title }) : t('trackPage.audioUnavailable')}>

@@ -1668,7 +1668,7 @@
     "mergeTarget": "Choose the same recording",
     "unmerge": "Unmerge",
     "audit": "Action history",
-    "createRecord": "Create from permitted metadata or a native track",
+    "createRecord": "Add a track by link",
     "trackTitle": "Track title",
     "artist": "Artist",
     "provenance": "Metadata origin and permission",
@@ -1710,7 +1710,7 @@
     "officialPlayer": "Official player",
     "closePlayer": "Close player",
     "openPlatform": "Open on platform",
-    "applePlaybackNote": "Without signing in to Apple Music, a 30-second preview is available. Full playback depends on Apple Music sign-in and subscription.",
+    "applePlaybackNote": "Without signing in to Apple Music, a preview is available. Full playback depends on Apple Music sign-in and subscription.",
     "embedPlaybackNote": "Press Play inside the platform player. Availability depends on the publisher, region and platform settings.",
     "embedPrivacyNote": "Opening the player connects to the platform, which may use cookies. NoirSound does not count these plays in its statistics."
   }

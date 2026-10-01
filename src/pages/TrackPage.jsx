@@ -1,4 +1,6 @@
 import { TrackSaveIcon, TrackPlayingIndicator } from '../components/tracks/TrackVisuals';
+import TrackSourceIcon from '../components/tracks/TrackSourceIcon';
+import { canPlayTrack, canQueueTrack } from '../utils/trackPlayback';
 import React, { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import PageMeta from '../components/meta/PageMeta';
@@ -72,7 +74,6 @@ export default function TrackPage() {
         setError(null);
         const nextTrack = await getTrackById(id);
         if (controller.signal.aborted) return;
-        if (nextTrack.playbackSource === 'external') { navigate(`/external-music/${nextTrack.recordingId}`, { replace: true }); return; }
         setTrack(nextTrack);
         const genre = normalizeGenre(nextTrack.genre);
         let related = [];
@@ -137,8 +138,9 @@ export default function TrackPage() {
   const isPlayingThis = isCurrent && isPlaying;
   const isLiked = likedTracks.includes(track.id);
   const inQueue = queue.some((qt) => qt.id === track.id);
-  const canPlay = track.isStreamable ?? Boolean(track.audioUrl);
-  const canEditLyrics = user?.role === 'ADMIN' || user?.artistProfileId === track.artistId;
+  const external = track.playbackSource === 'external';
+  const canPlay = canPlayTrack(track);
+  const canEditLyrics = !external && (user?.role === 'ADMIN' || user?.artistProfileId === track.artistId);
   const isBeat = isBeatTrack(track);
   const hasDetailSidebar = Boolean(track.artistId) || relatedTracks.length > 0;
 
@@ -148,7 +150,7 @@ export default function TrackPage() {
   const hasDuration = durationStr !== '—';
   const releaseStr = formatReleaseDate(track.releaseDate, i18n.language);
   const playCount = Number(track.plays || 0);
-  const trackNote = playCount === 0
+  const trackNote = external ? t('externalMusic.embedPlaybackNote') : playCount === 0
     ? t('trackPage.beFirstToListen')
     : isBeat
       ? t('beats.producedBy', { name: track.artistName })
@@ -156,12 +158,12 @@ export default function TrackPage() {
 
   const handlePlayClick = () => {
     if (!canPlay) return;
-    if (isCurrent) togglePlay();
+    if (isCurrent && track.playbackMode !== 'OFFICIAL_EMBED') togglePlay();
     else playTrack(track, [track]);
   };
 
   const handleQueueClick = () => {
-    if (!canPlay) return;
+    if (!canQueueTrack(track)) return;
     if (inQueue) removeFromQueue(track.id);
     else addToQueue(track);
   };
@@ -198,6 +200,7 @@ export default function TrackPage() {
         title={`${track.title} — ${track.artistName} · NoirSound`}
         description={`${showGenre ? `${genreLabel} · ` : ''}${hasDuration ? `${durationStr} · ` : ''}${isBeat ? 'Listen to this beat' : `Listen to ${track.title}`} by ${track.artistName} on NoirSound.`}
         canonical={`https://noirsound.co/track/${track.id}`}
+        robots={external ? "noindex, nofollow" : undefined}
       />
 
       {/* Hero + waveform form one connected music-detail unit */}
@@ -254,6 +257,7 @@ export default function TrackPage() {
               <div className={`space-y-2.5 ${track.title.length > 60 ? 'ns-track-detail-title--long' : ''}`}>
                 <div className="flex flex-wrap items-center justify-center gap-3 md:justify-start">
                   <TrackTypeBadge track={track} />
+                  <TrackSourceIcon track={track} />
                   {showGenre && (
                     <span className="text-sm text-zinc-400">
                       <span>{genreLabel}</span>
@@ -271,6 +275,7 @@ export default function TrackPage() {
                 </h1>
                 <button
                   type="button"
+                  disabled={!track.artistId}
                   onClick={() => navigate(`/artist/${track.artistId}`)}
                   className="inline-flex max-w-full items-center gap-2.5 break-words text-zinc-400 hover:text-zinc-100 transition-colors font-semibold text-sm cursor-pointer"
                 >
@@ -306,7 +311,7 @@ export default function TrackPage() {
 
                 <button
                   onClick={handleQueueClick}
-                  disabled={!canPlay}
+                  disabled={!canQueueTrack(track)}
                   className={`${iconActionClass(inQueue)} hidden disabled:opacity-40 disabled:cursor-not-allowed sm:inline-flex`}
                   title={inQueue ? t('trackPage.removeFromQueue') : t('trackPage.addToQueue')}
                   aria-label={inQueue ? t('trackPage.removeFromQueue') : t('trackPage.addToQueue')}
@@ -334,13 +339,13 @@ export default function TrackPage() {
 
               {/* Compact metadata row (secondary, wraps on mobile) */}
               <div className="flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1.5 font-sans tabular-nums text-ns-label text-zinc-500 md:justify-start">
-                <span
+                {!external && <span
                   className="inline-flex items-center gap-1.5"
                   aria-label={`${formatNumber(playCount)} ${t('trackPage.plays')}`}
                 >
                   <Headphones size={14} className="opacity-70" aria-hidden="true" />
                   {formatNumber(playCount)}
-                </span>
+                </span>}
                 {hasDuration && (
                   <>
                     <span aria-hidden="true" className="text-zinc-700">·</span>
@@ -365,7 +370,7 @@ export default function TrackPage() {
         </section>
 
         {/* WAVEFORM — visually attached to the hero */}
-        <section className="space-y-3 border-y border-zinc-800/60 bg-zinc-950/15 px-1 py-5 sm:px-3">
+        {track.playbackMode !== 'OFFICIAL_EMBED' && <section className="space-y-3 border-y border-zinc-800/60 bg-zinc-950/15 px-1 py-5 sm:px-3">
           <div className="flex items-center justify-between gap-4">
             <h2 className="ns-eyebrow">{t('trackPage.waveform')}</h2>
             <span className="text-ns-label font-sans tabular-nums text-zinc-500 select-none">
@@ -386,7 +391,7 @@ export default function TrackPage() {
           {isCurrent && (
             <p className="text-ns-label text-zinc-500 select-none">{t('trackPage.seekHint')}</p>
           )}
-        </section>
+        </section>}
       </div>
 
       {/* Lyrics, description, comments / conditional related rail */}
@@ -401,7 +406,7 @@ export default function TrackPage() {
           className={`min-w-0 space-y-6 xl:space-y-8 ${hasDetailSidebar ? 'xl:col-span-8' : 'xl:col-span-12'}`}
           data-testid="track-main-column"
         >
-          {(!isBeat || track.hasLyrics) && (
+          {!external && (!isBeat || track.hasLyrics) && (
             <TrackLyricsCard
               track={track}
               canEdit={canEditLyrics}
@@ -475,9 +480,14 @@ export default function TrackPage() {
             )}
           </section>
 
-          <section className="border-t border-zinc-800/60 pt-6">
+          {!external && <section className="border-t border-zinc-800/60 pt-6">
             <CommentSection trackId={track.id} />
-          </section>
+          </section>}
+          {external && <section className="flex flex-wrap items-center gap-3 border-t border-zinc-800/60 pt-6">
+            <TrackSourceIcon track={track} />
+            {track.canonicalUrl && <a href={track.canonicalUrl} target="_blank" rel="noopener noreferrer" className="underline">{t('externalMusic.openPlatform')}</a>}
+            <Link to={`/external-music/${track.recordingId}`} className="text-sm underline">{t('externalMusic.sources')}</Link>
+          </section>}
         </div>
 
         {hasDetailSidebar && (

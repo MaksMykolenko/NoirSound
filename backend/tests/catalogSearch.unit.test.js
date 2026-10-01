@@ -2,6 +2,22 @@ import { describe, expect, it } from 'vitest';
 import { parseCatalogQuery, decodeCatalogCursor, encodeCatalogCursor, escapedContains, catalogPageQuery } from '../src/lib/catalogSearch';
 
 const parse = query => parseCatalogQuery(query).value;
+describe('private beta catalogue scope',()=>{
+ it('does not accept a client-selected private scope',()=>expect(parseCatalogQuery({externalUserId:'other-owner'})).toMatchObject({ok:false}));
+ it('binds cursors to the server-derived owner and rejects them after logout or beta disable',()=>{
+  const owner={...parse({}),externalUserId:'owner'},now=new Date();
+  const cursor=encodeCatalogCursor(owner,{id:'record',publishedAt:now,_rank:0},now);
+  expect(decodeCatalogCursor({...owner,cursor},now).ok).toBe(true);
+  expect(decodeCatalogCursor({...parse({}),cursor},now).ok).toBe(false);
+  expect(decodeCatalogCursor({...owner,externalUserId:'different',cursor},now).ok).toBe(false);
+ });
+ it('parameterizes the owner and excludes merged and expired imports from the private extension',()=>{
+  const sql=catalogPageQuery({...parse({}),externalUserId:'owned-session'},null,new Date());
+  expect(sql.values).toContain('owned-session');expect(sql.text).not.toContain('owned-session');
+  expect(sql.text).toContain('er."curatorId"');expect(sql.text).toContain('er."mergedIntoId" IS NULL');expect(sql.text).toContain('er."metadataExpiresAt" > CURRENT_TIMESTAMP');
+  expect(catalogPageQuery(parse({}),null,new Date()).text).not.toContain('er."curatorId"');
+ });
+});
 
 describe('catalog request contract', () => {
   it('normalizes whitespace, canonical genres, legacy BPM and musical key aliases', () => {

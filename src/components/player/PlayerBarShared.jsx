@@ -1,5 +1,6 @@
 import { playerTrackHref } from '../../utils/playerTrackPresentation';
 import { TrackSaveIcon } from '../tracks/TrackVisuals';
+import TrackSourceIcon from '../tracks/TrackSourceIcon';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
@@ -84,7 +85,8 @@ export function PlayerTrackInfo({
             {track.title}
           </Link>
         </h4>
-        {track.playbackSource === 'external' ? <span className="block truncate text-xs text-zinc-400">{track.artistName} · {track.provider}</span> : <Link to={`/artist/${track.artistId}`} onClick={onOpenTrack} title={track.artistName} className="block text-xs text-zinc-400 truncate hover:text-zinc-100">{track.artistName}</Link>}
+        {track.playbackSource === 'external' ? <span className="block truncate text-xs text-zinc-400">{track.artistName}</span> : <Link to={`/artist/${track.artistId}`} onClick={onOpenTrack} title={track.artistName} className="block text-xs text-zinc-400 truncate hover:text-zinc-100">{track.artistName}</Link>}
+        <TrackSourceIcon track={track} />
         <PlaybackErrorStatus error={playbackError} />
       </div>
       <button

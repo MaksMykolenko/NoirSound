@@ -1,6 +1,7 @@
 'use strict';
 
 const { parseCatalogQuery, decodeCatalogCursor, searchCatalog } = require('../lib/catalogSearch');
+const { requestBetaUser } = require('../lib/externalCatalog');
 const { scaledRateLimitMax } = require('../lib/rateLimit');
 const { userOrIpKey } = require('../lib/rateLimitKeys');
 
@@ -10,12 +11,14 @@ async function discoverRoutes(fastify) {
   }, async (request, reply) => {
     const parsed = parseCatalogQuery(request.query);
     if (!parsed.ok) return reply.status(400).send(parsed);
+    const betaUser = await requestBetaUser(fastify, request);
+    if (betaUser) parsed.value.externalUserId = betaUser.id;
     const decoded = decodeCatalogCursor(parsed.value);
     if (!decoded.ok) return reply.status(400).send(decoded);
     try {
-      // Public results are deliberately role-independent. No authenticated
-      // private material or personalized like state enters catalog aggregates.
-      reply.header('Cache-Control', 'no-store');
+      // The private extension is derived from the server session and beta gate;
+      // clients cannot request another user's scope through query parameters.
+      reply.header('Cache-Control', betaUser ? 'private, no-store' : 'no-store');
       return await searchCatalog(fastify.prisma, parsed.value, decoded);
     } catch (error) {
       fastify.log.error(error);

@@ -43,5 +43,23 @@ describe.skipIf(process.env.EXTERNAL_CATALOG_DATABASE_TEST!=='true')('external c
  });
  it.each(['REMIX','LIVE','NIGHTCORE'])('cannot merge %s with an original',async version=>{const a=await create('Owned original fixture','ORIGINAL'),b=await create(`Owned fixture ${version}`,version);expect((await req(`/recordings/${b.recordingId}/merge`,{intoId:a.recordingId,reason:'Conflict fixture',evidence:'Fixture evidence'})).status).toBe(409);});
  it('beta records cannot leak to ordinary track/like/statistics APIs',async()=>{const r=await req('/import',{externalId:fixtureId});const id=r.body.recording.id;const pub=await app.inject({url:'/api/tracks'});expect(pub.statusCode).toBe(200);expect(JSON.stringify(pub.json())).not.toContain(id);expect((await app.inject({url:`/api/tracks/${id}`})).statusCode).toBe(404);expect((await app.inject({method:'POST',url:`/api/tracks/${id}/like`,headers:{cookie:listener,origin:'http://localhost:3000'}})).statusCode).toBe(404);expect((await app.inject({method:'POST',url:`/api/tracks/${id}/play-event`,headers:{cookie,origin:'http://localhost:3000'},payload:{durationListenedSeconds:31}})).statusCode).toBe(409);});
+ it('saved links appear as ordinary private tracks without exposing them publicly',async()=>{
+  const payload={title:'Owned SoundCloud normal-card fixture',artistName:'Owned fixture artist',provider:'SOUNDCLOUD',url:`https://soundcloud.com/owned-fixture/normal-card-${suffix}`,provenance:'Owned explicitly supplied fixture metadata',reason:'Ordinary card fixture'};
+  const before=await db.externalRecording.count();const created=await req('/recordings',payload);expect(created.status).toBe(200);
+  const track=created.body.recording;trackIds.push(track.id);recordIds.push(track.recordingId);
+  expect(track).toMatchObject({provider:'SOUNDCLOUD',playbackMode:'OFFICIAL_EMBED',isStreamable:false,isAvailable:true,canSave:true,artistId:null});
+  expect((await req('/recordings',payload)).body.recording.id).toBe(track.id);expect(await db.externalRecording.count()).toBe(before+1);
+  const catalog=async(auth)=>{const r=await app.inject({url:'/api/discover/catalog?'+new URLSearchParams({q:payload.title}),headers:auth?{cookie:auth}:{}});expect(r.statusCode).toBe(200);return r.json();};
+  expect((await catalog(cookie)).items).toHaveLength(1);expect((await catalog(cookie)).items[0]).toMatchObject({id:track.id,artistName:payload.artistName,artistId:null,artist:null,provider:'SOUNDCLOUD'});
+  expect((await catalog(listener)).total).toBe(0);expect((await catalog()).total).toBe(0);
+  const detail=await app.inject({url:`/api/tracks/${track.id}`,headers:{cookie}});expect(detail.statusCode).toBe(200);expect(detail.json().track.provider).toBe('SOUNDCLOUD');
+  const playback=await req(`/recordings/${track.recordingId}/playback?sourceId=${track.selectedSourceId}`,null,'GET');expect(playback.status).toBe(200);expect(new URL(playback.body.embedUrl).origin).toBe('https://w.soundcloud.com');
+  const events=await db.playEvent.count();const userId=userIds[0];const playlist=await db.playlist.create({data:{name:'Owned normal-card fixture',creatorId:userId,isPublic:false}});
+  const add=await app.inject({method:'POST',url:`/api/playlists/${playlist.id}/tracks`,headers:{cookie,origin:'http://localhost:3000'},payload:{trackId:track.id}});expect(add.statusCode,add.body).toBe(200);
+  const publicList=await db.playlist.create({data:{name:'Owned public fixture',creatorId:userId,isPublic:true}});
+  expect((await app.inject({method:'POST',url:`/api/playlists/${publicList.id}/tracks`,headers:{cookie,origin:'http://localhost:3000'},payload:{trackId:track.id}})).statusCode).toBe(404);
+  expect(await db.playEvent.count()).toBe(events);
+  await req('/settings',{enabled:false,reason:'Ordinary catalogue gate fixture'},'PATCH');expect((await catalog(cookie)).total).toBe(0);await req('/settings',{enabled:true,reason:'Restore ordinary catalogue gate fixture'},'PATCH');
+ });
  it('disables beta without deploy and preserves native API',async()=>{expect((await req('/settings',{enabled:false,reason:'Disable fixture beta'},'PATCH')).status).toBe(200);expect((await req('/search?q=fixture',null,'GET')).status).toBe(403);expect((await req('/embed?'+new URLSearchParams({provider:'YOUTUBE',url:'https://youtu.be/abcdefghijk'}),null,'GET')).status).toBe(403);expect((await app.inject({url:'/api/tracks'})).statusCode).toBe(200);expect((await req('/settings',{enabled:true,reason:'Reenable fixture beta'},'PATCH')).status).toBe(200);});
 });

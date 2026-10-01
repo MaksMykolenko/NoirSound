@@ -354,7 +354,7 @@ async function playlistsRoutes(fastify) {
       },
       include: trackInclude
     });
-    if (!track || (external && !recordingView({ ...external.externalRecording, track: external }).isStreamable)) {
+    if (!track || (external && !recordingView({ ...external.externalRecording, track: external }).canSave)) {
       return apiError(reply, 404, 'PLAYLIST_TRACK_NOT_FOUND', 'Track is unavailable.');
     }
     try {
