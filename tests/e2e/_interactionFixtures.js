@@ -27,6 +27,9 @@ export async function installFinalDesignFixtures(page, { locale='en', theme='noi
   if(path.endsWith('/stream')) return route.fulfill({status:200,contentType:'audio/wav',body:makeWavBuffer(20)});
   if(path==='/auth/me') return guest?json({error:'UNAUTHORIZED'},401):json({user:fixtureUser});
   if(path==='/auth/csrf') return json({csrfToken:'synthetic-local-qa'});
+  // The native UI fixture keeps External Music Beta closed. Discover now
+  // checks this official gate for admins; other unknown requests remain errors.
+  if(path==='/external-catalog/status'&&method==='GET') return json({enabled:false,providers:[]});
   if(path==='/artists'||path==='/me/followed-artists') return json({data:fixtureArtists});
   if(path==='/artists/qa-artist') return json({artist:fixtureArtists[0]});
   if(path==='/discover/catalog') {
