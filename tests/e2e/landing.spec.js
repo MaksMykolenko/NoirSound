@@ -179,7 +179,6 @@ test('showcase playback survives landing, Discover, track and Home navigation wi
   await expect(page.getByTestId('fullscreen-lyrics-player')).toBeHidden();
   await expect(lyricsButton).toBeFocused();
   state = await expectSharedAudio(page, audio, state);
-  await page.getByRole('link', { name: 'Open NoirSound', exact: true }).filter({ visible: true }).click();
   await expect(page).toHaveURL(/\/discover$/);
   await page.getByRole('link', { name: 'Home', exact: true }).filter({ visible: true }).click();
   await expect(page).toHaveURL(/\/home$/);

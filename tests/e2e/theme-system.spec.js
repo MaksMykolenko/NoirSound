@@ -67,7 +67,12 @@ test.describe('Theme system behavior', () => {
     const accountButton = page.locator('header').getByRole('button', { name: 'Profile', exact: true });
     await expect(accountButton).toHaveCount(1);
     await accountButton.click();
-    await expect(page.getByTestId('compact-theme-selector')).toBeVisible();
+    const appearance = page.getByRole('menuitem', { name: /^Appearance:/ });
+    await expect(appearance).toBeVisible();
+    await appearance.click();
+    const themes = page.getByRole('menu', { name: 'Appearance', exact: true });
+    await expect(themes).toBeVisible();
+    await expect(themes.locator('[role="menuitemradio"][aria-checked="true"]')).toHaveCount(1);
   });
 
 });
