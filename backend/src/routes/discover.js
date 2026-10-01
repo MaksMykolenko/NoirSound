@@ -1,7 +1,7 @@
 'use strict';
 
 const { parseCatalogQuery, decodeCatalogCursor, searchCatalog } = require('../lib/catalogSearch');
-const { requestBetaUser } = require('../lib/externalCatalog');
+const { requestBetaUser, publicBeta } = require('../lib/externalCatalog');
 const { scaledRateLimitMax } = require('../lib/rateLimit');
 const { userOrIpKey } = require('../lib/rateLimitKeys');
 
@@ -12,7 +12,7 @@ async function discoverRoutes(fastify) {
     const parsed = parseCatalogQuery(request.query);
     if (!parsed.ok) return reply.status(400).send(parsed);
     const betaUser = await requestBetaUser(fastify, request);
-    if (betaUser) parsed.value.externalUserId = betaUser.id;
+    if (betaUser) {parsed.value.externalUserId = betaUser.id;parsed.value.publicExternalCatalog=publicBeta();}
     const decoded = decodeCatalogCursor(parsed.value);
     if (!decoded.ok) return reply.status(400).send(decoded);
     try {

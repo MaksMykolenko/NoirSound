@@ -66,7 +66,7 @@ function queryFingerprint(filters) {
   return createHash('sha256').update(JSON.stringify([
     filters.q?.toLowerCase() || null, filters.contentType, filters.genre, filters.group,
     filters.style?.toLowerCase() || null, filters.mood?.toLowerCase() || null,
-    filters.key, filters.bpmMin, filters.bpmMax, filters.sort, filters.externalUserId || null,
+    filters.key, filters.bpmMin, filters.bpmMax, filters.sort, filters.externalUserId || null, Boolean(filters.publicExternalCatalog),
   ])).digest('hex');
 }
 
@@ -98,7 +98,7 @@ function catalogWhere(filters, omit = null) {
   const visibility = filters.externalUserId ? Prisma.sql`(${publicTrackSql()} OR (
     t."catalogScope" = 'EXTERNAL_BETA' AND t.status = 'PUBLISHED' AND t."isPublic" = false
     AND EXISTS (SELECT 1 FROM "ExternalRecording" er WHERE er."trackId" = t.id
-      AND er."curatorId" = ${filters.externalUserId} AND er."mergedIntoId" IS NULL
+      AND (${Boolean(filters.publicExternalCatalog)} OR er."curatorId" = ${filters.externalUserId}) AND er."mergedIntoId" IS NULL
       AND (er."metadataExpiresAt" IS NULL OR er."metadataExpiresAt" > CURRENT_TIMESTAMP))
   ))` : publicTrackSql();
   const parts = [visibility];

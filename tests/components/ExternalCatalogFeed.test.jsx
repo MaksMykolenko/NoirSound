@@ -25,9 +25,10 @@ describe('automatic platform cards in the normal catalog',()=>{
  it('opens a normal track page after automatic registration',async()=>{
   mount();await screen.findByText(preview.title);fireEvent.click(screen.getByRole('link',{name:preview.title}));await waitFor(()=>expect(screen.getByTestId('location')).toHaveTextContent('/track/saved-track'));
  });
- it('does not request or display the private feed for a listener',()=>{
-  useUserStore.setState({user:{id:'listener',role:'LISTENER'}});mount();expect(catalogRequest).not.toHaveBeenCalled();expect(screen.queryByTestId('external-catalog-feed')).toBeNull();
+ it.each([null,{id:'listener',role:'LISTENER'},{id:'artist',role:'ARTIST'}])('shows server-enabled public catalog to %j',async user=>{
+  useUserStore.setState({user});mount();await screen.findByText(preview.title);expect(catalogRequest).toHaveBeenCalledWith('/status');
  });
+ it('lets a listener save and like the actual identity',async()=>{useUserStore.setState({user:{id:'listener',role:'LISTENER'}});const like=vi.spyOn(usePlayerStore.getState(),'toggleLikeTrack').mockResolvedValue();mount();await screen.findByText(preview.title);fireEvent.click(screen.getByRole('button',{name:`Like ${preview.title}`}));await waitFor(()=>expect(like).toHaveBeenCalledWith(saved.id));});
  it('server-disabled beta does not request a live catalog',async()=>{
   catalogRequest.mockResolvedValue({enabled:false});mount();await waitFor(()=>expect(catalogRequest).toHaveBeenCalledTimes(1));expect(screen.queryByTestId('external-catalog-feed')).toBeNull();
  });

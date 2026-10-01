@@ -25,10 +25,10 @@ export default function TrackCard({ track:provided, tracksContext = [], queueSou
     if(!track?.previewExternalId)return track;
     if(request.current?.id===track.id)return request.current.promise;
     const owner=useUserStore.getState().user;
-    if(owner?.role!=='ADMIN')throw new Error('EXTERNAL_BETA_FORBIDDEN');
+    if(!owner){useUserStore.getState().setAuthModalOpen(true,'login');throw new Error('Sign in to save this track.');}
     setPending(true);setError('');
     const promise=saveCatalogTrack(track).then(value=>{
-      if(useUserStore.getState().user?.id!==owner.id||useUserStore.getState().user?.role!=='ADMIN')throw new Error('EXTERNAL_BETA_FORBIDDEN');
+      if(useUserStore.getState().user?.id!==owner.id)throw new Error('EXTERNAL_BETA_FORBIDDEN');
       setSaved({inputId:provided.id,track:value});return value;
     }).finally(()=>{request.current=null;setPending(false);});
     request.current={id:track.id,promise};return promise;

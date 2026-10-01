@@ -112,6 +112,7 @@ async function reportQualifyingPlay(track, listenedSeconds, completed) {
   if (track.playbackSource === 'landing' && import.meta.env.VITE_PUBLIC_APP_ENABLED === 'false') return false;
   try {
     if (track.playbackMode === 'EXTERNAL_STREAM') {
+      if(!useUserStore.getState().user)return false;
       const result = await recordExternalPlay(track, listenedSeconds, completed);
       return result?.success === true;
     }
@@ -359,7 +360,6 @@ export const usePlayerStore = create((set, get) => {
 
     openPlatformEmbed: async (provider, url, track = null) => {
       const user = useUserStore.getState().user;
-      if (user?.role !== 'ADMIN') throw new Error('EXTERNAL_BETA_FORBIDDEN');
       const generation = ++playbackGeneration;
       playbackAbort?.abort();
       playbackAbort = new AbortController();
@@ -368,10 +368,10 @@ export const usePlayerStore = create((set, get) => {
       audio?.removeAttribute?.('src');
       set({activePlatformEmbed:null,currentTrack:null,isPlaying:false,progress:0,duration:0,playbackLoading:false,playbackError:null,lyricsFullscreenOpen:false});
       const embed = track?.recordingId ? await resolveExternalPlayback(track, playbackAbort.signal) : await resolvePlatformEmbed(provider, url, playbackAbort.signal);
-      if (generation !== playbackGeneration || useUserStore.getState().user?.id !== user.id || useUserStore.getState().user?.role !== 'ADMIN') return;
+      if (generation !== playbackGeneration || useUserStore.getState().user?.id !== user?.id) return;
       const origins = {SOUNDCLOUD:'https://w.soundcloud.com',APPLE_MUSIC:'https://embed.music.apple.com',YOUTUBE:'https://www.youtube-nocookie.com'};
       if (embed.playbackMode !== 'OFFICIAL_EMBED' || embed.provider !== provider || new URL(embed.embedUrl).origin !== origins[provider]) throw new Error('EXTERNAL_EMBED_UNSUPPORTED');
-      set({activePlatformEmbed:{...embed,track,ownerId:user.id,generation},currentTrack:track || {id:`embed:${generation}`,title:provider,provider,playbackMode:'OFFICIAL_EMBED',isStreamable:false,hasLyrics:false},isPlayerCollapsed:false});
+      set({activePlatformEmbed:{...embed,track,ownerId:user?.id,generation},currentTrack:track || {id:`embed:${generation}`,title:provider,provider,playbackMode:'OFFICIAL_EMBED',isStreamable:false,hasLyrics:false},isPlayerCollapsed:false});
     },
 
     closePlatformEmbed: () => {
@@ -383,16 +383,16 @@ export const usePlayerStore = create((set, get) => {
     },
 
     playTrack: async (track, newQueue = null, queueSource = null) => {
-      if(track?.previewExternalId && !track.recordingId) {
+      if(track?.previewExternalId && !track.recordingId && !track.guestCatalogPreview) {
         const user=useUserStore.getState().user;
-        if(user?.role!=='ADMIN')return;
+        if(!user){await get().playTrack({...track,guestCatalogPreview:true},newQueue,queueSource);return;}
         const generation=++playbackGeneration;
         playbackAbort?.abort();playbackAbort=new AbortController();
         stopPlatformPlayback();audio?.pause();audio?.removeAttribute?.('src');
         set({activePlatformEmbed:null,currentTrack:track,isPlaying:false,progress:0,playbackLoading:true,playbackError:null});
         try {
           const saved=await saveCatalogTrack(track,playbackAbort.signal);
-          if(generation!==playbackGeneration||useUserStore.getState().user?.id!==user.id||useUserStore.getState().user?.role!=='ADMIN')return;
+          if(generation!==playbackGeneration||useUserStore.getState().user?.id!==user.id)return;
           const context=newQueue || (get().queue.some(t=>t.id===track.id)?get().queue:null);
           await get().playTrack(saved,context?.map(t=>t.id===track.id?saved:t),queueSource || get().queueSource);
         }catch(error){if(generation===playbackGeneration&&error.name!=='AbortError'){set({playbackLoading:false,playbackError:error.message});reportPlaybackError(error.message);}}

@@ -12,15 +12,15 @@ export default function PlatformEmbedPlayer({ embed }) {
   const user = useUserStore(s => s.user);
   const close = usePlayerStore(s => s.closePlatformEmbed);
   const frame = useRef(null);
-  const status = useQuery({queryKey:['external-status',user?.id],queryFn:({signal})=>catalogRequest('/status',{signal}),enabled:user?.role==='ADMIN',retry:false,refetchInterval:15000,refetchIntervalInBackground:true});
-  const allowed = user?.role === 'ADMIN' && user.id === embed.ownerId && status.data?.enabled === true && !status.error;
+  const status = useQuery({queryKey:['external-status',user?.id],queryFn:({signal})=>catalogRequest('/status',{signal}),retry:false,refetchInterval:15000,refetchIntervalInBackground:true});
+  const allowed = user?.id === embed.ownerId && status.data?.enabled === true && !status.error;
   useLayoutEffect(() => {
     const element = frame.current;
     const stop = () => { if (element) element.src = 'about:blank'; };
     const unregister = registerPlatformFrameStop(stop);
     return () => { stop(); unregister(); };
   }, [embed.generation, allowed]);
-  useEffect(() => { if (user?.role !== 'ADMIN' || user?.id !== embed.ownerId || (!allowed && !status.isPending)) close(); }, [allowed,status.isPending,user?.role,user?.id,embed.ownerId,close]);
+  useEffect(() => { if (user?.id !== embed.ownerId || (!allowed && !status.isPending)) close(); }, [allowed,status.isPending,user?.role,user?.id,embed.ownerId,close]);
   if (!allowed) return null;
   const youtube = embed.provider === 'YOUTUBE';
   return <section aria-label={t('externalMusic.officialPlayer')} data-testid="platform-embed-player" className="fixed bottom-24 right-4 z-[var(--ns-z-modal)] w-[calc(100vw-2rem)] max-w-[480px] overflow-auto rounded-xl border border-[var(--ns-border)] bg-[var(--ns-card-solid)] p-3 shadow-2xl lg:bottom-6 lg:right-8" style={{maxHeight:'calc(100dvh - 8rem)'}}>

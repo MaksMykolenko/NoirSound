@@ -46,10 +46,11 @@ async function betaEnabled(prisma) {
   const setting = await prisma.externalCatalogSetting.findUnique({where:{id:'beta'}});
   return setting ? setting.enabled : true;
 }
-async function canUseBeta(prisma,user) { return allowRole(user) && await betaEnabled(prisma); }
+const publicBeta = () => process.env.EXTERNAL_CATALOG_PUBLIC === 'true';
+async function canUseBeta(prisma,user) { return (publicBeta() || allowRole(user)) && await betaEnabled(prisma); }
 async function requestBetaUser(fastify,request) {
   const resolved = request.user ? {user:request.user} : await resolveAuthenticatedSession(fastify,request);
-  return resolved?.user && await canUseBeta(fastify.prisma,resolved.user) ? resolved.user : null;
+  return await canUseBeta(fastify.prisma,resolved?.user) ? (resolved?.user || {id:'public-catalog',publicCatalogGuest:true}) : null;
 }
 const includeRecording = {track:true,sources:true,members:{include:{track:true,sources:true}}};
 function recordingView(r, now = Date.now()) {
@@ -62,8 +63,10 @@ function recordingView(r, now = Date.now()) {
   const embed = primarySources.find(x=>['SOUNDCLOUD','APPLE_MUSIC','YOUTUBE'].includes(x.provider) && x.matchStatus==='CONFIRMED' && !['UNAVAILABLE','ERROR'].includes(x.availability));
   const selected = stream || embed || primarySources[0];
   const native = r.track.catalogScope === 'NATIVE' && Boolean(r.track.processedAudioKey);
-  return { id:r.trackId,recordingId:r.id,title:expired?'Metadata refresh required':r.track.title,artistName:expired?(selected?.provider || 'External'):r.track.primaryArtistName || 'Unknown artist',artistId:native?r.track.artistId:null,coverUrl:expired?null:r.track.coverUrl,duration:r.track.durationSeconds,contentType:'MUSIC',isStreamable:!expired && (native || Boolean(stream)),isAvailable:!expired && (native || Boolean(selected)),canSave:!expired && Boolean(native || selected),playbackMode:native?'NATIVE':stream?'EXTERNAL_STREAM':embed?'OFFICIAL_EMBED':'LINK_OUT',playbackSource:native?'native':'external',provider:native?'NOIRSOUND':selected?.provider,canonicalUrl:selected?.canonicalUrl || null,selectedSourceId:selected?.id || null,versionType:r.versionType,versionLabel:r.versionLabel,parentId:r.parentId,mergedIntoId:r.mergedIntoId,members:members.slice(1).map(x=>({id:x.id,trackId:x.trackId})),sources,primarySources,metadataExpired:Boolean(expired),likes:members.reduce((total,r)=>total+Number(r.track.likes || 0),0),hasLyrics:false };
+  return { id:r.trackId,recordingId:r.id,title:expired?'Metadata refresh required':r.track.title,artistName:expired?(selected?.provider || 'External'):r.track.primaryArtistName || 'Unknown artist',artistId:native?r.track.artistId:null,coverUrl:expired?null:r.track.coverUrl,duration:r.track.durationSeconds,contentType:'MUSIC',isStreamable:!expired && (native || Boolean(stream)),isAvailable:!expired && (native || Boolean(selected)),canSave:!expired && Boolean(native || selected),playbackMode:native?'NATIVE':stream?'EXTERNAL_STREAM':embed?'OFFICIAL_EMBED':'LINK_OUT',playbackSource:native?'native':'external',provider:native?'NOIRSOUND':selected?.provider,canonicalUrl:selected?.canonicalUrl || null,selectedSourceId:selected?.id || null,versionType:r.versionType,versionLabel:r.versionLabel,parentId:r.parentId,mergedIntoId:r.mergedIntoId,members:members.slice(1).map(x=>({id:x.id,trackId:x.trackId})),sources:sources.map(publicSource),primarySources:primarySources.map(publicSource),metadataExpired:Boolean(expired),likes:members.reduce((total,r)=>total+Number(r.track.likes || 0),0),hasLyrics:false };
 }
+function publicSource(s) { const {id,provider,externalId,canonicalUrl,playbackMode,availability,matchStatus,officialStatus,isPrimary,checkedAt}=s;return {id,provider,externalId,canonicalUrl,playbackMode,availability,matchStatus,officialStatus,isPrimary,checkedAt}; }
+function visibleRecording(r) { return r.track.catalogScope==='EXTERNAL_BETA' && r.track.status==='PUBLISHED' || r.track.catalogScope==='NATIVE' && r.track.isPublic && r.track.status==='PUBLISHED' && Boolean(r.track.processedAudioKey); }
 async function catalogLock(tx) { await tx.$executeRaw`SELECT pg_advisory_xact_lock(746290104)`; }
 async function recordAudit(tx,request,action,id,reason,metadata={}) { await tx.auditLog.create({data:auditData(request.user.id,action,'EXTERNAL_RECORDING',id,reason,metadata)}); }
-module.exports={PROVIDERS,VERSIONS,CatalogError,fail,platformUrl,versionFromTitle,matchAssessment,allowRole,betaEnabled,canUseBeta,requestBetaUser,includeRecording,recordingView,catalogLock,recordAudit};
+module.exports={PROVIDERS,VERSIONS,CatalogError,fail,platformUrl,versionFromTitle,matchAssessment,allowRole,publicBeta,visibleRecording,betaEnabled,canUseBeta,requestBetaUser,includeRecording,recordingView,catalogLock,recordAudit};

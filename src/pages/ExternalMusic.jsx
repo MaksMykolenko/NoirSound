@@ -37,7 +37,7 @@ function SourceEditor({source,run,pending}) {
     <label className="flex items-center gap-2"><input type="checkbox" checked={primary} onChange={e=>setPrimary(e.target.checked)}/>{t('externalMusic.primary')}</label><button className={button} disabled={pending}>{t('externalMusic.save')}</button>
   </form></details>;
 }
-function RecordingDetail({recording,versions,audit,records,run,pending}) {
+function AdminRecordingDetail({recording,versions,audit,records,run,pending}) {
   const {t}=useTranslation();const play=usePlayerStore(s=>s.playTrack),likes=usePlayerStore(s=>s.likedTracks),toggleLike=usePlayerStore(s=>s.toggleLikeTrack);
   const [reason,setReason]=useState(''),[provider,setProvider]=useState('SPOTIFY'),[url,setUrl]=useState(''),[intoId,setIntoId]=useState(''),[evidence,setEvidence]=useState(''),[versionType,setVersion]=useState(recording.versionType),[parentId,setParent]=useState(recording.parentId || ''),[label,setLabel]=useState(recording.versionLabel || ''),[playlistId,setPlaylist]=useState('');
   const playlists=useQuery({queryKey:['external-private-playlists'],queryFn:getMyPlaylists});
@@ -70,6 +70,10 @@ function RecordingDetail({recording,versions,audit,records,run,pending}) {
     <details><summary className="cursor-pointer font-semibold">{t('externalMusic.audit')}</summary>{audit.map(a=><p key={a.id} className="py-2 text-xs">{new Date(a.createdAt).toLocaleString()} · {a.action} · {a.reason}</p>)}</details>
   </div>;
 }
+function RecordingDetail(props) {
+  if(props.admin)return <AdminRecordingDetail {...props}/>;
+  return <div className="space-y-4"><MusicCard track={props.recording}/><section>{props.recording.primarySources.filter(s=>s.matchStatus==='CONFIRMED').map(s=><div key={s.id} className="flex gap-3 py-2"><a href={s.canonicalUrl} target="_blank" rel="noopener noreferrer">{s.provider}</a>{EMBED_PROVIDERS.includes(s.provider)&&<PlatformSourceButton source={s}/>}</div>)}</section></div>;
+}
 function NewRecording({run,pending}) {
   const {t}=useTranslation();const [provider,setProvider]=useState('SOUNDCLOUD'),[url,setUrl]=useState('');
   const [title,setTitle]=useState(''),[artistName,setArtist]=useState(''),[provenance,setProvenance]=useState(''),[nativeTrackId,setNative]=useState(''),[reason,setReason]=useState('');
@@ -81,10 +85,10 @@ function NewRecording({run,pending}) {
   </form></details>;
 }
 export default function ExternalMusic() {
-  const {id}=useParams();const {t}=useTranslation();const user=useUserStore(s=>s.user),hydrated=useUserStore(s=>s.authHydrated),setAuth=useUserStore(s=>s.setAuthModalOpen);const client=useQueryClient();
+  const {id}=useParams();const {t}=useTranslation();const user=useUserStore(s=>s.user),hydrated=useUserStore(s=>s.authHydrated);const client=useQueryClient();
   const [input,setInput]=useState(''),[q,setQuery]=useState(''),[notice,setNotice]=useState('');const admin=hydrated&&user?.role==='ADMIN';
-  const status=useQuery({queryKey:['external-status',user?.id],queryFn:()=>catalogRequest('/status'),enabled:admin,retry:false});
-  const enabled=admin&&status.data?.enabled===true;
+  const status=useQuery({queryKey:['external-status',user?.id],queryFn:()=>catalogRequest('/status'),enabled:hydrated,retry:false});
+  const enabled=status.data?.enabled===true;const canManage=admin&&status.data?.canManage===true;
   const records=useQuery({queryKey:['external-recordings',user?.id],queryFn:({signal})=>catalogRequest('/recordings',{signal}),enabled,retry:false});
 
   const detail=useQuery({queryKey:['external-recording',user?.id,id],queryFn:({signal})=>catalogRequest(`/recordings/${encodeURIComponent(id)}`,{signal}),enabled:enabled&&Boolean(id),retry:false});
@@ -92,7 +96,7 @@ export default function ExternalMusic() {
   const run=(path,body,method='POST')=>{setNotice('');mutation.mutate({path,body,method});};
   const error=mutation.error || detail.error || records.error || status.error;
   if(!hydrated)return <p role="status">{t('externalMusic.loading')}</p>;
-  if(!admin)return <div className="space-y-4"><h1 className="ns-page-title">{t('externalMusic.title')}</h1><p>{t('externalMusic.private')}</p>{!user&&<button className={button} onClick={()=>setAuth(true,'login')}>{t('externalMusic.signIn')}</button>}</div>;
+  if(status.error?.status===403)return <p>{t('externalMusic.private')}</p>;
   return <div className="space-y-6 pb-8" data-testid="external-music-page">
     <h1 className="ns-page-title">{t('externalMusic.title')}</h1><p className="text-sm text-[var(--ns-text-muted)]">{t('externalMusic.betaNote')}</p>
     <div className="flex flex-wrap gap-2">{status.data?.providers.map(p=><span key={p.provider} className="rounded border border-[var(--ns-border-subtle)] px-2 py-1 text-xs">{p.provider}: {enabled?p.status:'DISABLED'}</span>)}</div>
@@ -100,13 +104,13 @@ export default function ExternalMusic() {
     {notice&&<p role="status">{notice}</p>}
     {status.isPending&&<p role="status">{t('externalMusic.loading')}</p>}
     {status.data&&!enabled&&<p role="status">{t('externalMusic.disabled')}</p>}
-    {enabled&&id&&<>{detail.isPending?<p role="status">{t('externalMusic.loading')}</p>:detail.data&&<RecordingDetail key={detail.data.recording.recordingId} {...detail.data} records={records.data?.items || []} run={run} pending={mutation.isPending}/>}</>}
+    {enabled&&id&&<>{detail.isPending?<p role="status">{t('externalMusic.loading')}</p>:detail.data&&<RecordingDetail admin={canManage} key={detail.data.recording.recordingId} {...detail.data} records={records.data?.items || []} run={run} pending={mutation.isPending}/>}</>}
     {enabled&&!id&&<>
 
       <form role="search" className="flex gap-2" onSubmit={e=>{e.preventDefault();setQuery(input.trim());}}><input aria-label={t('externalMusic.search')} className={field} placeholder={t('externalMusic.searchPlaceholder')} value={input} onChange={e=>setInput(e.target.value)} maxLength={200} required/><button className={button}>{t('externalMusic.search')}</button></form>
       <ExternalCatalogFeed query={q}/>
-      <section className="space-y-3"><h2 className="font-semibold">{t('externalMusic.catalog')}</h2>{records.isPending&&<p role="status">{t('externalMusic.loading')}</p>}{records.data?.items.length===0&&<p>{t('externalMusic.emptyCatalog')}</p>}<div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">{records.data?.items.map(track=><MusicCard key={track.id} track={track} busy={mutation.isPending}/>)}</div></section><NewRecording run={run} pending={mutation.isPending}/>
+      <section className="space-y-3"><h2 className="font-semibold">{t('externalMusic.catalog')}</h2>{records.isPending&&<p role="status">{t('externalMusic.loading')}</p>}{records.data?.items.length===0&&<p>{t('externalMusic.emptyCatalog')}</p>}<div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">{records.data?.items.map(track=><MusicCard key={track.id} track={track} busy={mutation.isPending}/>)}</div></section>{canManage&&<NewRecording run={run} pending={mutation.isPending}/>}
     </>}
-    {status.data&&<form className="flex flex-wrap gap-2 border-t border-[var(--ns-border-subtle)] pt-4" onSubmit={e=>{e.preventDefault();const reason=new FormData(e.currentTarget).get('reason');run('/settings',{enabled:!status.data.enabled,reason},'PATCH');}}><input name="reason" aria-label={t('externalMusic.reason')} className={`${field} max-w-sm`} placeholder={t('externalMusic.reason')} minLength={3} maxLength={1000} required/><button className={button} disabled={mutation.isPending}>{t(status.data.enabled?'externalMusic.disable':'externalMusic.enable')}</button></form>}
+    {canManage&&<form className="flex flex-wrap gap-2 border-t border-[var(--ns-border-subtle)] pt-4" onSubmit={e=>{e.preventDefault();const reason=new FormData(e.currentTarget).get('reason');run('/settings',{enabled:!status.data.enabled,reason},'PATCH');}}><input name="reason" aria-label={t('externalMusic.reason')} className={`${field} max-w-sm`} placeholder={t('externalMusic.reason')} minLength={3} maxLength={1000} required/><button className={button} disabled={mutation.isPending}>{t(status.data.enabled?'externalMusic.disable':'externalMusic.enable')}</button></form>}
   </div>;
 }

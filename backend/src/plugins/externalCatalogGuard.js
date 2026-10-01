@@ -1,6 +1,6 @@
 'use strict';
 const fp=require('fastify-plugin');
-const {requestBetaUser,includeRecording,recordingView}=require('../lib/externalCatalog');
+const {requestBetaUser,includeRecording,recordingView,allowRole,visibleRecording}=require('../lib/externalCatalog');
 module.exports=fp(async fastify=>{
   fastify.addHook('preHandler',async(request,reply)=>{
     const m=request.url.split('?')[0].match(/^\/api\/tracks\/([^/]+)(?:\/|$)/);
@@ -17,6 +17,7 @@ module.exports=fp(async fastify=>{
     }
     if(request.method==='GET' && request.url.split('?')[0]===`/api/tracks/${m[1]}`) {
       const root=r.mergedIntoId ? await fastify.prisma.externalRecording.findUnique({where:{id:r.mergedIntoId},include:includeRecording}) : r;
+      if(!allowRole(user)&&!visibleRecording(root))return reply.code(404).send({error:'Track not found'});
       return reply.send({track:recordingView(root)});
     }
     if(request.url.split('?')[0].endsWith('/play-event'))return reply.code(409).send({error:'EXTERNAL_PLAY_EVENT_ENDPOINT_REQUIRED'});

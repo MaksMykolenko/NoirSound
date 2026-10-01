@@ -3,6 +3,7 @@ const {createAudiusAdapter}=require('../providers/audius');
 const {createCatalogAdapters,createCatalogFeed}=require('../providers/catalogs');
 const {ADMIN_PERMISSIONS,adminReadOptions,adminMutationOptions}=require('../lib/adminGuard');
 const C=require('../lib/externalCatalog');
+const {resolveAuthenticatedSession}=require('../lib/sessionResolver');
 const {EMBED_PROVIDERS,officialEmbed}=require('../providers/officialEmbeds');
 const reasonSchema={type:'string',minLength:3,maxLength:1000};
 const textSchema={type:'string',minLength:1,maxLength:300};
@@ -12,11 +13,13 @@ module.exports=async function externalCatalogRoutes(fastify,options) {
   const adapters={AUDIUS:audius,...(options.catalogAdapters || createCatalogAdapters())};
   const feed=createCatalogFeed(adapters);
   const providerFor=p=>{const adapter=adapters[p];if(!adapter)C.fail('EXTERNAL_PROVIDER_PERMISSION_REQUIRED',409);return adapter;};
-  const read=adminReadOptions(fastify,ADMIN_PERMISSIONS.TRACKS_READ);
+  const privateRead=adminReadOptions(fastify,ADMIN_PERMISSIONS.TRACKS_READ);
+  const read={preValidation:[async(request,reply)=>{if(!C.publicBeta()){for(const guard of privateRead.preValidation){await guard(request,reply);if(reply.sent)return;}}else{const session=await resolveAuthenticatedSession(fastify,request);request.user=session?.user || null;request.sessionId=session?.sessionId || null;}}],config:{rateLimit:{max:60,timeWindow:'1 minute'}}};
+  const save={preValidation:[async(request,reply)=>{await fastify.authenticate(request,reply);if(reply.sent)return;if(!C.publicBeta()){for(const guard of privateRead.preValidation.slice(1))await guard(request,reply);}}],config:{rateLimit:{max:60,timeWindow:'10 minutes'}}};
   const mutate=adminMutationOptions(fastify,ADMIN_PERMISSIONS.TRACKS_MANAGE);
   fastify.addHook('preHandler',async(request,reply)=>{
     reply.header('cache-control','private, no-store');reply.header('x-robots-tag','noindex, nofollow');
-    if(!C.allowRole(request.user))return reply.code(403).send({error:'EXTERNAL_BETA_FORBIDDEN'});
+    if((!C.publicBeta() || request.routeOptions.config.adminPermission) && !C.allowRole(request.user))return reply.code(403).send({error:'EXTERNAL_BETA_FORBIDDEN'});
     if(!/\/(status|settings)$/.test(request.url.split('?')[0])&&!await C.betaEnabled(fastify.prisma))return reply.code(403).send({error:'EXTERNAL_BETA_DISABLED'});
   });
   fastify.setErrorHandler((error,request,reply)=>{
@@ -52,7 +55,7 @@ module.exports=async function externalCatalogRoutes(fastify,options) {
     });
     return m;
   }
-  fastify.get('/status',read,async()=>({enabled:await C.betaEnabled(fastify.prisma),providers:feed.statuses()}));
+  fastify.get('/status',read,async request=>({enabled:await C.betaEnabled(fastify.prisma),public:C.publicBeta(),canManage:C.allowRole(request.user),providers:feed.statuses()}));
   fastify.get('/embed',{...read,schema:{querystring:{type:'object',additionalProperties:false,properties:{provider:{type:'string',enum:EMBED_PROVIDERS},url:{type:'string',minLength:1,maxLength:1000}},required:['provider','url']}}},async request=>officialEmbed(request.query.provider,request.query.url));
   fastify.patch('/settings',{...mutate,schema:bodySchema({enabled:{type:'boolean'},reason:reasonSchema},['enabled','reason'])},async request=>{
     return fastify.prisma.$transaction(async tx=>{await C.catalogLock(tx);const setting=await tx.externalCatalogSetting.upsert({where:{id:'beta'},create:{id:'beta',enabled:request.body.enabled},update:{enabled:request.body.enabled}});await C.recordAudit(tx,request,'EXTERNAL_BETA_SETTING','beta',request.body.reason,{enabled:setting.enabled});return {enabled:setting.enabled};});
@@ -65,6 +68,7 @@ module.exports=async function externalCatalogRoutes(fastify,options) {
     for(const m of data) {
       const source=sources.find(x=>x.externalId===m.externalId);let record=source?.recording;
       if(record?.mergedIntoId)record=await getRecording(record.mergedIntoId);
+      if(record&&!C.allowRole(request.user)&&!C.visibleRecording(record))continue;
       const key=record?.id || `audius:${m.externalId}`;if(seen.has(key))continue;seen.add(key);
       items.push(record?{...C.recordingView(record),imported:true}:{...m,id:key,artistName:m.artistName,duration:m.durationSeconds,isStreamable:m.availability==='AVAILABLE',playbackSource:'external',previewExternalId:m.externalId,imported:false});
     }
@@ -77,13 +81,14 @@ module.exports=async function externalCatalogRoutes(fastify,options) {
     for(const m of data.items){
       const source=found.find(s=>s.provider===m.provider&&s.externalId===m.externalId);let r=source?.recording;
       if(r?.mergedIntoId)r=await getRecording(r.mergedIntoId);
+      if(r&&!C.allowRole(request.user)&&!C.visibleRecording(r))continue;
       const key=r?.id || `${m.provider}:${m.externalId}`;if(seen.has(key))continue;seen.add(key);
       items.push(r?{...C.recordingView(r),imported:true}:{...m,id:key,duration:m.durationSeconds,isAvailable:m.availability==='AVAILABLE',isStreamable:m.playbackMode==='EXTERNAL_STREAM'&&m.availability==='AVAILABLE',playbackSource:'external',previewExternalId:m.externalId,imported:false});
     }
     return {...data,items};
   });
   fastify.get('/preview/:id/playback',read,async request=>{const p=await audius.playback(request.params.id);return {url:p.url,playbackMode:p.playbackMode,provider:p.provider,expiresAt:p.expiresAt};});
-  fastify.post('/import',{...mutate,schema:bodySchema({provider:{type:'string',enum:['AUDIUS','APPLE_MUSIC','YOUTUBE'],default:'AUDIUS'},externalId:{type:'string',pattern:'^[A-Za-z0-9_-]{1,32}$'},url:{type:'string',maxLength:1000}})},async request=>{
+  fastify.post('/import',{...save,schema:bodySchema({provider:{type:'string',enum:['AUDIUS','APPLE_MUSIC','YOUTUBE'],default:'AUDIUS'},externalId:{type:'string',pattern:'^[A-Za-z0-9_-]{1,32}$'},url:{type:'string',maxLength:1000}})},async request=>{
     if(Boolean(request.body.externalId)===Boolean(request.body.url))C.fail('AUDIUS_ID_OR_URL_REQUIRED');
     const provider=request.body.provider,adapter=providerFor(provider);
     if(request.body.url && provider!=='AUDIUS')C.fail('EXTERNAL_PROVIDER_ID_REQUIRED');
@@ -105,6 +110,7 @@ module.exports=async function externalCatalogRoutes(fastify,options) {
       const r=await tx.externalRecording.create({data:{trackId:track.id,curatorId:request.user.id,versionType:m.versionType,isrc:m.isrc,metadataProvenance:m.provenance,metadataExpiresAt:new Date(Date.now()+86400000),sources:{create:{provider,externalId:m.externalId,canonicalUrl:m.canonicalUrl,playbackMode:m.playbackMode,availability:m.availability,provenance:m.provenance,checkedAt:m.checkedAt,isPrimary:true,matchStatus:'CONFIRMED'}}},include:C.includeRecording});
       await C.recordAudit(tx,request,'EXTERNAL_IMPORT',r.id,'Automatic catalog selection',{provider,externalId:m.externalId});return r;
     });
+    if(!C.allowRole(request.user)&&!C.visibleRecording(record))C.fail('EXTERNAL_RECORDING_NOT_FOUND',404);
     return {recording:C.recordingView(record)};
   });
   fastify.post('/recordings',{...mutate,schema:bodySchema({nativeTrackId:textSchema,title:textSchema,artistName:textSchema,durationSeconds:{type:'integer',minimum:0,maximum:36000},versionType:{type:'string',enum:C.VERSIONS},provenance:reasonSchema,reason:reasonSchema,provider:{type:'string',enum:C.PROVIDERS.slice(1)},url:{type:'string',maxLength:1000}},['reason'])},async request=>{
@@ -127,13 +133,13 @@ module.exports=async function externalCatalogRoutes(fastify,options) {
       const source=r.sources.find(s=>s.provenance===r.metadataProvenance && adapters[s.provider]);if(source)try{await refreshSource(source);}catch{}
     }
     const fresh=await fastify.prisma.externalRecording.findMany({where:{id:{in:records.map(r=>r.id)}},include:C.includeRecording,orderBy:{createdAt:'desc'}});
-    const views=fresh.map(r=>C.recordingView(r));const explicitVersion=C.versionFromTitle(q)!=='UNKNOWN';
+    const views=fresh.filter(r=>C.allowRole(request.user)||C.visibleRecording(r)).map(r=>C.recordingView(r));const explicitVersion=C.versionFromTitle(q)!=='UNKNOWN';
     return {items:explicitVersion?views:views.filter(r=>!r.parentId).map(r=>({...r,otherVersions:views.filter(v=>v.parentId===r.recordingId)})),limit:30};
   });
   fastify.get('/recordings/:id',read,async request=>{
-    let r=await getRecording(request.params.id);if(r.mergedIntoId)r=await getRecording(r.mergedIntoId);
+    let r=await getRecording(request.params.id);if(r.mergedIntoId)r=await getRecording(r.mergedIntoId);if(!C.allowRole(request.user)&&!C.visibleRecording(r))C.fail('EXTERNAL_RECORDING_NOT_FOUND',404);
     for(const s of r.sources)if(adapters[s.provider] && (!s.checkedAt || Date.now()-s.checkedAt.getTime()>86400000 || s.availability==='ERROR'))try{await refreshSource(s);}catch{}
-    return {recording:C.recordingView(await getRecording(r.id)),versions:(await fastify.prisma.externalRecording.findMany({where:{parentId:r.id,mergedIntoId:null},include:C.includeRecording})).map(r=>C.recordingView(r)),audit:await fastify.prisma.auditLog.findMany({where:{targetType:'EXTERNAL_RECORDING',targetId:r.id},select:{id:true,action:true,reason:true,createdAt:true},orderBy:{createdAt:'desc'},take:30})};
+    return {recording:C.recordingView(await getRecording(r.id)),versions:(await fastify.prisma.externalRecording.findMany({where:{parentId:r.id,mergedIntoId:null},include:C.includeRecording})).filter(v=>C.allowRole(request.user)||C.visibleRecording(v)).map(r=>C.recordingView(r)),audit:C.allowRole(request.user)?await fastify.prisma.auditLog.findMany({where:{targetType:'EXTERNAL_RECORDING',targetId:r.id},select:{id:true,action:true,reason:true,createdAt:true},orderBy:{createdAt:'desc'},take:30}):[]};
   });
   fastify.patch('/recordings/:id',{...mutate,schema:bodySchema({versionType:{type:'string',enum:C.VERSIONS},versionLabel:{type:'string',maxLength:200},parentId:{anyOf:[textSchema,{type:'null'}]},isrc:{anyOf:[{type:'string',pattern:'^[A-Z]{2}[A-Z0-9]{3}[0-9]{7}$'},{type:'null'}]},reason:reasonSchema},['reason'])},async request=>{
     const {reason,...updates}=request.body;
@@ -197,7 +203,7 @@ module.exports=async function externalCatalogRoutes(fastify,options) {
     });
   });
   fastify.get('/recordings/:id/playback',{...read,schema:{querystring:{type:'object',additionalProperties:false,properties:{sourceId:textSchema},required:['sourceId']}}},async request=>{
-    const r=await getRecording(request.params.id);const source=[...r.sources,...r.members.flatMap(m=>m.sources)].find(s=>s.id===request.query.sourceId);
+    const r=await getRecording(request.params.id);if(!C.allowRole(request.user)&&!C.visibleRecording(r))C.fail('EXTERNAL_RECORDING_NOT_FOUND',404);const source=[...r.sources,...r.members.flatMap(m=>m.sources)].find(s=>s.id===request.query.sourceId);
     if(!source)C.fail('EXTERNAL_SOURCE_NOT_FOUND',404);
     if(source.matchStatus!=='CONFIRMED' || source.officialStatus==='REJECTED' || ['UNAVAILABLE','ERROR'].includes(source.availability))C.fail('EXTERNAL_SOURCE_NOT_PLAYABLE',409);
     if(EMBED_PROVIDERS.includes(source.provider)) {
@@ -209,8 +215,8 @@ module.exports=async function externalCatalogRoutes(fastify,options) {
     try {const p=await audius.playback(source.externalId);await refreshSource(source);return {url:p.url,playbackMode:p.playbackMode,provider:p.provider,expiresAt:p.expiresAt};}
     catch(e){await fastify.prisma.externalSource.update({where:{id:source.id},data:{availability:['AUDIUS_HTTP_404','AUDIUS_HTTP_403','EXTERNAL_TRACK_UNAVAILABLE'].includes(e.code)?'UNAVAILABLE':'ERROR',checkedAt:new Date()}});throw e;}
   });
-  fastify.post('/recordings/:id/play-event',{...mutate,schema:bodySchema({sourceId:textSchema,durationListenedSeconds:{type:'integer',minimum:1,maximum:3600},completed:{type:'boolean'}},['sourceId','durationListenedSeconds'])},async request=>{
-    const r=await getRecording(request.params.id);const s=[...r.sources,...r.members.flatMap(m=>m.sources)].find(s=>s.id===request.body.sourceId && s.playbackMode==='EXTERNAL_STREAM');if(!s)C.fail('EXTERNAL_SOURCE_NOT_PLAYABLE');
+  fastify.post('/recordings/:id/play-event',{...save,schema:bodySchema({sourceId:textSchema,durationListenedSeconds:{type:'integer',minimum:1,maximum:3600},completed:{type:'boolean'}},['sourceId','durationListenedSeconds'])},async request=>{
+    const r=await getRecording(request.params.id);if(!C.allowRole(request.user)&&!C.visibleRecording(r))C.fail('EXTERNAL_RECORDING_NOT_FOUND',404);const s=[...r.sources,...r.members.flatMap(m=>m.sources)].find(s=>s.id===request.body.sourceId && s.playbackMode==='EXTERNAL_STREAM');if(!s)C.fail('EXTERNAL_SOURCE_NOT_PLAYABLE');
     await fastify.prisma.externalPlaybackEvent.create({data:{recordingId:r.id,userId:request.user.id,provider:s.provider,durationListenedSeconds:Math.min(request.body.durationListenedSeconds,r.track.durationSeconds || 3600),completed:!!request.body.completed}});return {success:true,source:'NOIRSOUND_EXTERNAL_PLAYBACK',providerListenVerified:false};
   });
   // Bounded expiry sweep purges stale provider metadata, preserving Track IDs and links.

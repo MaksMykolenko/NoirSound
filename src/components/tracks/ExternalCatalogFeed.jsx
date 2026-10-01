@@ -7,8 +7,8 @@ import TrackCard from './TrackCard';
 
 export default function ExternalCatalogFeed(props) {
   const user=useUserStore(s=>s.user),hydrated=useUserStore(s=>s.authHydrated);
-  if(!hydrated||user?.role!=='ADMIN')return null;
-  return <AuthorizedFeed key={user.id} {...props} userId={user.id}/>;
+  if(!hydrated)return null;
+  return <AuthorizedFeed key={user?.id || 'guest'} {...props} userId={user?.id || 'guest'}/>;
 }
 function AuthorizedFeed({query='',excludeIds=[],userId}) {
   const {t}=useTranslation(),client=useQueryClient();

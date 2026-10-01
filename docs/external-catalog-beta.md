@@ -230,3 +230,9 @@ Credentials must be supplied privately in the existing server `.env.production`,
 - SoundCloud: **PERMISSION_REQUIRED**, search disabled. [API terms, Content and Privacy](https://developers.soundcloud.com/docs/api/terms-of-use) restrict alternative aggregate listening services unless explicitly licensed. No API catalog or API streaming is enabled by merely having a key. Existing administrator-supplied links remain independently reviewable.
 
 Apple/YouTube adapters without credentials are **NOT_CONFIGURED**, never called and never presented as live-tested. Audius public browsing/search does not require invented credentials. Disable the existing beta switch to hide the platform feed and deny import/playback routes. Release rollback uses the previous image revision; no database restore or destructive migration is required by this change.
+
+## Public beta access
+
+`EXTERNAL_CATALOG_PUBLIC=true` opens enabled catalog browse, source links, track details and official playback to guests and all active account roles. The environment enable flag and persisted Beta switch still apply. Public reads have IP rate limits, no-store responses and noindex headers. API imports and external play events require current active sessions and the normal same-origin write protection. Likes and private playlists use each user's own normal relations. Public playlists retain their existing external-track restriction.
+
+Source editing, manual record creation, merges, verification, settings and audit are still administrator-only and obey the existing owner allowlist. Public serialization omits source evidence and provenance; private native recordings attached by an administrator are excluded from public source views. No database migration or bulk publication of playlists occurs. Set `EXTERNAL_CATALOG_PUBLIC=false` to restore owner-only access; set the Beta switch off to stop all external catalog/playback.

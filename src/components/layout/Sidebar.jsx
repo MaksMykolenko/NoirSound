@@ -22,8 +22,8 @@ export default function Sidebar() {
       { to: '/upload', label: t('nav.upload'), icon: PlusCircle },
       { to: '/dashboard', label: t('header.creatorDashboard'), icon: LayoutDashboard },
     ] : []),
+    { to: '/external-music', label: t('externalMusic.title'), icon: Compass },
     ...(user?.role === 'ADMIN' ? [
-      { to: '/external-music', label: t('externalMusic.title'), icon: Compass },
       { to: '/admin', label: t('admin.admin'), icon: ShieldAlert },
     ] : []),
   ];
