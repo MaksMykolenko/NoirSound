@@ -1656,7 +1656,7 @@
     "back": "Back to catalog",
     "like": "Like",
     "playlist": "Choose a private playlist",
-    "linkOutNote": "LINK_OUT opens the platform. It does not play audio here or count as a listen.",
+    "linkOutNote": "SoundCloud, YouTube and Apple Music can open an official player. Spotify links open Spotify. Recording matches are verified separately.",
     "sources": "Platform sources",
     "addSource": "Add platform link",
     "provider": "Platform",
@@ -1701,6 +1701,17 @@
       "SPED_UP": "Sped Up",
       "SLOWED": "Slowed",
       "OTHER": "Other"
-    }
+    },
+    "listenByLink": "Listen by link",
+    "platformsNote": "SoundCloud, YouTube and Apple Music use official players. Search below uses Audius. Spotify opens on its own platform.",
+    "playerProvider": "Playback platform",
+    "playerUrl": "Track or video link",
+    "openPlayer": "Open player",
+    "officialPlayer": "Official player",
+    "closePlayer": "Close player",
+    "openPlatform": "Open on platform",
+    "applePlaybackNote": "Without signing in to Apple Music, a 30-second preview is available. Full playback depends on Apple Music sign-in and subscription.",
+    "embedPlaybackNote": "Press Play inside the platform player. Availability depends on the publisher, region and platform settings.",
+    "embedPrivacyNote": "Opening the player connects to the platform, which may use cookies. NoirSound does not count these plays in its statistics."
   }
 }

@@ -13,7 +13,7 @@ export default function usePlaybackKeyboard() {
         'input, textarea, select, button, a[href], summary, audio, video, [contenteditable]:not([contenteditable="false"]), [role="button"], [role="slider"], [role="textbox"], [role="combobox"], [role="menuitem"], [role="checkbox"], [role="switch"], [role="tab"]'
       )) return;
       const player = usePlayerStore.getState();
-      if (!player.currentTrack) return;
+      if (!player.currentTrack || player.activePlatformEmbed) return;
       event.preventDefault();
       if (!event.repeat) player.togglePlay();
     };

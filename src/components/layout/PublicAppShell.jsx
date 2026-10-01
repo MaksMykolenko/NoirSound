@@ -36,7 +36,7 @@ export default function PublicAppShell({ children }) {
   const isPlayerCollapsed = usePlayerStore((state) => state.isPlayerCollapsed);
   const lyricsFullscreenOpen = usePlayerStore((state) => state.lyricsFullscreenOpen);
   const mobilePlayerIsModal = Boolean(
-    isMobileViewport && currentTrack && !isPlayerCollapsed && !lyricsFullscreenOpen
+    isMobileViewport && currentTrack && currentTrack.playbackMode !== 'OFFICIAL_EMBED' && !isPlayerCollapsed && !lyricsFullscreenOpen
   );
   const shellIsInert = lyricsFullscreenOpen || isQueueOpen || mobilePlayerIsModal;
   const playbackContext = useMemo(() => ({ shellIsInert, isMobileViewport }), [shellIsInert, isMobileViewport]);

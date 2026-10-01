@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { resolveExternalPlayback, recordExternalPlay } from '../api/externalCatalog';
+import { resolveExternalPlayback, resolvePlatformEmbed, recordExternalPlay } from '../api/externalCatalog';
 import { API_BASE_URL, useMockApi } from '../api/client';
 import { getRecentlyPlayed } from '../api/stats';
 import { getLikedTracks, setTrackLiked } from '../api/tracks';
@@ -17,6 +17,12 @@ function reportPlaybackError(message) {
 let audio = null;
 let playbackGeneration = 0;
 let playbackAbort = null;
+let stopPlatformFrame = null;
+export function registerPlatformFrameStop(stop) {
+  stopPlatformFrame = stop;
+  return () => { if (stopPlatformFrame === stop) stopPlatformFrame = null; };
+}
+function stopPlatformPlayback() { stopPlatformFrame?.(); stopPlatformFrame = null; }
 let configureAudio = () => {};
 let likesRequest = null;
 let likesGeneration = 0;
@@ -40,7 +46,7 @@ function ensureAudio() {
 }
 
 function canStreamTrack(track) {
-  if (track?.playbackMode === 'LINK_OUT') return false;
+  if (['LINK_OUT','OFFICIAL_EMBED'].includes(track?.playbackMode)) return false;
   return track?.isStreamable ?? (useMockApi && Boolean(track?.audioUrl));
 }
 
@@ -59,7 +65,7 @@ if (typeof window !== 'undefined') {
   // Admin routes dispatch this event without importing the listener player.
   // A direct admin load therefore creates no listener audio engine, while an
   // in-app transition safely pauses an engine that was already active.
-  window.addEventListener('noirsound:admin-enter', () => audio?.pause());
+  window.addEventListener('noirsound:admin-enter', () => { audio?.pause(); usePlayerStore.getState().closePlatformEmbed(); });
 }
 
 // --- Qualified-play tracking -------------------------------------------
@@ -186,27 +192,31 @@ export const usePlayerStore = create((set, get) => {
     audio.onended = null;
     audio.onerror = null;
 
-    audio.onplay = () => set({ isPlaying: true });
+    audio.onplay = () => { if (!get().activePlatformEmbed) set({ isPlaying: true }); };
     audio.onpause = () => set({ isPlaying: false });
 
     audio.ontimeupdate = () => {
+      if (get().activePlatformEmbed) return;
       set({ progress: audio.currentTime });
       trackQualifyingProgress();
     };
 
     audio.ondurationchange = () => {
+      if (get().activePlatformEmbed) return;
       if (Number.isFinite(audio.duration) && audio.duration > 0) {
         set({ duration: audio.duration });
       }
     };
 
     audio.onended = () => {
+      if (get().activePlatformEmbed) return;
       // Safety net for very short tracks: `ended` can fire before the last
       // `timeupdate` tick would have crossed the qualifying threshold.
       trackQualifyingProgress(true);
       get().handleEnded();
     };
     audio.onerror = () => {
+      if (get().activePlatformEmbed) return;
       const message = get().currentTrack?.playbackMode === 'EXTERNAL_STREAM' ? 'External audio is unavailable. Retry or open Audius.' : 'The processed audio stream could not be loaded.';
       set({
         isPlaying: false,
@@ -220,6 +230,7 @@ export const usePlayerStore = create((set, get) => {
 
   return {
     currentTrack: null,
+    activePlatformEmbed: null,
     queue: [],
     originalQueue: [],
     queueSource: null,
@@ -240,7 +251,7 @@ export const usePlayerStore = create((set, get) => {
     lyricsFullscreenOpen: false,
 
     openLyricsFullscreen: () => {
-      if (get().currentTrack) {
+      if (get().currentTrack && !get().activePlatformEmbed) {
         set({ lyricsFullscreenOpen: true });
       }
     },
@@ -250,6 +261,7 @@ export const usePlayerStore = create((set, get) => {
     },
 
     collapsePlayer: () => {
+      if (get().activePlatformEmbed) { get().closePlatformEmbed(); return; }
       set({ isPlayerCollapsed: true });
       persistPlayerCollapsed(true);
     },
@@ -260,6 +272,7 @@ export const usePlayerStore = create((set, get) => {
     },
 
     togglePlayerCollapsed: () => {
+      if (get().activePlatformEmbed) { get().closePlatformEmbed(); return; }
       const nextCollapsed = !get().isPlayerCollapsed;
       set({ isPlayerCollapsed: nextCollapsed });
       persistPlayerCollapsed(nextCollapsed);
@@ -344,10 +357,37 @@ export const usePlayerStore = create((set, get) => {
       }
     },
 
+    openPlatformEmbed: async (provider, url) => {
+      const user = useUserStore.getState().user;
+      if (user?.role !== 'ADMIN') throw new Error('EXTERNAL_BETA_FORBIDDEN');
+      const generation = ++playbackGeneration;
+      playbackAbort?.abort();
+      playbackAbort = new AbortController();
+      stopPlatformPlayback();
+      audio?.pause();
+      audio?.removeAttribute?.('src');
+      set({activePlatformEmbed:null,currentTrack:null,isPlaying:false,progress:0,duration:0,playbackLoading:false,playbackError:null,lyricsFullscreenOpen:false});
+      const embed = await resolvePlatformEmbed(provider, url, playbackAbort.signal);
+      if (generation !== playbackGeneration || useUserStore.getState().user?.id !== user.id || useUserStore.getState().user?.role !== 'ADMIN') return;
+      const origins = {SOUNDCLOUD:'https://w.soundcloud.com',APPLE_MUSIC:'https://embed.music.apple.com',YOUTUBE:'https://www.youtube-nocookie.com'};
+      if (embed.playbackMode !== 'OFFICIAL_EMBED' || embed.provider !== provider || new URL(embed.embedUrl).origin !== origins[provider]) throw new Error('EXTERNAL_EMBED_UNSUPPORTED');
+      set({activePlatformEmbed:{...embed,ownerId:user.id,generation},currentTrack:{id:`embed:${generation}`,title:provider,provider,playbackMode:'OFFICIAL_EMBED',isStreamable:false,hasLyrics:false},isPlayerCollapsed:false});
+    },
+
+    closePlatformEmbed: () => {
+      ++playbackGeneration;
+      playbackAbort?.abort();
+      if (!get().activePlatformEmbed) return;
+      stopPlatformPlayback();
+      set({activePlatformEmbed:null,currentTrack:null,isPlaying:false,progress:0,duration:0,playbackLoading:false,lyricsFullscreenOpen:false});
+    },
+
     playTrack: async (track, newQueue = null, queueSource = null) => {
       const generation = ++playbackGeneration;
       playbackAbort?.abort();
       playbackAbort = new AbortController();
+      stopPlatformPlayback();
+      set({activePlatformEmbed:null});
       ensureAudio();
       if (!audio) return;
       audio.pause();
@@ -427,6 +467,7 @@ export const usePlayerStore = create((set, get) => {
     },
 
     togglePlay: () => {
+      if (get().activePlatformEmbed) return;
       if (get().playbackLoading) { get().pause(); return; }
       if (get().currentTrack?.playbackMode === 'EXTERNAL_STREAM' && !audio?.src) { get().playTrack(get().currentTrack); return; }
       const { isPlaying, currentTrack } = get();
@@ -453,6 +494,7 @@ export const usePlayerStore = create((set, get) => {
     },
 
     pause: () => {
+      if (get().activePlatformEmbed) { get().closePlatformEmbed(); return; }
       ++playbackGeneration;
       playbackAbort?.abort();
       set({ playbackLoading: false });
@@ -467,6 +509,7 @@ export const usePlayerStore = create((set, get) => {
     },
 
     seek: (time) => {
+      if (get().activePlatformEmbed) return;
       const { currentTrack } = get();
       if (audio) {
         audio.currentTime = time;

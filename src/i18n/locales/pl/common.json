@@ -1666,7 +1666,7 @@
     "back": "Wróć do katalogu",
     "like": "Polub",
     "playlist": "Wybierz prywatną playlistę",
-    "linkOutNote": "LINK_OUT otwiera platformę. Nie odtwarza tutaj audio i nie liczy odsłuchu.",
+    "linkOutNote": "SoundCloud, YouTube i Apple Music mogą otworzyć oficjalny odtwarzacz. Linki Spotify otwierają Spotify. Zgodność nagrania jest sprawdzana osobno.",
     "sources": "Źródła na platformach",
     "addSource": "Dodaj link",
     "provider": "Platforma",
@@ -1711,6 +1711,17 @@
       "SPED_UP": "Sped Up",
       "SLOWED": "Slowed",
       "OTHER": "Inna"
-    }
+    },
+    "listenByLink": "Słuchaj przez link",
+    "platformsNote": "SoundCloud, YouTube i Apple Music używają oficjalnych odtwarzaczy. Wyszukiwanie poniżej korzysta z Audius. Spotify otwiera się na swojej platformie.",
+    "playerProvider": "Platforma odtwarzania",
+    "playerUrl": "Link do utworu lub filmu",
+    "openPlayer": "Otwórz odtwarzacz",
+    "officialPlayer": "Oficjalny odtwarzacz",
+    "closePlayer": "Zamknij odtwarzacz",
+    "openPlatform": "Otwórz na platformie",
+    "applePlaybackNote": "Bez logowania do Apple Music dostępny jest 30-sekundowy fragment. Pełne odtwarzanie zależy od logowania i subskrypcji Apple Music.",
+    "embedPlaybackNote": "Naciśnij Play w odtwarzaczu platformy. Dostępność zależy od autora, regionu i ustawień platformy.",
+    "embedPrivacyNote": "Otwarcie odtwarzacza łączy z platformą, która może używać cookies. NoirSound nie dolicza tych odtworzeń do swoich statystyk."
   }
 }

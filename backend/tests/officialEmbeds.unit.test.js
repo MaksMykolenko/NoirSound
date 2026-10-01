@@ -1,0 +1,9 @@
+import {describe,it,expect} from 'vitest';
+import embeds from '../src/providers/officialEmbeds';
+const {officialEmbed}=embeds;
+describe('official visible embed URL boundaries',()=>{
+ it('keeps YouTube video identity and removes tracking/autoplay',()=>{const r=officialEmbed('YOUTUBE','https://youtu.be/abcdefghijk?autoplay=1&si=tracking');expect(r.embedUrl).toBe('https://www.youtube-nocookie.com/embed/abcdefghijk?playsinline=1&autoplay=0');expect(r.canonicalUrl).toBe('https://www.youtube.com/watch?v=abcdefghijk');});
+ it('preserves the selected Apple song',()=>{expect(officialEmbed('APPLE_MUSIC','https://music.apple.com/us/album/fixture/123?i=456&at=tracking').embedUrl).toBe('https://embed.music.apple.com/us/album/fixture/123?i=456');expect(officialEmbed('APPLE_MUSIC','https://music.apple.com/us/song/fixture/456').embedUrl).toBe('https://embed.music.apple.com/us/song/fixture/456');});
+ it('SoundCloud retains branding, disables autoplay and uses the exact public track',()=>{const u=new URL(officialEmbed('SOUNDCLOUD','https://www.soundcloud.com/fixture/track?secret_token=private').embedUrl);expect(u.origin).toBe('https://w.soundcloud.com');expect(Object.fromEntries(u.searchParams)).toEqual({url:'https://soundcloud.com/fixture/track',auto_play:'false',single_active:'true',show_artwork:'true',show_user:'true'});});
+ it.each([['SPOTIFY','https://open.spotify.com/track/1234567890123456789012'],['AUDIUS','https://audius.co/fixture/track'],['YOUTUBE','https://youtube.com.evil.test/watch?v=abcdefghijk'],['YOUTUBE','https://user:pass@www.youtube.com/watch?v=abcdefghijk'],['SOUNDCLOUD','https://127.0.0.1/fixture/track'],['SOUNDCLOUD','https://soundcloud.com/fixture/sets'],['APPLE_MUSIC','https://music.apple.com/us/album/fixture/123']])('rejects unsupported/unsafe/non-recording %s URL',(p,u)=>expect(()=>officialEmbed(p,u)).toThrow());
+});

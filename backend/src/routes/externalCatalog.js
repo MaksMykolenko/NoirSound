@@ -2,6 +2,7 @@
 const {createAudiusAdapter}=require('../providers/audius');
 const {ADMIN_PERMISSIONS,adminReadOptions,adminMutationOptions}=require('../lib/adminGuard');
 const C=require('../lib/externalCatalog');
+const {EMBED_PROVIDERS,officialEmbed}=require('../providers/officialEmbeds');
 const reasonSchema={type:'string',minLength:3,maxLength:1000};
 const textSchema={type:'string',minLength:1,maxLength:300};
 const bodySchema=(properties,required=[])=>({body:{type:'object',additionalProperties:false,properties,required}});
@@ -47,7 +48,8 @@ module.exports=async function externalCatalogRoutes(fastify,options) {
     });
     return m;
   }
-  fastify.get('/status',read,async()=>{ if(process.env.EXTERNAL_CATALOG_ENABLED==='true' && audius.status()==='NOT_CONFIGURED') { try { await audius.search('NoirSound',0,1); } catch {} } return ({enabled:await C.betaEnabled(fastify.prisma),providers:[{provider:'AUDIUS',status:process.env.EXTERNAL_CATALOG_ENABLED !== 'true' ? 'DISABLED' : audius.status(),capabilities:audius.capabilities},...C.PROVIDERS.slice(1).map(provider=>({provider,status:'LINK_OUT_ONLY',capabilities:{search:false,metadata:false,playbackMode:'LINK_OUT'}}))]}); });
+  fastify.get('/status',read,async()=>{ if(process.env.EXTERNAL_CATALOG_ENABLED==='true' && audius.status()==='NOT_CONFIGURED') { try { await audius.search('NoirSound',0,1); } catch {} } return ({enabled:await C.betaEnabled(fastify.prisma),providers:[{provider:'AUDIUS',status:process.env.EXTERNAL_CATALOG_ENABLED !== 'true' ? 'DISABLED' : audius.status(),capabilities:audius.capabilities},...C.PROVIDERS.slice(1).map(provider=>({provider,status:EMBED_PROVIDERS.includes(provider)?'OFFICIAL_EMBED':'LINK_OUT_ONLY',capabilities:{search:false,metadata:false,playbackMode:EMBED_PROVIDERS.includes(provider)?'OFFICIAL_EMBED':'LINK_OUT'}}))]}); });
+  fastify.get('/embed',{...read,schema:{querystring:{type:'object',additionalProperties:false,properties:{provider:{type:'string',enum:EMBED_PROVIDERS},url:{type:'string',minLength:1,maxLength:1000}},required:['provider','url']}}},async request=>officialEmbed(request.query.provider,request.query.url));
   fastify.patch('/settings',{...mutate,schema:bodySchema({enabled:{type:'boolean'},reason:reasonSchema},['enabled','reason'])},async request=>{
     return fastify.prisma.$transaction(async tx=>{await C.catalogLock(tx);const setting=await tx.externalCatalogSetting.upsert({where:{id:'beta'},create:{id:'beta',enabled:request.body.enabled},update:{enabled:request.body.enabled}});await C.recordAudit(tx,request,'EXTERNAL_BETA_SETTING','beta',request.body.reason,{enabled:setting.enabled});return {enabled:setting.enabled};});
   });

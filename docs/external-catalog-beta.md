@@ -24,16 +24,44 @@ origin, explicitly allowed only in `media-src`. The gateway's HEAD response does
 not expose that redirect. No wildcard Cloudflare storage origins are allowed;
 a provider CDN origin change requires review and a CSP update.
 
-Spotify, SoundCloud, Apple Music and YouTube support administrator-supplied
-HTTPS recording links only. No API/catalog/streaming/embeds are connected.
-LINK_OUT does not start playback, enter the audio queue or write a listening event.
-Only exact platform hostnames and recording URL forms are accepted; album-only,
-shortened unknown-host and arbitrary URLs are rejected. LINK_OUT does no fetch.
+SoundCloud, Apple Music and YouTube support official visible players through
+`GET /api/external-catalog/embed?provider=...&url=...`. The same administrator
+allowlist, environment gate and persisted beta switch protect this endpoint.
+Paste a public track/video link in “Listen by link”, or open a saved source's
+player. The server only validates and canonicalizes the URL; it performs no
+third-party fetch and creates no catalog rows. Search/import remain Audius-only.
+
+The existing global player owns one active platform frame. Opening one pauses
+and clears the native/Audius audio source; switching back synchronously blanks
+and removes the frame. Closing/collapsing, entering admin, logging out or loss
+of beta access stops the frame. The persisted gate is checked every 15 seconds
+and on window focus. YouTube remains visible with controls and a viewport of
+at least 200 by 200 pixels. Controls live in the official player; no fictional
+NoirSound progress, playback state, queue entries or listen statistics are emitted.
+
+Apple Music supports a 30-second preview without sign-in; full listening depends
+on the platform account/subscription. SoundCloud and YouTube honor publisher,
+region and embed restrictions; the original-platform link stays available.
+Opening a widget explicitly connects to that platform, which may use cookies.
+No API keys, audio extraction, proxying, transcoding or hidden video are used.
+HTML `frame-src` allows only the three official embed origins; JSON API CSP
+remains `default-src 'none'; frame-ancestors 'none'`.
+
+Spotify stays LINK_OUT_ONLY: its widget terms Section IV.2.f prohibit integrating
+Spotify with streams from another service. No Spotify widget/SDK/catalog content
+is incorporated into this multi-platform player. Existing source links, matching
+verification and private catalog relations are preserved. Stored LINK_OUT rows
+remain links; an explicit separate widget action is available for supported
+providers and does not assert that an unverified source is the same recording.
 
 References reviewed 2026-10-01:
 - https://docs.audius.co/sdk/
 - https://api.audius.co/v1/swagger.yaml
 - https://docs.audius.co/developers/guides/image-mirrors/
+- https://developer.spotify.com/documentation/embeds/terms
+- https://developers.soundcloud.com/docs/api/html5-widget
+- https://developers.google.com/youtube/iframe_api_reference
+- https://artists.apple.com/support/1117-apple-music-marketing-tools
 - https://developer.spotify.com/policy
 - https://developers.soundcloud.com/docs/api/terms-of-use
 
@@ -58,7 +86,8 @@ The server environment flag is a maximum gate; the database switch cannot
 re-enable beta if that environment flag is false.
 
 Status is LIVE only after an official API request succeeds. Link-only providers
-are LINK_OUT_ONLY. API failures and disabled providers remain explicit. Normal
+are LINK_OUT_ONLY; widget providers are OFFICIAL_EMBED, which indicates a
+configured URL adapter rather than guaranteed availability. API failures and disabled providers remain explicit. Normal
 NoirSound endpoints continue working when Audius is disabled or unavailable.
 
 ## Test
@@ -120,23 +149,13 @@ rollback, use the exact backend/worker/web image IDs in the deployment's private
 Preserve postgres/redis/minio containers and volumes. Keep the additive schema
 and new data. Never restore the whole DB over new user activity.
 
-## Current deployment blocker (2026-10-01)
+## Prior release
 
-The existing production deploy script was executed against its current HEAD and
-stopped before backup/build/migration/application updates:
-`A configured trusted private offsite verifier is required`.
-`OFFSITE_BACKUP_VERIFY_SCRIPT` is absent from the production environment and live
-application containers; no existing verifier executable was found in the checked
-NoirSound operations/release directories. A historical offsite receipt is not a
-configured verifier for this release. The required remaining operator input is
-the existing trusted verifier path. No production beta deployment is claimed.
-
-A fresh existing-system backup completed on 2026-10-01 at 16:14 UTC, reference
-`20261001T161440fb57a12bZ`, in `/opt/noirsound/NoirSound/backups` (outside the web
-root, files mode 0600). PostgreSQL gzip and storage tar readability passed.
-This fresh pair has not been independently restored/offsite-verified by this run.
-Production source and all running image references remained unchanged.
-
+The Audius beta was deployed at `769b034d9e105541790a50e6f8f5b48e99326ff0`
+through the production CI workflow, with fresh backup, isolated restore and
+attended user-device offsite verification. The original missing offsite hook was
+resolved through the transport below. This provider expansion requires the same
+fresh gates and introduces no database migration.
 
 ## CI and existing user-device offsite transport
 

@@ -25,12 +25,14 @@ import {
 } from './PlayerBarShared';
 import { useTrackContextMenu } from '../../hooks/useEntityContextMenu';
 import useDialogFocusTrap from '../../hooks/useDialogFocusTrap';
+import PlatformEmbedPlayer from './PlatformEmbedPlayer';
 import { isUnmodifiedPrimaryActivation } from '../../utils/linkActivation';
 
 export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
   const { t } = useTranslation();
   const {
     currentTrack,
+    activePlatformEmbed,
     isPlaying,
     volume,
     progress,
@@ -66,7 +68,7 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
     && window.matchMedia('(max-width: 1023px)').matches
   ));
   const mobileSheetOpen = Boolean(
-    isMobileViewport && currentTrack && !isPlayerCollapsed && !lyricsFullscreenOpen && !isQueueOpen
+    isMobileViewport && currentTrack && !activePlatformEmbed && !isPlayerCollapsed && !lyricsFullscreenOpen && !isQueueOpen
   );
   const mobileSheetRef = useDialogFocusTrap(mobileSheetOpen, collapsePlayer);
 
@@ -102,6 +104,8 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
     window.addEventListener('keydown', handleGlobalKeyDown);
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
   }, [isPlayerCollapsed, collapsePlayer, lyricsFullscreenOpen, isQueueOpen, mobileSheetOpen]);
+
+  if (activePlatformEmbed) return <PlatformEmbedPlayer key={activePlatformEmbed.generation} embed={activePlatformEmbed}/>;
 
   return (
     <>
