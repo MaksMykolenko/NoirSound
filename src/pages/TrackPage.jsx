@@ -150,7 +150,7 @@ export default function TrackPage() {
   const hasDuration = durationStr !== '—';
   const releaseStr = formatReleaseDate(track.releaseDate, i18n.language);
   const playCount = Number(track.plays || 0);
-  const trackNote = external ? t('externalMusic.embedPlaybackNote') : playCount === 0
+  const trackNote = external ? (track.playbackMode === 'OFFICIAL_EMBED' ? t('externalMusic.embedPlaybackNote') : track.playbackMode === 'LINK_OUT' ? t('externalMusic.openPlatform') : track.provider) : playCount === 0
     ? t('trackPage.beFirstToListen')
     : isBeat
       ? t('beats.producedBy', { name: track.artistName })

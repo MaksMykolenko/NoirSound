@@ -73,7 +73,7 @@ export default function TrackCard({ track, tracksContext = [], queueSource = nul
           {variant === 'release' && releaseYear !== null && <p>{releaseYear}</p>}
         </div>
         <span className="sr-only">{getLocalizedGenre(track.genre)} · {formatDuration(track.duration)}</span>
-        {!canPlay && <span className="ns-media-meta">{t(track.playbackMode === 'LINK_OUT' ? 'externalMusic.linkOutNote' : 'trackPage.audioUnavailable')}</span>}
+        {!canPlay && (track.playbackMode === 'LINK_OUT' && track.canonicalUrl ? <a className="ns-media-meta underline" href={track.canonicalUrl} target="_blank" rel="noopener noreferrer">{t('externalMusic.openPlatform')}</a> : <span className="ns-media-meta">{t('trackPage.audioUnavailable')}</span>)}
       </div>
     </article>
   );
