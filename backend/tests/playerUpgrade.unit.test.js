@@ -28,7 +28,7 @@ describe('preview and OAuth encryption',()=>{
     const sealed=tokens.seal({user:'a'},'selection',1000);
     expect(tokens.open(sealed,'selection').user).toBe('a');
     expect(tokens.open(sealed,'spotify-access')).toBeNull();
-    expect(tokens.open('x'+sealed.slice(1),'selection')).toBeNull();
+    expect(tokens.open((sealed[0]==='x'?'y':'x')+sealed.slice(1),'selection')).toBeNull();
     vi.advanceTimersByTime(1001);expect(tokens.open(sealed,'selection')).toBeNull();
   });
 });

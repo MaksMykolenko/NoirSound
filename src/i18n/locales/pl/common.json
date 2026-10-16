@@ -1675,7 +1675,7 @@
     "back": "Wróć do katalogu",
     "like": "Polub",
     "playlist": "Wybierz prywatną playlistę",
-    "linkOutNote": "SoundCloud i YouTube korzystają z oficjalnych odtwarzaczy. Linki Spotify otwierają Spotify. Zgodność nagrania jest sprawdzana osobno.",
+    "linkOutNote": "Import zapisuje listę utworów. Pełne audio wymaga dostępnego źródła; Spotify wymaga połączenia Premium.",
     "sources": "Źródła na platformach",
     "addSource": "Dodaj link",
     "provider": "Platforma",
@@ -1742,7 +1742,7 @@
   },
   "playlistImport": {
     "title": "Importuj playlistę",
-    "help": "Importuj całą listę ze Spotify, YouTube lub SoundCloud i słuchaj przez oficjalny odtwarzacz w NoirSound.",
+    "help": "Importuj całą listę ze Spotify, YouTube lub SoundCloud. Dostępne pełne utwory odtwarza standardowy odtwarzacz NoirSound.",
     "available": "gotowe",
     "unconfigured": "niepołączone",
     "configHelp": "Połącz Spotify, YouTube lub SoundCloud, aby importować playlisty z linku.",
@@ -1792,7 +1792,7 @@
     "trackUnavailable": "Niedostępne w serwisie źródłowym",
     "playTrack": "Słuchaj {{title}}",
     "openTrack": "Otwórz {{title}} w serwisie źródłowym",
-    "sourcePlaybackNote": "Źródło listy: {{provider}}. Naciśnij ▶ obok utworu. Dla Spotify wybierz wersję z YouTube; zostanie zapamiętana i będzie odtwarzana tutaj w NoirSound.",
+    "sourcePlaybackNote": "Źródło listy: {{provider}}. Odtwarzanie w standardowym odtwarzaczu NoirSound. Import zapisuje listę; dostępność pełnego audio jest sprawdzana osobno.",
     "spotifyPlaybackNote": "Spotify może odtwarzać tylko fragment. Pełne utwory mogą wymagać zalogowania do Spotify i obsługiwanej przeglądarki.",
     "previousTrack": "Poprzedni utwór",
     "nextTrack": "Następny utwór",
@@ -1803,6 +1803,18 @@
     "videoLink": "Lub link do filmu YouTube",
     "checkVideo": "Sprawdź film",
     "changeVersion": "Zmień wersję utworu",
-    "videoPlaybackFailed": "YouTube nie odtworzył tego filmu. Wybierz inną wersję."
+    "videoPlaybackFailed": "YouTube nie odtworzył tego filmu. Wybierz inną wersję.",
+    "connectPlayback": "Połącz odtwarzanie Spotify",
+    "reconnectPlayback": "Połącz Spotify ponownie",
+    "spotifyNativeNote": "Pełne utwory w odtwarzaczu NoirSound. Wymagane Spotify Premium.",
+    "playbackErrors": {
+      "SPOTIFY_PLAYBACK_CONNECT": "Połącz Spotify w tej playliście.",
+      "SPOTIFY_PLAYBACK_PREMIUM": "Spotify wymaga Premium i dostępu do tej aplikacji.",
+      "SPOTIFY_PLAYBACK_RATE_LIMIT": "Spotify tymczasowo ograniczył żądania. Spróbuj później.",
+      "SPOTIFY_PLAYBACK_UNAVAILABLE": "Nie udało się uruchomić Spotify. Spróbuj ponownie.",
+      "SPOTIFY_PLAYBACK_AUTOPLAY": "Naciśnij odtwarzanie ponownie, aby włączyć dźwięk.",
+      "IMPORT_AUDIO_UNAVAILABLE": "Pełne audio tego utworu nie jest dostępne w NoirSound.",
+      "IMPORT_TRACK_UNAVAILABLE": "Ten utwór jest niedostępny w źródle."
+    }
   }
 }

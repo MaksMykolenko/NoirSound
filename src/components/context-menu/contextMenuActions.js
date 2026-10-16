@@ -216,12 +216,12 @@ export function buildPlaylistContextActions({
 }) {
   if (!playlist) return [];
   const tracks = playlist.tracks || [];
-  const playable = tracks.filter((track) => track.playbackMode === 'OFFICIAL_EMBED' || (track.isStreamable ?? Boolean(track.audioUrl)));
+  const playable = tracks.filter((track) => (track.playbackMode === 'IMPORTED_SOURCE' && !track.unavailable) || (track.isStreamable ?? Boolean(track.audioUrl)));
   const canResolveTracks = playable.length > 0 || Number(playlist.trackCount || 0) > 0;
   const loadPlayableTracks = async () => {
     if (playable.length > 0) return playable;
     const resolved = await resolvePlaylistTracks?.();
-    return (resolved || []).filter((track) => track.playbackMode === 'OFFICIAL_EMBED' || (track.isStreamable ?? Boolean(track.audioUrl)));
+    return (resolved || []).filter((track) => (track.playbackMode === 'IMPORTED_SOURCE' && !track.unavailable) || (track.isStreamable ?? Boolean(track.audioUrl)));
   };
   const owner = playlist.isOwner || playlist.canEdit || playlist.createdByCurrentUser;
   return [

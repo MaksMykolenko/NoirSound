@@ -1675,7 +1675,7 @@
     "back": "К каталогу",
     "like": "Нравится",
     "playlist": "Выберите приватный плейлист",
-    "linkOutNote": "SoundCloud и YouTube используют официальные плееры. Ссылки Spotify открывают Spotify. Соответствие записи проверяется отдельно.",
+    "linkOutNote": "Импорт сохраняет список композиций. Полное аудио требует доступного источника; Spotify — подключения Premium.",
     "sources": "Источники на платформах",
     "addSource": "Добавить ссылку",
     "provider": "Платформа",
@@ -1742,7 +1742,7 @@
   },
   "playlistImport": {
     "title": "Импорт плейлиста",
-    "help": "Импортируйте весь список из Spotify, YouTube или SoundCloud и слушайте через официальный плеер в NoirSound.",
+    "help": "Импортируйте весь список из Spotify, YouTube или SoundCloud. Доступные полные треки воспроизводятся обычной панелью NoirSound.",
     "available": "готово",
     "unconfigured": "не подключено",
     "configHelp": "Подключите Spotify, YouTube или SoundCloud для импорта плейлистов по ссылке.",
@@ -1792,7 +1792,7 @@
     "trackUnavailable": "Недоступно в исходном сервисе",
     "playTrack": "Слушать {{title}}",
     "openTrack": "Открыть {{title}} в исходном сервисе",
-    "sourcePlaybackNote": "Источник списка: {{provider}}. Нажми ▶ рядом с треком. Для Spotify выбери YouTube-версию один раз — она сохранится и будет играть здесь, в NoirSound.",
+    "sourcePlaybackNote": "Источник списка: {{provider}}. Воспроизведение через обычную панель NoirSound. Импорт сохраняет список; доступность полного аудио проверяется отдельно.",
     "spotifyPlaybackNote": "Spotify может воспроизводить только превью. Для полного трека может потребоваться вход в Spotify и поддерживаемый браузер.",
     "previousTrack": "Предыдущий трек",
     "nextTrack": "Следующий трек",
@@ -1803,6 +1803,18 @@
     "videoLink": "Или ссылка на видео YouTube",
     "checkVideo": "Проверить видео",
     "changeVersion": "Изменить версию трека",
-    "videoPlaybackFailed": "YouTube не воспроизвёл это видео. Выбери другую версию."
+    "videoPlaybackFailed": "YouTube не воспроизвёл это видео. Выбери другую версию.",
+    "connectPlayback": "Подключить воспроизведение Spotify",
+    "reconnectPlayback": "Переподключить Spotify",
+    "spotifyNativeNote": "Полные треки через панель NoirSound. Нужен Spotify Premium.",
+    "playbackErrors": {
+      "SPOTIFY_PLAYBACK_CONNECT": "Подключи Spotify для воспроизведения в этом плейлисте.",
+      "SPOTIFY_PLAYBACK_PREMIUM": "Spotify требует Premium и доступа к этому приложению.",
+      "SPOTIFY_PLAYBACK_RATE_LIMIT": "Spotify временно ограничил запросы. Попробуй позже.",
+      "SPOTIFY_PLAYBACK_UNAVAILABLE": "Не удалось запустить аудио Spotify. Попробуй ещё раз.",
+      "SPOTIFY_PLAYBACK_AUTOPLAY": "Нажми ▶ ещё раз, чтобы браузер разрешил звук.",
+      "IMPORT_AUDIO_UNAVAILABLE": "Для этого трека нет доступного полного аудио в NoirSound.",
+      "IMPORT_TRACK_UNAVAILABLE": "Этот трек недоступен в источнике."
+    }
   }
 }

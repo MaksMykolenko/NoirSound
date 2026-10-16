@@ -29,7 +29,8 @@ export function PlaybackErrorStatus({ error, className = '' }) {
   const { t } = useTranslation();
   if (!error) return null;
 
-  const message = resolvePlaybackErrorMessage(error, {
+  const key='playlistImport.playbackErrors.'+error;
+  const message = t(key,{defaultValue:''}) || resolvePlaybackErrorMessage(error, {
     mockMode: isMockMode(),
     demoMessage: t('player.demoAudioUnavailable'),
     unavailableMessage: t('player.audioUnavailable'),
@@ -85,13 +86,13 @@ export function PlayerTrackInfo({
             {track.title}
           </Link>
         </h4>
-        {track.playbackSource === 'external' ? <span className="block truncate text-xs text-zinc-400">{track.artistName}</span> : <Link to={`/artist/${track.artistId}`} onClick={onOpenTrack} title={track.artistName} className="block text-xs text-zinc-400 truncate hover:text-zinc-100">{track.artistName}</Link>}
+        {(track.playbackSource === 'external' || track.importedPlaylistId) ? <span className="block truncate text-xs text-zinc-400">{track.artistName}</span> : <Link to={`/artist/${track.artistId}`} onClick={onOpenTrack} title={track.artistName} className="block text-xs text-zinc-400 truncate hover:text-zinc-100">{track.artistName}</Link>}
         <TrackSourceIcon track={track} />
         <PlaybackErrorStatus error={playbackError} />
       </div>
       <button
         type="button"
-        disabled={Boolean(track.previewExternalId)}
+        disabled={Boolean(track.previewExternalId || track.importedPlaylistId)}
         onClick={onToggleLike}
         className={`p-2 transition-colors cursor-pointer shrink-0 focus:outline-none focus:text-brand-red ${
           isLiked ? 'text-brand-red' : 'text-zinc-500 hover:text-zinc-300'
@@ -104,6 +105,7 @@ export function PlayerTrackInfo({
       </button>
       <button
         type="button"
+        disabled={Boolean(track.importedPlaylistId)}
         onClick={openFromButton}
         className="ns-media-action shrink-0 text-zinc-500 hover:text-zinc-200"
         aria-label={t('playlists.moreActionsFor', { title: track.title })}

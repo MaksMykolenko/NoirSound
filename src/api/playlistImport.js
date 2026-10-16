@@ -8,5 +8,6 @@ export const connectSpotifyImport = () => post('spotify/connect',{});
 export const disconnectSpotifyImport = () => apiFetch('/playlist-import/spotify',{method:'DELETE',suppressErrorToast:true});
 export const importedPlaybackStatus = (id,signal) => apiFetch('/playlist-import/source/'+encodeURIComponent(id)+'/status',{signal,suppressErrorToast:true});
 export const importedPlayback = (id,position,signal) => apiFetch('/playlist-import/source/'+encodeURIComponent(id)+'/playback/'+position,{signal,suppressErrorToast:true});
-export const sourceAlternatives = (id,position,payload={},signal) => post('source/'+encodeURIComponent(id)+'/alternatives/'+position,payload,signal);
-export const saveSourceChoice = (id,position,selection,signal) => post('source/'+encodeURIComponent(id)+'/choice/'+position,{selection},signal);
+export const connectSpotifyPlayback = playlistId => post('spotify/connect',{playback:true,playlistId});
+export const spotifyPlaybackToken = signal => apiFetch('/playlist-import/spotify/playback-token',{signal,suppressErrorToast:true});
+export const startSpotifyTrack = (id,position,deviceId,signal) => post('source/'+encodeURIComponent(id)+'/spotify/play/'+position,{deviceId},signal);

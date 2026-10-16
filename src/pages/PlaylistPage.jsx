@@ -1,3 +1,4 @@
+import SpotifyPlaybackConnection from '../components/playlists/SpotifyPlaybackConnection';
 import { sourcePlaylistTrack } from '../utils/sourcePlaylist';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
@@ -182,7 +183,7 @@ export default function PlaylistPage() {
   }
   if (!playlist) return null;
 
-  const playableTracks = tracks.filter((track) => track.playbackMode === 'OFFICIAL_EMBED' || (track.isStreamable ?? Boolean(track.audioUrl)));
+  const playableTracks = tracks.filter((track) => (track.playbackMode === 'IMPORTED_SOURCE' && !track.unavailable) || (track.isStreamable ?? Boolean(track.audioUrl)));
   const totalDuration = tracks.reduce((total, track) => total + Number(track.duration || 0), 0);
   const isPlaylistPlaying = Boolean(
     player.isPlaying
@@ -404,6 +405,7 @@ export default function PlaylistPage() {
           {owner && !playlist.sourceImport && tracks.length > 1 && <p className="hidden text-ns-label text-zinc-500 sm:block">{t('playlists.reorderHelp')}</p>}
         </div>
         {playlist.sourceImport && <p className="px-1 text-sm text-zinc-400">{t('playlistImport.sourcePlaybackNote',{provider:playlist.sourceImport.provider==='YOUTUBE'?'YouTube':playlist.sourceImport.provider==='SOUNDCLOUD'?'SoundCloud':'Spotify'})}</p>}
+        {owner && playlist.sourceImport?.provider==='SPOTIFY' && <SpotifyPlaybackConnection playlistId={playlist.id}/>}
         {tracks.length === 0 ? (
           <EmptyState iconName="Music2" title={t('playlists.empty')} description={owner ? t('playlists.emptyOwner') : t('playlists.emptyVisitor')} />
         ) : playlist.sourceImport ? (

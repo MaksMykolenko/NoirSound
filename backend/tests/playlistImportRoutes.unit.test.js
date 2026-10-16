@@ -5,7 +5,7 @@ import routes from '../src/routes/playlistImport';
 import tokenModule from '../src/lib/importTokens';
 
 describe('playlist import authorization and confirmation',()=>{
-  let app,db,playlists,visible,sources,youtubeMatches;
+  let app,db,playlists,visible,sources,spotifyPlayback;
   const entry={title:'Fixture',artist:'Artist',duration:180};
   const post=(path,payload,user='a')=>app.inject({method:'POST',url:'/api/playlist-import/'+path,headers:user?{'x-fixture-user':user}:{},payload});
   beforeEach(async()=>{
@@ -17,13 +17,13 @@ describe('playlist import authorization and confirmation',()=>{
       $transaction:async fn=>fn(db),
     };
     sources={capabilities:()=>({SPOTIFY:true,YOUTUBE:false,SOUNDCLOUD:false}),load:vi.fn(async()=>({name:'Source playlist',entries:[entry]})),spotifyExchange:vi.fn(async()=>({access:'server-token',expires:Date.now()+900000}))};
-    youtubeMatches={configured:vi.fn(()=>false),search:vi.fn(async()=>[{videoId:'abcdefghijk',title:'Artist — Fixture',channel:'Artist',duration:180}]),inspect:vi.fn()};
+    spotifyPlayback={play:vi.fn(async()=>{}),refresh:vi.fn(async()=>({access:'refreshed',tokenExpires:Date.now()+3600000}))};
     app=Fastify();app.decorate('prisma',db);app.decorate('authenticate',async(request,reply)=>{
       if(!request.headers['x-fixture-user'])return reply.code(401).send({error:'Unauthorized'});
       request.user={id:request.headers['x-fixture-user'],role:'LISTENER'};request.sessionId='session-'+request.user.id;
     });
     await app.register(cookie);
-    await app.register(routes,{prefix:'/api/playlist-import',sources,youtubeMatches,env:{COOKIE_SECRET:'test-only',SPOTIFY_CLIENT_ID:'fixture',SPOTIFY_REDIRECT_URI:'https://example.test/api/playlist-import/spotify/callback',FRONTEND_ORIGIN:'https://example.test'}});
+    await app.register(routes,{prefix:'/api/playlist-import',sources,spotifyPlayback,env:{COOKIE_SECRET:'test-only',SPOTIFY_CLIENT_ID:'fixture',SPOTIFY_REDIRECT_URI:'https://example.test/api/playlist-import/spotify/callback',FRONTEND_ORIGIN:'https://example.test'}});
     await app.ready();
   });
   afterEach(async()=>{await app.close();vi.unstubAllEnvs();});
@@ -119,12 +119,12 @@ describe('playlist import authorization and confirmation',()=>{
     expect((await post('commit',payload)).json().error).toBe('IMPORT_TOO_LARGE');
     expect(db.playlist.create).not.toHaveBeenCalled();
   });
-  it('resolves only the private owner’s stored track and playlist to official embeds',async()=>{
+  it('resolves only the private owner’s stored positions for the native Spotify engine',async()=>{
     const saved=await post('commit',await sourcePreview(3)),id=saved.json().id;
     const get=(tail,user='a')=>app.inject({url:`/api/playlist-import/source/${id}/${tail}`,headers:user?{'x-fixture-user':user}:{}});
     expect((await get('status')).json()).toEqual({enabled:true});
-    expect((await get('playback/2')).json()).toMatchObject({provider:'SPOTIFY',embedUrl:'https://open.spotify.com/embed/track/1234567890123456789012',position:2,total:3,accessScope:'playlist-import'});
-    expect((await get('playback/playlist')).json()).toMatchObject({embedUrl:'https://open.spotify.com/embed/playlist/1234567890123456789012',wholePlaylist:true});
+    expect((await get('playback/2')).json()).toMatchObject({provider:'SPOTIFY',playbackMode:'SPOTIFY_SDK',uri:'spotify:track:1234567890123456789012',position:2,total:3,accessScope:'playlist-import'});
+    expect((await get('playback/playlist')).json()).toMatchObject({playbackMode:'SPOTIFY_SDK',position:0,sourceQueue:expect.any(Array)});
     expect((await get('playback/1')).statusCode).toBe(409);
     expect((await get('playback/999')).statusCode).toBe(409);
     expect((await get('playback/-1')).statusCode).toBe(400);
@@ -133,35 +133,36 @@ describe('playlist import authorization and confirmation',()=>{
     playlists.get(id).isPublic=true;
     expect((await get('status')).statusCode).toBe(404);
   });
-  it('remembers a listener’s YouTube choice without changing source order or exposing it to other users',async()=>{
-    youtubeMatches.configured.mockReturnValue(true);
-    const saved=await post('commit',await sourcePreview()),id=saved.json().id;
-    const get=position=>app.inject({url:`/api/playlist-import/source/${id}/playback/${position}`,headers:{'x-fixture-user':'a'}});
-    expect((await get(716)).json()).toMatchObject({playbackMode:'SOURCE_MATCH',provider:'YOUTUBE',position:716,track:{title:'Position 717'}});
-    expect(youtubeMatches.search).not.toHaveBeenCalled();
-    const match=await post(`source/${id}/alternatives/716`,{});
-    const selection=match.json().candidates[0].selection;
-    expect((await post(`source/${id}/choice/716`,{selection},'b')).statusCode).toBe(409);
-    expect((await post(`source/${id}/choice/715`,{selection})).statusCode).toBe(409);
-    expect((await post(`source/${id}/choice/716`,{selection:'forged'})).statusCode).toBe(409);
-    expect((await post(`source/${id}/choice/716`,{selection})).json()).toEqual({saved:true});
-    expect((await get(716)).json()).toMatchObject({provider:'YOUTUBE',playbackMode:'OFFICIAL_EMBED',videoId:'abcdefghijk',position:716});
-    expect(playlists.get(id).sourceImport.items).toHaveLength(717);
-    expect(playlists.get(id).sourceImport.items[0].youtubeId).toBeUndefined();
-    expect((await post(`source/${id}/alternatives/716`,{},'b')).statusCode).toBe(404);
-    playlists.get(id).isPublic=true;
-    expect((await post(`source/${id}/choice/716`,{selection})).statusCode).toBe(404);
-  });
-  it('starts a Spotify list inside NoirSound and rejects a stale match after source metadata changes',async()=>{
-    youtubeMatches.configured.mockReturnValue(true);
+  it('retires both YouTube selection endpoints without mutating the saved list',async()=>{
     const saved=await post('commit',await sourcePreview(3)),id=saved.json().id;
-    const playback=await app.inject({url:`/api/playlist-import/source/${id}/playback/playlist`,headers:{'x-fixture-user':'a'}});
-    expect(playback.json()).toMatchObject({playbackMode:'SOURCE_MATCH',position:0,sourceQueue:[{position:0},{position:1},{position:2}]});
-    youtubeMatches.inspect.mockResolvedValue({videoId:'abcdefghijk',title:'Verified link'});
-    const found=await post(`source/${id}/alternatives/1`,{url:'https://youtu.be/abcdefghijk'});
-    expect(youtubeMatches.inspect).toHaveBeenCalledWith('https://youtu.be/abcdefghijk');
-    const selection=found.json().candidates[0].selection;
-    playlists.get(id).sourceImport.items[1].title='Changed';
-    expect((await post(`source/${id}/choice/1`,{selection})).statusCode).toBe(409);
+    expect((await post(`source/${id}/alternatives/0`,{})).statusCode).toBe(410);
+    expect((await post(`source/${id}/choice/0`,{selection:'old'})).statusCode).toBe(410);
+    expect((await post(`source/${id}/alternatives/0`,{},'b')).statusCode).toBe(404);
+    expect(db.playlist.update).not.toHaveBeenCalled();
+  });
+  it('requires a separately granted SDK scope and binds playback tokens to the NoirSound session',async()=>{
+    const saved=await post('commit',await sourcePreview(3)),id=saved.json().id;
+    const url=`/api/playlist-import/source/${id}/spotify/play/0`;
+    expect((await app.inject({method:'POST',url,headers:{'x-fixture-user':'a'},payload:{deviceId:'device'}})).json().error).toBe('SPOTIFY_PLAYBACK_CONNECT');
+    const start=await post('spotify/connect',{playback:true,playlistId:id});
+    const authorization=new URL(start.json().url),state=authorization.searchParams.get('state');
+    expect(authorization.searchParams.get('scope')).toContain('streaming');
+    sources.spotifyExchange.mockResolvedValue({access:'sdk-access',refresh:'sdk-refresh',scope:'streaming user-read-email user-read-private user-read-playback-state user-modify-playback-state',expires:Date.now()+3600000});
+    const callback=await app.inject({url:'/api/playlist-import/spotify/callback?code=fixture&state='+state,headers:{'x-fixture-user':'a',cookie:start.cookies.map(c=>c.name+'='+c.value).join('; ')}});
+    expect(callback.headers.location).toBe('https://example.test/playlist/'+id+'?spotify=connected');
+    const cookie=callback.cookies.find(c=>c.name==='ns_spotify_playback');expect(cookie.httpOnly).toBe(true);expect(cookie.value).not.toContain('sdk-refresh');
+    const headers={'x-fixture-user':'a',cookie:cookie.name+'='+cookie.value};
+    const token=await app.inject({url:'/api/playlist-import/spotify/playback-token',headers});
+    expect(token.json()).toMatchObject({accessToken:'sdk-access'});expect(token.body).not.toContain('sdk-refresh');expect(token.headers['cache-control']).toBe('private, no-store');
+    expect((await app.inject({url:'/api/playlist-import/spotify/playback-token',headers:{...headers,'x-fixture-user':'b'}})).statusCode).toBe(409);
+    const play=await app.inject({method:'POST',url,headers,payload:{deviceId:'device'}});
+    expect(play.statusCode).toBe(200);expect(spotifyPlayback.play).toHaveBeenCalledWith('sdk-access','device','1234567890123456789012');
+    expect((await app.inject({method:'POST',url:url.replace('/0','/1'),headers,payload:{deviceId:'device'}})).statusCode).toBe(409);
+    expect((await app.inject({method:'POST',url,headers,payload:{deviceId:'device',uri:'spotify:track:other'}})).statusCode).toBe(200);
+    expect(spotifyPlayback.play).toHaveBeenLastCalledWith('sdk-access','device','1234567890123456789012');
+    vi.spyOn(Date,'now').mockReturnValue(Date.now()+3600000);
+    const refreshed=await app.inject({url:'/api/playlist-import/spotify/playback-token',headers});
+    expect(refreshed.json().accessToken).toBe('refreshed');expect(spotifyPlayback.refresh).toHaveBeenCalledWith('sdk-refresh');
+    vi.restoreAllMocks();
   });
 });

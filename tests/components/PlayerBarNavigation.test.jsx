@@ -78,12 +78,22 @@ function clickWithoutFollowingNativeNavigation(element, init = {}) {
 }
 
 describe('player track navigation', () => {
+  it('keeps imported Spotify tracks in the standard player, without a provider widget',()=>{
+    usePlayerStore.setState({currentTrack:{...track,id:'source:playlist:716',importedPlaylistId:'playlist',provider:'SPOTIFY',playbackMode:'IMPORTED_SOURCE',isStreamable:false},activePlatformEmbed:null,playbackEngine:'spotify',isPlayerCollapsed:false});
+    const {container}=render(<MemoryRouter><PlayerBar onToggleQueue={()=>{}} isQueueOpen={false}/></MemoryRouter>);
+    expect(screen.getByTestId('desktop-player')).toBeInTheDocument();
+    expect(within(screen.getByTestId('desktop-player')).getByTestId('standard-player-transport')).toBeInTheDocument();
+    expect(container.querySelector('iframe')).toBeNull();
+    expect(within(screen.getByTestId('desktop-player')).getByRole('link',{name:track.title})).toHaveAttribute('href','/playlist/playlist');
+  });
+
   beforeEach(async () => {
     await i18n.changeLanguage('en');
     localStorage.removeItem('noirsound.playerCollapsed');
     document.body.style.overflow = '';
     usePlayerStore.setState({
       currentTrack: track,
+      playbackEngine: 'audio',
       queue: [track],
       originalQueue: [track],
       isPlaying: true,

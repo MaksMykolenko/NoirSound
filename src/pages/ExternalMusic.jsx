@@ -13,12 +13,6 @@ const PROVIDERS=['SPOTIFY','YOUTUBE','SOUNDCLOUD'];
 const VERSIONS=['UNKNOWN','ORIGINAL','REMIX','LIVE','ACOUSTIC','INSTRUMENTAL','RADIO_EDIT','CLEAN','EXPLICIT','NIGHTCORE','SPED_UP','SLOWED','OTHER'];
 const field='w-full rounded border border-[var(--ns-border-subtle)] bg-[var(--ns-surface)] p-2 text-sm';
 const button='inline-flex items-center justify-center gap-2 rounded border border-[var(--ns-border-subtle)] px-3 py-2 text-sm hover:bg-[var(--ns-surface-raised)] disabled:opacity-40';
-const EMBED_PROVIDERS=['SOUNDCLOUD','APPLE_MUSIC','YOUTUBE'];
-function PlatformSourceButton({source}) {
-  const {t}=useTranslation();const open=usePlayerStore(s=>s.openPlatformEmbed);
-  const request=useMutation({mutationFn:()=>open(source.provider,source.canonicalUrl)});
-  return <><button className={button} disabled={request.isPending||source.matchStatus==='REJECTED'||source.officialStatus==='REJECTED'} onClick={()=>request.mutate()}>{t('externalMusic.openPlayer')}</button>{request.error&&request.error.name!=='AbortError'&&<span role="alert" className="text-sm text-rose-400">{t('externalMusic.error')} · {request.error.code || request.error.message}</span>}</>;
-}
 function MusicCard({track,onImport,busy}) {
   const {t}=useTranslation();
   return <div data-testid="external-result" className="min-w-0">
@@ -50,7 +44,7 @@ function AdminRecordingDetail({recording,versions,audit,records,run,pending}) {
     <p className="text-sm text-[var(--ns-text-muted)]">{t('externalMusic.linkOutNote')}</p>
     <section className="space-y-3" aria-label={t('externalMusic.sources')}><h2 className="font-semibold">{t('externalMusic.sources')}</h2>{recording.sources.map(s=><div key={s.id} className="rounded border border-[var(--ns-border-subtle)] p-3">
       <div className="flex flex-wrap items-center gap-3"><a className={button} href={s.canonicalUrl} target="_blank" rel="noopener noreferrer"><ExternalLink size={16}/>{s.provider} · {s.playbackMode}</a><span className="text-xs">{s.matchStatus} · {s.officialStatus==='VERIFIED'?t('externalMusic.verified'):t('externalMusic.unverified')} · {s.availability}</span>{recording.primarySources.some(p=>p.id===s.id)&&<span className="text-xs">{t('externalMusic.primary')}</span>}
-      {EMBED_PROVIDERS.includes(s.provider)&&<PlatformSourceButton source={s}/>}
+
       {s.playbackMode==='EXTERNAL_STREAM'&&<button className={button} disabled={s.availability!=='AVAILABLE'||s.matchStatus!=='CONFIRMED'} onClick={()=>play({...recording,playbackSource:'external',playbackMode:'EXTERNAL_STREAM',provider:s.provider,selectedSourceId:s.id,isStreamable:true},null,'external-catalog')}>{t('externalMusic.play')}</button>}</div>
       <SourceEditor source={s} run={run} pending={pending}/>
     </div>)}</section>
@@ -72,7 +66,7 @@ function AdminRecordingDetail({recording,versions,audit,records,run,pending}) {
 }
 function RecordingDetail(props) {
   if(props.admin)return <AdminRecordingDetail {...props}/>;
-  return <div className="space-y-4"><MusicCard track={props.recording}/><section>{props.recording.primarySources.filter(s=>s.matchStatus==='CONFIRMED').map(s=><div key={s.id} className="flex gap-3 py-2"><a href={s.canonicalUrl} target="_blank" rel="noopener noreferrer">{s.provider}</a>{EMBED_PROVIDERS.includes(s.provider)&&<PlatformSourceButton source={s}/>}</div>)}</section></div>;
+  return <div className="space-y-4"><MusicCard track={props.recording}/><section>{props.recording.primarySources.filter(s=>s.matchStatus==='CONFIRMED').map(s=><div key={s.id} className="flex gap-3 py-2"><a href={s.canonicalUrl} target="_blank" rel="noopener noreferrer">{s.provider}</a></div>)}</section></div>;
 }
 function NewRecording({run,pending}) {
   const {t}=useTranslation();const [provider,setProvider]=useState('SOUNDCLOUD'),[url,setUrl]=useState('');

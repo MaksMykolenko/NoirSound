@@ -1,90 +1,20 @@
+const sdk = vi.hoisted(()=>({controllers:[],callbacks:[]}));
+vi.mock('../../services/spotifyPlayback',()=>({createSpotifyController:vi.fn(callbacks=>{const controller={start:vi.fn(async()=>{}),destroy:vi.fn(),toggle:vi.fn(async()=>{}),pause:vi.fn(async()=>{}),seek:vi.fn(async()=>{}),volume:vi.fn(async()=>{})};sdk.controllers.push(controller);sdk.callbacks.push(callbacks);return controller;})}));
 import {beforeEach,afterEach,describe,it,expect,vi} from 'vitest';
 import connectPresenceService from '../../services/noirsoundConnect';
 import {useUserStore} from '../userStore';
-import {usePlayerStore,__getAudioElementForTests,registerPlatformFrameStop} from '../playerStore';
+import {usePlayerStore,__getAudioElementForTests} from '../playerStore';
 const native={id:'native',title:'Native fixture',artistId:'artist',isStreamable:true,duration:180};
 const external={id:'external',title:'Audius fixture',recordingId:'record',selectedSourceId:'source',playbackMode:'EXTERNAL_STREAM',playbackSource:'external',isStreamable:true,duration:180};
 const res=data=>({ok:true,status:200,headers:{get:()=> 'application/json'},json:async()=>data});
 describe('one global player across providers',()=>{
- it('resolves a Spotify list to a stored YouTube version without sending it to native audio',async()=>{
-  useUserStore.setState({user:{id:'listener',role:'LISTENER'}});
-  const track={id:'source:p:0',importedPlaylistId:'p',position:0,title:'Source track',provider:'SPOTIFY',playbackMode:'OFFICIAL_EMBED'};
-  const f=vi.fn(async()=>res({provider:'YOUTUBE',playbackMode:'SOURCE_MATCH',accessScope:'playlist-import',playlistId:'p',position:0,track,sourceQueue:[track],canChoose:true}));vi.stubGlobal('fetch',f);
-  await usePlayerStore.getState().playTrack({...track,position:'playlist'});
-  expect(usePlayerStore.getState().activePlatformEmbed).toMatchObject({playbackMode:'SOURCE_MATCH',track,sourceQueue:[track]});
-  f.mockResolvedValue(res({provider:'YOUTUBE',playbackMode:'OFFICIAL_EMBED',embedUrl:'https://www.youtube-nocookie.com/embed/abcdefghijk',videoId:'abcdefghijk',accessScope:'playlist-import',playlistId:'p',position:0,track,canChoose:true}));
-  await usePlayerStore.getState().playTrack(track);
-  expect(usePlayerStore.getState().activePlatformEmbed.provider).toBe('YOUTUBE');
-  expect(__getAudioElementForTests().getAttribute('src')).toBeNull();
-  const stop=vi.fn(),unregister=registerPlatformFrameStop(stop);
-  usePlayerStore.getState().chooseSourceVersion();expect(stop).toHaveBeenCalledOnce();
-  expect(usePlayerStore.getState().activePlatformEmbed.playbackMode).toBe('SOURCE_MATCH');
-  unregister();
- });
- it('resolves an imported Spotify position through owner access and keeps repeated source positions available',async()=>{
-  useUserStore.setState({user:{id:'listener',role:'LISTENER'}});
-  const track={id:'source:p:0',importedPlaylistId:'p',position:0,title:'Source track',provider:'SPOTIFY',playbackMode:'OFFICIAL_EMBED',isStreamable:false};
-  const queue=[track,{...track,id:'source:p:1',position:1}];
-  const f=vi.fn(async()=>res({provider:'SPOTIFY',playbackMode:'OFFICIAL_EMBED',embedUrl:'https://open.spotify.com/embed/track/1234567890123456789012',canonicalUrl:'https://open.spotify.com/track/1234567890123456789012',accessScope:'playlist-import',playlistId:'p',position:0,total:2}));
-  vi.stubGlobal('fetch',f);
-  await usePlayerStore.getState().playTrack(native);
-  await usePlayerStore.getState().playTrack(track,queue);
-  expect(connectPresenceService.isPlaying).toBe(false);
-  expect(connectPresenceService.currentTrackId).toBeNull();
-  expect(String(f.mock.calls.at(-1)[0])).toContain('/playlist-import/source/p/playback/0');
-  expect(usePlayerStore.getState().activePlatformEmbed.sourceQueue).toEqual(queue);
-  expect(__getAudioElementForTests().getAttribute('src')).toBeNull();
-  await usePlayerStore.getState().playTrack(queue[1]);
-  expect(String(f.mock.calls.at(-1)[0])).toContain('/playlist-import/source/p/playback/1');
-  expect(usePlayerStore.getState().activePlatformEmbed.sourceQueue).toEqual(queue);
-  useUserStore.setState({user:null});expect(usePlayerStore.getState().activePlatformEmbed).toBeNull();
- });
- beforeEach(()=>{useUserStore.setState({user:null});vi.spyOn(window.HTMLMediaElement.prototype,'play').mockResolvedValue();vi.spyOn(window.HTMLMediaElement.prototype,'pause').mockImplementation(()=>{});usePlayerStore.getState().pause();usePlayerStore.setState({currentTrack:null,isPlaying:false,queue:[],recentlyPlayed:[],playbackError:null});});
+ beforeEach(()=>{sdk.controllers.length=0;sdk.callbacks.length=0;useUserStore.setState({user:null});vi.spyOn(window.HTMLMediaElement.prototype,'play').mockResolvedValue();vi.spyOn(window.HTMLMediaElement.prototype,'pause').mockImplementation(()=>{});usePlayerStore.getState().pause();usePlayerStore.setState({currentTrack:null,isPlaying:false,queue:[],recentlyPlayed:[],playbackError:null});});
  afterEach(()=>{usePlayerStore.getState().pause();vi.restoreAllMocks();vi.unstubAllGlobals();});
  it('runs native -> Audius -> native on the same Audio element',async()=>{vi.stubGlobal('fetch',vi.fn(async()=>res({url:'https://creatornode.audius.co/tracks/cidstream/fixture',playbackMode:'EXTERNAL_STREAM'})));await usePlayerStore.getState().playTrack(native);const audio=__getAudioElementForTests();await usePlayerStore.getState().playTrack(external);expect(__getAudioElementForTests()).toBe(audio);expect(audio.src).toContain('creatornode.audius.co');await usePlayerStore.getState().playTrack(native);expect(audio.src).toContain('/tracks/native/stream');expect(usePlayerStore.getState().currentTrack.id).toBe('native');});
  it('discards a stale external resolution after switching to native',async()=>{let resolve;vi.stubGlobal('fetch',vi.fn(()=>new Promise(r=>{resolve=r;})));const first=usePlayerStore.getState().playTrack(external);await usePlayerStore.getState().playTrack(native);resolve(res({url:'https://creatornode.audius.co/old',playbackMode:'EXTERNAL_STREAM'}));await first;expect(__getAudioElementForTests().src).toContain('/tracks/native/stream');expect(usePlayerStore.getState().currentTrack.id).toBe('native');});
  it('pause cancels a pending resolver without starting audio',async()=>{let resolve;vi.stubGlobal('fetch',vi.fn(()=>new Promise(r=>{resolve=r;})));const request=usePlayerStore.getState().playTrack(external);usePlayerStore.getState().pause();resolve(res({url:'https://creatornode.audius.co/old',playbackMode:'EXTERNAL_STREAM'}));await request;expect(usePlayerStore.getState().isPlaying).toBe(false);expect(window.HTMLMediaElement.prototype.play).not.toHaveBeenCalled();});
  it('LINK_OUT cannot play or queue or open a website',async()=>{const open=vi.spyOn(window,'open');const link={...external,playbackMode:'LINK_OUT'};usePlayerStore.getState().addToQueue(link);await usePlayerStore.getState().playTrack(link);expect(usePlayerStore.getState().queue).toEqual([]);expect(window.HTMLMediaElement.prototype.play).not.toHaveBeenCalled();expect(open).not.toHaveBeenCalled();});
  it('external qualifying playback posts separate events, never native stats',async()=>{useUserStore.setState({user:{id:'listener',role:'LISTENER'}});const f=vi.fn(async url=>res(String(url).includes('/play-event')?{success:true}:{url:'https://creatornode.audius.co/tracks/cidstream/fixture',playbackMode:'EXTERNAL_STREAM'}));vi.stubGlobal('fetch',f);await usePlayerStore.getState().playTrack(external);const audio=__getAudioElementForTests();audio.currentTime=31;audio.dispatchEvent(new Event('timeupdate'));await new Promise(r=>setTimeout(r,0));const paths=f.mock.calls.map(([u])=>new URL(u).pathname);expect(paths).toContain('/api/external-catalog/recordings/record/play-event');expect(paths).not.toContain('/api/tracks/external/play-event');});
- it('official frame -> native destroys the frame before audio starts; iframe plays never enter queue/stats',async()=>{
-  useUserStore.setState({user:{id:'admin',role:'ADMIN'}});
-  vi.stubGlobal('fetch',vi.fn(async()=>res({provider:'YOUTUBE',playbackMode:'OFFICIAL_EMBED',embedUrl:'https://www.youtube-nocookie.com/embed/abcdefghijk',canonicalUrl:'https://www.youtube.com/watch?v=abcdefghijk'})));
-  await usePlayerStore.getState().playTrack(native,[native]);
-  await usePlayerStore.getState().openPlatformEmbed('YOUTUBE','https://youtu.be/abcdefghijk');
-  expect(__getAudioElementForTests().getAttribute('src')).toBeNull();expect(usePlayerStore.getState().isPlaying).toBe(false);expect(usePlayerStore.getState().queue).toEqual([native]);
-  const stop=vi.fn();const unregister=registerPlatformFrameStop(stop);
-  const calls=window.HTMLMediaElement.prototype.play.mock.calls.length;
-  usePlayerStore.getState().togglePlay();expect(window.HTMLMediaElement.prototype.play.mock.calls.length).toBe(calls);
-  await usePlayerStore.getState().playTrack(native);
-  expect(stop).toHaveBeenCalledOnce();expect(stop.mock.invocationCallOrder[0]).toBeLessThan(window.HTMLMediaElement.prototype.play.mock.invocationCallOrder.at(-1));expect(usePlayerStore.getState().activePlatformEmbed).toBeNull();unregister();
- });
- it('stale frame resolution cannot override native playback or a logged-out account',async()=>{
-  useUserStore.setState({user:{id:'admin',role:'ADMIN'}});
-  let resolve;vi.stubGlobal('fetch',vi.fn(url=>String(url).includes('/embed?')?new Promise(r=>{resolve=r;}):Promise.resolve(res({}))));
-  const request=usePlayerStore.getState().openPlatformEmbed('YOUTUBE','https://youtu.be/abcdefghijk');
-  await usePlayerStore.getState().playTrack(native);
-  resolve(res({provider:'YOUTUBE',playbackMode:'OFFICIAL_EMBED',embedUrl:'https://www.youtube-nocookie.com/embed/abcdefghijk'}));await request;
-  expect(usePlayerStore.getState().currentTrack.id).toBe('native');expect(usePlayerStore.getState().activePlatformEmbed).toBeNull();
-  const logout=usePlayerStore.getState().openPlatformEmbed('YOUTUBE','https://youtu.be/abcdefghijk');useUserStore.setState({user:null});resolve(res({provider:'YOUTUBE',playbackMode:'OFFICIAL_EMBED',embedUrl:'https://www.youtube-nocookie.com/embed/abcdefghijk'}));await logout;expect(usePlayerStore.getState().activePlatformEmbed).toBeNull();
- });
- it('closing a frame cancels pending resolution and unsafe response origins are rejected',async()=>{
-  useUserStore.setState({user:{id:'admin',role:'ADMIN'}});
-  let resolve;vi.stubGlobal('fetch',vi.fn(url=>String(url).includes('/embed?')?new Promise(r=>{resolve=r;}):Promise.resolve(res({}))));
-  const request=usePlayerStore.getState().openPlatformEmbed('YOUTUBE','https://youtu.be/abcdefghijk');usePlayerStore.getState().closePlatformEmbed();resolve(res({provider:'YOUTUBE',playbackMode:'OFFICIAL_EMBED',embedUrl:'https://www.youtube-nocookie.com/embed/abcdefghijk'}));await request;expect(usePlayerStore.getState().activePlatformEmbed).toBeNull();
-  vi.stubGlobal('fetch',vi.fn(async()=>res({provider:'YOUTUBE',playbackMode:'OFFICIAL_EMBED',embedUrl:'https://evil.example/embed/abcdefghijk'})));
-  await expect(usePlayerStore.getState().openPlatformEmbed('YOUTUBE','https://youtu.be/abcdefghijk')).rejects.toThrow('EXTERNAL_EMBED_UNSUPPORTED');
- });
- it('a saved platform track retains its identity and resolves its stored source without entering the audio queue',async()=>{
-  useUserStore.setState({user:{id:'admin',role:'ADMIN'}});
-  const track={...external,provider:'YOUTUBE',playbackMode:'OFFICIAL_EMBED',isStreamable:false,isAvailable:true,artistName:'Fixture artist'};
-  const f=vi.fn(async()=>res({provider:'YOUTUBE',playbackMode:'OFFICIAL_EMBED',embedUrl:'https://www.youtube-nocookie.com/embed/abcdefghijk',canonicalUrl:'https://www.youtube.com/watch?v=abcdefghijk'}));vi.stubGlobal('fetch',f);
-  const before=window.HTMLMediaElement.prototype.play.mock.calls.length;
-  await usePlayerStore.getState().playTrack(track,[track,native]);
-  expect(String(f.mock.calls[0][0])).toContain('/recordings/record/playback?sourceId=source');
-  expect(usePlayerStore.getState().currentTrack).toEqual(track);expect(usePlayerStore.getState().activePlatformEmbed.track).toEqual(track);
-  expect(usePlayerStore.getState().isPlaying).toBe(false);expect(window.HTMLMediaElement.prototype.play.mock.calls.length).toBe(before);
-  usePlayerStore.getState().addToQueue(track);expect(usePlayerStore.getState().queue).toEqual([]);usePlayerStore.getState().closePlatformEmbed();
- });
  it('automatically saves a live card before playing its actual stored identity',async()=>{
   useUserStore.setState({user:{id:'admin',role:'ADMIN'}});
   const preview={...external,id:'AUDIUS:owned',recordingId:undefined,selectedSourceId:undefined,provider:'AUDIUS',previewExternalId:'owned'};
@@ -108,6 +38,39 @@ describe('one global player across providers',()=>{
  it('a guest plays a live Audius card without importing or sending authenticated events',async()=>{
   const preview={...external,id:'AUDIUS:guest',recordingId:undefined,selectedSourceId:undefined,provider:'AUDIUS',previewExternalId:'guest'};const f=vi.fn(async()=>res({url:'https://creatornode.audius.co/tracks/cidstream/fixture',playbackMode:'EXTERNAL_STREAM'}));vi.stubGlobal('fetch',f);await usePlayerStore.getState().playTrack(preview,[preview]);expect(usePlayerStore.getState().isPlaying).toBe(true);expect(String(f.mock.calls[0][0])).toContain('/preview/guest/playback');expect(f.mock.calls.some(([u])=>String(u).includes('/import'))).toBe(false);const audio=__getAudioElementForTests();audio.currentTime=31;audio.dispatchEvent(new Event('timeupdate'));await new Promise(r=>setTimeout(r,0));expect(f.mock.calls.some(([u])=>String(u).includes('/play-event'))).toBe(false);
  });
- it('a listener opens official controls without any administrator role',async()=>{useUserStore.setState({user:{id:'listener',role:'LISTENER'}});vi.stubGlobal('fetch',vi.fn(async()=>res({provider:'YOUTUBE',playbackMode:'OFFICIAL_EMBED',embedUrl:'https://www.youtube-nocookie.com/embed/abcdefghijk',canonicalUrl:'https://www.youtube.com/watch?v=abcdefghijk'})));await usePlayerStore.getState().openPlatformEmbed('YOUTUBE','https://youtu.be/abcdefghijk');expect(usePlayerStore.getState().activePlatformEmbed.ownerId).toBe('listener');});
  it('resolver failure can be followed by working native playback',async()=>{vi.spyOn(console,'error').mockImplementation(()=>{});vi.stubGlobal('fetch',vi.fn(async()=>({ok:false,status:502,json:async()=>({error:'AUDIUS_UNAVAILABLE'})})));await usePlayerStore.getState().playTrack(external);expect(usePlayerStore.getState().isPlaying).toBe(false);await usePlayerStore.getState().playTrack(native);expect(usePlayerStore.getState().isPlaying).toBe(true);expect(usePlayerStore.getState().playbackError).toBeNull();});
+ it('uses the existing controls for Spotify and preserves repeated source positions',async()=>{
+  useUserStore.setState({user:{id:'listener'}});
+  const track={id:'source:p:0',sourceId:'1234567890123456789012',importedPlaylistId:'p',position:0,title:'Source',provider:'SPOTIFY',playbackMode:'IMPORTED_SOURCE',isStreamable:false};
+  const queue=[track,{...track,id:'source:p:1',position:1}];
+  vi.stubGlobal('fetch',vi.fn(async url=>res({playbackMode:'SPOTIFY_SDK',track:queue[String(url).endsWith('/1')?1:0]})));
+  await usePlayerStore.getState().playTrack(native);
+  await usePlayerStore.getState().playTrack(track,queue);
+  expect(connectPresenceService.currentTrackId).toBeNull();
+  expect(usePlayerStore.getState().activePlatformEmbed).toBeNull();
+  expect(usePlayerStore.getState().queue).toEqual(queue);
+  expect(__getAudioElementForTests().getAttribute('src')).toBeNull();
+  sdk.callbacks[0].onState({isPlaying:true,progress:42,duration:180});
+  expect(usePlayerStore.getState()).toMatchObject({isPlaying:true,progress:42,duration:180,playbackLoading:false});
+  usePlayerStore.getState().togglePlay();usePlayerStore.getState().seek(70);usePlayerStore.getState().setVolume(.3);
+  expect(sdk.controllers[0].toggle).toHaveBeenCalledOnce();expect(sdk.controllers[0].seek).toHaveBeenCalledWith(70);expect(sdk.controllers[0].volume).toHaveBeenCalledWith(.3);
+  usePlayerStore.getState().next();await vi.waitFor(()=>expect(sdk.controllers).toHaveLength(2));
+  expect(sdk.controllers[0].destroy).toHaveBeenCalled();expect(usePlayerStore.getState().currentTrack.id).toBe('source:p:1');
+  useUserStore.setState({user:null});expect(sdk.controllers[1].destroy).toHaveBeenCalled();
+  sdk.callbacks[1].onState({isPlaying:true,progress:50,duration:180});expect(usePlayerStore.getState().currentTrack).toBeNull();
+ });
+ it('an imported resolution cannot override native playback after switching tracks',async()=>{
+  let resolve;vi.stubGlobal('fetch',vi.fn(()=>new Promise(r=>{resolve=r;})));
+  const track={id:'source:p:0',importedPlaylistId:'p',position:0,playbackMode:'IMPORTED_SOURCE'};
+  const pending=usePlayerStore.getState().playTrack(track);
+  await usePlayerStore.getState().playTrack(native);
+  resolve(res({playbackMode:'SPOTIFY_SDK',track:{...track,provider:'SPOTIFY'}}));await pending;
+  expect(sdk.controllers).toHaveLength(0);expect(usePlayerStore.getState().currentTrack.id).toBe('native');
+ });
+ it('obsolete widget cards show an availability error without opening frames or websites',async()=>{
+  const open=vi.spyOn(window,'open');const fetch=vi.fn();vi.stubGlobal('fetch',fetch);
+  await usePlayerStore.getState().playTrack({...native,playbackMode:'OFFICIAL_EMBED',isStreamable:false});
+  expect(fetch).not.toHaveBeenCalled();expect(open).not.toHaveBeenCalled();expect(usePlayerStore.getState()).toMatchObject({activePlatformEmbed:null,isPlaying:false,playbackError:'IMPORT_AUDIO_UNAVAILABLE'});
+ });
+
 });

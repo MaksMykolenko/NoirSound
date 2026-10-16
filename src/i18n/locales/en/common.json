@@ -1665,7 +1665,7 @@
     "back": "Back to catalog",
     "like": "Like",
     "playlist": "Choose a private playlist",
-    "linkOutNote": "SoundCloud and YouTube use official players. Spotify links open Spotify. Recording matches are verified separately.",
+    "linkOutNote": "Import saves track metadata. Full audio needs an available source; Spotify requires a Premium connection.",
     "sources": "Platform sources",
     "addSource": "Add platform link",
     "provider": "Platform",
@@ -1732,7 +1732,7 @@
   },
   "playlistImport": {
     "title": "Import playlist",
-    "help": "Import the entire list from Spotify, YouTube or SoundCloud and listen through the official player in NoirSound.",
+    "help": "Import the full list from Spotify, YouTube or SoundCloud. Available full tracks use the standard NoirSound player.",
     "available": "ready",
     "unconfigured": "not connected",
     "configHelp": "Connect Spotify, YouTube or SoundCloud to import playlists by link.",
@@ -1782,7 +1782,7 @@
     "trackUnavailable": "Unavailable on the source service",
     "playTrack": "Listen to {{title}}",
     "openTrack": "Open {{title}} on the source service",
-    "sourcePlaybackNote": "List source: {{provider}}. Press ▶ next to a track. For Spotify, choose a YouTube version once; it will be remembered and play here in NoirSound.",
+    "sourcePlaybackNote": "List source: {{provider}}. Playback uses the standard NoirSound player. Import saves the list; full audio availability is checked separately.",
     "spotifyPlaybackNote": "Spotify may play only a preview. Full tracks may require signing in to Spotify and a supported browser.",
     "previousTrack": "Previous track",
     "nextTrack": "Next track",
@@ -1793,6 +1793,18 @@
     "videoLink": "Or a YouTube video link",
     "checkVideo": "Check video",
     "changeVersion": "Change track version",
-    "videoPlaybackFailed": "YouTube could not play this video. Choose another version."
+    "videoPlaybackFailed": "YouTube could not play this video. Choose another version.",
+    "connectPlayback": "Connect Spotify playback",
+    "reconnectPlayback": "Reconnect Spotify",
+    "spotifyNativeNote": "Full tracks through the NoirSound controls. Spotify Premium required.",
+    "playbackErrors": {
+      "SPOTIFY_PLAYBACK_CONNECT": "Connect Spotify playback in this playlist.",
+      "SPOTIFY_PLAYBACK_PREMIUM": "Spotify requires Premium and access to this app.",
+      "SPOTIFY_PLAYBACK_RATE_LIMIT": "Spotify has temporarily limited requests. Try later.",
+      "SPOTIFY_PLAYBACK_UNAVAILABLE": "Spotify audio could not start. Please retry.",
+      "SPOTIFY_PLAYBACK_AUTOPLAY": "Press play again to allow browser audio.",
+      "IMPORT_AUDIO_UNAVAILABLE": "No full audio source is available for this track in NoirSound.",
+      "IMPORT_TRACK_UNAVAILABLE": "This track is unavailable at its source."
+    }
   }
 }

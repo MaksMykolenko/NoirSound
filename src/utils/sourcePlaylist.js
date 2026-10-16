@@ -7,7 +7,7 @@ export function sourcePlaylistTrack(playlist) {
     title: playlist.name,
     provider: playlist.sourceImport.provider,
     canonicalUrl: playlist.sourceImport.sourceUrl,
-    playbackMode: 'OFFICIAL_EMBED',
+    playbackMode: 'IMPORTED_SOURCE',
     isStreamable: false,
     hasLyrics: false,
   };

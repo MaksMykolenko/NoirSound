@@ -40,17 +40,16 @@ function sourcePlaylistView(playlist, includeItems = false) {
     total: source.items.length,
     unavailable: source.items.filter(item => item.unavailable).length,
     ...(includeItems ? { items: source.items.map((entry, position) => {
-      const alternative = sourcePlayback('YOUTUBE', entry.youtubeId);
-      const playback = alternative || sourcePlayback(source.provider, entry.sourceId);
+      const playback = sourcePlayback(source.provider, entry.sourceId);
       return {
-        ...entry, position, id: `source:${playlist.id}:${position}`,
+        ...sourceItem(source.provider,entry), position, id: `source:${playlist.id}:${position}`,
         provider: source.provider, artistName: entry.artist,
-        sourceUnavailable: Boolean(entry.unavailable), unavailable: !alternative && Boolean(entry.unavailable),
-        canResolve: source.provider === 'SPOTIFY' && canResolveSource(entry),
-        playbackProvider: alternative ? 'YOUTUBE' : source.provider,
+        sourceUnavailable: Boolean(entry.unavailable), unavailable: Boolean(entry.unavailable),
+        canResolve: Boolean(playback && !entry.unavailable),
+        playbackProvider: source.provider,
         importedPlaylistId: playlist.id,
         canonicalUrl: playback?.canonicalUrl || null,
-        playbackMode: alternative || (playback && !entry.unavailable) || (source.provider === 'SPOTIFY' && canResolveSource(entry)) ? 'OFFICIAL_EMBED' : 'UNAVAILABLE',
+        playbackMode: playback && !entry.unavailable ? 'IMPORTED_SOURCE' : 'UNAVAILABLE',
         isStreamable: false, hasLyrics: false,
       };
     }) } : {}),

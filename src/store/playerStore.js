@@ -1,7 +1,8 @@
 import {audioCache,audioCacheEnabled,canWarmAudio} from '../services/audioCache';
 import {nextQueuedTrack} from '../services/playerPreload';
 import { create } from 'zustand';
-import { resolveExternalPlayback, resolvePlatformEmbed, recordExternalPlay, saveCatalogTrack } from '../api/externalCatalog';
+import { resolveExternalPlayback, recordExternalPlay, saveCatalogTrack } from '../api/externalCatalog';
+import { createSpotifyController } from '../services/spotifyPlayback';
 import { importedPlayback } from '../api/playlistImport';
 import { API_BASE_URL, useMockApi, apiFetch } from '../api/client';
 import { getRecentlyPlayed } from '../api/stats';
@@ -18,6 +19,8 @@ function reportPlaybackError(message) {
 }
 
 let audio = null;
+let spotifyController = null;
+function stopSpotify() { spotifyController?.destroy(); spotifyController = null; }
 let playbackGeneration = 0;
 let playbackAbort = null;
 let activeObjectUrl = null;
@@ -28,6 +31,7 @@ function cancelWarm() { clearTimeout(warmTimer); warmAbort?.abort(); warmAbort =
 function releaseCachedSource() { cancelWarm(); currentDescriptor=null; if(activeObjectUrl){URL.revokeObjectURL(activeObjectUrl);activeObjectUrl=null;} }
 const cacheScope = () => useUserStore.getState().user?.id || 'guest';
 async function playbackDescriptor(track,signal) {
+  if (track.playbackMode==='IMPORTED_SOURCE') throw new Error('IMPORT_AUDIO_UNAVAILABLE');
   if (track.playbackMode==='EXTERNAL_STREAM') {
     const resolved=await resolveExternalPlayback(track,signal);
     if(resolved.playbackMode!=='EXTERNAL_STREAM'||!resolved.url)throw new Error('External audio is unavailable.');
@@ -58,7 +62,7 @@ export function registerPlatformFrameStop(stop) {
   stopPlatformFrame = stop;
   return () => { if (stopPlatformFrame === stop) stopPlatformFrame = null; };
 }
-function stopPlatformPlayback() { stopPlatformFrame?.(); stopPlatformFrame = null; }
+function stopPlatformPlayback() { stopPlatformFrame?.(); stopPlatformFrame = null; stopSpotify(); }
 let configureAudio = () => {};
 let likesRequest = null;
 let likesGeneration = 0;
@@ -82,6 +86,7 @@ function ensureAudio() {
 }
 
 function canStreamTrack(track) {
+  if (track?.playbackMode==='IMPORTED_SOURCE') return !track.unavailable;
   if (['LINK_OUT','OFFICIAL_EMBED'].includes(track?.playbackMode)) return false;
   return track?.isStreamable ?? (useMockApi && Boolean(track?.audioUrl));
 }
@@ -229,31 +234,31 @@ export const usePlayerStore = create((set, get) => {
     audio.onended = null;
     audio.onerror = null;
 
-    audio.onplay = () => { if (!get().activePlatformEmbed) set({ isPlaying: true }); };
-    audio.onpause = () => set({ isPlaying: false });
+    audio.onplay = () => { if (!get().activePlatformEmbed && get().playbackEngine!=='spotify') set({ isPlaying: true }); };
+    audio.onpause = () => { if(get().playbackEngine!=='spotify') set({isPlaying:false}); };
 
     audio.ontimeupdate = () => {
-      if (get().activePlatformEmbed) return;
+      if (get().activePlatformEmbed || get().playbackEngine==='spotify') return;
       set({ progress: audio.currentTime });
       trackQualifyingProgress();
     };
 
     audio.ondurationchange = () => {
-      if (get().activePlatformEmbed) return;
+      if (get().activePlatformEmbed || get().playbackEngine==='spotify') return;
       if (Number.isFinite(audio.duration) && audio.duration > 0) {
         set({ duration: audio.duration });
       }
     };
 
     audio.onended = () => {
-      if (get().activePlatformEmbed) return;
+      if (get().activePlatformEmbed || get().playbackEngine==='spotify') return;
       // Safety net for very short tracks: `ended` can fire before the last
       // `timeupdate` tick would have crossed the qualifying threshold.
       trackQualifyingProgress(true);
       get().handleEnded();
     };
     audio.onerror = () => {
-      if (get().activePlatformEmbed) return;
+      if (get().activePlatformEmbed || get().playbackEngine==='spotify') return;
       const message = get().currentTrack?.playbackMode === 'EXTERNAL_STREAM' ? 'External audio is unavailable. Retry or open Audius.' : 'The processed audio stream could not be loaded.';
       set({
         isPlaying: false,
@@ -268,6 +273,7 @@ export const usePlayerStore = create((set, get) => {
   return {
     currentTrack: null,
     activePlatformEmbed: null,
+    playbackEngine: 'audio',
     queue: [],
     originalQueue: [],
     queueSource: null,
@@ -349,6 +355,7 @@ export const usePlayerStore = create((set, get) => {
     },
 
     toggleLikeTrack: async (trackId) => {
+      if(String(trackId).startsWith('source:'))return;
       const userId = useUserStore.getState().user?.id;
       if (!userId) {
         useUserStore.getState().setAuthModalOpen(true);
@@ -394,41 +401,13 @@ export const usePlayerStore = create((set, get) => {
       }
     },
 
-    openPlatformEmbed: async (provider, url, track = null, sourceQueue = null) => {
-      const user = useUserStore.getState().user;
-      const generation = ++playbackGeneration;
-      playbackAbort?.abort();
-      playbackAbort = new AbortController();
-      stopPlatformPlayback();
-      if (connectPresenceService.currentTrackId) connectPresenceService.notifyStop();
-      audio?.pause();
-      audio?.removeAttribute?.('src');
-      releaseCachedSource();
-      set({activePlatformEmbed:null,currentTrack:null,isPlaying:false,progress:0,duration:0,playbackLoading:false,playbackError:null,lyricsFullscreenOpen:false});
-      const embed = track?.importedPlaylistId ? await importedPlayback(track.importedPlaylistId, track.position, playbackAbort.signal) : track?.recordingId ? await resolveExternalPlayback(track, playbackAbort.signal) : await resolvePlatformEmbed(provider, url, playbackAbort.signal);
-      if (generation !== playbackGeneration || useUserStore.getState().user?.id !== user?.id) return;
-      const origins = {SPOTIFY:'https://open.spotify.com',SOUNDCLOUD:'https://w.soundcloud.com',APPLE_MUSIC:'https://embed.music.apple.com',YOUTUBE:'https://www.youtube-nocookie.com'};
-      const sourceMatch = track?.importedPlaylistId && embed.accessScope==='playlist-import' && embed.provider==='YOUTUBE' && embed.playbackMode==='SOURCE_MATCH';
-      const importedAlternative = track?.importedPlaylistId && provider==='SPOTIFY' && embed.provider==='YOUTUBE' && embed.accessScope==='playlist-import';
-      if (!sourceMatch && (embed.playbackMode !== 'OFFICIAL_EMBED' || (embed.provider !== provider && !importedAlternative) || new URL(embed.embedUrl).origin !== origins[embed.provider])) throw new Error('EXTERNAL_EMBED_UNSUPPORTED');
-      const resolvedTrack = embed.track || track;
-      set({activePlatformEmbed:{...embed,track:resolvedTrack,sourceQueue:embed.sourceQueue || sourceQueue,ownerId:user?.id,generation},currentTrack:resolvedTrack || {id:`embed:${generation}`,title:provider,provider,playbackMode:'OFFICIAL_EMBED',isStreamable:false,hasLyrics:false},isPlayerCollapsed:false});
+    // Compatibility for catalog cards: provider widgets are no longer players.
+    openPlatformEmbed: async (_provider, _url, track = null) => {
+      await get().playTrack(track || {title:_provider,playbackMode:'LINK_OUT'});
     },
-
-    chooseSourceVersion: () => {
-      const embed=get().activePlatformEmbed;
-      if(!embed?.canChoose)return;
-      stopPlatformPlayback();
-      set({activePlatformEmbed:{...embed,playbackMode:'SOURCE_MATCH',generation:++playbackGeneration}});
-    },
-
     closePlatformEmbed: () => {
-      ++playbackGeneration;
-      playbackAbort?.abort();
-      cancelWarm();
-      if (!get().activePlatformEmbed) return;
-      stopPlatformPlayback();
-      set({activePlatformEmbed:null,currentTrack:null,isPlaying:false,progress:0,duration:0,playbackLoading:false,lyricsFullscreenOpen:false});
+      ++playbackGeneration; playbackAbort?.abort(); stopPlatformPlayback();
+      set({activePlatformEmbed:null,isPlaying:false,playbackLoading:false,playbackEngine:'audio'});
     },
 
     playTrack: async (track, newQueue = null, queueSource = null) => {
@@ -438,7 +417,7 @@ export const usePlayerStore = create((set, get) => {
         const generation=++playbackGeneration;
         playbackAbort?.abort();playbackAbort=new AbortController();
         stopPlatformPlayback();audio?.pause();audio?.removeAttribute?.('src');releaseCachedSource();
-        set({activePlatformEmbed:null,currentTrack:track,isPlaying:false,progress:0,playbackLoading:true,playbackError:null});
+        set({activePlatformEmbed:null,playbackEngine:'audio',currentTrack:track,isPlaying:false,progress:0,playbackLoading:true,playbackError:null});
         try {
           const saved=await saveCatalogTrack(track,playbackAbort.signal);
           if(generation!==playbackGeneration||useUserStore.getState().user?.id!==user.id)return;
@@ -447,17 +426,44 @@ export const usePlayerStore = create((set, get) => {
         }catch(error){if(generation===playbackGeneration&&error.name!=='AbortError'){set({playbackLoading:false,playbackError:error.message});reportPlaybackError(error.message);}}
         return;
       }
-      if (track?.playbackMode === 'OFFICIAL_EMBED') {
-        const expectedGeneration = playbackGeneration + 1;
-        try { await get().openPlatformEmbed(track.provider, track.canonicalUrl, track, newQueue || get().activePlatformEmbed?.sourceQueue); }
-        catch (error) { if (expectedGeneration === playbackGeneration && error.name !== 'AbortError') { set({playbackError:error.message}); reportPlaybackError(error.message); } }
+      if (track?.importedPlaylistId) {
+        const userId=useUserStore.getState().user?.id;
+        const generation=++playbackGeneration;
+        playbackAbort?.abort(); playbackAbort=new AbortController();
+        stopPlatformPlayback(); audio?.pause(); audio?.removeAttribute?.('src'); releaseCachedSource();
+        if(connectPresenceService.currentTrackId)connectPresenceService.notifyStop();
+        const initialQueue=newQueue || get().queue;
+        set({activePlatformEmbed:null,currentTrack:track,playbackEngine:'spotify',isPlaying:false,isPlayerCollapsed:false,lyricsFullscreenOpen:false,progress:0,duration:track.duration||0,playbackLoading:true,playbackError:null,queue:initialQueue.filter(canStreamTrack),originalQueue:newQueue?[...initialQueue.filter(canStreamTrack)]:get().originalQueue,queueSource:queueSource||get().queueSource});
+        const current=()=>generation===playbackGeneration && useUserStore.getState().user?.id===userId;
+        const fail=code=>{if(current())set({isPlaying:false,playbackLoading:false,playbackError:code});};
+        try {
+          const resolved=await importedPlayback(track.importedPlaylistId,track.position,playbackAbort.signal);
+          if(!current())return;
+          const selected=resolved.track;
+          if(!selected || selected.importedPlaylistId!==track.importedPlaylistId)throw new Error('IMPORT_AUDIO_UNAVAILABLE');
+          const queue=(resolved.sourceQueue || initialQueue).filter(canStreamTrack);
+          set({currentTrack:selected,queue,...(resolved.sourceQueue||newQueue?{originalQueue:[...queue]}:{}),duration:selected.duration||0});
+          if(resolved.playbackMode==='NATIVE' && resolved.nativeTrackId) {
+            const native={...selected,id:resolved.nativeTrackId,importedPlaylistId:undefined,playbackMode:'NATIVE',isStreamable:true};
+            // Keep source position IDs in the queue, but use real native identity
+            // for its ordinary stream, likes, lyrics and play accounting.
+            await get().playTrack(native,queue.map(item=>item.id===selected.id?native:item),queueSource||get().queueSource);
+            return;
+          }
+          if(resolved.playbackMode!=='SPOTIFY_SDK' || selected.provider!=='SPOTIFY')throw new Error('IMPORT_AUDIO_UNAVAILABLE');
+          spotifyController=createSpotifyController({
+            onState:state=>{if(current())set({isPlaying:state.isPlaying,progress:state.progress,duration:state.duration,playbackLoading:false,playbackError:null,...(state.coverUrl?{currentTrack:{...get().currentTrack,coverUrl:state.coverUrl}}:{})});},
+            onEnded:()=>{if(current())get().handleEnded();}, onError:code=>{if(current()&&code!=='SPOTIFY_PLAYBACK_AUTOPLAY')stopSpotify();fail(code);},
+          });
+          await spotifyController.start(selected,get().volume);
+        } catch(error) { if(error.name!=='AbortError') { if(current())stopSpotify(); fail(error.code||error.message); } }
         return;
       }
       const generation = ++playbackGeneration;
       playbackAbort?.abort();
       playbackAbort = new AbortController();
       stopPlatformPlayback();
-      set({activePlatformEmbed:null});
+      set({activePlatformEmbed:null,playbackEngine:'audio'});
       ensureAudio();
       if (!audio) return;
       audio.pause();
@@ -466,8 +472,8 @@ export const usePlayerStore = create((set, get) => {
       set({ isPlaying: false, playbackLoading: false });
       const canPlay = canStreamTrack(track);
       if (!canPlay) {
-        const message = 'Audio is not available for this release yet.';
-        set({ isPlaying: false, playbackError: message });
+        const message = 'IMPORT_AUDIO_UNAVAILABLE';
+        set({ currentTrack:track,isPlayerCollapsed:false,progress:0,duration:track?.duration||0,isPlaying: false, playbackError: message });
         reportPlaybackError(message);
         return;
       }
@@ -533,7 +539,11 @@ export const usePlayerStore = create((set, get) => {
     },
 
     togglePlay: () => {
-      if (get().activePlatformEmbed) return;
+      if(get().playbackEngine==='spotify') {
+        if(get().playbackLoading){get().pause();return;}
+        if((get().playbackError && get().playbackError!=='SPOTIFY_PLAYBACK_AUTOPLAY') || !spotifyController){get().playTrack(get().currentTrack);return;}
+        spotifyController.toggle()?.catch(()=>set({playbackError:'SPOTIFY_PLAYBACK_UNAVAILABLE'}));return;
+      }
       if (get().playbackLoading) { get().pause(); return; }
       if (get().currentTrack && !audio?.src) { get().playTrack(get().currentTrack); return; }
       const { isPlaying, currentTrack } = get();
@@ -560,6 +570,11 @@ export const usePlayerStore = create((set, get) => {
     },
 
     pause: () => {
+      if(get().playbackEngine==='spotify') {
+        if(get().playbackLoading){++playbackGeneration;playbackAbort?.abort();stopSpotify();}
+        else spotifyController?.pause()?.catch(()=>{});
+        set({isPlaying:false,playbackLoading:false});return;
+      }
       if (get().activePlatformEmbed) { get().closePlatformEmbed(); return; }
       ++playbackGeneration;
       playbackAbort?.abort();
@@ -575,7 +590,7 @@ export const usePlayerStore = create((set, get) => {
     },
 
     seek: (time) => {
-      if (get().activePlatformEmbed) return;
+      if(get().playbackEngine==='spotify'){spotifyController?.seek(time)?.catch(()=>{});set({progress:time});return;}
       const { currentTrack } = get();
       if (audio) {
         audio.currentTime = time;
@@ -589,6 +604,7 @@ export const usePlayerStore = create((set, get) => {
     setVolume: (value) => {
       if (!Number.isFinite(value)) return;
       const rounded = Math.max(0, Math.min(1, value));
+      spotifyController?.volume(rounded)?.catch(()=>{});
       if (audio) {
         audio.volume = rounded;
       }
@@ -609,6 +625,7 @@ export const usePlayerStore = create((set, get) => {
           nextIndex = 0;
         } else {
           // No more tracks: stop and reset
+          stopSpotify();
           if (audio) audio.pause();
           set({ isPlaying: false, progress: 0 });
           connectPresenceService.notifyEnded();
@@ -733,6 +750,6 @@ useUserStore.subscribe((state,previous)=>{
   ++playbackGeneration;playbackAbort?.abort();audio?.pause();audio?.removeAttribute?.('src');
   stopPlatformPlayback();releaseCachedSource();
   if(previous.authHydrated || previous.user)audioCache.clear();
-  usePlayerStore.setState({currentTrack:null,activePlatformEmbed:null,isPlaying:false,playbackLoading:false,progress:0,lyricsFullscreenOpen:false});
+  usePlayerStore.setState({currentTrack:null,queue:[],originalQueue:[],queueSource:null,activePlatformEmbed:null,playbackEngine:'audio',isPlaying:false,playbackLoading:false,progress:0,lyricsFullscreenOpen:false});
 });
 if(typeof window!=='undefined')window.addEventListener('noirsound:audio-cache-change',cancelWarm);

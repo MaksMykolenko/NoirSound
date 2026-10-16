@@ -111,7 +111,7 @@ function createPlaylistSources({ fetchImpl = globalThis.fetch, env = process.env
   async function spotifyExchange(code, verifier) {
     const data=await json('https://accounts.spotify.com/api/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({grant_type:'authorization_code',code,redirect_uri:env.SPOTIFY_REDIRECT_URI,client_id:env.SPOTIFY_CLIENT_ID,code_verifier:verifier})});
     if(!data.access_token)throw new CatalogError('IMPORT_CONNECT_REQUIRED',409);
-    return {access:data.access_token,expires:Date.now()+Math.min(Number(data.expires_in)||900,900)*1000};
+    return {access:data.access_token,refresh:data.refresh_token,scope:data.scope,expires:Date.now()+Math.min(Number(data.expires_in)||3600,3600)*1000};
   }
   return {capabilities,load,spotifyExchange};
 }

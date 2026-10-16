@@ -69,8 +69,9 @@ try:
             status,headers,body=request(port,path);assert status==200;assert 'script-src' in headers.get('Content-Security-Policy',''),(path,headers)
             directives={parts[0]:parts[1:] for directive in headers['Content-Security-Policy'].split(';') if (parts:=directive.split())}
             assert set(directives['media-src'])=={"'self'",'blob:','https://api.audius.co','https://creatornode.audius.co','https://validator.eeba4a6ca56a0d87af802270217c2a51.r2.cloudflarestorage.com'}
-            assert set(directives['frame-src'])=={'https://open.spotify.com','https://w.soundcloud.com','https://embed.music.apple.com','https://www.youtube-nocookie.com'}
-            assert 'https://www.youtube.com' in directives['script-src']
+            assert set(directives['frame-src'])=={'https://sdk.scdn.co'}
+            assert 'https://sdk.scdn.co' in directives['script-src']
+            assert 'https://www.youtube.com' not in directives['script-src']
             assert directives['object-src']==["'none'"]
         status,headers,body=request(port,'/creator-rules?from=test','www.noirsound.test');assert status==308;assert headers.get('Location')=='https://noirsound.test/creator-rules?from=test';results.append(['www preserve path/query',status])
         # A legitimate media path reaches its upstream (absent fixture upstream

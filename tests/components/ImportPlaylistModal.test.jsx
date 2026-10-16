@@ -36,7 +36,7 @@ describe('complete source playlist import',()=>{
     expect(importing.commitImport).not.toHaveBeenCalled();
   });
   it('maps repeated source recordings to distinct playlist positions with preserved playback metadata',()=>{
-    const items=[0,1].map(position=>({id:`source:p:${position}`,position,sourceId:'same',provider:'SPOTIFY',importedPlaylistId:'p',playbackMode:'OFFICIAL_EMBED'}));
+    const items=[0,1].map(position=>({id:`source:p:${position}`,position,sourceId:'same',provider:'SPOTIFY',importedPlaylistId:'p',playbackMode:'IMPORTED_SOURCE'}));
     const mapped=mapPlaylistResponse({id:'p',sourceImport:{items,total:2},tracks:[],createdByCurrentUser:true,isPublic:false,trackCount:2});
     expect(mapped.tracks).toEqual(items);expect(mapped.trackCount).toBe(2);expect(mapped.canReorder).toBe(false);
   });

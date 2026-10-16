@@ -27,14 +27,12 @@ import {
 } from './PlayerBarShared';
 import { useTrackContextMenu } from '../../hooks/useEntityContextMenu';
 import useDialogFocusTrap from '../../hooks/useDialogFocusTrap';
-import PlatformEmbedPlayer from './PlatformEmbedPlayer';
 import { isUnmodifiedPrimaryActivation } from '../../utils/linkActivation';
 
 export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
   const { t } = useTranslation();
   const {
     currentTrack,
-    activePlatformEmbed,
     isPlaying,
     volume,
     progress,
@@ -70,7 +68,7 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
     && window.matchMedia('(max-width: 1023px)').matches
   ));
   const mobileSheetOpen = Boolean(
-    isMobileViewport && currentTrack && !activePlatformEmbed && !isPlayerCollapsed && !lyricsFullscreenOpen && !isQueueOpen
+    isMobileViewport && currentTrack && !isPlayerCollapsed && !lyricsFullscreenOpen && !isQueueOpen
   );
   const mobileSheetRef = useDialogFocusTrap(mobileSheetOpen, collapsePlayer);
 
@@ -107,7 +105,6 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
   }, [isPlayerCollapsed, collapsePlayer, lyricsFullscreenOpen, isQueueOpen, mobileSheetOpen]);
 
-  if (activePlatformEmbed) return <PlatformEmbedPlayer key={activePlatformEmbed.generation} embed={activePlatformEmbed}/>;
 
   return (
     <>
@@ -380,6 +377,7 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
             <div className="flex items-center gap-2">
               <button
                 type="button"
+                disabled={Boolean(currentTrack.importedPlaylistId)}
                 onClick={openTrackActions}
                 className="ns-icon-button text-zinc-500"
                 aria-label={t('playlists.moreActionsFor', { title: currentTrack?.title || '' })}
@@ -446,7 +444,7 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
               <button
                 onClick={() => toggleLikeTrack(currentTrack.id)}
                 data-testid="standard-mobile-player-like-button"
-                disabled={Boolean(currentTrack.previewExternalId)}
+                disabled={Boolean(currentTrack.previewExternalId || currentTrack.importedPlaylistId)}
                 className={`ns-media-action ${
                   isLiked
                     ? 'bg-rose-500/10 text-brand-red border-brand-red/35'
