@@ -38,9 +38,11 @@
 
 Для реєстрації API-застосунку SoundCloud зараз вимагає **Artist Pro**. [Офіційна інструкція отримання ключів](https://developers.soundcloud.com/docs/api/register-app).
 
+Форма [створення застосунку](https://soundcloud.com/you/apps/new) окремо зазначає: сервіси перенесення плейлистів або бібліотек потребують **явного схвалення SoundCloud**. Самої підписки Artist Pro або наявності ключів недостатньо для запуску цього імпортера. До отримання дозволу залиш `SOUNDCLOUD_CLIENT_ID` і `SOUNDCLOUD_CLIENT_SECRET` порожніми. В описі заявки прямо вказуй перенесення метаданих плейлистів і зіставлення з каталогом NoirSound; не описуй цю функцію як інший тип застосунку. [Умови API](https://developers.soundcloud.com/docs/api/terms-of-use).
+
 1. Увійди в [SoundCloud Your Apps](https://soundcloud.com/you/apps) з акаунтом, який має доступ до реєстрації застосунків.
 2. Створи застосунок з назвою `NoirSound Playlist Import`, сайтом `https://noirsound.co` і описом перенесення метаданих публічних плейлистів на запит користувача.
-3. Скопіюй **Client ID** та **Client Secret** у `SOUNDCLOUD_CLIENT_ID` і `SOUNDCLOUD_CLIENT_SECRET`.
+3. Після явного схвалення цього сценарію SoundCloud скопіюй **Client ID** та **Client Secret** у `SOUNDCLOUD_CLIENT_ID` і `SOUNDCLOUD_CLIENT_SECRET`.
 4. Після застосування налаштувань встав у NoirSound повне посилання `https://soundcloud.com/username/sets/playlist-name`.
 
 Використовується серверний Client Credentials flow для публічних наборів треків. Авторизація слухача та OAuth callback у цьому імпортері SoundCloud не використовуються. Приватні набори й короткі share-посилання не підтримуються. Для записів, де API повертає лише ім’я завантажувача, NoirSound просить вручну вибрати відповідник.
