@@ -191,9 +191,14 @@ test('later-page playback, likes and playlist actions persist without pagination
   const persisted = await page.request.get(`${API_BASE}/playlists/${playlist.id}`);
   expect((await persisted.json()).playlist.tracks.some(entry => entry.track?.id === trackId)).toBe(true);
 
-  const streamResponse = page.waitForResponse(response => response.url().includes(`/tracks/${trackId}/stream`) && [200, 206, 302].includes(response.status()));
+  // Cached playback first resolves fresh access; the audio can then use a blob
+  // or the returned storage URL without visiting the legacy stream redirect.
+  const playbackResponse = page.waitForResponse(response => response.url().endsWith(`/tracks/${trackId}/playback`) && response.status() === 200);
   await lateRow.getByRole('button', { name: `Play ${track.title}`, exact: true }).click();
-  await streamResponse;
+  const playback = await (await playbackResponse).json();
+  expect(playback.cacheKey).toMatch(/^native:[a-f0-9]{64}$/);
+  expect(playback.playbackMode).toBe('NATIVE');
+  expect(new URL(playback.url).protocol).toMatch(/^https?:$/);
   if (isMobile) {
     const player = page.getByRole('dialog', { name: `Now Playing: ${track.title}`, exact: true });
     await expect(player.getByRole('button', { name: 'Pause', exact: true })).toBeVisible();

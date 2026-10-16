@@ -290,3 +290,6 @@ Provider configuration is server-only in .env.production:
 Without these credentials, link import reports that the service is not connected;
 CSV/TXT metadata import remains usable. Missing commercial-catalog recordings
 cannot be supplied by this migration: listeners choose among native/Audius matches.
+
+For app registration, provider requirements, server configuration and the first
+import, see the [Ukrainian setup guide](playlist-import-setup.uk.md).
