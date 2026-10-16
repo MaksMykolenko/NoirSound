@@ -244,6 +244,7 @@ describe('lyrics UI', () => {
     expect(getTrackLyrics).not.toHaveBeenCalled();
     const lyricsButtons = screen.getAllByRole('button', { name: i18n.t('player.openLyrics') });
     expect(lyricsButtons).toHaveLength(1);
+    expect(lyricsButtons[0].querySelector('.lucide-maximize-2')).not.toBeNull();
     expect(screen.queryByTestId('mobile-now-playing-sheet')).not.toBeInTheDocument();
     await userEvent.click(lyricsButtons[0]);
     const dialog = screen.getByRole('dialog', {
@@ -254,9 +255,24 @@ describe('lyrics UI', () => {
     expect(await within(dialog).findByText('Player panel line')).toBeInTheDocument();
     expect(getTrackLyrics).toHaveBeenCalledTimes(1);
     expect(usePlayerStore.getState()).toMatchObject({ isPlaying: true, progress: 21 });
-    await userEvent.click(within(dialog).getByTestId('fullscreen-lyrics-back'));
+    const collapse = within(dialog).getByTestId('standard-player-fullscreen-button');
+    expect(collapse).toHaveAccessibleName(i18n.t('player.closeLyrics'));
+    expect(collapse).toHaveAttribute('aria-pressed', 'true');
+    expect(collapse.querySelector('.lucide-minimize-2')).not.toBeNull();
+    await userEvent.click(collapse);
     await waitFor(() => expect(screen.queryByTestId('fullscreen-lyrics-player')).toBeNull());
     expect(usePlayerStore.getState().isPlaying).toBe(true);
+  });
+
+  it('loads lyrics for an imported Spotify track using its playlist position', async () => {
+    const spotifyTrack = { ...track, id: 'source:imported-list:0', importedPlaylistId: 'imported-list', position: 0, provider: 'SPOTIFY', sourceId: '1234567890123456789012', playbackMode: 'SPOTIFY_SDK' };
+    getTrackLyrics.mockResolvedValue({ trackId: spotifyTrack.id, hasLyrics: true, lyricsType: 'PLAIN', lyricsText: 'Imported song fixture', source: 'LRCLIB' });
+    usePlayerStore.setState({ currentTrack: spotifyTrack, isPlaying: true, progress: 21, duration: 180 });
+    render(<PlayerLyricsFixture />);
+    await userEvent.click(screen.getByRole('button', { name: i18n.t('player.openLyrics') }));
+    expect(await screen.findByText('Imported song fixture')).toBeInTheDocument();
+    expect(getTrackLyrics).toHaveBeenCalledExactlyOnceWith(spotifyTrack.id, spotifyTrack);
+    expect(usePlayerStore.getState()).toMatchObject({ isPlaying: true, progress: 21 });
   });
 
   it('keeps a long title intact and opens its track page from fullscreen controls', async () => {

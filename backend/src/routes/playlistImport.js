@@ -8,6 +8,7 @@ const { createPlaylistSources } = require('../providers/playlistSources');
 const { auditData } = require('../lib/auditLog');
 const { sourceItem, sourcePlaylistView } = require('../lib/sourcePlaylist');
 const { createSpotifyPlayback, SCOPES, hasPlaybackScopes } = require('../providers/spotifyPlayback');
+const { lookupLyrics } = require('../providers/lyrics');
 const body = (properties, required=Object.keys(properties)) => ({body:{type:'object',additionalProperties:false,properties,required}});
 const text = (maxLength=300) => ({type:'string',minLength:1,maxLength});
 const rate = max => ({rateLimit:{max,timeWindow:'1 minute',keyGenerator:request=>request.user?.id || request.ip}});
@@ -15,6 +16,7 @@ const rate = max => ({rateLimit:{max,timeWindow:'1 minute',keyGenerator:request=
 module.exports = async function playlistImportRoutes(fastify, options) {
   const env=options.env || process.env, sources=options.sources || createPlaylistSources({env});
   const spotify=options.spotifyPlayback || createSpotifyPlayback({env});
+  const lyricsLookup=options.lyricsLookup || lookupLyrics;
   const tokens=createImportTokens(env.COOKIE_SECRET);
   const sessionKey=request=>crypto.createHash('sha256').update(request.user.id+':'+request.sessionId).digest('hex');
   const cookieOptions={httpOnly:true,secure:env.NODE_ENV==='production',sameSite:'lax',path:'/api/playlist-import',maxAge:900};
@@ -112,6 +114,13 @@ module.exports = async function playlistImportRoutes(fastify, options) {
   fastify.get('/spotify/playback-token',{config:rate(60)},async(request,reply)=>{
     const value=await playbackAccess(request,reply);
     return {accessToken:value.access,expiresAt:value.tokenExpires};
+  });
+  fastify.get('/source/:id/lyrics/:position',{config:rate(40)},async request=>{
+    const playlist=await ownedSource(request);
+    const {track}=sourcePosition(playlist,request.params.position);
+    // Resolve lyrics from the owner's stored metadata, never a client-supplied
+    // title or another user's private playlist. No Spotify playback grant needed.
+    return lyricsLookup(track);
   });
   fastify.post('/source/:id/spotify/play/:position',{config:rate(60),schema:body({deviceId:{type:'string',pattern:'^[A-Za-z0-9_-]{1,128}$'}})},async(request,reply)=>{
     const playlist=await ownedSource(request);

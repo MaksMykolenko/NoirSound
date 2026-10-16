@@ -123,7 +123,9 @@ export default function FullscreenLyricsPlayer({
     setLoadFailed(false);
     setLoading(true);
 
-    (currentTrack.previewExternalId && !currentTrack.recordingId ? getTrackLyrics(currentTrack.id, currentTrack) : getTrackLyrics(currentTrack.id))
+    (currentTrack.importedPlaylistId || (currentTrack.previewExternalId && !currentTrack.recordingId)
+      ? getTrackLyrics(currentTrack.id, currentTrack)
+      : getTrackLyrics(currentTrack.id))
       .then((response) => {
         if (cancelled) return;
         cacheFullscreenLyrics(currentTrack.id, response);

@@ -5,7 +5,7 @@ import routes from '../src/routes/playlistImport';
 import tokenModule from '../src/lib/importTokens';
 
 describe('playlist import authorization and confirmation',()=>{
-  let app,db,playlists,visible,sources,spotifyPlayback;
+  let app,db,playlists,visible,sources,spotifyPlayback,lyricsLookup;
   const entry={title:'Fixture',artist:'Artist',duration:180};
   const post=(path,payload,user='a')=>app.inject({method:'POST',url:'/api/playlist-import/'+path,headers:user?{'x-fixture-user':user}:{},payload});
   beforeEach(async()=>{
@@ -18,12 +18,13 @@ describe('playlist import authorization and confirmation',()=>{
     };
     sources={capabilities:()=>({SPOTIFY:true,YOUTUBE:false,SOUNDCLOUD:false}),load:vi.fn(async()=>({name:'Source playlist',entries:[entry]})),spotifyExchange:vi.fn(async()=>({access:'server-token',expires:Date.now()+900000}))};
     spotifyPlayback={play:vi.fn(async()=>{}),refresh:vi.fn(async()=>({access:'refreshed',tokenExpires:Date.now()+3600000}))};
+    lyricsLookup=vi.fn(async track=>({trackId:track.id,hasLyrics:true,lyricsType:'PLAIN',lyricsText:'Original fixture lyric',source:'LRCLIB'}));
     app=Fastify();app.decorate('prisma',db);app.decorate('authenticate',async(request,reply)=>{
       if(!request.headers['x-fixture-user'])return reply.code(401).send({error:'Unauthorized'});
       request.user={id:request.headers['x-fixture-user'],role:'LISTENER'};request.sessionId='session-'+request.user.id;
     });
     await app.register(cookie);
-    await app.register(routes,{prefix:'/api/playlist-import',sources,spotifyPlayback,env:{COOKIE_SECRET:'test-only',SPOTIFY_CLIENT_ID:'fixture',SPOTIFY_REDIRECT_URI:'https://example.test/api/playlist-import/spotify/callback',FRONTEND_ORIGIN:'https://example.test'}});
+    await app.register(routes,{prefix:'/api/playlist-import',sources,spotifyPlayback,lyricsLookup,env:{COOKIE_SECRET:'test-only',SPOTIFY_CLIENT_ID:'fixture',SPOTIFY_REDIRECT_URI:'https://example.test/api/playlist-import/spotify/callback',FRONTEND_ORIGIN:'https://example.test'}});
     await app.ready();
   });
   afterEach(async()=>{await app.close();vi.unstubAllEnvs();});
@@ -132,6 +133,29 @@ describe('playlist import authorization and confirmation',()=>{
     expect((await get('status',null)).statusCode).toBe(401);
     playlists.get(id).isPublic=true;
     expect((await get('status')).statusCode).toBe(404);
+  });
+  it('looks up lyrics using the owner’s stored Spotify metadata without a playback grant',async()=>{
+    const saved=await post('commit',await sourcePreview(3)),id=saved.json().id;
+    const result=await app.inject({url:`/api/playlist-import/source/${id}/lyrics/0?title=Untrusted&artist=Untrusted`,headers:{'x-fixture-user':'a'}});
+    expect(result.statusCode,result.body).toBe(200);
+    expect(result.headers['cache-control']).toBe('private, no-store');
+    expect(result.json()).toMatchObject({trackId:`source:${id}:0`,hasLyrics:true,lyricsText:'Original fixture lyric',source:'LRCLIB'});
+    expect(lyricsLookup).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({id:`source:${id}:0`,title:'Position 1',artistName:'Artist',duration:180,provider:'SPOTIFY',position:0}));
+    expect(spotifyPlayback.play).not.toHaveBeenCalled();
+    expect(spotifyPlayback.refresh).not.toHaveBeenCalled();
+    expect(db.playlist.update).not.toHaveBeenCalled();
+  });
+  it('does not look up lyrics for inaccessible playlists or unavailable positions',async()=>{
+    const saved=await post('commit',await sourcePreview(3)),id=saved.json().id;
+    const get=(position,user='a')=>app.inject({url:`/api/playlist-import/source/${id}/lyrics/${position}`,headers:user?{'x-fixture-user':user}:{}});
+    expect((await get(0,null)).statusCode).toBe(401);
+    expect((await get(0,'b')).statusCode).toBe(404);
+    expect((await get(1)).statusCode).toBe(409);
+    expect((await get(999)).statusCode).toBe(409);
+    expect((await get(-1)).statusCode).toBe(400);
+    playlists.get(id).isPublic=true;
+    expect((await get(0)).statusCode).toBe(404);
+    expect(lyricsLookup).not.toHaveBeenCalled();
   });
   it('retires both YouTube selection endpoints without mutating the saved list',async()=>{
     const saved=await post('commit',await sourcePreview(3)),id=saved.json().id;

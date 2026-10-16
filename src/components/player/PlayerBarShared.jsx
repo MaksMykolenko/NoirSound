@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import {
   Maximize2,
+  Minimize2,
   ListMusic,
   Pause,
   Play,
@@ -312,14 +313,13 @@ export function DesktopPlayerBarContent({
         <button
           type="button"
           onClick={onLyrics}
-          className={`p-2 transition-all focus:outline-none cursor-pointer ${
-            lyricsActive ? 'rounded-md border border-brand-red/30 bg-zinc-900 text-brand-red' : 'text-zinc-500 hover:text-zinc-200'
-          }`}
+          data-testid="standard-player-fullscreen-button"
+          className="inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full border-0 bg-transparent p-0 text-zinc-400 transition-colors hover:bg-white/5 hover:text-zinc-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-red"
           title={t(lyricsActive ? 'player.closeLyrics' : 'player.openLyrics')}
           aria-label={t(lyricsActive ? 'player.closeLyrics' : 'player.openLyrics')}
           aria-pressed={lyricsActive}
         >
-          <Maximize2 size={18} />
+          {lyricsActive ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
         </button>
         <button
           type="button"
