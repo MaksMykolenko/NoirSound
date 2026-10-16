@@ -26,7 +26,7 @@ export function createSpotifyController({ onState, onEnded, onError }) {
     if (destroyed || !started || !state || ended) return;
     const current = state.track_window?.current_track;
     const changedTrack = current?.uri && current.uri !== uri;
-    const finished = state.paused && state.position === 0 && lastDuration > 0 && lastPosition >= lastDuration - 1800 && Date.now() > seekingUntil;
+    const finished = state.position < 500 && lastDuration > 0 && lastPosition >= lastDuration - 1800 && Date.now() > seekingUntil;
     if (changedTrack || finished) {
       ended = true;
       player.pause().catch(() => {});

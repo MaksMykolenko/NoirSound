@@ -7,6 +7,7 @@ import i18n from '../../src/i18n';
 import AppLayout from '../../src/components/layout/AppLayout';
 import PublicAppShell from '../../src/components/layout/PublicAppShell';
 import PlayerBar from '../../src/components/player/PlayerBar';
+import QueuePanel from '../../src/components/player/QueuePanel';
 import { __getAudioElementForTests, usePlayerStore } from '../../src/store/playerStore';
 import { isUnmodifiedPrimaryActivation } from '../../src/utils/linkActivation';
 
@@ -85,6 +86,17 @@ describe('player track navigation', () => {
     expect(within(screen.getByTestId('desktop-player')).getByTestId('standard-player-transport')).toBeInTheDocument();
     expect(container.querySelector('iframe')).toBeNull();
     expect(within(screen.getByTestId('desktop-player')).getByRole('link',{name:track.title})).toHaveAttribute('href','/playlist/playlist');
+  });
+
+  it('lets an imported Spotify position be selected from the ordinary queue',()=>{
+    const first={...track,id:'source:playlist:0',importedPlaylistId:'playlist',position:0,provider:'SPOTIFY',playbackMode:'IMPORTED_SOURCE',isStreamable:false};
+    const second={...first,id:'source:playlist:1',position:1,title:'Next source song'};
+    usePlayerStore.setState({currentTrack:first,queue:[first,second]});
+    const play=vi.spyOn(usePlayerStore.getState(),'playTrack').mockResolvedValue();
+    render(<MemoryRouter><QueuePanel isOpen onClose={()=>{}}/></MemoryRouter>);
+    const button=screen.getByRole('button',{name:'Play Next source song'});
+    expect(button).toBeEnabled();fireEvent.click(button);expect(play).toHaveBeenCalledWith(second);
+    play.mockRestore();
   });
 
   beforeEach(async () => {

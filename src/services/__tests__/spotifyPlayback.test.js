@@ -28,6 +28,12 @@ describe('Spotify audio behind the NoirSound controls',()=>{
     handlers.player_state_changed({paused:false,position:1000,duration:180000,track_window:{current_track:{uri:'spotify:track:radio'}}});
     expect(callbacks.onEnded).toHaveBeenCalledOnce();expect(instance.pause).toHaveBeenCalledOnce();
   });
+  it('leaves repeat handling to NoirSound even if the Spotify device repeats the current URI',async()=>{
+    await controller.start(track,.3);
+    handlers.player_state_changed({paused:false,position:179500,duration:180000,track_window:{current_track:{uri}}});
+    handlers.player_state_changed({paused:false,position:0,duration:180000,track_window:{current_track:{uri}}});
+    expect(callbacks.onEnded).toHaveBeenCalledOnce();
+  });
   it('disconnects on a source switch and ignores late playback events',async()=>{
     await controller.start(track,.3);controller.destroy();callbacks.onState.mockClear();
     handlers.player_state_changed({paused:false,position:60000,duration:180000,track_window:{current_track:{uri}}});

@@ -1,4 +1,5 @@
 import React from 'react';
+import { canPlayTrack } from '../../utils/trackPlayback';
 import { usePlayerStore } from '../../store/playerStore';
 import { MoreHorizontal, X, Play, Pause, Trash2, Music } from 'lucide-react';
 import FallbackCover from '../ui/FallbackCover';
@@ -18,7 +19,7 @@ function QueueTrackRow({ track, index, currentTrack, isPlaying, togglePlay, play
 
   const isCurrent = currentTrack?.id === track.id;
   const isPlayingThis = isCurrent && isPlaying;
-  const canPlay = track.isAvailable !== false && (track.isStreamable ?? Boolean(track.audioUrl));
+  const canPlay = canPlayTrack(track);
   return (
     <div
       onContextMenu={contextMenuProps.onContextMenu}
