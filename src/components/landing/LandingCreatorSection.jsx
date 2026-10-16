@@ -2,6 +2,7 @@ import React, { useId, useState } from 'react';
 import { ArrowUpRight, Upload } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
+import { useUserStore } from '../../store/userStore';
 import { useLandingDraftStore } from '../../store/landingDraftStore';
 import { BATCH_MAX_FILE_BYTES, validateSelectedFiles } from '../upload/batch/batchUploadUtils';
 import LandingReleasePreview from './LandingReleasePreview';
@@ -9,6 +10,10 @@ import LandingReleasePreview from './LandingReleasePreview';
 export default function LandingCreatorSection() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const user = useUserStore(state => state.user);
+  const openAuth = useUserStore(state => state.setAuthModalOpen);
+  const canAccessUpload = import.meta.env.VITE_PUBLIC_APP_ENABLED !== 'false' || user?.role === 'ADMIN';
+  const creatorPending = !canAccessUpload && Boolean(user?.creatorRegistration);
   const { draft, lostDraft, updateDraft, requestUpload } = useLandingDraftStore();
   const [previewOpen, setPreviewOpen] = useState(false);
   const [fileError, setFileError] = useState(false);
@@ -30,6 +35,10 @@ export default function LandingCreatorSection() {
 
   function continueUpload() {
     setPreviewOpen(false);
+    if (!canAccessUpload) {
+      openAuth(true, 'register', 'CREATOR');
+      return;
+    }
     requestUpload();
     navigate('/upload');
   }
@@ -51,9 +60,9 @@ export default function LandingCreatorSection() {
             </ol>
 
             <div className="creator-cta-box">
-              <p className="creator-cta-text">{t('start.uploadIntro')}</p>
-              <button type="button" onClick={continueUpload} className="button button-accent creator-cta-button">
-                {t('landing.publish')}<ArrowUpRight size={16} aria-hidden="true" />
+              <p className="creator-cta-text">{t(creatorPending ? 'start.creatorPending' : canAccessUpload ? 'start.uploadIntro' : 'start.creatorAccessDescription')}</p>
+              <button type="button" onClick={continueUpload} disabled={creatorPending} className="button button-accent creator-cta-button">
+                {t(canAccessUpload ? 'landing.publish' : 'auth.registerAsCreator')}<ArrowUpRight size={16} aria-hidden="true" />
               </button>
             </div>
           </div>

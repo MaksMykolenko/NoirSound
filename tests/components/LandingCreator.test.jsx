@@ -1,7 +1,7 @@
 import React from 'react';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Link, MemoryRouter, Route, Routes } from 'react-router-dom';
 import LandingCreatorSection from '../../src/components/landing/LandingCreatorSection';
 import UploadForm from '../../src/components/upload/UploadForm';
@@ -49,7 +49,25 @@ beforeEach(async () => {
   ensureProfile.mockReset();
 });
 
+afterEach(() => vi.unstubAllEnvs());
+
 describe('landing creator handoff', () => {
+  it('keeps creator onboarding reachable without entering a gated upload route', async () => {
+    vi.stubEnv('VITE_PUBLIC_APP_ENABLED', 'false');
+    useUserStore.setState({ user: { id: 'listener', role: 'LISTENER', creatorRegistration: null } });
+    render(<TestFlow />);
+    await userEvent.click(screen.getByRole('button', { name: 'Register as Creator', exact: true }));
+    expect(useUserStore.getState()).toMatchObject({ isAuthModalOpen: true, authModalMode: 'register', authModalInitialAccountType: 'CREATOR' });
+    expect(screen.queryByRole('link', { name: 'Back to landing' })).not.toBeInTheDocument();
+  });
+
+  it('shows a saved creator request in closed mode instead of sending it again', async () => {
+    vi.stubEnv('VITE_PUBLIC_APP_ENABLED', 'false');
+    useUserStore.setState({ user: { id: 'listener', role: 'LISTENER', creatorRegistration: { status: 'REGISTERED' } } });
+    render(<TestFlow />);
+    expect(screen.getByText(i18n.t('start.creatorPending'))).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Register as Creator', exact: true })).toBeDisabled();
+  });
   it('updates a text-safe visual preview without playback, publication or upload', async () => {
     const user = userEvent.setup();
     render(<TestFlow />);
