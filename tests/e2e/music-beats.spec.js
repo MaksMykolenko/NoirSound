@@ -68,6 +68,7 @@ test.describe('Music / Beats content separation', () => {
 
     await page.getByRole('tab', { name: 'Beats' }).click();
     await expect(page).toHaveURL(/\/discover\?content=BEAT/);
+    await page.getByRole('button', { name: 'Filters', exact: true }).click();
     await expect(page.getByTestId('beat-discover-filters')).toBeVisible();
     const beatCard = page.getByTestId('all-releases')
       .locator(`[data-track-id="${beatUpload.trackId}"]`);

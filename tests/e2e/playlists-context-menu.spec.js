@@ -92,6 +92,7 @@ test.describe('Playlists and custom context menu', () => {
     await expect(hero).toBeFocused();
 
     await page.goto('/library?tab=playlists');
+    await page.getByRole('button', { name: 'Filter library', exact: true }).filter({ visible: true }).click();
     const filter = page.getByPlaceholder('Filter library');
     await filter.click({ button: 'right' });
     await expect(page.getByRole('menu')).toHaveCount(0);

@@ -20,12 +20,14 @@ test.beforeEach(async ({ context }) => {
 
 async function openThemeSettings(page) {
   await page.goto('/profile?tab=settings');
+  await page.locator('summary').filter({ hasText: /^Appearance$/ }).click();
   await expect(page.getByTestId('theme-selector')).toBeVisible();
 }
 
 async function selectTheme(page, themeId) {
   const option = page.getByTestId(`theme-option-${themeId}`);
   await expect(option).toHaveCount(1);
+  if (!(await option.isVisible())) await page.locator('summary').filter({ hasText: /^Appearance$/ }).click();
   await option.click();
   const resolvedTheme = themeId === 'system' ? /noir-pink|light-minimal/ : themeId;
   await expect(page.locator('html')).toHaveAttribute('data-theme', resolvedTheme);

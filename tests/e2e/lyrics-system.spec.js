@@ -105,7 +105,7 @@ test.describe('Lyrics system', () => {
     )).toBeVisible();
     await page.getByRole('button', { name: 'Play track' }).click();
     await expect(page.getByTestId('desktop-player').getByRole('button', {
-      name: 'Open fullscreen lyrics',
+      name: 'Open fullscreen player',
       exact: true,
     })).toBeEnabled();
 

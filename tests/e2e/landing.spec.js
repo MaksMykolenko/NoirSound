@@ -270,6 +270,7 @@ test('saved landing locales preserve authored titles and app theme, and metadata
   await expect(page.locator('meta[property="og:type"]')).toHaveAttribute('content', 'website');
   await expect(page.locator('meta[property="og:title"]')).toHaveCount(1);
   await expect(page.locator('meta[name="description"]')).toHaveCount(1);
+  await page.locator('footer summary').filter({ hasText: 'Legal & help' }).click();
   await page.locator('footer').getByRole('link', { name: 'Privacy', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Privacy Policy', exact: true })).toBeVisible();
 });
