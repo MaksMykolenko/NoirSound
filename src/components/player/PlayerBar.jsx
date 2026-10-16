@@ -1,3 +1,4 @@
+import {useMockApi} from '../../api/client';
 import { playerTrackHref, playerArtistLabel } from '../../utils/playerTrackPresentation';
 import { TrackSaveIcon } from '../tracks/TrackVisuals';
 import TrackSourceIcon from '../tracks/TrackSourceIcon';
@@ -58,7 +59,7 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
   } = usePlayerStore();
 
   const isLiked = currentTrack ? likedTracks.includes(currentTrack.id) : false;
-  const lyricsAvailable = Boolean(currentTrack?.hasLyrics);
+  const lyricsAvailable = Boolean(currentTrack?.hasLyrics || (!useMockApi && currentTrack?.isStreamable && currentTrack?.playbackSource !== 'landing'));
   const { contextMenuProps: trackContextMenuProps, openFromButton: openTrackActions } =
     useTrackContextMenu(currentTrack);
   const desktopPlayerHeight = 'h-[var(--ns-player-height)]';

@@ -1,6 +1,8 @@
+import {audioCache,audioCacheEnabled,canWarmAudio} from '../services/audioCache';
+import {nextQueuedTrack} from '../services/playerPreload';
 import { create } from 'zustand';
 import { resolveExternalPlayback, resolvePlatformEmbed, recordExternalPlay, saveCatalogTrack } from '../api/externalCatalog';
-import { API_BASE_URL, useMockApi } from '../api/client';
+import { API_BASE_URL, useMockApi, apiFetch } from '../api/client';
 import { getRecentlyPlayed } from '../api/stats';
 import { getLikedTracks, setTrackLiked } from '../api/tracks';
 import { useUserStore } from './userStore';
@@ -17,6 +19,39 @@ function reportPlaybackError(message) {
 let audio = null;
 let playbackGeneration = 0;
 let playbackAbort = null;
+let activeObjectUrl = null;
+let warmTimer = null;
+let warmAbort = null;
+let currentDescriptor = null;
+function cancelWarm() { clearTimeout(warmTimer); warmAbort?.abort(); warmAbort = null; }
+function releaseCachedSource() { cancelWarm(); currentDescriptor=null; if(activeObjectUrl){URL.revokeObjectURL(activeObjectUrl);activeObjectUrl=null;} }
+const cacheScope = () => useUserStore.getState().user?.id || 'guest';
+async function playbackDescriptor(track,signal) {
+  if (track.playbackMode==='EXTERNAL_STREAM') {
+    const resolved=await resolveExternalPlayback(track,signal);
+    if(resolved.playbackMode!=='EXTERNAL_STREAM'||!resolved.url)throw new Error('External audio is unavailable.');
+    return resolved;
+  }
+  if(useMockApi)return {url:track.audioUrl};
+  if(track.playbackSource==='landing')return {url:API_BASE_URL+'/landing/tracks/'+encodeURIComponent(track.id)+'/stream'};
+  if(audioCacheEnabled())return apiFetch('/tracks/'+encodeURIComponent(track.id)+'/playback',{signal,suppressErrorToast:true});
+  return {url:API_BASE_URL+'/tracks/'+encodeURIComponent(track.id)+'/stream'};
+}
+function scheduleWarm() {
+  cancelWarm();
+  const state=usePlayerStore.getState();
+  if(!state.isPlaying||state.activePlatformEmbed||!currentDescriptor||!canWarmAudio())return;
+  const track=state.currentTrack,next=nextQueuedTrack(state),descriptor=currentDescriptor,scope=cacheScope();
+  warmAbort=new AbortController(); const signal=warmAbort.signal;
+  warmTimer=setTimeout(async()=>{
+    try {
+      await audioCache.warm(scope,descriptor,signal);
+      if(signal.aborted||!next||next.id===track.id||!canStreamTrack(next))return;
+      const upcoming=await playbackDescriptor(next,signal);
+      if(!signal.aborted&&scope===cacheScope())await audioCache.warm(scope,upcoming,signal);
+    }catch { /* Prefetch is optional; foreground playback resolves fresh access again. */ }
+  },1200);
+}
 let stopPlatformFrame = null;
 export function registerPlatformFrameStop(stop) {
   stopPlatformFrame = stop;
@@ -366,6 +401,7 @@ export const usePlayerStore = create((set, get) => {
       stopPlatformPlayback();
       audio?.pause();
       audio?.removeAttribute?.('src');
+      releaseCachedSource();
       set({activePlatformEmbed:null,currentTrack:null,isPlaying:false,progress:0,duration:0,playbackLoading:false,playbackError:null,lyricsFullscreenOpen:false});
       const embed = track?.recordingId ? await resolveExternalPlayback(track, playbackAbort.signal) : await resolvePlatformEmbed(provider, url, playbackAbort.signal);
       if (generation !== playbackGeneration || useUserStore.getState().user?.id !== user?.id) return;
@@ -377,6 +413,7 @@ export const usePlayerStore = create((set, get) => {
     closePlatformEmbed: () => {
       ++playbackGeneration;
       playbackAbort?.abort();
+      cancelWarm();
       if (!get().activePlatformEmbed) return;
       stopPlatformPlayback();
       set({activePlatformEmbed:null,currentTrack:null,isPlaying:false,progress:0,duration:0,playbackLoading:false,lyricsFullscreenOpen:false});
@@ -388,7 +425,7 @@ export const usePlayerStore = create((set, get) => {
         if(!user){await get().playTrack({...track,guestCatalogPreview:true},newQueue,queueSource);return;}
         const generation=++playbackGeneration;
         playbackAbort?.abort();playbackAbort=new AbortController();
-        stopPlatformPlayback();audio?.pause();audio?.removeAttribute?.('src');
+        stopPlatformPlayback();audio?.pause();audio?.removeAttribute?.('src');releaseCachedSource();
         set({activePlatformEmbed:null,currentTrack:track,isPlaying:false,progress:0,playbackLoading:true,playbackError:null});
         try {
           const saved=await saveCatalogTrack(track,playbackAbort.signal);
@@ -413,6 +450,7 @@ export const usePlayerStore = create((set, get) => {
       if (!audio) return;
       audio.pause();
       audio.removeAttribute?.('src');
+      releaseCachedSource();
       set({ isPlaying: false, playbackLoading: false });
       const canPlay = canStreamTrack(track);
       if (!canPlay) {
@@ -427,7 +465,7 @@ export const usePlayerStore = create((set, get) => {
         progress: 0,
         duration: track.duration || 0,
         playbackError: null,
-        playbackLoading: track.playbackMode === 'EXTERNAL_STREAM'
+        playbackLoading: true
       };
 
       if (newQueue) {
@@ -449,18 +487,13 @@ export const usePlayerStore = create((set, get) => {
 
       audio.volume = get().volume;
       try {
-        if (track.playbackMode === 'EXTERNAL_STREAM') {
-          const resolved = await resolveExternalPlayback(track, playbackAbort.signal);
-          if (generation !== playbackGeneration) return;
-          if (resolved.playbackMode !== 'EXTERNAL_STREAM' || !resolved.url) throw new Error('External audio is unavailable.');
-          audio.src = resolved.url;
-        } else if (useMockApi) {
-          audio.src = track.audioUrl;
-        } else if (track.playbackSource === 'landing') {
-          audio.src = `${API_BASE_URL}/landing/tracks/${encodeURIComponent(track.id)}/stream`;
-        } else {
-          audio.src = `${API_BASE_URL}/tracks/${encodeURIComponent(track.id)}/stream`;
-        }
+        const resolved=await playbackDescriptor(track,playbackAbort.signal);
+        if(generation!==playbackGeneration)return;
+        const cached=await audioCache.get(cacheScope(),resolved);
+        if(generation!==playbackGeneration)return;
+        currentDescriptor=resolved;
+        activeObjectUrl=cached?URL.createObjectURL(cached):null;
+        audio.src=activeObjectUrl || resolved.url;
         if (generation !== playbackGeneration) return;
         await audio.play();
         if (generation !== playbackGeneration) return;
@@ -490,7 +523,7 @@ export const usePlayerStore = create((set, get) => {
     togglePlay: () => {
       if (get().activePlatformEmbed) return;
       if (get().playbackLoading) { get().pause(); return; }
-      if (get().currentTrack?.playbackMode === 'EXTERNAL_STREAM' && !audio?.src) { get().playTrack(get().currentTrack); return; }
+      if (get().currentTrack && !audio?.src) { get().playTrack(get().currentTrack); return; }
       const { isPlaying, currentTrack } = get();
       if (!currentTrack) return;
 
@@ -678,3 +711,16 @@ export const usePlayerStore = create((set, get) => {
     }
   };
 });
+
+// Reordering/shuffling the queue invalidates an in-flight next-track download.
+usePlayerStore.subscribe((state,previous)=>{
+  if(state.currentTrack!==previous.currentTrack||state.queue!==previous.queue||state.repeatMode!==previous.repeatMode||state.isPlaying!==previous.isPlaying||state.activePlatformEmbed!==previous.activePlatformEmbed)scheduleWarm();
+});
+useUserStore.subscribe((state,previous)=>{
+  if(state.user?.id===previous.user?.id)return;
+  ++playbackGeneration;playbackAbort?.abort();audio?.pause();audio?.removeAttribute?.('src');
+  stopPlatformPlayback();releaseCachedSource();
+  if(previous.authHydrated || previous.user)audioCache.clear();
+  usePlayerStore.setState({currentTrack:null,activePlatformEmbed:null,isPlaying:false,playbackLoading:false,progress:0,lyricsFullscreenOpen:false});
+});
+if(typeof window!=='undefined')window.addEventListener('noirsound:audio-cache-change',cancelWarm);

@@ -1,3 +1,4 @@
+import ImportPlaylistModal from '../components/playlists/ImportPlaylistModal';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Heart, History, ListMusic, Plus, Radio, Users } from 'lucide-react';
@@ -55,6 +56,7 @@ export default function Library() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isCreateOpen, setCreateOpen] = useState(false);
+  const [isImportOpen,setImportOpen]=useState(()=>new URLSearchParams(window.location.search).get('import')==='spotify');
   const [playlistRevision, setPlaylistRevision] = useState(0);
   const { tracks: likedSongs, loading: likesLoading, error: likesError } = useLikedCollection(playlistRevision);
   const isLikedTab = ['liked', 'music', 'beats'].includes(activeTab);
@@ -140,9 +142,12 @@ export default function Library() {
           <h1 className="ns-page-title">{t('nav.yourLibrary')}</h1>
           <p className="ns-page-lede">{t('library.subtitle')}</p>
         </div>
+        <div className="flex flex-wrap gap-2">
+        <button type="button" onClick={()=>setImportOpen(true)} className="ns-button-secondary min-h-11 px-4 text-sm">{t('playlistImport.title')}</button>
         <button type="button" onClick={() => setCreateOpen(true)} className="ns-button-primary inline-flex min-h-11 shrink-0 items-center gap-2 px-4 text-sm">
           <Plus size={15} aria-hidden="true" /> {t('playlists.new')}
         </button>
+        </div>
       </header>
 
       <div ref={tabsRef} className="ns-tabs-scroll ns-tabs-polish flex shrink-0 gap-1 overflow-x-auto border-b border-zinc-800/60" role="tablist">
@@ -263,6 +268,7 @@ export default function Library() {
           )
         )}
       </div>
+      {isImportOpen && <ImportPlaylistModal onClose={()=>{setImportOpen(false);if(window.location.search.includes('import='))navigate('/library',{replace:true});}} onImported={result=>{setImportOpen(false);window.dispatchEvent(new CustomEvent('noirsound:playlists-changed'));navigate('/playlist/'+result.id);}} />}
       <CreatePlaylistModal isOpen={isCreateOpen} onClose={() => setCreateOpen(false)} onCreate={handleCreatePlaylist} />
     </div>
   );

@@ -236,3 +236,57 @@ Apple/YouTube adapters without credentials are **NOT_CONFIGURED**, never called 
 `EXTERNAL_CATALOG_PUBLIC=true` opens enabled catalog browse, source links, track details and official playback to guests and all active account roles. The environment enable flag and persisted Beta switch still apply. Public reads have IP rate limits, no-store responses and noindex headers. API imports and external play events require current active sessions and the normal same-origin write protection. Likes and private playlists use each user's own normal relations. Public playlists retain their existing external-track restriction.
 
 Source editing, manual record creation, merges, verification, settings and audit are still administrator-only and obey the existing owner allowlist. Public serialization omits source evidence and provenance; private native recordings attached by an administrator are excluded from public source views. No database migration or bulk publication of playlists occurs. Set `EXTERNAL_CATALOG_PUBLIC=false` to restore owner-only access; set the Beta switch off to stop all external catalog/playback.
+
+
+## Player cache, lyrics and playlist migration
+
+The player upgrade is an independent implementation using official APIs and
+standard browser media/IndexedDB facilities. No Liner code is included.
+
+- Audio cache: device-local IndexedDB, at most 80 MiB / 50 tracks, 24 MiB per
+  recording and a six-hour expiry. Content identities are derived from the native
+  audio object or Audius CID; signed URLs and upstream credentials are never
+  persisted in the cache. Playback resolves current access before reading a blob.
+  Private entries are account-scoped. Logout clears the cache. Settings allow
+  disabling/clearing it; unsupported storage, CORS and quota failures fall back
+  to streaming. This is not an offline-download feature.
+- Preloading: one cancellable background pipeline prepares current/next queue
+  audio, respects repeat/shuffle/reorder, and stops on pause, source/account
+  changes or official embeds. Data Saver and 2G skip warming. It never imports
+  preview tracks or creates playback events. This does not promise gapless audio.
+- Lyrics: artist-confirmed lyrics take priority. Opening lyrics can query LRCLIB
+  lazily using title, artist and duration; only an exact normalized identity and
+  duration within three seconds is accepted. Results cache for 15 minutes.
+  LRC imports support repeated timestamps, fractions and offsets; timed rows
+  highlight, scroll, seek, and have a device-local timing adjustment. Plain text
+  stays plain; editing imported text removes timing. Set LRCLIB_ENABLED=false
+  to disable external lookup. Tests use synthetic lyrics unless explicitly enabled.
+- Library > Import playlist: up to 200 source entries, CSV/TXT fallback, progress,
+  explicit selection and skipped-track feedback. It creates a private playlist
+  transactionally, preserves selected order, collapses duplicate matches and
+  deduplicates confirmation retries by user/request ID. Only fresh authenticated
+  sessions can preview/commit. Native availability is rechecked at commit;
+  Audius availability is checked for preview and again at playback. Candidate
+  selections expire after 15 minutes and are cryptographically bound to the user.
+  Original source audio and provider account libraries are not copied or modified.
+
+Provider configuration is server-only in .env.production:
+
+- Spotify: SPOTIFY_CLIENT_ID and SPOTIFY_REDIRECT_URI, exactly registered as
+  https://noirsound.co/api/playlist-import/spotify/callback for production.
+  OAuth PKCE requests playlist-read-private / playlist-read-collaborative.
+  The current API uses /v1/playlists/{id}/items; access may be limited to playlists
+  owned by or shared with the connected user. Account access lasts at most
+  15 minutes in an encrypted HttpOnly, secure production cookie bound to the
+  NoirSound session. No refresh token is retained. Disconnect removes that cookie.
+- YouTube: YOUTUBE_API_KEY; public playlists via official playlistItems pages.
+  Removed/private videos are reported as skipped. Video title/channel metadata
+  always requires manual selection of a catalog match.
+- SoundCloud: SOUNDCLOUD_CLIENT_ID and SOUNDCLOUD_CLIENT_SECRET; public sets only.
+  Client credentials use Basic auth, short-lived app tokens are reused/refreshed,
+  and resolve redirects/pagination are restricted to the official API and the
+  same playlist URN. Uploader-only attribution requires manual match selection.
+
+Without these credentials, link import reports that the service is not connected;
+CSV/TXT metadata import remains usable. Missing commercial-catalog recordings
+cannot be supplied by this migration: listeners choose among native/Audius matches.

@@ -24,6 +24,7 @@ export async function installFinalDesignFixtures(page, { locale='en', theme='noi
  await page.route('**/api/**', async route=>{
   const url=new URL(route.request().url()); if(!url.pathname.startsWith('/api/')) return route.continue(); const path=url.pathname.replace(/^\/api/,''); const method=route.request().method();
   const json=(body,status=200)=>route.fulfill({status,contentType:'application/json',body:JSON.stringify(body)});
+  if(path.endsWith('/playback'))return json({url:url.origin+url.pathname.replace(/\/playback$/,'/stream'),cacheKey:'fixture:'+path,playbackMode:'NATIVE'});
   if(path.endsWith('/stream')) return route.fulfill({status:200,contentType:'audio/wav',body:makeWavBuffer(20)});
   if(path==='/auth/me') return guest?json({error:'UNAUTHORIZED'},401):json({user:fixtureUser});
   if(path==='/auth/csrf') return json({csrfToken:'synthetic-local-qa'});

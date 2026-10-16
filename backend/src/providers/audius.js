@@ -1,5 +1,6 @@
 'use strict';
 const { CatalogError, platformUrl, versionFromTitle } = require('../lib/externalCatalog');
+const {createHash}=require('node:crypto');
 const ORIGIN = 'https://api.audius.co';
 const CAPABILITIES = Object.freeze({search:true,resolve:true,metadata:true,playbackMode:'EXTERNAL_STREAM',publicAccess:true});
 const validId = id => typeof id === 'string' && /^[A-Za-z0-9]{1,32}$/.test(id);
@@ -67,7 +68,7 @@ function createAudiusAdapter({fetchImpl=globalThis.fetch,env=process.env}={}) {
       if(![200,206].includes(probe.status))throw new CatalogError('EXTERNAL_TRACK_UNAVAILABLE',409);
       streamUrl=gateway.href;
     }
-    return {track,url:streamUrl,expiresAt:new Date(Date.now()+60000).toISOString(),playbackMode:'EXTERNAL_STREAM',provider:'AUDIUS'};
+    return {track,url:streamUrl,cacheKey:raw.track_cid ? 'audius:'+createHash('sha256').update(id+':'+raw.track_cid).digest('hex') : null,expiresAt:new Date(Date.now()+60000).toISOString(),playbackMode:'EXTERNAL_STREAM',provider:'AUDIUS'};
   }
   return {capabilities:CAPABILITIES,getTrack,resolve,search,browse,playback,status:()=>lastStatus};
 }

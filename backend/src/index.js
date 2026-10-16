@@ -170,6 +170,7 @@ function buildServer(options = {}) {
   fastify.register(require('./routes/artists'), { prefix: '/api/artists' });
   fastify.register(require('./routes/profiles'), { prefix: '/api/profiles' });
   fastify.register(require('./routes/playlists'), { prefix: '/api/playlists' });
+  fastify.register(require('./routes/playlistImport'), { prefix: '/api/playlist-import', audius: options.audius, sources: options.playlistSources });
   fastify.register(require('./routes/uploads'), { prefix: '/api/uploads' });
   fastify.register(require('./routes/uploadBatches'), { prefix: '/api/uploads/batch' });
   fastify.register(require('./routes/comments'), { prefix: '/api/comments' });

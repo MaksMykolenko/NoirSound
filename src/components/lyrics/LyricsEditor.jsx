@@ -1,3 +1,4 @@
+import {parseLrc} from './timedLyrics';
 import React, { useMemo, useState } from 'react';
 import { Eye, FileText, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -11,6 +12,7 @@ export default function LyricsEditor({
 }) {
   const { t } = useTranslation();
   const [preview, setPreview] = useState(false);
+  const [lrcError,setLrcError]=useState('');
   const text = value.lyricsText || '';
   const counts = useMemo(() => lyricsCounts(text), [text]);
   const hasLyrics = Boolean(text.trim());
@@ -53,16 +55,31 @@ export default function LyricsEditor({
           <select
             id={`${idPrefix}-type`}
             className="ns-field px-4"
-            value={hasLyrics ? 'PLAIN' : 'NONE'}
+            value={hasLyrics ? value.lyricsType || 'PLAIN' : 'NONE'}
             disabled
             aria-label={t('lyrics.type')}
           >
             <option value="NONE">{t('lyrics.noLyrics')}</option>
+            <option value="SYNCED">{t('lyrics.synced')}</option>
             <option value="PLAIN">{t('lyrics.plain')}</option>
           </select>
         </label>
       </div>
 
+      <label className="block space-y-2 text-sm text-zinc-400">
+        <span>{t('lyrics.importLrc')}</span>
+        <input type="file" accept=".lrc,text/plain" className="block max-w-full text-sm" onChange={async event => {
+          const file=event.target.files?.[0];event.target.value='';if(!file)return;
+          setLrcError('');
+          try {
+            if(file.size>50000)throw new Error('large');
+            const lines=parseLrc(await file.text());
+            if(!lines.length||lines.map(x=>x.text).join('\n').length>50000)throw new Error('invalid');
+            onChange({...value,lyricsText:lines.map(x=>x.text).join('\n'),lyricsType:'SYNCED',lyricsSynced:lines});
+          }catch{setLrcError(t('lyrics.lrcInvalid'));}
+        }} />
+      </label>
+      {lrcError && <p role="alert" className="text-sm text-rose-300">{lrcError}</p>}
       {preview ? (
         <div
           className="min-h-48 whitespace-pre-wrap break-words rounded-md border border-zinc-800 bg-zinc-950/60 p-4 text-sm leading-7 text-zinc-200"
@@ -84,6 +101,7 @@ export default function LyricsEditor({
                 ...value,
                 lyricsText: nextText,
                 lyricsType: nextText.trim() ? 'PLAIN' : 'NONE',
+                lyricsSynced: null,
                 ...(nextText.trim() ? {} : { lyricsRightsConfirmed: false }),
               });
             }}
@@ -122,6 +140,7 @@ export default function LyricsEditor({
             ...value,
             lyricsText: '',
             lyricsType: 'NONE',
+            lyricsSynced: null,
             lyricsLanguage: '',
             lyricsRightsConfirmed: false,
           })}

@@ -1473,7 +1473,13 @@
     "retry": "Try again",
     "characters": "characters",
     "lines": "lines",
-    "legalCopy": "Only add lyrics you wrote, own, or have permission to publish on NoirSound."
+    "legalCopy": "Only add lyrics you wrote, own, or have permission to publish on NoirSound.",
+    "follow": "Follow playback",
+    "timing": "Timing",
+    "earlier": "Show lyrics later",
+    "later": "Show lyrics earlier",
+    "importLrc": "Import timed lyrics (.lrc). Editing text clears timing.",
+    "lrcInvalid": "Choose a valid LRC file with timestamps, up to 50 KB."
   },
   "upload": {
     "lyricsSection": "Lyrics (optional)",
@@ -1716,5 +1722,56 @@
     "applePlaybackNote": "Without signing in to Apple Music, a preview is available. Full playback depends on Apple Music sign-in and subscription.",
     "embedPlaybackNote": "Press Play inside the platform player. Availability depends on the publisher, region and platform settings.",
     "embedPrivacyNote": "Opening the player connects to the platform, which may use cookies. NoirSound does not count these plays in its statistics."
+  },
+  "audioCache": {
+    "title": "Audio cache",
+    "help": "Keep up to 80 MB for 6 hours on this device and prepare the next track. Playback checks access online. Data Saver and slow connections skip preloading.",
+    "enable": "Cache audio and preload the next track",
+    "clear": "Clear audio cache",
+    "cleared": "Audio cache cleared."
+  },
+  "playlistImport": {
+    "title": "Import playlist",
+    "help": "Spotify, YouTube and SoundCloud → available tracks in NoirSound. Review each match before saving.",
+    "available": "ready",
+    "unconfigured": "not connected",
+    "configHelp": "Some services are not connected yet. You can import a CSV file or a text list now.",
+    "connectSpotify": "Connect Spotify",
+    "disconnectSpotify": "Disconnect Spotify",
+    "link": "Playlist link",
+    "file": "Or import a CSV / TXT file",
+    "fileHelp": "Up to 200 tracks. CSV: title, artist, duration (seconds); Spotify exports: Track Name, Artist Name(s), Duration (ms). TXT: Artist — Title on each line.",
+    "defaultName": "Imported playlist",
+    "preview": "Find matching tracks",
+    "matching": "Finding tracks…",
+    "progress": "Checked {{done}} of {{total}}",
+    "name": "Playlist name",
+    "selection": "Selected {{selected}} of {{total}}. Choose a match or skip a track.",
+    "limited": "Loaded {{loaded}} of {{total}} entries; {{skipped}} unavailable entries skipped. Limit: 200 entries.",
+    "pending": "Waiting for a match…",
+    "matchFor": "Match for {{title}}",
+    "skip": "Skip / choose a match",
+    "notFound": "No matching track found",
+    "partial": "Audius search was unavailable. Only local matches are shown.",
+    "empty": "This playlist has no accessible music tracks.",
+    "privateHelp": "Creates a private playlist. Repeated matches are added once. No audio is copied from the source service.",
+    "saving": "Creating playlist…",
+    "confirm": "Create playlist ({{count}})",
+    "errors": {
+      "IMPORT_FAILED": "Could not import. Please try again.",
+      "IMPORT_URL_INVALID": "Use a full Spotify, YouTube or public SoundCloud playlist link.",
+      "IMPORT_FILE_INVALID": "Use CSV columns title and artist, or Artist — Title lines; maximum 150 KB.",
+      "IMPORT_TOO_LARGE": "Import up to 200 tracks at a time.",
+      "IMPORT_NOT_CONFIGURED": "This service is not connected. Use CSV or TXT.",
+      "IMPORT_CONNECT_REQUIRED": "Connect Spotify again to read this playlist.",
+      "IMPORT_PLAYLIST_INACCESSIBLE": "Playlist unavailable. Spotify may restrict access to playlists you own or collaborate on.",
+      "IMPORT_RATE_LIMITED": "Too many requests. Wait and retry.",
+      "IMPORT_PROVIDER_UNAVAILABLE": "Source service unavailable. Try again later.",
+      "IMPORT_PREVIEW_EXPIRED": "Preview expired. Find matches again.",
+      "IMPORT_TRACK_UNAVAILABLE": "A track is no longer available. Refresh matches.",
+      "IMPORT_PLAYLIST_CHANGED": "Playlist changed during import. Please retry.",
+      "EXTERNAL_BETA_DISABLED": "External catalog disabled. Refresh matches."
+    },
+    "changeSource": "Choose another playlist"
   }
 }

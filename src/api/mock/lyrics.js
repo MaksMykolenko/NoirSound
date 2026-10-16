@@ -38,6 +38,7 @@ export async function updateTrackLyrics(trackId, payload) {
     trackId: id,
     hasLyrics: true,
     lyricsType: payload.lyricsType || 'PLAIN',
+    lyricsSynced: payload.lyricsSynced || null,
     lyricsLanguage: payload.lyricsLanguage || null,
     lyricsText: text,
     lyricsUpdatedAt: new Date().toISOString(),

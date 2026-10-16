@@ -30,7 +30,8 @@ export default function LyricsEditModal({ open, track, onClose, onSaved }) {
       .then((lyrics) => {
         if (cancelled) return;
         setForm({
-          lyricsText: lyrics.lyricsText || '',
+          lyricsText: lyrics.lyricsText || lyrics.lyricsSynced?.map(line=>line.text).join('\n') || '',
+          lyricsSynced: lyrics.lyricsSynced || null,
           lyricsType: lyrics.hasLyrics ? (lyrics.lyricsType || 'PLAIN') : 'NONE',
           lyricsLanguage: lyrics.lyricsLanguage || '',
           lyricsRightsConfirmed: Boolean(lyrics.hasLyrics),
@@ -63,7 +64,8 @@ export default function LyricsEditModal({ open, track, onClose, onSaved }) {
     try {
       const result = await updateTrackLyrics(track.id, {
         lyricsText: form.lyricsText,
-        lyricsType: text ? 'PLAIN' : 'NONE',
+        lyricsType: text ? form.lyricsType : 'NONE',
+        lyricsSynced: text && form.lyricsType === 'SYNCED' ? form.lyricsSynced : null,
         lyricsLanguage: text ? form.lyricsLanguage || null : null,
         lyricsRightsConfirmed: text ? form.lyricsRightsConfirmed : false,
       });

@@ -660,16 +660,13 @@ describe('lyrics UI', () => {
     expect(screen.getByTestId('fullscreen-lyrics-player')).toBeInTheDocument();
   });
 
-  it('disables lyrics controls for a track without lyrics', () => {
-    usePlayerStore.setState({
-      currentTrack: { ...track, id: 'no-lyrics', hasLyrics: false, lyricsType: 'NONE' },
-    });
+  it('offers on-demand lyric lookup without prefetching on render', async () => {
+    getTrackLyrics.mockResolvedValue({hasLyrics:false});
+    usePlayerStore.setState({currentTrack:{...track,id:'no-lyrics',hasLyrics:false,lyricsType:'NONE'}});
     render(<PlayerLyricsFixture />);
-    const unavailable = screen.getAllByRole('button', { name: i18n.t('player.lyricsUnavailable') });
-    expect(unavailable).toHaveLength(1);
-    expect(screen.queryByTestId('mobile-now-playing-sheet')).not.toBeInTheDocument();
-    unavailable.forEach((button) => expect(button).toBeDisabled());
-    fireEvent.keyDown(document, { key: 'Escape' });
-    expect(getTrackLyrics).not.toHaveBeenCalled();
+    const open=screen.getByRole('button',{name:i18n.t('player.openLyrics')});
+    expect(open).toBeEnabled();expect(getTrackLyrics).not.toHaveBeenCalled();
+    await userEvent.click(open);
+    expect(await screen.findByText(i18n.t('lyrics.noLyrics'))).toBeInTheDocument();
   });
 });

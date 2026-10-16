@@ -1,7 +1,7 @@
 import { apiFetch } from '../client';
 
-export function getTrackLyrics(trackId) {
-  return apiFetch(`/tracks/${encodeURIComponent(trackId)}/lyrics`, {
+export function getTrackLyrics(trackId, track = null) {
+  return apiFetch(track?.previewExternalId && !track.recordingId ? `/external-catalog/preview/${encodeURIComponent(track.previewExternalId)}/lyrics` : `/tracks/${encodeURIComponent(trackId)}/lyrics`, {
     suppressErrorToast: true,
   });
 }

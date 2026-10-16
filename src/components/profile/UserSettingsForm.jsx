@@ -1,3 +1,4 @@
+import AudioCacheSettings from '../settings/AudioCacheSettings';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useUserStore } from '../../store/userStore';
@@ -273,6 +274,7 @@ export default function UserSettingsForm() {
       </div>
 
       {/* Desktop Connect & Discord Rich Presence */}
+      <AudioCacheSettings />
       <DesktopConnectSettings className="border-b border-zinc-800/70 pb-5" />
 
       {/* Appearance is intentionally after profile identity and language so the

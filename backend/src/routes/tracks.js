@@ -1,3 +1,6 @@
+const { createHash } = require('node:crypto');
+const { lookupLyrics } = require('../providers/lyrics');
+const C = require('../lib/externalCatalog');
 const { registerShowcase } = require('../lib/landingShowcase');
 const { userOrIpKey } = require('../lib/rateLimitKeys');
 const { serializePublicTrack } = require('../lib/publicTrack');
@@ -201,21 +204,24 @@ async function tracksRoutes(fastify, _options) {
   });
 
   // GET /api/tracks/:id/lyrics — lazy public lyrics payload.
-  fastify.get('/:id/lyrics', async (request, reply) => {
+  fastify.get('/:id/lyrics', {config:{rateLimit:{max:40,timeWindow:'1 minute'}}}, async (request, reply) => {
     try {
-      const track = await fastify.prisma.track.findFirst({
-        where: {
-          id: request.params.id,
-          ...publicVisibilityWhere()
-        }
+      let track = await fastify.prisma.track.findFirst({
+        where: { id: request.params.id, ...publicVisibilityWhere() },
+        include: { artist: { include: { user: { select: {displayName:true} } } } }
       });
+      if (!track && await C.requestBetaUser(fastify,request)) {
+        const recording = await fastify.prisma.externalRecording.findUnique({where:{trackId:request.params.id},include:C.includeRecording});
+        if (recording && C.visibleRecording(recording) && !C.recordingView(recording).metadataExpired) track=recording.track;
+      }
       if (!track) {
         return reply.status(404).send({
           error: 'LYRICS_NOT_AVAILABLE',
           message: 'Lyrics are not available for this track.'
         });
       }
-      return serializeLyrics(track);
+      reply.header('cache-control','private, no-store');
+      return await lookupLyrics(track);
     } catch (error) {
       fastify.log.error(error);
       return reply.status(500).send({ error: 'Internal Server Error' });
@@ -312,7 +318,7 @@ async function tracksRoutes(fastify, _options) {
   });
 
   // GET /api/tracks/:id/stream
-  fastify.get('/:id/stream', async (request, reply) => {
+  async function streamOrPlayback(request, reply) {
     try {
       const track = await fastify.prisma.track.findUnique({
         where: { id: request.params.id },
@@ -338,13 +344,16 @@ async function tracksRoutes(fastify, _options) {
         track.processedAudioKey
       );
       
-      // Redirect to the S3 URL
+      reply.header('cache-control','private, no-store');
+      if (request.routeOptions.url.endsWith('/playback')) return {url:streamUrl,cacheKey:'native:'+createHash('sha256').update(track.id+':'+track.processedAudioKey).digest('hex'),playbackMode:'NATIVE'};
       return reply.redirect(streamUrl, 302);
     } catch (error) {
       fastify.log.error(error);
       return reply.status(500).send({ error: 'Internal Server Error' });
     }
-  });
+  }
+  fastify.get('/:id/stream', streamOrPlayback);
+  fastify.get('/:id/playback', streamOrPlayback);
 
   // GET /api/tracks/:id/cover
   fastify.get('/:id/cover', async (request, reply) => {

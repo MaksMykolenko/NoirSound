@@ -103,9 +103,9 @@ test.describe('Lyrics system', () => {
     )).toBeVisible();
     await page.getByRole('button', { name: 'Play track' }).click();
     await expect(page.getByTestId('desktop-player').getByRole('button', {
-      name: 'Lyrics unavailable',
+      name: 'Open fullscreen lyrics',
       exact: true,
-    })).toBeDisabled();
+    })).toBeEnabled();
 
     await page.goto('/dashboard');
     const dashboardEditButtons = page.getByRole('button', { name: `Edit lyrics for ${title}` });

@@ -99,4 +99,25 @@ describe.skipIf(process.env.EXTERNAL_CATALOG_DATABASE_TEST!=='true')('external c
   } finally {process.env.EXTERNAL_CATALOG_PUBLIC='false';}
  });
  it('disables beta without deploy and preserves native API',async()=>{expect((await req('/settings',{enabled:false,reason:'Disable fixture beta'},'PATCH')).status).toBe(200);expect((await req('/search?q=fixture',null,'GET')).status).toBe(403);expect((await req('/browse',null,'GET')).status).toBe(403);expect((await req('/embed?'+new URLSearchParams({provider:'YOUTUBE',url:'https://youtu.be/abcdefghijk'}),null,'GET')).status).toBe(403);expect((await app.inject({url:'/api/tracks'})).statusCode).toBe(200);expect((await req('/settings',{enabled:true,reason:'Reenable fixture beta'},'PATCH')).status).toBe(200);});
+ it('imports selected native and Audius matches atomically into a private playlist and revalidates native streams',async()=>{
+  await req('/settings',{enabled:true,reason:'Migration fixture setup'},'PATCH');
+  const curator=await db.artistProfile.findUnique({where:{userId:userIds[0]}});
+  const native=await db.track.create({data:{title:'Unique migration native fixture',primaryArtistName:'Migration artist',artistId:curator.id,status:'PUBLISHED',isPublic:true,catalogScope:'NATIVE',processedAudioKey:'private-fixture-object-key',durationSeconds:180,tags:[]}});
+  trackIds.push(native.id);
+  const request=(path,payload)=>app.inject({method:'POST',url:'/api/playlist-import/'+path,headers:{cookie,origin:'http://localhost:3000'},payload});
+  const matches=await request('matches',{entries:[{title:native.title,artist:'Migration artist',duration:180},{title:m.title,artist:m.artistName,duration:120}]});
+  expect(matches.statusCode,matches.body).toBe(200);
+  const rows=matches.json().results;expect(rows[0].selected).toBe('native:'+native.id);expect(rows[1].selected).toBe('audius:'+fixtureId);
+  const payload={name:'Owned migration fixture',requestId:randomUUID(),selections:[rows[0].candidates[0].selection,rows[1].candidates[0].selection,rows[0].candidates[0].selection]};
+  const committed=await request('commit',payload);expect(committed.statusCode,committed.body).toBe(200);expect(committed.json()).toMatchObject({trackCount:2,duplicates:1});
+  expect((await request('commit',payload)).json().id).toBe(committed.json().id);
+  const playlist=await db.playlist.findUnique({where:{id:committed.json().id},include:{tracks:{orderBy:{order:'asc'}}}});
+  expect(playlist.isPublic).toBe(false);expect(playlist.tracks[0].trackId).toBe(native.id);expect(playlist.tracks.map(t=>t.order)).toEqual([0,1]);
+  app.storage.getPublicOrSignedUrl=async()=> 'https://storage.example.test/fixture';
+  const playback=await app.inject({url:'/api/tracks/'+native.id+'/playback'});expect(playback.statusCode,playback.body).toBe(200);expect(playback.json().cacheKey).toMatch(/^native:[a-f0-9]{64}$/);expect(playback.body).not.toContain('private-fixture-object-key');
+  await db.track.update({where:{id:native.id},data:{isPublic:false}});
+  expect((await app.inject({url:'/api/tracks/'+native.id+'/playback'})).statusCode).toBe(404);
+  expect((await app.inject({url:'/api/tracks/'+native.id+'/playback',headers:{cookie}})).statusCode).toBe(200);
+ });
+
 });

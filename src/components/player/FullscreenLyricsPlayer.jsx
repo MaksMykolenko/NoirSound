@@ -1,3 +1,4 @@
+import SyncedLyricsView from '../lyrics/SyncedLyricsView';
 import { playerArtistLabel } from '../../utils/playerTrackPresentation';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -115,7 +116,7 @@ export default function FullscreenLyricsPlayer({
     setLoadFailed(false);
     setLoading(true);
 
-    getTrackLyrics(currentTrack.id)
+    (currentTrack.previewExternalId && !currentTrack.recordingId ? getTrackLyrics(currentTrack.id, currentTrack) : getTrackLyrics(currentTrack.id))
       .then((response) => {
         if (cancelled) return;
         cacheFullscreenLyrics(currentTrack.id, response);
@@ -131,7 +132,7 @@ export default function FullscreenLyricsPlayer({
     return () => {
       cancelled = true;
     };
-  }, [currentTrack?.id, retryVersion]);
+  }, [currentTrack, retryVersion]);
 
   useEffect(() => {
     if (!window.history.state?.[HISTORY_STATE_KEY]) {
@@ -220,11 +221,11 @@ export default function FullscreenLyricsPlayer({
           className="ns-fullscreen-lyrics-scroll min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain px-5 py-8 sm:px-10 sm:py-12 lg:px-[clamp(3rem,7vw,7rem)] lg:py-16"
           data-testid="fullscreen-lyrics-scroll"
         >
-          <div className="ns-fullscreen-mobile-display mb-8 lg:hidden">
+          {!(lyrics?.lyricsType === 'SYNCED' && lyrics.lyricsSynced?.length) && <div className="ns-fullscreen-mobile-display mb-8 lg:hidden">
             <p className="font-sans text-ns-meta font-medium uppercase tracking-ns-label text-brand-red">{t('player.nowPlaying')}</p>
             <h2 className={`break-words ns-display-title ns-display-title--fullscreen mt-1 text-zinc-100 ${longTitleClass}`}>{currentTrack.title}</h2>
             <p className="mt-1 font-sans text-sm text-zinc-500">{playerArtistLabel(currentTrack)}</p>
-          </div>
+          </div>}
           {loading ? (
             <div className="mx-auto max-w-4xl space-y-5 animate-pulse" role="status" aria-label={t('lyrics.loading')}>
               {[82, 64, 91, 56, 74, 87, 62].map((width) => (
@@ -245,13 +246,13 @@ export default function FullscreenLyricsPlayer({
                 </button>
               </div>
             </div>
-          ) : lyrics?.hasLyrics && lyrics.lyricsText ? (
+          ) : lyrics?.hasLyrics && (lyrics.lyricsText || lyrics.lyricsSynced?.length) ? (
             <div className="mx-auto max-w-4xl">
-              <p className="whitespace-pre-wrap break-words font-sans text-[clamp(1.25rem,2.5vw,2.125rem)] font-semibold leading-[1.6] text-zinc-200">
+              {lyrics.lyricsType === 'SYNCED' && lyrics.lyricsSynced?.length ? <SyncedLyricsView key={currentTrack.id} trackId={currentTrack.id} lines={lyrics.lyricsSynced} progress={progress} onSeek={seek} /> : <p className="whitespace-pre-wrap break-words font-sans text-[clamp(1.25rem,2.5vw,2.125rem)] font-semibold leading-[1.6] text-zinc-200">
                 {lyrics.lyricsText}
-              </p>
+              </p>}
               <p className="mt-14 border-t border-[var(--ns-border-subtle)] pt-5 font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-zinc-500">
-                {t('lyrics.providedByArtist')}
+                {lyrics.source === 'LRCLIB' ? <a href='https://lrclib.net' target='_blank' rel='noreferrer'>LRCLIB</a> : t('lyrics.providedByArtist')}
               </p>
             </div>
           ) : (
