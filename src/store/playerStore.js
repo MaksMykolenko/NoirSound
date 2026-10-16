@@ -400,6 +400,7 @@ export const usePlayerStore = create((set, get) => {
       playbackAbort?.abort();
       playbackAbort = new AbortController();
       stopPlatformPlayback();
+      if (connectPresenceService.currentTrackId) connectPresenceService.notifyStop();
       audio?.pause();
       audio?.removeAttribute?.('src');
       releaseCachedSource();

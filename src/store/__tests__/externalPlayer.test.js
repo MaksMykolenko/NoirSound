@@ -1,4 +1,5 @@
 import {beforeEach,afterEach,describe,it,expect,vi} from 'vitest';
+import connectPresenceService from '../../services/noirsoundConnect';
 import {useUserStore} from '../userStore';
 import {usePlayerStore,__getAudioElementForTests,registerPlatformFrameStop} from '../playerStore';
 const native={id:'native',title:'Native fixture',artistId:'artist',isStreamable:true,duration:180};
@@ -13,6 +14,8 @@ describe('one global player across providers',()=>{
   vi.stubGlobal('fetch',f);
   await usePlayerStore.getState().playTrack(native);
   await usePlayerStore.getState().playTrack(track,queue);
+  expect(connectPresenceService.isPlaying).toBe(false);
+  expect(connectPresenceService.currentTrackId).toBeNull();
   expect(String(f.mock.calls.at(-1)[0])).toContain('/playlist-import/source/p/playback/0');
   expect(usePlayerStore.getState().activePlatformEmbed.sourceQueue).toEqual(queue);
   expect(__getAudioElementForTests().getAttribute('src')).toBeNull();
