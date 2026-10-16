@@ -78,13 +78,14 @@ for (const creatorType of ['LISTENER', 'ARTIST', 'BEATMAKER', 'BOTH']) {
       await expect(page).toHaveURL(/\?notice=coming-soon$/);
     }
     await expectGate(page.request);
-    const logout = page.waitForResponse(response => response.url().endsWith('/api/auth/logout') && response.request().method() === 'POST');
-    const userMenu = page.getByRole('button', { name: new RegExp(`@${user.username}`, 'i') });
-    if (await userMenu.isVisible()) {
-      await userMenu.click();
-    }
-    await page.getByRole('menuitem', { name: /sign out|log out/i }).or(page.getByRole('button', { name: /sign out|log out/i })).first().click();
-    expect((await logout).status()).toBe(200);
+    const userMenu = page.getByRole('button', { name: `Profile: @${user.username}`, exact: true });
+    await expect(userMenu).toBeVisible();
+    await userMenu.click();
+    const [logout] = await Promise.all([
+      page.waitForResponse(response => response.url().endsWith('/api/auth/logout') && response.request().method() === 'POST'),
+      page.getByRole('menuitem', { name: /sign out|log out/i }).click(),
+    ]);
+    expect(logout.status()).toBe(200);
     expect((await page.request.get(`${API_BASE}/auth/me`)).status()).toBe(401);
     await uiLogin(page, email);
     await page.reload();
