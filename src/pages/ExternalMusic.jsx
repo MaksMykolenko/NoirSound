@@ -9,7 +9,7 @@ import { useUserStore } from '../store/userStore';
 import { usePlayerStore } from '../store/playerStore';
 import { getMyPlaylists, addTrackToPlaylist } from '../api/playlists';
 import TrackCard from '../components/tracks/TrackCard';
-const PROVIDERS=['AUDIUS','SPOTIFY','SOUNDCLOUD','APPLE_MUSIC','YOUTUBE'];
+const PROVIDERS=['SPOTIFY','YOUTUBE','SOUNDCLOUD'];
 const VERSIONS=['UNKNOWN','ORIGINAL','REMIX','LIVE','ACOUSTIC','INSTRUMENTAL','RADIO_EDIT','CLEAN','EXPLICIT','NIGHTCORE','SPED_UP','SLOWED','OTHER'];
 const field='w-full rounded border border-[var(--ns-border-subtle)] bg-[var(--ns-surface)] p-2 text-sm';
 const button='inline-flex items-center justify-center gap-2 rounded border border-[var(--ns-border-subtle)] px-3 py-2 text-sm hover:bg-[var(--ns-surface-raised)] disabled:opacity-40';
@@ -29,7 +29,7 @@ function MusicCard({track,onImport,busy}) {
 function SourceEditor({source,run,pending}) {
   const {t}=useTranslation();const [url,setUrl]=useState(source.canonicalUrl),[match,setMatch]=useState(source.matchStatus),[official,setOfficial]=useState(source.officialStatus),[primary,setPrimary]=useState(source.isPrimary),[evidence,setEvidence]=useState(''),[reason,setReason]=useState('');
   return <details className="mt-2"><summary className="cursor-pointer text-sm">{t('externalMusic.editSource')}</summary><form className="mt-2 grid gap-2 sm:grid-cols-2" onSubmit={e=>{e.preventDefault();run(`/sources/${source.id}`,{...(url!==source.canonicalUrl?{url}:{}),matchStatus:match,officialStatus:official,isPrimary:primary,...(evidence?{evidence}:{}),reason},'PATCH');}}>
-    <label className="sm:col-span-2">URL<input aria-label="Source URL" className={field} value={url} onChange={e=>setUrl(e.target.value)} disabled={source.provider==='AUDIUS'} type="url" required/></label>
+    <label className="sm:col-span-2">URL<input aria-label="Source URL" className={field} value={url} onChange={e=>setUrl(e.target.value)} disabled={!PROVIDERS.includes(source.provider)} type="url" required/></label>
     <label>{t('externalMusic.match')}<select className={field} value={match} onChange={e=>setMatch(e.target.value)}>{['UNVERIFIED','CONFIRMED','REJECTED'].map(v=><option key={v}>{v}</option>)}</select></label>
     <label>{t('externalMusic.official')}<select className={field} value={official} onChange={e=>setOfficial(e.target.value)}>{['UNVERIFIED','VERIFIED','REJECTED'].map(v=><option key={v}>{v}</option>)}</select></label>
     <label className="sm:col-span-2">{t('externalMusic.evidence')}<input className={field} value={evidence} onChange={e=>setEvidence(e.target.value)} minLength={3} maxLength={1000} required={match==='CONFIRMED'||official==='VERIFIED'}/></label>
@@ -78,7 +78,7 @@ function NewRecording({run,pending}) {
   const {t}=useTranslation();const [provider,setProvider]=useState('SOUNDCLOUD'),[url,setUrl]=useState('');
   const [title,setTitle]=useState(''),[artistName,setArtist]=useState(''),[provenance,setProvenance]=useState(''),[nativeTrackId,setNative]=useState(''),[reason,setReason]=useState('');
   return <details open><summary className="cursor-pointer font-semibold">{t('externalMusic.createRecord')}</summary><form className="mt-3 grid gap-2 sm:grid-cols-2" onSubmit={e=>{e.preventDefault();run('/recordings',nativeTrackId?{nativeTrackId,reason}:{title,artistName,provenance,reason,...(url?{provider,url}: {})});}}>
-    {!nativeTrackId&&<><select aria-label={t('externalMusic.provider')} className={field} value={provider} onChange={e=>setProvider(e.target.value)}>{PROVIDERS.slice(1).map(p=><option key={p}>{p}</option>)}</select><input className={field} aria-label={t('externalMusic.playerUrl')} placeholder="https://…" value={url} onChange={e=>setUrl(e.target.value)} type="url" maxLength={1000} required/></>}
+    {!nativeTrackId&&<><select aria-label={t('externalMusic.provider')} className={field} value={provider} onChange={e=>setProvider(e.target.value)}>{PROVIDERS.map(p=><option key={p}>{p}</option>)}</select><input className={field} aria-label={t('externalMusic.playerUrl')} placeholder="https://…" value={url} onChange={e=>setUrl(e.target.value)} type="url" maxLength={1000} required/></>}
     <input className={field} aria-label={t('externalMusic.trackTitle')} placeholder={t('externalMusic.trackTitle')} value={title} onChange={e=>setTitle(e.target.value)} required={!nativeTrackId}/><input className={field} aria-label={t('externalMusic.artist')} placeholder={t('externalMusic.artist')} value={artistName} onChange={e=>setArtist(e.target.value)} required={!nativeTrackId}/>
     <input className={field} aria-label={t('externalMusic.provenance')} placeholder={t('externalMusic.provenance')} value={provenance} onChange={e=>setProvenance(e.target.value)} minLength={3} required={!nativeTrackId}/><input className={field} aria-label={t('externalMusic.nativeId')} placeholder={t('externalMusic.nativeId')} value={nativeTrackId} onChange={e=>setNative(e.target.value)}/>
     <input className={field} aria-label={t('externalMusic.reason')} placeholder={t('externalMusic.reason')} value={reason} onChange={e=>setReason(e.target.value)} minLength={3} required/><button className={button} disabled={pending}>{t('externalMusic.add')}</button>

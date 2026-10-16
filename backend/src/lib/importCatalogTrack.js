@@ -4,6 +4,7 @@ const {auditData}=require('./auditLog');
 // The caller holds catalogLock and owns the transaction.
 async function importCatalogTrack(tx,userId,m) {
   const provider=m.provider;
+  if(!C.IMPORT_PROVIDERS.includes(provider))C.fail('EXTERNAL_PROVIDER_UNSUPPORTED',400);
       const existing=await tx.externalSource.findFirst({where:{OR:[{provider,externalId:m.externalId},{canonicalUrl:m.canonicalUrl}]},include:{recording:true}});
       if(existing){
         await tx.externalSource.update({where:{id:existing.id},data:{availability:m.availability,playbackMode:m.playbackMode,checkedAt:m.checkedAt}});

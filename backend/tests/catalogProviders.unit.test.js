@@ -8,7 +8,7 @@ describe('official catalog connectors and independent provider failure',()=>{
  it('missing credentials do not call APIs or manufacture live results',async()=>{
   const fetch=vi.fn(),adapters=createCatalogAdapters({fetchImpl:fetch,env:{}}),feed=createCatalogFeed(adapters);
   const result=await feed.browse('fixture');expect(result.items).toEqual([]);expect(fetch).not.toHaveBeenCalled();
-  expect(result.providers.find(p=>p.provider==='APPLE_MUSIC').status).toBe('NOT_CONFIGURED');expect(result.providers.find(p=>p.provider==='SPOTIFY')).toMatchObject({status:'PERMISSION_REQUIRED',capabilities:{search:false}});
+  expect(result.providers.map(p=>p.provider)).toEqual(['SPOTIFY','YOUTUBE','SOUNDCLOUD']);expect(result.providers.find(p=>p.provider==='YOUTUBE').status).toBe('NOT_CONFIGURED');expect(result.providers.find(p=>p.provider==='SPOTIFY')).toMatchObject({status:'PERMISSION_REQUIRED',capabilities:{search:false}});
  });
  it('Apple search uses an official server-only token and keeps recording versions and real song identities',async()=>{
   const fetch=vi.fn(async()=>res({results:{songs:{data:[song],next:'/v1/catalog/us/search?offset=20'}}}));const a=createCatalogAdapters({fetchImpl:fetch,env:{APPLE_MUSIC_DEVELOPER_TOKEN:'owned-test-token'}}).APPLE_MUSIC;
@@ -27,13 +27,15 @@ describe('official catalog connectors and independent provider failure',()=>{
  it.each([401,403,404,429,302])('never follows redirects or retries a provider HTTP %i',async status=>{
   const f=vi.fn(async()=>new Response(null,{status,headers:{location:'https://127.0.0.1/private'}}));const a=createCatalogAdapters({fetchImpl:f,env:{APPLE_MUSIC_DEVELOPER_TOKEN:'owned-test-token'}}).APPLE_MUSIC;await expect(a.getTrack(song.id)).rejects.toMatchObject({code:`APPLE_MUSIC_HTTP_${status}`});expect(f).toHaveBeenCalledTimes(1);
  });
- it('interleaves available catalogs and isolates quota failures, with query-bound pagination',async()=>{
-  const a={status:()=> 'LIVE',capabilities:{search:true},browse:vi.fn(async(q,offset)=>({items:[{provider:'AUDIUS',externalId:`item${offset}`}],next:offset===0?20:null}))};
-  const b={status:()=> 'CONFIGURED',browse:async()=>{throw Object.assign(new Error(),{code:'quota'});}};
-  const feed=createCatalogFeed({AUDIUS:a,YOUTUBE:b});const first=await feed.browse('fixture');expect(first.items).toHaveLength(1);expect(first.providers.find(p=>p.provider==='YOUTUBE').status).toBe('ERROR');expect(first.pageInfo.hasNextPage).toBe(true);
-  const second=await feed.browse('fixture',first.pageInfo.nextCursor);expect(second.items[0].externalId).toBe('item20');expect(second.pageInfo.nextCursor).toBeNull();await expect(feed.browse('different',first.pageInfo.nextCursor)).rejects.toMatchObject({code:'EXTERNAL_CURSOR_INVALID'});
+ it('paginates the permitted catalog with query-bound cursors',async()=>{
+  const youtube={status:()=> 'LIVE',capabilities:{search:true},browse:vi.fn(async(q,token)=>({items:[{provider:'YOUTUBE',externalId:token||'first'}],next:token?null:'second'}))};
+  const feed=createCatalogFeed({YOUTUBE:youtube});const first=await feed.browse('fixture');expect(first.items).toHaveLength(1);expect(first.pageInfo.hasNextPage).toBe(true);
+  const second=await feed.browse('fixture',first.pageInfo.nextCursor);expect(second.items[0].externalId).toBe('second');expect(second.pageInfo.nextCursor).toBeNull();await expect(feed.browse('different',first.pageInfo.nextCursor)).rejects.toMatchObject({code:'EXTERNAL_CURSOR_INVALID'});
  });
- it('an unprobed public Audius adapter is browsable without an API key',async()=>{
-  const feed=createCatalogFeed({AUDIUS:{status:()=> 'NOT_CONFIGURED',browse:async()=>({items:[{externalId:'owned'}],next:null})}});expect((await feed.browse()).items).toHaveLength(1);
+ it('never browses removed providers even when configured, and reports a permitted provider failure',async()=>{
+  const removed={status:()=> 'LIVE',browse:vi.fn(async()=>({items:[{externalId:'removed'}],next:null}))};
+  const feed=createCatalogFeed({AUDIUS:removed,APPLE_MUSIC:removed,YOUTUBE:{status:()=> 'CONFIGURED',browse:async()=>{throw new Error('quota');}}});
+  const result=await feed.browse();expect(result.items).toEqual([]);expect(removed.browse).not.toHaveBeenCalled();
+  expect(result.providers.map(p=>p.provider)).toEqual(['SPOTIFY','YOUTUBE','SOUNDCLOUD']);expect(result.providers.find(p=>p.provider==='YOUTUBE').status).toBe('ERROR');
  });
 });

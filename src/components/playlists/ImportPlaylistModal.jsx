@@ -9,7 +9,6 @@ export default function ImportPlaylistModal({ onClose, onImported }) {
   const { t }=useTranslation();
   const [status,setStatus]=useState(null), [error,setError]=useState('');
   const [url,setUrl]=useState(()=>{try{return sessionStorage.getItem('noirsound.importUrl')||'';}catch{return '';}});
-  const [fileText,setFileText]=useState(''), [fileName,setFileName]=useState('');
   const [preview,setPreview]=useState(null), [rows,setRows]=useState([]), [name,setName]=useState('');
   const [busy,setBusy]=useState(false), [saving,setSaving]=useState(false), [completed,setCompleted]=useState(0);
   const controller=useRef(null), requestId=useRef(crypto.randomUUID());
@@ -30,9 +29,9 @@ export default function ImportPlaylistModal({ onClose, onImported }) {
     controller.current?.abort();controller.current=new AbortController();const signal=controller.current.signal;
     requestId.current=crypto.randomUUID();
     try {
-      const loaded=await previewImport(fileText?{fileText}:{url:url.trim()},signal);
+      const loaded=await previewImport({url:url.trim()},signal);
       if(signal.aborted)return;
-      setPreview(loaded);setName(loaded.provider==='FILE'?t('playlistImport.defaultName'):loaded.name);
+      setPreview(loaded);setName(loaded.name);
       const next=loaded.entries.map(entry=>({entry,candidates:[],selected:'',pending:true}));
       setRows([...next]);
       for(let i=0;i<next.length;i+=5) {
@@ -62,14 +61,8 @@ export default function ImportPlaylistModal({ onClose, onImported }) {
         {!preview && status && Object.values(status.providers).some(value=>!value) && <p className="text-sm text-zinc-400">{t('playlistImport.configHelp')}</p>}
         {!preview && status?.providers.SPOTIFY && <button type="button" disabled={busy||saving} className="ns-button-secondary min-h-11 px-4 text-sm" onClick={status.spotifyConnected?async()=>{try{await disconnectSpotifyImport();setStatus({...status,spotifyConnected:false});}catch(err){showError(err);}}:connect}>{t(status.spotifyConnected?'playlistImport.disconnectSpotify':'playlistImport.connectSpotify')}</button>}
         <form hidden={Boolean(preview)} onSubmit={start} className="space-y-3">
-          <label className="block text-sm">{t('playlistImport.link')}<input value={url} disabled={busy||saving} onChange={event=>{setUrl(event.target.value);setFileText('');setFileName('');}} className="ns-field mt-2 w-full px-3" type="url" maxLength={1000} placeholder="https://open.spotify.com/playlist/…" /></label>
-          <label className="block text-sm">{t('playlistImport.file')}<input type="file" disabled={busy||saving} accept=".csv,.txt,text/csv,text/plain" className="mt-2 block max-w-full text-sm text-zinc-400" onChange={async event=>{
-            const file=event.target.files?.[0];event.target.value='';if(!file)return;setError('');
-            if(file.size>150000){setError(t('playlistImport.errors.IMPORT_FILE_INVALID'));return;}
-            try{setFileText(await file.text());setFileName(file.name);setUrl('');}catch{setError(t('playlistImport.errors.IMPORT_FILE_INVALID'));}
-          }}/></label>
-          <p className="break-words text-xs text-zinc-400">{fileName || t('playlistImport.fileHelp')}</p>
-          <button type="submit" disabled={busy||saving||(!url.trim()&&!fileText)} className="ns-button-secondary min-h-11 px-4">{t(busy?'playlistImport.matching':'playlistImport.preview')}</button>
+          <label className="block text-sm">{t('playlistImport.link')}<input value={url} disabled={busy||saving} onChange={event=>setUrl(event.target.value)} className="ns-field mt-2 w-full px-3" type="url" required maxLength={1000} placeholder="https://open.spotify.com/playlist/…" /></label>
+          <button type="submit" disabled={busy||saving||!url.trim()} className="ns-button-secondary min-h-11 px-4">{t(busy?'playlistImport.matching':'playlistImport.preview')}</button>
           {busy && <p role="status" className="text-sm text-zinc-400">{preview?t('playlistImport.progress',{done:completed,total:rows.length}):t('lyrics.loading')}</p>}
         </form>
         {error && <p role="alert" className="rounded border border-rose-500/30 bg-rose-500/10 p-3 text-sm text-rose-200">{error}</p>}
@@ -86,7 +79,6 @@ export default function ImportPlaylistModal({ onClose, onImported }) {
                 <option value="">{t(row.candidates.length?'playlistImport.skip':'playlistImport.notFound')}</option>
                 {row.candidates.map(candidate=><option key={candidate.key} value={candidate.key}>{candidate.artistName} — {candidate.title} · {candidate.provider}</option>)}
               </select></label>
-              {row.warning && <p className="text-xs text-amber-300">{t('playlistImport.partial')}</p>}
             </>}
           </li>)}</ol>
           {!rows.length && <p>{t('playlistImport.empty')}</p>}

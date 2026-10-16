@@ -3,6 +3,8 @@ const { isIP } = require('node:net');
 const { auditData } = require('./auditLog');
 const { resolveAuthenticatedSession } = require('./sessionResolver');
 const PROVIDERS = ['AUDIUS', 'SPOTIFY', 'SOUNDCLOUD', 'APPLE_MUSIC', 'YOUTUBE'];
+// Legacy providers remain readable for saved libraries; new imports use this list.
+const IMPORT_PROVIDERS = ['SPOTIFY', 'YOUTUBE', 'SOUNDCLOUD'];
 const VERSIONS = ['UNKNOWN', 'ORIGINAL', 'REMIX', 'LIVE', 'ACOUSTIC', 'INSTRUMENTAL', 'RADIO_EDIT', 'CLEAN', 'EXPLICIT', 'NIGHTCORE', 'SPED_UP', 'SLOWED', 'OTHER'];
 class CatalogError extends Error {
   constructor(code, status = 400) { super(code); this.code = code; this.statusCode = status; }
@@ -69,4 +71,4 @@ function publicSource(s) { const {id,provider,externalId,canonicalUrl,playbackMo
 function visibleRecording(r) { return r.track.catalogScope==='EXTERNAL_BETA' && r.track.status==='PUBLISHED' || r.track.catalogScope==='NATIVE' && r.track.isPublic && r.track.status==='PUBLISHED' && Boolean(r.track.processedAudioKey); }
 async function catalogLock(tx) { await tx.$executeRaw`SELECT pg_advisory_xact_lock(746290104)`; }
 async function recordAudit(tx,request,action,id,reason,metadata={}) { await tx.auditLog.create({data:auditData(request.user.id,action,'EXTERNAL_RECORDING',id,reason,metadata)}); }
-module.exports={PROVIDERS,VERSIONS,CatalogError,fail,platformUrl,versionFromTitle,matchAssessment,allowRole,publicBeta,visibleRecording,betaEnabled,canUseBeta,requestBetaUser,includeRecording,recordingView,catalogLock,recordAudit};
+module.exports={PROVIDERS,IMPORT_PROVIDERS,VERSIONS,CatalogError,fail,platformUrl,versionFromTitle,matchAssessment,allowRole,publicBeta,visibleRecording,betaEnabled,canUseBeta,requestBetaUser,includeRecording,recordingView,catalogLock,recordAudit};

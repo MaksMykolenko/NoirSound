@@ -2,10 +2,8 @@
 const crypto = require('node:crypto');
 const C = require('../lib/externalCatalog');
 const { createImportTokens } = require('../lib/importTokens');
-const { parseImportFile, rankCandidates, MAX_IMPORT_TRACKS } = require('../lib/playlistImport');
-const { importCatalogTrack } = require('../lib/importCatalogTrack');
+const { playlistLink, rankCandidates, MAX_IMPORT_TRACKS } = require('../lib/playlistImport');
 const { publicTrackWhere } = require('../lib/publicVisibility');
-const { createAudiusAdapter } = require('../providers/audius');
 const { createPlaylistSources } = require('../providers/playlistSources');
 const { auditData } = require('../lib/auditLog');
 const body = (properties, required=Object.keys(properties)) => ({body:{type:'object',additionalProperties:false,properties,required}});
@@ -13,7 +11,7 @@ const text = (maxLength=300) => ({type:'string',minLength:1,maxLength});
 const rate = max => ({rateLimit:{max,timeWindow:'1 minute',keyGenerator:request=>request.user?.id || request.ip}});
 
 module.exports = async function playlistImportRoutes(fastify, options) {
-  const env=options.env || process.env, audius=options.audius || createAudiusAdapter(), sources=options.sources || createPlaylistSources({env});
+  const env=options.env || process.env, sources=options.sources || createPlaylistSources({env});
   const tokens=createImportTokens(env.COOKIE_SECRET);
   const sessionKey=request=>crypto.createHash('sha256').update(request.user.id+':'+request.sessionId).digest('hex');
   const cookieOptions={httpOnly:true,secure:env.NODE_ENV==='production',sameSite:'lax',path:'/api/playlist-import',maxAge:900};
@@ -51,24 +49,15 @@ module.exports = async function playlistImportRoutes(fastify, options) {
     return reply.redirect(target.href);
   });
   fastify.delete('/spotify',{config:rate(10)},async(_request,reply)=>{reply.clearCookie('ns_spotify_import',cookieOptions);return {connected:false};});
-  fastify.post('/preview',{config:rate(5),schema:body({url:text(1000),fileText:text(150000)},[])},async request=>{
-    if(Boolean(request.body.url)===Boolean(request.body.fileText))C.fail('IMPORT_INPUT_INVALID');
-    if(request.body.fileText) {const entries=parseImportFile(request.body.fileText);return {provider:'FILE',name:'Imported playlist',entries,total:entries.length,skipped:0,truncated:false};}
+  fastify.post('/preview',{config:rate(5),schema:body({url:text(1000)})},async request=>{
+    playlistLink(request.body.url);
     return sources.load(request.body.url,connection(request)?.access);
   });
   fastify.post('/matches',{config:rate(60),schema:body({entries:{type:'array',minItems:1,maxItems:5,items:{type:'object',additionalProperties:false,required:['title','artist'],properties:{title:text(),artist:{type:'string',maxLength:200},duration:{anyOf:[{type:'number',minimum:0,maximum:36000},{type:'null'}]},needsReview:{type:'boolean'}}}}})},async request=>{
-    const external=await C.canUseBeta(fastify.prisma,request.user);
     const results=await Promise.all(request.body.entries.map(async entry=>{
       const native=await fastify.prisma.track.findMany({where:publicTrackWhere({processedAudioKey:{not:null},title:{contains:entry.title,mode:'insensitive'}}),include:{artist:{include:{user:{select:{displayName:true}}}}},take:10});
       const candidates=native.map(track=>({key:'native:'+track.id,title:track.title,artistName:track.primaryArtistName||track.artist.user.displayName,duration:track.durationSeconds||track.duration,provider:'NOIRSOUND',selection:tokens.seal({user:request.user.id,trackId:track.id},'selection')}));
-      let warning=null;
-      if(external) {
-        try {
-          const found=await audius.search([entry.artist,entry.title].filter(Boolean).join(' ').slice(0,200),0,10);
-          for(const m of found.filter(m=>m.availability==='AVAILABLE'&&m.playbackMode==='EXTERNAL_STREAM'))candidates.push({key:'audius:'+m.externalId,title:m.title,artistName:m.artistName,duration:m.durationSeconds,provider:'AUDIUS',selection:tokens.seal({user:request.user.id,metadata:m},'selection')});
-        }catch{warning='IMPORT_SEARCH_PARTIAL';}
-      }
-      return {...rankCandidates(entry,candidates),warning};
+      return rankCandidates(entry,candidates);
     }));
     return {results};
   });
@@ -84,23 +73,15 @@ module.exports = async function playlistImportRoutes(fastify, options) {
     const picks=request.body.selections.map(value=>{
       const selected=tokens.open(value,'selection');
       if(!selected || selected.user!==request.user.id)C.fail('IMPORT_PREVIEW_EXPIRED',409);
+      if(selected.metadata || typeof selected.trackId!=='string')C.fail('IMPORT_TRACK_UNAVAILABLE',409);
       return selected;
     });
 
-      const hasExternal=picks.some(p=>p.metadata);
-      if(hasExternal && !await C.canUseBeta(tx,request.user))C.fail('EXTERNAL_BETA_DISABLED',409);
       const ids=[];
       for(const pick of picks) {
-        let trackId=pick.trackId;
-        if(pick.metadata) {
-          pick.metadata.checkedAt=new Date(pick.metadata.checkedAt);
-          const recording=await importCatalogTrack(tx,request.user.id,pick.metadata);
-          if(!C.visibleRecording(recording))C.fail('IMPORT_TRACK_UNAVAILABLE',409);
-          trackId=recording.trackId;
-        } else {
-          const native=await tx.track.findFirst({where:publicTrackWhere({id:trackId,processedAudioKey:{not:null}}),select:{id:true}});
-          if(!native)C.fail('IMPORT_TRACK_UNAVAILABLE',409);
-        }
+        const trackId=pick.trackId;
+        const native=await tx.track.findFirst({where:publicTrackWhere({id:trackId,processedAudioKey:{not:null}}),select:{id:true}});
+        if(!native)C.fail('IMPORT_TRACK_UNAVAILABLE',409);
         if(!ids.includes(trackId))ids.push(trackId);
       }
       const playlist=await tx.playlist.create({data:{id,name:request.body.name.trim(),creatorId:request.user.id,isPublic:false,tags:[],tracks:{create:ids.map((trackId,order)=>({trackId,order}))}}});

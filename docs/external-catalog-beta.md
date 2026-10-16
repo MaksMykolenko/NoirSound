@@ -238,6 +238,16 @@ Apple/YouTube adapters without credentials are **NOT_CONFIGURED**, never called 
 Source editing, manual record creation, merges, verification, settings and audit are still administrator-only and obey the existing owner allowlist. Public serialization omits source evidence and provenance; private native recordings attached by an administrator are excluded from public source views. No database migration or bulk publication of playlists occurs. Set `EXTERNAL_CATALOG_PUBLIC=false` to restore owner-only access; set the Beta switch off to stop all external catalog/playback.
 
 
+## Current import sources
+
+New imports and discovery are limited to Spotify, YouTube and SoundCloud.
+Audius and Apple Music are excluded from discovery, new catalog imports and
+source creation; legacy Audius preview/search endpoints return 410. Saved legacy
+recordings retain their IDs, library relationships and playback access.
+Playlist migration accepts provider links only, matches native NoirSound tracks,
+and rejects old Audius selection tokens. CSV/TXT import has been removed.
+The earlier provider expansion notes describe historical behavior.
+
 ## Player cache, lyrics and playlist migration
 
 The player upgrade is an independent implementation using official APIs and
@@ -261,12 +271,12 @@ standard browser media/IndexedDB facilities. No Liner code is included.
   highlight, scroll, seek, and have a device-local timing adjustment. Plain text
   stays plain; editing imported text removes timing. Set LRCLIB_ENABLED=false
   to disable external lookup. Tests use synthetic lyrics unless explicitly enabled.
-- Library > Import playlist: up to 200 source entries, CSV/TXT fallback, progress,
+- Library > Import playlist: up to 200 source entries from the three providers, progress,
   explicit selection and skipped-track feedback. It creates a private playlist
   transactionally, preserves selected order, collapses duplicate matches and
   deduplicates confirmation retries by user/request ID. Only fresh authenticated
   sessions can preview/commit. Native availability is rechecked at commit;
-  Audius availability is checked for preview and again at playback. Candidate
+  Removed provider selections are rejected at confirmation. Candidate
   selections expire after 15 minutes and are cryptographically bound to the user.
   Original source audio and provider account libraries are not copied or modified.
 
@@ -288,8 +298,8 @@ Provider configuration is server-only in .env.production:
   same playlist URN. Uploader-only attribution requires manual match selection.
 
 Without these credentials, link import reports that the service is not connected;
-CSV/TXT metadata import remains usable. Missing commercial-catalog recordings
-cannot be supplied by this migration: listeners choose among native/Audius matches.
+Direct link import becomes available after provider setup. Missing catalog
+recordings cannot be supplied by this migration: listeners choose native matches.
 
 For app registration, provider requirements, server configuration and the first
 import, see the [Ukrainian setup guide](playlist-import-setup.uk.md).

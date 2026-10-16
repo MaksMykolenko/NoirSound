@@ -2,6 +2,7 @@ import {afterEach,beforeEach,describe,it,expect,vi} from 'vitest';
 import Fastify from 'fastify';
 import cookie from '@fastify/cookie';
 import routes from '../src/routes/playlistImport';
+import tokenModule from '../src/lib/importTokens';
 
 describe('playlist import authorization and confirmation',()=>{
   let app,db,playlists,visible,sources;
@@ -15,7 +16,7 @@ describe('playlist import authorization and confirmation',()=>{
       auditLog:{create:vi.fn(async()=>{})},$executeRaw:vi.fn(async()=>{}),
       $transaction:async fn=>fn(db),
     };
-    sources={capabilities:()=>({SPOTIFY:true,YOUTUBE:false,SOUNDCLOUD:false}),spotifyExchange:vi.fn(async()=>({access:'server-token',expires:Date.now()+900000}))};
+    sources={capabilities:()=>({SPOTIFY:true,YOUTUBE:false,SOUNDCLOUD:false}),load:vi.fn(async()=>({name:'Source playlist',entries:[entry]})),spotifyExchange:vi.fn(async()=>({access:'server-token',expires:Date.now()+900000}))};
     app=Fastify();app.decorate('prisma',db);app.decorate('authenticate',async(request,reply)=>{
       if(!request.headers['x-fixture-user'])return reply.code(401).send({error:'Unauthorized'});
       request.user={id:request.headers['x-fixture-user'],role:'LISTENER'};request.sessionId='session-'+request.user.id;
@@ -31,7 +32,26 @@ describe('playlist import authorization and confirmation',()=>{
     return response.json().results[0].candidates[0].selection;
   }
   it('requires a session even for previews',async()=>{
-    expect((await post('preview',{fileText:'Artist - Fixture'},null)).statusCode).toBe(401);
+    expect((await post('preview',{url:'https://youtube.com/playlist?list=PLabcdefghijk'},null)).statusCode).toBe(401);
+  });
+  it.each([
+    {fileText:'Artist - Fixture'},
+    {url:'https://audius.co/fixture/playlist'},
+    {url:'https://music.apple.com/us/playlist/fixture/pl.123'},
+  ])('rejects removed import sources before contacting a provider: %j',async payload=>{
+    expect((await post('preview',payload)).statusCode).toBe(400);
+    expect(sources.load).not.toHaveBeenCalled();
+  });
+  it.each(['https://open.spotify.com/playlist/1234567890123456789012','https://youtube.com/playlist?list=PLabcdefghijk','https://soundcloud.com/fixture/sets/list'])('accepts a supported playlist link %s',async url=>{
+    const response=await post('preview',{url});expect(response.statusCode,response.body).toBe(200);
+    expect(sources.load).toHaveBeenCalledWith(url,undefined);
+  });
+  it('rejects an unexpired Audius selection issued before the source was removed',async()=>{
+    const tokens=tokenModule.createImportTokens('test-only');
+    const old=tokens.seal({user:'a',metadata:{provider:'AUDIUS',externalId:'old'}},'selection');
+    const response=await post('commit',{name:'Old preview',requestId:'00000000-0000-4000-a000-000000000001',selections:[old]});
+    expect(response.statusCode).toBe(409);expect(response.json().error).toBe('IMPORT_TRACK_UNAVAILABLE');
+    expect(db.playlist.create).not.toHaveBeenCalled();
   });
   it('creates a private, ordered, deduplicated playlist exactly once on retry',async()=>{
     const selected=await selection(),payload={name:'Migrated',requestId:'00000000-0000-4000-a000-000000000001',selections:[selected,selected]};

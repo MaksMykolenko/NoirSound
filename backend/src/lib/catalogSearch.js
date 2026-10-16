@@ -5,7 +5,7 @@ const { Prisma } = require('@prisma/client');
 const { MUSIC_GENRES, GENRE_GROUPS, GROUP_LABELS, getGenresByGroup, getGroupOf, getGenreFilterValues, normalizeGenre } = require('../constants/musicGenres');
 const { normalizeBeatKey, publicBeatMetadata } = require('./beatMetadata');
 const { publicTrackSql } = require('./publicVisibility');
-const { includeRecording, recordingView } = require('./externalCatalog');
+const { includeRecording, recordingView, IMPORT_PROVIDERS } = require('./externalCatalog');
 
 const SORTS = Object.freeze(['recent', 'played', 'liked', 'trending']);
 const BPM_RANGES = Object.freeze({ 'under-90': [40, 89], '90-119': [90, 119], '120-149': [120, 149], '150-plus': [150, 240] });
@@ -99,6 +99,8 @@ function catalogWhere(filters, omit = null) {
     t."catalogScope" = 'EXTERNAL_BETA' AND t.status = 'PUBLISHED' AND t."isPublic" = false
     AND EXISTS (SELECT 1 FROM "ExternalRecording" er WHERE er."trackId" = t.id
       AND (${Boolean(filters.publicExternalCatalog)} OR er."curatorId" = ${filters.externalUserId}) AND er."mergedIntoId" IS NULL
+      AND EXISTS (SELECT 1 FROM "ExternalSource" es JOIN "ExternalRecording" sr ON sr.id = es."recordingId"
+        WHERE (sr.id = er.id OR sr."mergedIntoId" = er.id) AND es.provider::text IN (${Prisma.join(IMPORT_PROVIDERS)}))
       AND (er."metadataExpiresAt" IS NULL OR er."metadataExpiresAt" > CURRENT_TIMESTAMP))
   ))` : publicTrackSql();
   const parts = [visibility];

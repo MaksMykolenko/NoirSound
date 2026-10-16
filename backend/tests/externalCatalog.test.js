@@ -7,8 +7,9 @@ import sessionModule from '../src/lib/session';
 const {createPrismaClient}=prismaModule,{hashToken}=sessionModule;
 describe.skipIf(process.env.EXTERNAL_CATALOG_DATABASE_TEST!=='true')('external catalog with owned PostgreSQL fixtures',()=>{
  let app,db,cookie,listener,trackIds=[],recordIds=[],userIds=[];
- const suffix=randomUUID().slice(0,8),fixtureId='QA'+suffix;
- const m={externalId:fixtureId,title:'Owned Audius adapter fixture',artistName:'Owned fixture artist',durationSeconds:120,availability:'AVAILABLE',playbackMode:'EXTERNAL_STREAM',provenance:'AUDIUS_PUBLIC_API',checkedAt:new Date(),canonicalUrl:`https://audius.co/owned-fixture/fixture-${suffix}`,versionType:'UNKNOWN',provider:'AUDIUS'};
+ const suffix=randomUUID().slice(0,8),fixtureId='QAT'+suffix;
+ const m={externalId:fixtureId,title:'Owned YouTube adapter fixture',artistName:'Owned fixture artist',durationSeconds:120,availability:'AVAILABLE',playbackMode:'OFFICIAL_EMBED',provenance:'YOUTUBE_PUBLIC_API',checkedAt:new Date(),canonicalUrl:`https://www.youtube.com/watch?v=${fixtureId}`,versionType:'UNKNOWN',provider:'YOUTUBE'};
+ const legacy={...m,title:'Owned legacy Audius fixture',externalId:'legacy'+suffix,provider:'AUDIUS',playbackMode:'EXTERNAL_STREAM',provenance:'AUDIUS_PUBLIC_API',canonicalUrl:`https://audius.co/owned-fixture/legacy-${suffix}`};
  const req=async(path,body,method='POST',auth=cookie)=>{const r=await app.inject({method,url:'/api/external-catalog'+path,headers:{cookie:auth,origin:'http://localhost:3000'},...(body?{payload:body}:{})});return {status:r.statusCode,body:r.json()};};
  const create=async(title='Owned recording fixture',versionType='UNKNOWN')=>{const r=await req('/recordings',{title,artistName:'Owned fixture artist',durationSeconds:120,versionType,provenance:'Owned synthetic test metadata',reason:'Owned fixture test'});expect(r.status).toBe(200);trackIds.push(r.body.recording.id);recordIds.push(r.body.recording.recordingId);return r.body.recording;};
  beforeAll(async()=>{
@@ -17,13 +18,13 @@ describe.skipIf(process.env.EXTERNAL_CATALOG_DATABASE_TEST!=='true')('external c
   db=createPrismaClient();
   async function session(role){const u=await db.user.create({data:{email:`external-${role.toLowerCase()}-${suffix}@example.test`,username:`qa_${role.toLowerCase()}_${suffix}`,displayName:'Owned QA fixture',role,status:'ACTIVE'}});userIds.push(u.id);const sid=randomUUID(),token=jwt.sign({userId:u.id,sid},process.env.JWT_SECRET,{expiresIn:'1h'});await db.session.create({data:{id:sid,userId:u.id,token:hashToken(token),expiresAt:new Date(Date.now()+3600000)}});return `token=${token}`;}
   cookie=await session('ADMIN');listener=await session('LISTENER');
-  const audius={getTrack:async()=>m,resolve:async()=>m,search:async()=>[m],browse:async()=>({items:[m],next:null}),status:()=> 'LIVE',capabilities:{search:true},playback:async()=>({track:m,url:'https://creatornode.audius.co/tracks/cidstream/fixture',playbackMode:'EXTERNAL_STREAM',provider:'AUDIUS'})};
+  const audius={getTrack:async()=>legacy,resolve:async()=>legacy,search:async()=>[legacy],browse:async()=>({items:[legacy],next:null}),status:()=> 'LIVE',capabilities:{search:true},playback:async()=>({track:legacy,url:'https://creatornode.audius.co/tracks/cidstream/fixture',playbackMode:'EXTERNAL_STREAM',provider:'AUDIUS'})};
   const apple={...m,provider:'APPLE_MUSIC',externalId:'123456',canonicalUrl:'https://music.apple.com/us/song/123456',playbackMode:'OFFICIAL_EMBED',provenance:'APPLE_MUSIC_PUBLIC_API',title:'Owned API Apple fixture'};
-  const catalogAdapters={APPLE_MUSIC:{getTrack:async()=>apple,browse:async()=>({items:[apple],next:null}),status:()=> 'CONFIGURED',capabilities:{search:true}},YOUTUBE:{getTrack:async()=>{throw new Error('Not configured');},status:()=> 'NOT_CONFIGURED'}};
+  const catalogAdapters={APPLE_MUSIC:{getTrack:async()=>apple,browse:async()=>({items:[apple],next:null}),status:()=> 'CONFIGURED',capabilities:{search:true}},YOUTUBE:{getTrack:async()=>m,browse:async()=>({items:[m],next:null}),status:()=> 'CONFIGURED',capabilities:{search:true}}};
   app=buildServer({prisma:db,audius,catalogAdapters,storage:{},audioQueue:{close:async()=>{}},rateLimitRedis:null});await app.ready();
  });
  afterAll(async()=>{if(app)await app.close();if(db){await db.externalPlaybackEvent.deleteMany({where:{recordingId:{in:recordIds}}});await db.externalSource.deleteMany({where:{recordingId:{in:recordIds}}});await db.externalRecording.updateMany({where:{id:{in:recordIds}},data:{mergedIntoId:null,parentId:null}});await db.externalRecording.deleteMany({where:{id:{in:recordIds}}});await db.track.deleteMany({where:{id:{in:trackIds}}});await db.auditLog.deleteMany({where:{actorId:{in:userIds}}});await db.user.deleteMany({where:{id:{in:userIds}}});await db.externalCatalogSetting.deleteMany({where:{id:'beta'}});await db.$disconnect();}});
- it('rejects anonymous/listener API, direct URLs and cross-origin writes',async()=>{const closedStatus=await app.inject({url:'/api/external-catalog/status'});expect(closedStatus.statusCode).toBe(200);expect(closedStatus.json()).toMatchObject({enabled:false,canManage:false,providers:[]});expect((await app.inject({url:'/api/external-catalog/search?q=fixture'})).statusCode).toBe(401);expect((await req('/search?q=fixture',null,'GET',listener)).status).toBe(403);expect((await app.inject({url:'/external-music'})).statusCode).toBe(302);expect((await app.inject({method:'POST',url:'/api/external-catalog/import',headers:{cookie,origin:'https://evil.example'},payload:{externalId:fixtureId}})).statusCode).toBe(403);});
+ it('rejects anonymous/listener API, direct URLs and cross-origin writes',async()=>{const closedStatus=await app.inject({url:'/api/external-catalog/status'});expect(closedStatus.statusCode).toBe(200);expect(closedStatus.json()).toMatchObject({enabled:false,canManage:false,providers:[]});expect((await app.inject({url:'/api/external-catalog/search?q=fixture'})).statusCode).toBe(401);expect((await req('/search?q=fixture',null,'GET',listener)).status).toBe(403);expect((await app.inject({url:'/external-music'})).statusCode).toBe(302);expect((await app.inject({method:'POST',url:'/api/external-catalog/import',headers:{cookie,origin:'https://evil.example'},payload:{provider:'YOUTUBE',externalId:fixtureId}})).statusCode).toBe(403);});
  it('official embed API is private, gated, canonical and creates no catalog rows',async()=>{
   const path='/embed?'+new URLSearchParams({provider:'YOUTUBE',url:'https://youtu.be/abcdefghijk?si=tracking'});
   expect((await app.inject({url:'/api/external-catalog'+path})).statusCode).toBe(401);
@@ -34,7 +35,7 @@ describe.skipIf(process.env.EXTERNAL_CATALOG_DATABASE_TEST!=='true')('external c
   try {expect((await req(path,null,'GET')).status).toBe(403);}finally{if(prior===undefined)delete process.env.EXTERNAL_CATALOG_ADMIN_IDS;else process.env.EXTERNAL_CATALOG_ADMIN_IDS=prior;}
   expect((await req('/embed?'+new URLSearchParams({provider:'SPOTIFY',url:'https://open.spotify.com/track/1234567890123456789012'}),null,'GET')).status).toBe(400);
  });
- it('repeated import is idempotent under real unique constraints',async()=>{const a=await req('/import',{externalId:fixtureId}),b=await req('/import',{url:m.canonicalUrl});expect(a.status).toBe(200);expect(b.body.recording.id).toBe(a.body.recording.id);trackIds.push(a.body.recording.id);recordIds.push(a.body.recording.recordingId);expect(a.body.recording.sources[0].officialStatus).toBe('UNVERIFIED');expect(a.body.recording.versionType).toBe('UNKNOWN');expect(a.body.recording.artistId).toBeNull();const bridge=await db.track.findUnique({where:{id:a.body.recording.id},include:{artist:{include:{user:true}},externalRecording:true}});expect(bridge.artist.userId).toBe(userIds[0]);expect(bridge.primaryArtistName).toBe(m.artistName);expect(bridge.artist.user.displayName).toBe('Owned QA fixture');expect(bridge.externalRecording.curatorId).toBe(userIds[0]);});
+ it('repeated import is idempotent under real unique constraints',async()=>{const a=await req('/import',{provider:'YOUTUBE',externalId:fixtureId}),b=await req('/import',{provider:'YOUTUBE',externalId:fixtureId});expect(a.status).toBe(200);expect(b.body.recording.id).toBe(a.body.recording.id);trackIds.push(a.body.recording.id);recordIds.push(a.body.recording.recordingId);expect(a.body.recording.sources[0].officialStatus).toBe('UNVERIFIED');expect(a.body.recording.versionType).toBe('UNKNOWN');expect(a.body.recording.artistId).toBeNull();const bridge=await db.track.findUnique({where:{id:a.body.recording.id},include:{artist:{include:{user:true}},externalRecording:true}});expect(bridge.artist.userId).toBe(userIds[0]);expect(bridge.primaryArtistName).toBe(m.artistName);expect(bridge.artist.user.displayName).toBe('Owned QA fixture');expect(bridge.externalRecording.curatorId).toBe(userIds[0]);});
  it('LINK_OUT confirmation and primary selection require evidence',async()=>{const a=await create();const source=await req(`/recordings/${a.recordingId}/sources`,{provider:'YOUTUBE',url:'https://youtu.be/abcdefghijk',reason:'Fixture link supplied'});expect(source.status).toBe(200);expect(source.body.source.playbackMode).toBe('LINK_OUT');expect((await req(`/sources/${source.body.source.id}`,{matchStatus:'CONFIRMED',officialStatus:'VERIFIED',isPrimary:true,reason:'Fixture verification'},'PATCH')).status).toBe(400);expect((await req(`/sources/${source.body.source.id}`,{matchStatus:'CONFIRMED',officialStatus:'VERIFIED',isPrimary:true,evidence:'Synthetic fixture verification evidence',reason:'Fixture verification'},'PATCH')).status).toBe(200);});
  it('merge/unmerge keeps exact playlist, like and history rows and one card',async()=>{const a=await create(),b=await create();await req(`/recordings/${a.recordingId}/sources`,{provider:'YOUTUBE',url:'https://youtu.be/abcd1234567',reason:'Synthetic source A'});await req(`/recordings/${b.recordingId}/sources`,{provider:'SPOTIFY',url:'https://open.spotify.com/track/1234567890123456789012',reason:'Synthetic source B'});
   const userId=userIds[0],p=await db.playlist.create({data:{name:'Owned fixture playlist',creatorId:userId,isPublic:false}});await db.playlistTrack.create({data:{playlistId:p.id,trackId:a.id,order:1}});await db.trackLike.create({data:{userId,trackId:a.id}});await db.externalPlaybackEvent.create({data:{recordingId:a.recordingId,userId,provider:'AUDIUS',durationListenedSeconds:31}});
@@ -44,7 +45,7 @@ describe.skipIf(process.env.EXTERNAL_CATALOG_DATABASE_TEST!=='true')('external c
   expect((await req(`/recordings/${a.recordingId}/unmerge`,{reason:'Reversibility fixture check'})).status).toBe(200);expect(await snapshot()).toBe(before);expect(await db.externalSource.findMany({where:{recordingId:a.recordingId},select:{id:true,matchStatus:true,isPrimary:true,verificationEvidence:true}})).toEqual(sourceBefore);expect(await db.auditLog.count({where:{targetId:b.recordingId,action:{in:['EXTERNAL_MERGE','EXTERNAL_UNMERGE']}}})).toBe(2);
  });
  it.each(['REMIX','LIVE','NIGHTCORE'])('cannot merge %s with an original',async version=>{const a=await create('Owned original fixture','ORIGINAL'),b=await create(`Owned fixture ${version}`,version);expect((await req(`/recordings/${b.recordingId}/merge`,{intoId:a.recordingId,reason:'Conflict fixture',evidence:'Fixture evidence'})).status).toBe(409);});
- it('beta records cannot leak to ordinary track/like/statistics APIs',async()=>{const r=await req('/import',{externalId:fixtureId});const id=r.body.recording.id;const pub=await app.inject({url:'/api/tracks'});expect(pub.statusCode).toBe(200);expect(JSON.stringify(pub.json())).not.toContain(id);expect((await app.inject({url:`/api/tracks/${id}`})).statusCode).toBe(404);expect((await app.inject({method:'POST',url:`/api/tracks/${id}/like`,headers:{cookie:listener,origin:'http://localhost:3000'}})).statusCode).toBe(404);expect((await app.inject({method:'POST',url:`/api/tracks/${id}/play-event`,headers:{cookie,origin:'http://localhost:3000'},payload:{durationListenedSeconds:31}})).statusCode).toBe(409);});
+ it('beta records cannot leak to ordinary track/like/statistics APIs',async()=>{const r=await req('/import',{provider:'YOUTUBE',externalId:fixtureId});const id=r.body.recording.id;const pub=await app.inject({url:'/api/tracks'});expect(pub.statusCode).toBe(200);expect(JSON.stringify(pub.json())).not.toContain(id);expect((await app.inject({url:`/api/tracks/${id}`})).statusCode).toBe(404);expect((await app.inject({method:'POST',url:`/api/tracks/${id}/like`,headers:{cookie:listener,origin:'http://localhost:3000'}})).statusCode).toBe(404);expect((await app.inject({method:'POST',url:`/api/tracks/${id}/play-event`,headers:{cookie,origin:'http://localhost:3000'},payload:{durationListenedSeconds:31}})).statusCode).toBe(409);});
  it('saved links appear as ordinary private tracks without exposing them publicly',async()=>{
   const payload={title:'Owned SoundCloud normal-card fixture',artistName:'Owned fixture artist',provider:'SOUNDCLOUD',url:`https://soundcloud.com/owned-fixture/normal-card-${suffix}`,provenance:'Owned explicitly supplied fixture metadata',reason:'Ordinary card fixture'};
   const before=await db.externalRecording.count();const created=await req('/recordings',payload);expect(created.status).toBe(200);
@@ -64,12 +65,12 @@ describe.skipIf(process.env.EXTERNAL_CATALOG_DATABASE_TEST!=='true')('external c
   await req('/settings',{enabled:false,reason:'Ordinary catalogue gate fixture'},'PATCH');expect((await catalog(cookie)).total).toBe(0);await req('/settings',{enabled:true,reason:'Restore ordinary catalogue gate fixture'},'PATCH');
  });
  it('browses without URLs, automatically imports official metadata, and keeps the feed private',async()=>{
-  const before=await db.externalRecording.count();const page=await req('/browse',null,'GET');expect(page.status).toBe(200);expect(page.body.items.some(t=>t.provider==='AUDIUS')).toBe(true);expect(page.body.items.some(t=>t.provider==='APPLE_MUSIC')).toBe(true);expect(await db.externalRecording.count()).toBe(before);
+  const before=await db.externalRecording.count();const page=await req('/browse',null,'GET');expect(page.status).toBe(200);expect(page.body.items.every(t=>t.provider==='YOUTUBE')).toBe(true);expect(page.body.providers.map(p=>p.provider)).toEqual(['SPOTIFY','YOUTUBE','SOUNDCLOUD']);expect(await db.externalRecording.count()).toBe(before);
   expect((await req('/browse',null,'GET',listener)).status).toBe(403);expect((await app.inject({url:'/api/external-catalog/browse'})).statusCode).toBe(401);
-  const imported=await req('/import',{provider:'APPLE_MUSIC',externalId:'123456'});expect(imported.status,JSON.stringify(imported.body)).toBe(200);const r=imported.body.recording;trackIds.push(r.id);recordIds.push(r.recordingId);expect(r).toMatchObject({provider:'APPLE_MUSIC',playbackMode:'OFFICIAL_EMBED',isStreamable:false,canSave:true});
-  expect((await req('/import',{provider:'APPLE_MUSIC',externalId:'123456'})).body.recording.id).toBe(r.id);expect(await db.externalRecording.count()).toBe(before+1);
-  const again=await req('/browse',null,'GET');expect(again.body.items.find(t=>t.provider==='APPLE_MUSIC')).toMatchObject({id:r.id,imported:true,recordingId:r.recordingId});
-  expect((await req(`/recordings/${r.recordingId}/playback?sourceId=${r.selectedSourceId}`,null,'GET')).body.embedUrl).toContain('embed.music.apple.com');
+  const imported=await req('/import',{provider:'YOUTUBE',externalId:fixtureId});expect(imported.status,JSON.stringify(imported.body)).toBe(200);const r=imported.body.recording;trackIds.push(r.id);recordIds.push(r.recordingId);expect(r).toMatchObject({provider:'YOUTUBE',playbackMode:'OFFICIAL_EMBED',isStreamable:false,canSave:true});
+  expect((await req('/import',{provider:'YOUTUBE',externalId:fixtureId})).body.recording.id).toBe(r.id);expect(await db.externalRecording.count()).toBe(before);
+  const again=await req('/browse',null,'GET');expect(again.body.items.find(t=>t.provider==='YOUTUBE')).toMatchObject({id:r.id,imported:true,recordingId:r.recordingId});
+  expect((await req(`/recordings/${r.recordingId}/playback?sourceId=${r.selectedSourceId}`,null,'GET')).body.embedUrl).toContain('www.youtube-nocookie.com');
   expect((await app.inject({url:`/api/tracks/${r.id}`})).statusCode).toBe(404);
  });
  it('public beta opens browse/details/playback and listener saves without granting administrative access',async()=>{
@@ -79,8 +80,8 @@ describe.skipIf(process.env.EXTERNAL_CATALOG_DATABASE_TEST!=='true')('external c
    expect((await app.inject({url:'/api/external-catalog/browse'})).statusCode).toBe(200);
    expect((await app.inject({url:'/external-music'})).statusCode).toBe(200);
    const before=await db.externalRecording.count();
-   expect((await app.inject({method:'POST',url:'/api/external-catalog/import',headers:{origin:'http://localhost:3000'},payload:{externalId:fixtureId}})).statusCode).toBe(401);
-   const saved=await req('/import',{externalId:fixtureId},'POST',listener);expect(saved.status).toBe(200);expect(await db.externalRecording.count()).toBe(before);const r=saved.body.recording;
+   expect((await app.inject({method:'POST',url:'/api/external-catalog/import',headers:{origin:'http://localhost:3000'},payload:{provider:'YOUTUBE',externalId:fixtureId}})).statusCode).toBe(401);
+   const saved=await req('/import',{provider:'YOUTUBE',externalId:fixtureId},'POST',listener);expect(saved.status).toBe(200);expect(await db.externalRecording.count()).toBe(before);const r=saved.body.recording;
    expect((await app.inject({url:`/api/tracks/${r.id}`})).statusCode).toBe(200);
    const detail=await app.inject({url:`/api/external-catalog/recordings/${r.recordingId}`});expect(detail.statusCode).toBe(200);expect(detail.json().audit).toEqual([]);expect(detail.json().recording.sources[0]).not.toHaveProperty('verificationEvidence');expect(detail.json().recording.sources[0]).not.toHaveProperty('provenance');
    expect((await app.inject({url:`/api/external-catalog/recordings/${r.recordingId}/playback?sourceId=${r.selectedSourceId}`})).statusCode).toBe(200);
@@ -92,22 +93,50 @@ describe.skipIf(process.env.EXTERNAL_CATALOG_DATABASE_TEST!=='true')('external c
    const playlist=await db.playlist.create({data:{creatorId:userIds[1],name:'Listener public-beta QA',isPublic:false}});
    expect((await app.inject({method:'POST',url:`/api/playlists/${playlist.id}/tracks`,headers:{cookie:listener,origin:'http://localhost:3000'},payload:{trackId:r.id}})).statusCode).toBe(201);
    expect((await app.inject({url:`/api/playlists/${playlist.id}`})).statusCode).toBe(404);
-   expect((await app.inject({method:'POST',url:'/api/external-catalog/import',headers:{cookie:listener,origin:'https://evil.example'},payload:{externalId:fixtureId}})).statusCode).toBe(403);
+   expect((await app.inject({method:'POST',url:'/api/external-catalog/import',headers:{cookie:listener,origin:'https://evil.example'},payload:{provider:'YOUTUBE',externalId:fixtureId}})).statusCode).toBe(403);
    await req('/settings',{enabled:false,reason:'Public beta emergency stop'},'PATCH');
    expect((await app.inject({url:'/api/external-catalog/browse'})).statusCode).toBe(403);expect((await app.inject({url:`/api/tracks/${r.id}`})).statusCode).toBe(404);
    await req('/settings',{enabled:true,reason:'Restore fixture beta'},'PATCH');
   } finally {process.env.EXTERNAL_CATALOG_PUBLIC='false';}
  });
+ it('rejects removed providers through every import entry and preserves saved legacy playback',async()=>{
+  const count=await db.externalRecording.count();
+  const target=await create('Owned source policy target');
+  for(const provider of ['AUDIUS','APPLE_MUSIC']) {
+   const url=provider==='AUDIUS'?legacy.canonicalUrl:'https://music.apple.com/us/song/123456';
+   expect((await req('/import',{provider,externalId:'123456'})).status).toBe(400);
+   expect((await req('/recordings',{provider,url,title:'Removed',artistName:'Fixture',provenance:'Owned fixture',reason:'Policy fixture'})).status).toBe(400);
+   expect((await req(`/recordings/${target.recordingId}/sources`,{provider,url,reason:'Policy fixture'})).status).toBe(400);
+  }
+  expect((await req('/import',{externalId:fixtureId})).status).toBe(400);
+  expect((await req('/search?q=fixture',null,'GET')).status).toBe(410);
+  expect((await req('/preview/legacy/playback',null,'GET')).status).toBe(410);
+  expect((await req('/preview/legacy/lyrics',null,'GET')).status).toBe(410);
+  expect(await db.externalRecording.count()).toBe(count+1);
+  // Seed a pre-existing record directly: production import routes cannot create it.
+  const curator=await db.artistProfile.findUnique({where:{userId:userIds[0]}});
+  const track=await db.track.create({data:{title:legacy.title,primaryArtistName:legacy.artistName,artistId:curator.id,status:'PUBLISHED',isPublic:false,catalogScope:'EXTERNAL_BETA',durationSeconds:120,tags:[]}});
+  const record=await db.externalRecording.create({data:{trackId:track.id,curatorId:userIds[0],versionType:'UNKNOWN',metadataProvenance:legacy.provenance,metadataExpiresAt:new Date(Date.now()+86400000),sources:{create:{provider:'AUDIUS',externalId:legacy.externalId,canonicalUrl:legacy.canonicalUrl,playbackMode:'EXTERNAL_STREAM',availability:'AVAILABLE',provenance:legacy.provenance,matchStatus:'CONFIRMED',isPrimary:true,checkedAt:new Date()}}},include:{sources:true}});
+  trackIds.push(track.id);recordIds.push(record.id);
+  expect((await req(`/recordings/${record.id}/playback?sourceId=${record.sources[0].id}`,null,'GET')).status).toBe(200);
+  const playlist=await db.playlist.create({data:{creatorId:userIds[0],name:'Preserved legacy library',isPublic:false}});
+  expect((await app.inject({method:'POST',url:`/api/playlists/${playlist.id}/tracks`,headers:{cookie,origin:'http://localhost:3000'},payload:{trackId:track.id}})).statusCode).toBe(201);
+  expect((await req('/recordings',null,'GET')).body.items.some(t=>t.id===track.id)).toBe(false);
+  const catalog=await app.inject({url:'/api/discover/catalog?'+new URLSearchParams({q:legacy.title}),headers:{cookie}});
+  expect(catalog.statusCode,catalog.body).toBe(200);expect(catalog.json().total).toBe(0);
+  expect(await db.track.findUnique({where:{id:track.id}})).not.toBeNull();
+ });
  it('disables beta without deploy and preserves native API',async()=>{expect((await req('/settings',{enabled:false,reason:'Disable fixture beta'},'PATCH')).status).toBe(200);expect((await req('/search?q=fixture',null,'GET')).status).toBe(403);expect((await req('/browse',null,'GET')).status).toBe(403);expect((await req('/embed?'+new URLSearchParams({provider:'YOUTUBE',url:'https://youtu.be/abcdefghijk'}),null,'GET')).status).toBe(403);expect((await app.inject({url:'/api/tracks'})).statusCode).toBe(200);expect((await req('/settings',{enabled:true,reason:'Reenable fixture beta'},'PATCH')).status).toBe(200);});
- it('imports selected native and Audius matches atomically into a private playlist and revalidates native streams',async()=>{
+ it('imports selected native matches atomically into a private playlist and revalidates native streams',async()=>{
   await req('/settings',{enabled:true,reason:'Migration fixture setup'},'PATCH');
   const curator=await db.artistProfile.findUnique({where:{userId:userIds[0]}});
   const native=await db.track.create({data:{title:'Unique migration native fixture',primaryArtistName:'Migration artist',artistId:curator.id,status:'PUBLISHED',isPublic:true,catalogScope:'NATIVE',processedAudioKey:'private-fixture-object-key',durationSeconds:180,tags:[]}});
-  trackIds.push(native.id);
+  const secondNative=await db.track.create({data:{title:'Second native migration fixture',primaryArtistName:'Migration artist',artistId:curator.id,status:'PUBLISHED',isPublic:true,catalogScope:'NATIVE',processedAudioKey:'second-private-fixture-key',durationSeconds:120,tags:[]}});
+  trackIds.push(native.id,secondNative.id);
   const request=(path,payload)=>app.inject({method:'POST',url:'/api/playlist-import/'+path,headers:{cookie,origin:'http://localhost:3000'},payload});
-  const matches=await request('matches',{entries:[{title:native.title,artist:'Migration artist',duration:180},{title:m.title,artist:m.artistName,duration:120}]});
+  const matches=await request('matches',{entries:[{title:native.title,artist:'Migration artist',duration:180},{title:secondNative.title,artist:'Migration artist',duration:120}]});
   expect(matches.statusCode,matches.body).toBe(200);
-  const rows=matches.json().results;expect(rows[0].selected).toBe('native:'+native.id);expect(rows[1].selected).toBe('audius:'+fixtureId);
+  const rows=matches.json().results;expect(rows[0].selected).toBe('native:'+native.id);expect(rows[1].selected).toBe('native:'+secondNative.id);
   const payload={name:'Owned migration fixture',requestId:randomUUID(),selections:[rows[0].candidates[0].selection,rows[1].candidates[0].selection,rows[0].candidates[0].selection]};
   const committed=await request('commit',payload);expect(committed.statusCode,committed.body).toBe(200);expect(committed.json()).toMatchObject({trackCount:2,duplicates:1});
   expect((await request('commit',payload)).json().id).toBe(committed.json().id);

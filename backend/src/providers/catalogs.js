@@ -1,7 +1,7 @@
 'use strict';
-const {CatalogError,platformUrl,versionFromTitle}=require('../lib/externalCatalog');
+const {CatalogError,platformUrl,versionFromTitle,IMPORT_PROVIDERS}=require('../lib/externalCatalog');
 const {createHash}=require('node:crypto');
-const SEARCH_PROVIDERS=['AUDIUS','APPLE_MUSIC','YOUTUBE'];
+const SEARCH_PROVIDERS=['YOUTUBE'];
 // No Spotify/SoundCloud API catalog is requested by this mixed-service product.
 // Their published policies require separate permissions for this use case.
 function createCatalogAdapters({fetchImpl=globalThis.fetch,env=process.env}={}) {
@@ -72,23 +72,23 @@ function createCatalogAdapters({fetchImpl=globalThis.fetch,env=process.env}={}) 
   return {APPLE_MUSIC:apple,YOUTUBE:youtube};
 }
 function createCatalogFeed(adapters) {
-  const statuses=()=>['AUDIUS','SPOTIFY','SOUNDCLOUD','APPLE_MUSIC','YOUTUBE'].map(provider=>({provider,status:adapters[provider]?.status() || 'PERMISSION_REQUIRED',capabilities:adapters[provider]?.capabilities || {search:false,metadata:false,browse:false,playbackMode:provider==='SPOTIFY'?'LINK_OUT':'OFFICIAL_EMBED'}}));
+  const statuses=()=>IMPORT_PROVIDERS.map(provider=>({provider,status:adapters[provider]?.status() || 'PERMISSION_REQUIRED',capabilities:adapters[provider]?.capabilities || {search:false,metadata:false,browse:false,playbackMode:provider==='SPOTIFY'?'LINK_OUT':'OFFICIAL_EMBED'}}));
   async function browse(q='',cursor='',limit=20) {
     const queryHash=createHash('sha256').update(q).digest('hex').slice(0,16);
-    let positions={AUDIUS:0,APPLE_MUSIC:0,YOUTUBE:null};
+    let positions={YOUTUBE:null};
     if(cursor) {
       try {
         if(!/^[\w-]{1,600}$/.test(cursor))throw 0;
         const decoded=JSON.parse(Buffer.from(cursor,'base64url').toString());
-        if(decoded.q!==queryHash||Object.keys(decoded).length!==2||Object.keys(decoded.p).length!==3)throw 0;
+        if(decoded.q!==queryHash||Object.keys(decoded).length!==2||Object.keys(decoded.p).length!==1)throw 0;
         const p=decoded.p;
-        if(!['AUDIUS','APPLE_MUSIC'].every(k=>p[k]===null||(Number.isInteger(p[k])&&p[k]>=0&&p[k]<=1000))||!(p.YOUTUBE===null||p.YOUTUBE===false||/^[\w-]{1,160}$/.test(p.YOUTUBE)))throw 0;
+        if(!(p.YOUTUBE===null||p.YOUTUBE===false||/^[\w-]{1,160}$/.test(p.YOUTUBE)))throw 0;
         positions=p;
       }catch {throw new CatalogError('EXTERNAL_CURSOR_INVALID');}
     }
     const reports=await Promise.all(SEARCH_PROVIDERS.map(async provider=>{
       const a=adapters[provider],pos=positions[provider];
-      if(!a||a.status()==='DISABLED'||(provider!=='AUDIUS'&&a.status()==='NOT_CONFIGURED'))return {provider,status:a?.status() || 'NOT_CONFIGURED',items:[],next:provider==='YOUTUBE'?false:null};
+      if(!a||['DISABLED','NOT_CONFIGURED'].includes(a.status()))return {provider,status:a?.status() || 'NOT_CONFIGURED',items:[],next:false};
       if(cursor&&(provider==='YOUTUBE'?pos===false:pos===null))return {provider,status:a.status(),items:[],next:pos};
       try {const data=await a.browse(q,pos,limit);return {provider,status:'LIVE',...data,next:provider==='YOUTUBE'?(data.next || false):data.next};}
       catch(e) {return {provider,status:'ERROR',error:e instanceof CatalogError?e.code:'PROVIDER_UNAVAILABLE',items:[],next:provider==='YOUTUBE'?false:null};}

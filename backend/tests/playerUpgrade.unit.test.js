@@ -3,20 +3,11 @@ import importing from '../src/lib/playlistImport';
 import tokenModule from '../src/lib/importTokens';
 import lyricsModule from '../src/providers/lyrics';
 import sourceModule from '../src/providers/playlistSources';
-const {parseImportFile,playlistLink,rankCandidates}=importing;
+const {playlistLink,rankCandidates}=importing;
 const json=data=>new Response(JSON.stringify(data),{headers:{'content-type':'application/json'}});
 afterEach(()=>vi.useRealTimers());
 
 describe('playlist metadata parsing and matching',()=>{
-  it('reads quoted Spotify CSV, BOM, commas, millisecond duration, and TXT',()=>{
-    expect(parseImportFile('\uFEFFTrack Name,Artist Name(s),Duration (ms)\r\n"Song, part 1",Artist,180500')).toEqual([{title:'Song, part 1',artist:'Artist',duration:180.5}]);
-    expect(parseImportFile('Artist - Track')).toEqual([{title:'Track',artist:'Artist',duration:null}]);
-    expect(parseImportFile('title;artist;duration\nTrack;Artist;3:02')[0].duration).toBe(182);
-  });
-  it('rejects oversized and malformed files instead of silently dropping records',()=>{
-    expect(()=>parseImportFile('title,artist\n"broken,Artist')).toThrow();
-    expect(()=>parseImportFile(Array(201).fill('Artist - Track').join('\n'))).toThrow('IMPORT_TOO_LARGE');
-  });
   it.each(['http://open.spotify.com/playlist/1234567890123456789012','https://open.spotify.com.evil.test/playlist/1234567890123456789012','https://user@youtube.com/playlist?list=PLabcdefghijk','https://127.0.0.1/playlist?list=PLabcdefghijk','https://soundcloud.com/user/song'])('rejects unsafe/nonplaylist links %s',url=>expect(()=>playlistLink(url)).toThrow());
   it('accepts localized Spotify and YouTube Music links without fetching submitted origins',()=>{
     expect(playlistLink('https://open.spotify.com/intl-uk/playlist/1234567890123456789012?si=test')).toEqual({provider:'SPOTIFY',id:'1234567890123456789012'});
