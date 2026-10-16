@@ -6,6 +6,7 @@ const { playlistLink, rankCandidates, MAX_IMPORT_TRACKS } = require('../lib/play
 const { publicTrackWhere } = require('../lib/publicVisibility');
 const { createPlaylistSources } = require('../providers/playlistSources');
 const { auditData } = require('../lib/auditLog');
+const { sourceItem, sourcePlayback, sourcePlaylistView, sourcePlaylistPlayback } = require('../lib/sourcePlaylist');
 const body = (properties, required=Object.keys(properties)) => ({body:{type:'object',additionalProperties:false,properties,required}});
 const text = (maxLength=300) => ({type:'string',minLength:1,maxLength});
 const rate = max => ({rateLimit:{max,timeWindow:'1 minute',keyGenerator:request=>request.user?.id || request.ip}});
@@ -50,8 +51,39 @@ module.exports = async function playlistImportRoutes(fastify, options) {
   });
   fastify.delete('/spotify',{config:rate(10)},async(_request,reply)=>{reply.clearCookie('ns_spotify_import',cookieOptions);return {connected:false};});
   fastify.post('/preview',{config:rate(5),schema:body({url:text(1000)})},async request=>{
-    playlistLink(request.body.url);
-    return sources.load(request.body.url,connection(request)?.access);
+    const parsed=playlistLink(request.body.url);
+    const loaded=await sources.load(request.body.url,connection(request)?.access);
+    const provider=parsed.provider;
+    const sourceUrl=provider==='SPOTIFY'?'https://open.spotify.com/playlist/'+parsed.id:provider==='YOUTUBE'?'https://www.youtube.com/playlist?list='+parsed.id:parsed.url;
+    const id=crypto.randomUUID();
+    const entries=loaded.entries.map((entry,position)=>{
+      const item=sourceItem(provider,entry);
+      return {...item,selection:tokens.seal({user:request.user.id,previewId:id,position,item},'source-selection')};
+    });
+    const preview=tokens.seal({id,user:request.user.id,session:sessionKey(request),provider,sourceUrl,total:loaded.total,loaded:entries.length,truncated:Boolean(loaded.truncated)},'source-preview');
+    return {...loaded,provider,entries,preview,unavailable:entries.filter(entry=>entry.unavailable).length};
+  });
+
+  async function ownedSource(request) {
+    const playlist=await fastify.prisma.playlist.findUnique({where:{id:request.params.id},select:{id:true,creatorId:true,isPublic:true,sourceImport:true}});
+    if(!playlist || playlist.creatorId!==request.user.id || playlist.isPublic || !sourcePlaylistView(playlist))C.fail('IMPORT_PLAYLIST_INACCESSIBLE',404);
+    return playlist;
+  }
+  fastify.get('/source/:id/status',{config:rate(30)},async request=>{
+    await ownedSource(request);return {enabled:true};
+  });
+  fastify.get('/source/:id/playback/:position',{config:rate(60)},async request=>{
+    const playlist=await ownedSource(request);
+    if(request.params.position==='playlist') {
+      const playback=sourcePlaylistPlayback(playlist.sourceImport);
+      if(!playback)C.fail('IMPORT_TRACK_UNAVAILABLE',409);
+      return {...playback,provider:playlist.sourceImport.provider,playbackMode:'OFFICIAL_EMBED',accessScope:'playlist-import',playlistId:playlist.id,wholePlaylist:true,total:playlist.sourceImport.items.length};
+    }
+    if(!/^\d{1,4}$/.test(request.params.position))C.fail('IMPORT_INPUT_INVALID',400);
+    const position=Number(request.params.position),item=playlist.sourceImport.items[position];
+    const playback=item && !item.unavailable && sourcePlayback(playlist.sourceImport.provider,item.sourceId);
+    if(!playback)C.fail('IMPORT_TRACK_UNAVAILABLE',409);
+    return {...playback,provider:playlist.sourceImport.provider,playbackMode:'OFFICIAL_EMBED',accessScope:'playlist-import',playlistId:playlist.id,position,total:playlist.sourceImport.items.length};
   });
   fastify.post('/matches',{config:rate(60),schema:body({entries:{type:'array',minItems:1,maxItems:5,items:{type:'object',additionalProperties:false,required:['title','artist'],properties:{title:text(),artist:{type:'string',maxLength:200},duration:{anyOf:[{type:'number',minimum:0,maximum:36000},{type:'null'}]},needsReview:{type:'boolean'}}}}})},async request=>{
     const results=await Promise.all(request.body.entries.map(async entry=>{
@@ -61,7 +93,7 @@ module.exports = async function playlistImportRoutes(fastify, options) {
     }));
     return {results};
   });
-  fastify.post('/commit',{config:rate(5),schema:body({name:text(120),requestId:{type:'string',pattern:'^[a-f0-9-]{36}$'},selections:{type:'array',minItems:1,maxItems:MAX_IMPORT_TRACKS,items:text(8000)}})},async request=>{
+  fastify.post('/commit',{bodyLimit:4*1024*1024,config:rate(5),schema:body({name:text(120),requestId:{type:'string',pattern:'^[a-f0-9-]{36}$'},mode:{type:'string',enum:['source']},preview:text(8000),selections:{type:'array',minItems:1,maxItems:MAX_IMPORT_TRACKS,items:text(8000)}},['name','requestId','selections'])},async request=>{
     if(!request.body.name.trim())C.fail('IMPORT_INPUT_INVALID');
     // Stable, user-scoped id makes a retried confirmation atomic and idempotent.
     const hex=crypto.createHash('sha256').update('playlist-import:'+request.user.id+':'+request.body.requestId).digest('hex');
@@ -69,7 +101,21 @@ module.exports = async function playlistImportRoutes(fastify, options) {
     return fastify.prisma.$transaction(async tx=>{
       await C.catalogLock(tx);
       const existing=await tx.playlist.findUnique({where:{id},include:{_count:{select:{tracks:true}}}});
-      if(existing)return {id:existing.id,name:existing.name,trackCount:existing._count.tracks,reused:true};
+      if(existing)return {id:existing.id,name:existing.name,trackCount:sourcePlaylistView(existing)?.total ?? existing._count.tracks,reused:true};
+      if(request.body.mode==='source') {
+        const preview=tokens.open(request.body.preview,'source-preview');
+        if(!preview || preview.user!==request.user.id || preview.session!==sessionKey(request))C.fail('IMPORT_PREVIEW_EXPIRED',409);
+        if(preview.truncated)C.fail('IMPORT_TOO_LARGE',409);
+        if(preview.loaded!==request.body.selections.length)C.fail('IMPORT_INPUT_INVALID',400);
+        const items=request.body.selections.map((value,position)=>{
+          const selected=tokens.open(value,'source-selection');
+          if(!selected || selected.user!==request.user.id || selected.previewId!==preview.id || selected.position!==position)C.fail('IMPORT_PREVIEW_EXPIRED',409);
+          return sourceItem(preview.provider,selected.item);
+        });
+        const playlist=await tx.playlist.create({data:{id,name:request.body.name.trim(),creatorId:request.user.id,isPublic:false,tags:[],sourceImport:{version:1,provider:preview.provider,sourceUrl:preview.sourceUrl,items}}});
+        await tx.auditLog.create({data:auditData(request.user.id,'PLAYLIST_IMPORT','PLAYLIST',playlist.id,'User imported source playlist',{provider:preview.provider,trackCount:items.length})});
+        return {id:playlist.id,name:playlist.name,trackCount:items.length};
+      }
     const picks=request.body.selections.map(value=>{
       const selected=tokens.open(value,'selection');
       if(!selected || selected.user!==request.user.id)C.fail('IMPORT_PREVIEW_EXPIRED',409);

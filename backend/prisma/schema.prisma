@@ -301,6 +301,7 @@ model Playlist {
   tags            String[] @default([])
   coverImageKey   String?
   likes           Int      @default(0)
+  sourceImport    Json?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 

@@ -4,6 +4,7 @@ const { optionalAuthenticatedUserId } = require('../lib/optionalAuth');
 const { userOrIpKey } = require('../lib/rateLimitKeys');
 const { scaledRateLimitMax } = require('../lib/rateLimit');
 const { buildPlaylistTrackEntry } = require('../lib/playlistTrackView');
+const { sourcePlaylistView } = require('../lib/sourcePlaylist');
 
 const MAX_TITLE_LENGTH = 120;
 const MAX_DESCRIPTION_LENGTH = 1000;
@@ -71,23 +72,26 @@ function playlistPermissions(playlist, viewer) {
     isSaved: Boolean(playlist.likedBy?.length),
     canEdit: isOwner || isAdmin,
     canDelete: isOwner || isAdmin,
-    canReorder: isOwner || isAdmin
+    canReorder: !playlist.sourceImport && (isOwner || isAdmin),
+    canChangeVisibility: !playlist.sourceImport,
+    canAddTracks: !playlist.sourceImport
   };
 }
 
 function serializePlaylist(playlist, viewer, { includeTracks = false, likedTrackIds = null } = {}) {
+  const source = playlist.creatorId === viewer?.id ? sourcePlaylistView(playlist, includeTracks) : null;
   const trackRows = includeTracks
     ? (playlist.tracks || []).map((entry) => buildPlaylistTrackEntry({
         entry, playlist, viewer, likedTrackIds
       }))
     : undefined;
-  const trackCount = Number(playlist._count?.tracks ?? trackRows?.length ?? 0);
+  const trackCount = source?.total ?? Number(playlist._count?.tracks ?? trackRows?.length ?? 0);
   // Summed from the raw (pre-sanitization) rows, not `trackRows`, so an
   // unavailable track hidden from a non-owner viewer still counts toward
   // the real total duration -- the aggregate must not change depending on
   // who is looking at it, only the per-row display does.
   const durationSeconds = includeTracks
-    ? (playlist.tracks || []).reduce(
+    ? source ? source.items.reduce((total,item)=>total+Number(item.duration||0),0) : (playlist.tracks || []).reduce(
         (total, entry) => total + Number(entry.track?.durationSeconds || entry.track?.duration || 0),
         0
       )
@@ -113,6 +117,7 @@ function serializePlaylist(playlist, viewer, { includeTracks = false, likedTrack
     createdAt: playlist.createdAt,
     updatedAt: playlist.updatedAt,
     ...playlistPermissions(playlist, viewer),
+    ...(source ? { sourceImport: source } : {}),
     ...(includeTracks ? { tracks: trackRows } : {})
   };
 }
@@ -293,6 +298,9 @@ async function playlistsRoutes(fastify) {
       }
       updates.description = description || null;
     }
+    if (request.body?.isPublic === true && access.playlist.sourceImport) {
+      return apiError(reply, 409, 'IMPORTED_PLAYLIST_PRIVATE', 'Imported playlists remain private.');
+    }
     if (request.body?.isPublic !== undefined) updates.isPublic = request.body.isPublic === true;
     if (request.body?.coverUrl !== undefined) {
       const coverUrl = cleanText(request.body.coverUrl);
@@ -335,6 +343,7 @@ async function playlistsRoutes(fastify) {
     }
     const access = await ownedPlaylist(fastify, request.params.id, request.user, true);
     if (access.error) return apiError(reply, access.status, access.error, 'Track cannot be added.');
+    if (access.playlist.sourceImport) return apiError(reply, 409, 'IMPORTED_PLAYLIST_SNAPSHOT', 'This playlist preserves its imported source order.');
     if (access.playlist.tracks.length >= MAX_PLAYLIST_TRACKS) {
       return apiError(reply, 409, 'PLAYLIST_LIMIT_REACHED', `A playlist can contain at most ${MAX_PLAYLIST_TRACKS} tracks.`);
     }

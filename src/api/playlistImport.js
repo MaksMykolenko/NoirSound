@@ -6,3 +6,5 @@ export const matchImport = (entries,signal) => post('matches',{entries},signal);
 export const commitImport = (payload,signal) => post('commit',payload,signal);
 export const connectSpotifyImport = () => post('spotify/connect',{});
 export const disconnectSpotifyImport = () => apiFetch('/playlist-import/spotify',{method:'DELETE',suppressErrorToast:true});
+export const importedPlaybackStatus = (id,signal) => apiFetch('/playlist-import/source/'+encodeURIComponent(id)+'/status',{signal,suppressErrorToast:true});
+export const importedPlayback = (id,position,signal) => apiFetch('/playlist-import/source/'+encodeURIComponent(id)+'/playback/'+position,{signal,suppressErrorToast:true});

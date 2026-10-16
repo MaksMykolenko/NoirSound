@@ -5,6 +5,22 @@ const native={id:'native',title:'Native fixture',artistId:'artist',isStreamable:
 const external={id:'external',title:'Audius fixture',recordingId:'record',selectedSourceId:'source',playbackMode:'EXTERNAL_STREAM',playbackSource:'external',isStreamable:true,duration:180};
 const res=data=>({ok:true,status:200,headers:{get:()=> 'application/json'},json:async()=>data});
 describe('one global player across providers',()=>{
+ it('resolves an imported Spotify position through owner access and keeps repeated source positions available',async()=>{
+  useUserStore.setState({user:{id:'listener',role:'LISTENER'}});
+  const track={id:'source:p:0',importedPlaylistId:'p',position:0,title:'Source track',provider:'SPOTIFY',playbackMode:'OFFICIAL_EMBED',isStreamable:false};
+  const queue=[track,{...track,id:'source:p:1',position:1}];
+  const f=vi.fn(async()=>res({provider:'SPOTIFY',playbackMode:'OFFICIAL_EMBED',embedUrl:'https://open.spotify.com/embed/track/1234567890123456789012',canonicalUrl:'https://open.spotify.com/track/1234567890123456789012',accessScope:'playlist-import',playlistId:'p',position:0,total:2}));
+  vi.stubGlobal('fetch',f);
+  await usePlayerStore.getState().playTrack(native);
+  await usePlayerStore.getState().playTrack(track,queue);
+  expect(String(f.mock.calls.at(-1)[0])).toContain('/playlist-import/source/p/playback/0');
+  expect(usePlayerStore.getState().activePlatformEmbed.sourceQueue).toEqual(queue);
+  expect(__getAudioElementForTests().getAttribute('src')).toBeNull();
+  await usePlayerStore.getState().playTrack(queue[1]);
+  expect(String(f.mock.calls.at(-1)[0])).toContain('/playlist-import/source/p/playback/1');
+  expect(usePlayerStore.getState().activePlatformEmbed.sourceQueue).toEqual(queue);
+  useUserStore.setState({user:null});expect(usePlayerStore.getState().activePlatformEmbed).toBeNull();
+ });
  beforeEach(()=>{useUserStore.setState({user:null});vi.spyOn(window.HTMLMediaElement.prototype,'play').mockResolvedValue();vi.spyOn(window.HTMLMediaElement.prototype,'pause').mockImplementation(()=>{});usePlayerStore.getState().pause();usePlayerStore.setState({currentTrack:null,isPlaying:false,queue:[],recentlyPlayed:[],playbackError:null});});
  afterEach(()=>{usePlayerStore.getState().pause();vi.restoreAllMocks();vi.unstubAllGlobals();});
  it('runs native -> Audius -> native on the same Audio element',async()=>{vi.stubGlobal('fetch',vi.fn(async()=>res({url:'https://creatornode.audius.co/tracks/cidstream/fixture',playbackMode:'EXTERNAL_STREAM'})));await usePlayerStore.getState().playTrack(native);const audio=__getAudioElementForTests();await usePlayerStore.getState().playTrack(external);expect(__getAudioElementForTests()).toBe(audio);expect(audio.src).toContain('creatornode.audius.co');await usePlayerStore.getState().playTrack(native);expect(audio.src).toContain('/tracks/native/stream');expect(usePlayerStore.getState().currentTrack.id).toBe('native');});

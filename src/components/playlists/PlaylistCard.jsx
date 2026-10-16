@@ -1,3 +1,4 @@
+import { sourcePlaylistTrack } from '../../utils/sourcePlaylist';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { MoreHorizontal, Play } from 'lucide-react';
@@ -31,7 +32,8 @@ export default function PlaylistCard({ playlist, onToggleSaved, onEdit, onDelete
     }
     if (tracksInPlaylist.length > 0) {
       // Play the first track and load the rest as the queue context
-      playTrack(tracksInPlaylist[0], tracksInPlaylist);
+      const first = sourcePlaylistTrack(playlist) || tracksInPlaylist.find(track => !track.unavailable);
+      if (first) playTrack(first, tracksInPlaylist, {type:'playlist',id:playlist.id,name:playlist.name});
     }
   };
 

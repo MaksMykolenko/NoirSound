@@ -5,6 +5,7 @@ function serializePublicPlaylist(playlist) {
   const {
     coverImageKey,
     sourceBatch: _sourceBatch,
+    sourceImport: _sourceImport,
     ...safePlaylist
   } = playlist;
   return {

@@ -1,6 +1,6 @@
 'use strict';
 const { CatalogError, versionFromTitle } = require('./externalCatalog');
-const MAX_IMPORT_TRACKS = 200;
+const MAX_IMPORT_TRACKS = 1000;
 const fail = code => { throw new CatalogError(code, 400); };
 const normalize = value => String(value || '').normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
 function playlistLink(value) {

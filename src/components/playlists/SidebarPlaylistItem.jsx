@@ -1,3 +1,4 @@
+import { sourcePlaylistTrack } from '../../utils/sourcePlaylist';
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { MoreHorizontal, Pin, Play } from 'lucide-react';
@@ -31,7 +32,8 @@ export default function SidebarPlaylistItem({ playlist, onToggleSaved, onEdit, o
       }
     }
     if (tracksInPlaylist.length > 0) {
-      playTrack(tracksInPlaylist[0], tracksInPlaylist);
+      const first = sourcePlaylistTrack(playlist) || tracksInPlaylist.find(track => !track.unavailable);
+      if (first) playTrack(first, tracksInPlaylist, {type:'playlist',id:playlist.id,name:playlist.name});
     }
   };
 

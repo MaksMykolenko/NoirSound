@@ -1,3 +1,4 @@
+import { sourcePlaylistTrack } from '../utils/sourcePlaylist';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   ArrowLeft,
@@ -27,6 +28,7 @@ import { usePlaylist } from '../hooks/queries/usePlaylists';
 import { usePlaylistContextMenu } from '../hooks/useEntityContextMenu';
 import { usePlayerStore } from '../store/playerStore';
 import { useToastStore } from '../store/toastStore';
+import SourceTrackList from '../components/playlists/SourceTrackList';
 import PlaylistTrackTable from '../components/playlists/PlaylistTrackTable';
 import EditPlaylistModal from '../components/playlists/EditPlaylistModal';
 import EmptyState from '../components/ui/EmptyState';
@@ -156,7 +158,7 @@ export default function PlaylistPage() {
     onToggleSaved: !owner ? () => handleToggleSaved() : undefined,
     onEdit: owner ? () => setEditOpen(true) : undefined,
     onDelete: owner ? () => setDeleteCandidate(playlist) : undefined,
-    onToggleVisibility: owner ? () => handleToggleVisibility() : undefined,
+    onToggleVisibility: owner && !playlist?.sourceImport ? () => handleToggleVisibility() : undefined,
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [owner, playlist]);
   const { contextMenuProps, openFromButton } = usePlaylistContextMenu(playlist, contextOptions);
@@ -180,7 +182,7 @@ export default function PlaylistPage() {
   }
   if (!playlist) return null;
 
-  const playableTracks = tracks.filter((track) => track.isStreamable ?? Boolean(track.audioUrl));
+  const playableTracks = tracks.filter((track) => track.playbackMode === 'OFFICIAL_EMBED' || (track.isStreamable ?? Boolean(track.audioUrl)));
   const totalDuration = tracks.reduce((total, track) => total + Number(track.duration || 0), 0);
   const isPlaylistPlaying = Boolean(
     player.isPlaying
@@ -197,7 +199,7 @@ export default function PlaylistPage() {
       player.togglePlay();
       return;
     }
-    player.playTrack(playableTracks[0], playableTracks, source);
+    player.playTrack(sourcePlaylistTrack(playlist) || playableTracks[0], playableTracks, source);
   };
 
   const handleShuffle = () => {
@@ -226,7 +228,7 @@ export default function PlaylistPage() {
   }
 
   async function handleToggleVisibility() {
-    if (!owner || pending === 'visibility') return;
+    if (!owner || playlist.sourceImport || pending === 'visibility') return;
     setPending('visibility');
     try {
       const updated = await updatePlaylist(playlist.id, { isPublic: !playlist.isPublic });
@@ -375,9 +377,9 @@ export default function PlaylistPage() {
             <button onClick={handleShuffle} disabled={playableTracks.length === 0} className="ns-button-secondary hidden min-w-11 items-center justify-center gap-2 px-4 disabled:opacity-40 sm:inline-flex" aria-label={t('playlists.shuffle')}>
               <Shuffle size={15} /> <span>{t('playlists.shuffle')}</span>
             </button>
-            <button onClick={() => player.addTracksToQueue(playableTracks)} disabled={playableTracks.length === 0} className="ns-button-secondary hidden min-w-11 items-center justify-center gap-2 px-4 disabled:opacity-40 sm:inline-flex" aria-label={t('playlists.addToQueue')}>
+            {!playlist.sourceImport && <button onClick={() => player.addTracksToQueue(playableTracks)} disabled={playableTracks.length === 0} className="ns-button-secondary hidden min-w-11 items-center justify-center gap-2 px-4 disabled:opacity-40 sm:inline-flex" aria-label={t('playlists.addToQueue')}>
               <ListPlus size={15} /> <span>{t('playlists.addToQueue')}</span>
-            </button>
+            </button>}
             {!owner && (
               <button onClick={handleToggleSaved} disabled={pending === 'save'} className="ns-button-secondary inline-flex min-w-11 items-center justify-center gap-2 px-3 sm:px-4" aria-label={playlist.isSaved ? t('playlists.saved') : t('playlists.save')}>
                 {pending === 'save' ? <LoaderCircle size={15} className="animate-spin" /> : <Heart size={15} fill={playlist.isSaved ? 'currentColor' : 'none'} />}
@@ -399,10 +401,13 @@ export default function PlaylistPage() {
       <section className="space-y-4">
         <div className="flex items-center justify-between px-1">
           <h2 className="ns-section-title">{t('playlists.tracks')}</h2>
-          {owner && tracks.length > 1 && <p className="hidden text-ns-label text-zinc-500 sm:block">{t('playlists.reorderHelp')}</p>}
+          {owner && !playlist.sourceImport && tracks.length > 1 && <p className="hidden text-ns-label text-zinc-500 sm:block">{t('playlists.reorderHelp')}</p>}
         </div>
+        {playlist.sourceImport && <p className="px-1 text-sm text-zinc-400">{t('playlistImport.sourcePlaybackNote',{provider:playlist.sourceImport.provider==='YOUTUBE'?'YouTube':playlist.sourceImport.provider==='SOUNDCLOUD'?'SoundCloud':'Spotify'})}</p>}
         {tracks.length === 0 ? (
           <EmptyState iconName="Music2" title={t('playlists.empty')} description={owner ? t('playlists.emptyOwner') : t('playlists.emptyVisitor')} />
+        ) : playlist.sourceImport ? (
+          <SourceTrackList key={playlist.id} tracks={tracks} currentId={player.currentTrack?.id} onPlay={track=>player.playTrack(track,tracks,source)}/>
         ) : (
           <div className="border-y border-zinc-800/60 py-2">
             <PlaylistTrackTable

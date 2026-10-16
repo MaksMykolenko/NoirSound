@@ -290,6 +290,29 @@ describe('NoirSound backend integration', () => {
   });
 
   describe('playlist API', () => {
+    it('round-trips 717 source positions through PostgreSQL and keeps playback private', async () => {
+      const owner = await app.prisma.user.findUnique({ where: { email: 'listener@noirsound.com' } });
+      const items = Array.from({ length: 717 }, (_, index) => ({ title: `Source ${index+1}`, artist: 'Fixture', duration: 180, sourceId: '1234567890123456789012', unavailable: false }));
+      const playlist = await app.prisma.playlist.create({ data: { name: 'Source snapshot fixture', creatorId: owner.id, isPublic: false, tags: [], sourceImport: { version: 1, provider: 'SPOTIFY', sourceUrl: 'https://open.spotify.com/playlist/1234567890123456789012', items } } });
+      try {
+        const detail = await supertest(app.server).get(`/api/playlists/${playlist.id}`).set('Cookie', listenerCookie);
+        expect(detail.statusCode).toBe(200);
+        expect(detail.body.playlist.trackCount).toBe(717);
+        expect(detail.body.playlist.sourceImport.items[716]).toMatchObject({ title: 'Source 717', position: 716, playbackMode: 'OFFICIAL_EMBED' });
+        expect(detail.body.playlist.canReorder).toBe(false);
+        const mine = await supertest(app.server).get('/api/playlists/me').set('Cookie', listenerCookie);
+        const listed = mine.body.data.find(item => item.id === playlist.id);
+        expect(listed.trackCount).toBe(717);expect(listed.sourceImport.items).toBeUndefined();
+        const playback = await supertest(app.server).get(`/api/playlist-import/source/${playlist.id}/playback/716`).set('Cookie', listenerCookie);
+        expect(playback.statusCode).toBe(200);expect(playback.body.embedUrl).toBe('https://open.spotify.com/embed/track/1234567890123456789012');
+        expect((await supertest(app.server).get(`/api/playlists/${playlist.id}`)).statusCode).toBe(404);
+        expect((await supertest(app.server).get(`/api/playlist-import/source/${playlist.id}/playback/716`).set('Cookie', artistCookie)).statusCode).toBe(404);
+        expect((await supertest(app.server).patch(`/api/playlists/${playlist.id}`).set('Cookie', listenerCookie).send({isPublic:true})).statusCode).toBe(409);
+        expect((await supertest(app.server).post(`/api/playlists/${playlist.id}/tracks`).set('Cookie', listenerCookie).send({trackId:'fixture-native'})).statusCode).toBe(409);
+      } finally {
+        await app.prisma.playlist.delete({ where: { id: playlist.id } });
+      }
+    });
     it('enforces authentication and validates playlist metadata', async () => {
       const unauthenticated = await supertest(app.server)
         .post('/api/playlists')

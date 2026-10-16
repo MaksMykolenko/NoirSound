@@ -12,7 +12,7 @@ export function mapPlaylistResponse(backendPlaylist) {
   // separate `trackEntries` array below, which nothing else in the app
   // ever read -- addedAt reached the frontend API layer and was then
   // silently dropped before any component saw it.
-  const tracks = trackEntries
+  const tracks = backendPlaylist.sourceImport?.items || trackEntries
     .map((entry, index) => {
       const mapped = mapTrackResponse(entry.track || entry);
       if (!mapped) return null;
@@ -63,7 +63,7 @@ export function mapPlaylistResponse(backendPlaylist) {
     isSaved: Boolean(backendPlaylist.isSaved || backendPlaylist.likedByCurrentUser),
     canEdit: Boolean(backendPlaylist.canEdit || backendPlaylist.createdByCurrentUser),
     canDelete: Boolean(backendPlaylist.canDelete || backendPlaylist.createdByCurrentUser),
-    canReorder: Boolean(backendPlaylist.canReorder || backendPlaylist.createdByCurrentUser),
+    canReorder: !backendPlaylist.sourceImport && Boolean(backendPlaylist.canReorder || backendPlaylist.createdByCurrentUser),
     createdByCurrentUser: Boolean(backendPlaylist.isOwner || backendPlaylist.createdByCurrentUser),
     likedByCurrentUser: Boolean(backendPlaylist.isSaved || backendPlaylist.likedByCurrentUser)
   };

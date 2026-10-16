@@ -102,13 +102,13 @@ export default function EditPlaylistModal({ playlist, isOpen, onClose, onSaved }
             <textarea maxLength={1000} rows={4} value={description} onChange={(event) => setDescription(event.target.value)} className="ns-field w-full resize-none px-4 py-3 text-base sm:text-sm" />
             <span className="block text-right text-ns-meta text-zinc-600">{description.length}/1000</span>
           </label>
-          <label className="flex min-h-12 cursor-pointer items-center justify-between gap-4 rounded-md border border-zinc-800 bg-zinc-900/40 px-4">
+          {!playlist.sourceImport && <label className="flex min-h-12 cursor-pointer items-center justify-between gap-4 rounded-md border border-zinc-800 bg-zinc-900/40 px-4">
             <span>
               <strong className="block text-sm text-zinc-200">{t('playlists.public')}</strong>
               <small className="text-ns-meta text-zinc-500">{t('playlists.privateHelp')}</small>
             </span>
             <input type="checkbox" checked={isPublic} onChange={(event) => setIsPublic(event.target.checked)} className="h-4 w-4 accent-[var(--ns-accent)]" />
-          </label>
+          </label>}
           <label className="flex min-h-12 cursor-pointer items-center gap-3 rounded-md border border-dashed border-zinc-700 px-4 text-sm text-zinc-300 hover:border-zinc-500">
             <ImagePlus size={17} className="text-brand-red" />
             <span title={cover?.name} className="min-w-0 flex-1 break-words">{cover?.name || t('playlists.coverHelp')}</span>

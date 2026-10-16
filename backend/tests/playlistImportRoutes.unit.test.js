@@ -12,7 +12,7 @@ describe('playlist import authorization and confirmation',()=>{
     visible=true;playlists=new Map();vi.stubEnv('EXTERNAL_CATALOG_PUBLIC','false');
     db={
       track:{findMany:vi.fn(async()=>[{id:'native',title:'Fixture',primaryArtistName:'Artist',durationSeconds:180}]),findFirst:vi.fn(async()=>visible?{id:'native'}:null)},
-      playlist:{findUnique:vi.fn(async({where})=>playlists.get(where.id)),create:vi.fn(async({data})=>{playlists.set(data.id,{...data,_count:{tracks:data.tracks.create.length}});return data;})},
+      playlist:{findUnique:vi.fn(async({where})=>playlists.get(where.id)),create:vi.fn(async({data})=>{playlists.set(data.id,{...data,_count:{tracks:data.tracks?.create.length||0}});return data;})},
       auditLog:{create:vi.fn(async()=>{})},$executeRaw:vi.fn(async()=>{}),
       $transaction:async fn=>fn(db),
     };
@@ -79,5 +79,57 @@ describe('playlist import authorization and confirmation',()=>{
     expect(ok.body).not.toContain('server-token');
     const access=ok.cookies.find(c=>c.name==='ns_spotify_import');
     expect(access.httpOnly).toBe(true);expect(access.value).not.toContain('server-token');
+  });
+  async function sourcePreview(count=717,truncated=false) {
+    const entries=Array.from({length:count},(_,i)=>({...entry,title:`Position ${i+1}`,sourceId:i===1?null:'1234567890123456789012',unavailable:i===1}));
+    sources.load.mockResolvedValue({name:'Full source list',entries,total:count,truncated});
+    const preview=await post('preview',{url:'https://open.spotify.com/playlist/1234567890123456789012'});
+    expect(preview.statusCode,preview.body).toBe(200);
+    const result=preview.json();
+    return {mode:'source',preview:result.preview,name:result.name,requestId:'00000000-0000-4000-a000-000000000002',selections:result.entries.map(item=>item.selection)};
+  }
+  it('saves all 717 source positions, including repeats and unavailable entries, without catalog matching',async()=>{
+    const payload=await sourcePreview();
+    const saved=await post('commit',payload);
+    expect(saved.statusCode,saved.body).toBe(200);expect(saved.json().trackCount).toBe(717);
+    const playlist=playlists.get(saved.json().id);
+    expect(playlist).toMatchObject({isPublic:false,creatorId:'a',sourceImport:{provider:'SPOTIFY',version:1}});
+    expect(playlist.sourceImport.items).toHaveLength(717);
+    expect(playlist.sourceImport.items[1].unavailable).toBe(true);
+    expect(playlist.sourceImport.items[716].title).toBe('Position 717');
+    expect(playlist.sourceImport.items[0].sourceId).toBe(playlist.sourceImport.items[716].sourceId);
+    expect(db.track.findMany).not.toHaveBeenCalled();expect(db.track.findFirst).not.toHaveBeenCalled();
+    expect((await post('commit',payload)).json()).toMatchObject({id:playlist.id,trackCount:717,reused:true});
+    expect(db.playlist.create).toHaveBeenCalledTimes(1);
+  });
+  it('rejects missing, reordered, mixed-preview, expired and other-user source selections',async()=>{
+    const payload=await sourcePreview(3),other=await sourcePreview(3);
+    expect((await post('commit',payload,'b')).statusCode).toBe(409);
+    expect((await post('commit',{...payload,selections:payload.selections.slice(1)})).statusCode).toBe(400);
+    expect((await post('commit',{...payload,selections:[...payload.selections].reverse()})).statusCode).toBe(409);
+    expect((await post('commit',{...payload,selections:other.selections})).statusCode).toBe(409);
+    expect((await post('commit',{...payload,preview:'tampered'})).statusCode).toBe(409);
+    vi.spyOn(Date,'now').mockReturnValue(Date.now()+16*60*1000);
+    expect((await post('commit',payload)).json().error).toBe('IMPORT_PREVIEW_EXPIRED');
+    vi.restoreAllMocks();expect(db.playlist.create).not.toHaveBeenCalled();
+  });
+  it('refuses to save a truncated source list',async()=>{
+    const payload=await sourcePreview(1000,true);
+    expect((await post('commit',payload)).json().error).toBe('IMPORT_TOO_LARGE');
+    expect(db.playlist.create).not.toHaveBeenCalled();
+  });
+  it('resolves only the private owner’s stored track and playlist to official embeds',async()=>{
+    const saved=await post('commit',await sourcePreview(3)),id=saved.json().id;
+    const get=(tail,user='a')=>app.inject({url:`/api/playlist-import/source/${id}/${tail}`,headers:user?{'x-fixture-user':user}:{}});
+    expect((await get('status')).json()).toEqual({enabled:true});
+    expect((await get('playback/2')).json()).toMatchObject({provider:'SPOTIFY',embedUrl:'https://open.spotify.com/embed/track/1234567890123456789012',position:2,total:3,accessScope:'playlist-import'});
+    expect((await get('playback/playlist')).json()).toMatchObject({embedUrl:'https://open.spotify.com/embed/playlist/1234567890123456789012',wholePlaylist:true});
+    expect((await get('playback/1')).statusCode).toBe(409);
+    expect((await get('playback/999')).statusCode).toBe(409);
+    expect((await get('playback/-1')).statusCode).toBe(400);
+    expect((await get('playback/0','b')).statusCode).toBe(404);
+    expect((await get('status',null)).statusCode).toBe(401);
+    playlists.get(id).isPublic=true;
+    expect((await get('status')).statusCode).toBe(404);
   });
 });

@@ -42,7 +42,7 @@ function createPlaylistSources({ fetchImpl = globalThis.fetch, env = process.env
     if (!capabilities()[provider]) throw new CatalogError('IMPORT_NOT_CONFIGURED',409);
     const entries=[]; let name=provider+' playlist', total=0, skipped=0, truncated=false;
     // One total deadline across all pages; pagination URLs from providers are never fetched verbatim.
-    const signal=AbortSignal.timeout(25000);
+    const signal=AbortSignal.timeout(45000);
     if (provider==='SPOTIFY') {
       if(!spotifyToken)throw new CatalogError('IMPORT_CONNECT_REQUIRED',409);
       const headers={Authorization:'Bearer '+spotifyToken};
@@ -53,8 +53,8 @@ function createPlaylistSources({ fetchImpl = globalThis.fetch, env = process.env
         total=Number(page.total)||total;
         for(const row of page.items) {
           const track=row.item || row.track;
-          if(row.is_local || !track || track.type!=='track' || !track.name) { skipped++;continue; }
-          entries.push({title:track.name.slice(0,300),artist:(track.artists||[]).map(a=>a.name).join(', ').slice(0,200),duration:Number(track.duration_ms)/1000 || null});
+          const unavailable=Boolean(row.is_local || !track || track.type!=='track' || !track.name || track.is_playable===false);
+          entries.push({title:String(track?.name || 'Unavailable track').slice(0,300),artist:(track?.artists||[]).map(a=>a.name).join(', ').slice(0,200),duration:Number(track?.duration_ms)/1000 || null,sourceId:!row.is_local && track?.type==='track' ? track.id : null,unavailable});
         }
         if(!page.next)break;
         if(offset+50>=MAX_IMPORT_TRACKS)truncated=true;
@@ -67,17 +67,17 @@ function createPlaylistSources({ fetchImpl = globalThis.fetch, env = process.env
       if(!meta.items?.length)throw new CatalogError('IMPORT_PLAYLIST_INACCESSIBLE',404);
       name=meta.items[0].snippet.title;
       let token='';
-      for(let pageIndex=0;pageIndex<4;pageIndex++) {
+      for(let pageIndex=0;pageIndex<Math.ceil(MAX_IMPORT_TRACKS/50);pageIndex++) {
         const page=await api('playlistItems',{part:'snippet,contentDetails',playlistId:parsed.id,maxResults:'50',...(token?{pageToken:token}:{})});
         if(!Array.isArray(page.items))throw new CatalogError('IMPORT_PROVIDER_UNAVAILABLE',502);
         total=Number(page.pageInfo?.totalResults)||total;
         for(const item of page.items) {
           const raw=item.snippet?.title;
-          if(!raw || ['Deleted video','Private video'].includes(raw)){skipped++;continue;}
-          const parts=raw.match(/^(.+?)\s+[-–—]\s+(.+)$/);
-          entries.push({title:(parts?.[2]||raw).slice(0,300),artist:(parts?.[1]||item.snippet.videoOwnerChannelTitle||'').replace(/ - Topic$/,'').slice(0,200),duration:null,needsReview:true});
+          const unavailable=!raw || ['Deleted video','Private video'].includes(raw);
+          const parts=String(raw || 'Unavailable video').match(/^(.+?)\s+[-–—]\s+(.+)$/);
+          entries.push({title:(parts?.[2]||raw||'Unavailable video').slice(0,300),artist:(parts?.[1]||item.snippet?.videoOwnerChannelTitle||'').replace(/ - Topic$/,'').slice(0,200),duration:null,needsReview:true,sourceId:unavailable?null:item.contentDetails?.videoId,unavailable});
         }
-        token=page.nextPageToken;if(!token)break;if(pageIndex===3)truncated=true;
+        token=page.nextPageToken;if(!token)break;if(pageIndex===Math.ceil(MAX_IMPORT_TRACKS/50)-1)truncated=true;
       }
     } else {
       const headers={Authorization:'OAuth '+await scToken()};
@@ -87,16 +87,15 @@ function createPlaylistSources({ fetchImpl = globalThis.fetch, env = process.env
       name=playlist.title || name;total=Number(playlist.track_count)||0;
       const path='/playlists/'+encodeURIComponent(urn)+'/tracks';
       let query=new URLSearchParams({linked_partitioning:'true',limit:'50'});
-      for(let pageIndex=0;pageIndex<4;pageIndex++) {
+      for(let pageIndex=0;pageIndex<Math.ceil(MAX_IMPORT_TRACKS/50);pageIndex++) {
         const page=await json('https://api.soundcloud.com'+path+'?'+query,{headers,signal});
         const items=Array.isArray(page)?page:page.collection;
         if(!Array.isArray(items))throw new CatalogError('IMPORT_PROVIDER_UNAVAILABLE',502);
         for(const track of items) {
-          if(!track.title){skipped++;continue;}
-          entries.push({title:track.title.slice(0,300),artist:(track.metadata_artist || track.user?.username || '').slice(0,200),duration:Number(track.duration)/1000 || null,needsReview:!track.metadata_artist});
+          entries.push({title:String(track.title || 'Unavailable track').slice(0,300),artist:(track.metadata_artist || track.user?.username || '').slice(0,200),duration:Number(track.duration)/1000 || null,needsReview:!track.metadata_artist,sourceId:track.id?String(track.id):String(track.urn||'').replace(/^soundcloud:tracks:/,''),unavailable:!track.title});
         }
         if(!page.next_href)break;
-        if(pageIndex===3||entries.length>=MAX_IMPORT_TRACKS){truncated=true;break;}
+        if(pageIndex===Math.ceil(MAX_IMPORT_TRACKS/50)-1||entries.length>=MAX_IMPORT_TRACKS){truncated=true;break;}
         let next;try{next=new URL(page.next_href);}catch{throw new CatalogError('IMPORT_PROVIDER_UNAVAILABLE',502);}
         if(next.origin!=='https://api.soundcloud.com'||next.username||next.password||next.hash||decodeURIComponent(next.pathname)!==decodeURIComponent(path))throw new CatalogError('IMPORT_PROVIDER_UNAVAILABLE',502);
         query=new URLSearchParams({linked_partitioning:'true',limit:'50'});
@@ -105,6 +104,8 @@ function createPlaylistSources({ fetchImpl = globalThis.fetch, env = process.env
       }
       if(entries.length>MAX_IMPORT_TRACKS)truncated=true;
     }
+    if(total>MAX_IMPORT_TRACKS)truncated=true;
+    if(!truncated && total && entries.length!==total)throw new CatalogError('IMPORT_PLAYLIST_CHANGED',409);
     return {provider,name:String(name).slice(0,120),entries:entries.slice(0,MAX_IMPORT_TRACKS),total:total||entries.length+skipped,skipped,truncated};
   }
   async function spotifyExchange(code, verifier) {

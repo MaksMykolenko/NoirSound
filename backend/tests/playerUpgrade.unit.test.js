@@ -50,14 +50,38 @@ describe('timed lyrics provider',()=>{
   });
 });
 describe('official playlist providers',()=>{
-  it('paginates Spotify items, skips local files and checks snapshot consistency',async()=>{
+  it.each([717,1000,1001])('reads every Spotify page in order up to the safe bound: %i positions',async total=>{
+    const offsets=[];
+    const fetchImpl=async url=>{
+      if(!url.includes('/items'))return json({name:'Full list',snapshot_id:'v1'});
+      const offset=Number(new URL(url).searchParams.get('offset'));offsets.push(offset);
+      return json({total,next:offset+50<total?'unused-provider-url':null,items:Array.from({length:Math.min(50,total-offset)},(_,index)=>({item:{type:'track',id:'1234567890123456789012',name:`Position ${offset+index+1}`,artists:[{name:'Artist'}]}}))});
+    };
+    const source=sourceModule.createPlaylistSources({fetchImpl,env:{SPOTIFY_CLIENT_ID:'fixture',SPOTIFY_REDIRECT_URI:'https://example.test/callback'}});
+    const result=await source.load('https://open.spotify.com/playlist/1234567890123456789012','fixture');
+    const size=Math.min(1000,total);
+    expect(result.entries).toHaveLength(size);expect(result.entries.at(-1).title).toBe(`Position ${size}`);
+    expect(result.truncated).toBe(total>1000);expect(offsets).toEqual(Array.from({length:Math.ceil(size/50)},(_,i)=>i*50));
+  });
+  it('rejects an incomplete or changing playlist rather than saving a partial snapshot',async()=>{
+    for(const scenario of ['snapshot','count']) {
+      let metadataCalls=0;
+      const fetchImpl=async url=>{
+        if(!url.includes('/items'))return json({name:'Changed',snapshot_id:++metadataCalls===1?'v1':scenario==='snapshot'?'v2':'v1'});
+        return json({items:[{item:{type:'track',name:'One'}}],total:2,next:null});
+      };
+      const source=sourceModule.createPlaylistSources({fetchImpl,env:{SPOTIFY_CLIENT_ID:'fixture',SPOTIFY_REDIRECT_URI:'https://example.test/callback'}});
+      await expect(source.load('https://open.spotify.com/playlist/1234567890123456789012','fixture')).rejects.toMatchObject({code:'IMPORT_PLAYLIST_CHANGED'});
+    }
+  });
+  it('retains Spotify local files as unavailable source positions',async()=>{
     const fetchImpl=vi.fn(async url=>{
       if(!url.includes('/items'))return json({name:'Fixture list',snapshot_id:'v1'});
       return json({items:[{item:{type:'track',name:'Track',artists:[{name:'Artist'}],duration_ms:180000}},{is_local:true,item:{name:'Local'}}],total:2,next:null});
     });
     const source=sourceModule.createPlaylistSources({fetchImpl,env:{SPOTIFY_CLIENT_ID:'fixture',SPOTIFY_REDIRECT_URI:'https://example.test/callback'}});
     const result=await source.load('https://open.spotify.com/playlist/1234567890123456789012','fixture-token');
-    expect(result).toMatchObject({name:'Fixture list',skipped:1,entries:[{title:'Track',artist:'Artist',duration:180}]});
+    expect(result).toMatchObject({name:'Fixture list',skipped:0,entries:[{title:'Track',artist:'Artist',duration:180},{title:'Local',unavailable:true,sourceId:null}]});
     expect(fetchImpl).toHaveBeenCalledTimes(3);
     expect(fetchImpl.mock.calls[1][0]).toContain('/items?limit=50');
   });
@@ -80,7 +104,7 @@ describe('official playlist providers',()=>{
   it('keeps YouTube uploader-derived metadata for manual review and reports removed videos',async()=>{
     const source=sourceModule.createPlaylistSources({env:{YOUTUBE_API_KEY:'fixture'},fetchImpl:async url=>String(url).includes('/playlists?')?json({items:[{snippet:{title:'List'}}]}):json({items:[{snippet:{title:'Artist - Song'}},{snippet:{title:'Private video'}}],pageInfo:{totalResults:2}})});
     const result=await source.load('https://youtube.com/playlist?list=PLabcdefghijk');
-    expect(result).toMatchObject({skipped:1,entries:[{title:'Song',artist:'Artist',needsReview:true}]});
+    expect(result).toMatchObject({skipped:0,entries:[{title:'Song',artist:'Artist',needsReview:true},{title:'Private video',unavailable:true,sourceId:null}]});
   });
   it('does not fetch if a provider is unconfigured',async()=>{
     const fetchImpl=vi.fn();const source=sourceModule.createPlaylistSources({fetchImpl,env:{}});

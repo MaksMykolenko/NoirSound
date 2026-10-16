@@ -2,6 +2,7 @@ import {audioCache,audioCacheEnabled,canWarmAudio} from '../services/audioCache'
 import {nextQueuedTrack} from '../services/playerPreload';
 import { create } from 'zustand';
 import { resolveExternalPlayback, resolvePlatformEmbed, recordExternalPlay, saveCatalogTrack } from '../api/externalCatalog';
+import { importedPlayback } from '../api/playlistImport';
 import { API_BASE_URL, useMockApi, apiFetch } from '../api/client';
 import { getRecentlyPlayed } from '../api/stats';
 import { getLikedTracks, setTrackLiked } from '../api/tracks';
@@ -393,7 +394,7 @@ export const usePlayerStore = create((set, get) => {
       }
     },
 
-    openPlatformEmbed: async (provider, url, track = null) => {
+    openPlatformEmbed: async (provider, url, track = null, sourceQueue = null) => {
       const user = useUserStore.getState().user;
       const generation = ++playbackGeneration;
       playbackAbort?.abort();
@@ -403,11 +404,11 @@ export const usePlayerStore = create((set, get) => {
       audio?.removeAttribute?.('src');
       releaseCachedSource();
       set({activePlatformEmbed:null,currentTrack:null,isPlaying:false,progress:0,duration:0,playbackLoading:false,playbackError:null,lyricsFullscreenOpen:false});
-      const embed = track?.recordingId ? await resolveExternalPlayback(track, playbackAbort.signal) : await resolvePlatformEmbed(provider, url, playbackAbort.signal);
+      const embed = track?.importedPlaylistId ? await importedPlayback(track.importedPlaylistId, track.position, playbackAbort.signal) : track?.recordingId ? await resolveExternalPlayback(track, playbackAbort.signal) : await resolvePlatformEmbed(provider, url, playbackAbort.signal);
       if (generation !== playbackGeneration || useUserStore.getState().user?.id !== user?.id) return;
-      const origins = {SOUNDCLOUD:'https://w.soundcloud.com',APPLE_MUSIC:'https://embed.music.apple.com',YOUTUBE:'https://www.youtube-nocookie.com'};
+      const origins = {SPOTIFY:'https://open.spotify.com',SOUNDCLOUD:'https://w.soundcloud.com',APPLE_MUSIC:'https://embed.music.apple.com',YOUTUBE:'https://www.youtube-nocookie.com'};
       if (embed.playbackMode !== 'OFFICIAL_EMBED' || embed.provider !== provider || new URL(embed.embedUrl).origin !== origins[provider]) throw new Error('EXTERNAL_EMBED_UNSUPPORTED');
-      set({activePlatformEmbed:{...embed,track,ownerId:user?.id,generation},currentTrack:track || {id:`embed:${generation}`,title:provider,provider,playbackMode:'OFFICIAL_EMBED',isStreamable:false,hasLyrics:false},isPlayerCollapsed:false});
+      set({activePlatformEmbed:{...embed,track,sourceQueue,ownerId:user?.id,generation},currentTrack:track || {id:`embed:${generation}`,title:provider,provider,playbackMode:'OFFICIAL_EMBED',isStreamable:false,hasLyrics:false},isPlayerCollapsed:false});
     },
 
     closePlatformEmbed: () => {
@@ -437,7 +438,7 @@ export const usePlayerStore = create((set, get) => {
       }
       if (track?.playbackMode === 'OFFICIAL_EMBED') {
         const expectedGeneration = playbackGeneration + 1;
-        try { await get().openPlatformEmbed(track.provider, track.canonicalUrl, track); }
+        try { await get().openPlatformEmbed(track.provider, track.canonicalUrl, track, newQueue || get().activePlatformEmbed?.sourceQueue); }
         catch (error) { if (expectedGeneration === playbackGeneration && error.name !== 'AbortError') { set({playbackError:error.message}); reportPlaybackError(error.message); } }
         return;
       }
