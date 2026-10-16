@@ -72,7 +72,7 @@ SOUNDCLOUD_CLIENT_SECRET=YOUR_SOUNDCLOUD_CLIENT_SECRET
 
 ## Варіант без API-ключів
 
-У цьому ж вікні можна завантажити UTF-8 CSV або TXT до 150 000 символів і 200 композицій. Наприклад:
+У цьому ж вікні можна завантажити UTF-8 CSV або TXT до 150 000 байтів (150 кБ) і 200 композицій. Наприклад:
 
 ```csv
 title,artist,duration
