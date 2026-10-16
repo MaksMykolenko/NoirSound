@@ -6,6 +6,21 @@ const native={id:'native',title:'Native fixture',artistId:'artist',isStreamable:
 const external={id:'external',title:'Audius fixture',recordingId:'record',selectedSourceId:'source',playbackMode:'EXTERNAL_STREAM',playbackSource:'external',isStreamable:true,duration:180};
 const res=data=>({ok:true,status:200,headers:{get:()=> 'application/json'},json:async()=>data});
 describe('one global player across providers',()=>{
+ it('resolves a Spotify list to a stored YouTube version without sending it to native audio',async()=>{
+  useUserStore.setState({user:{id:'listener',role:'LISTENER'}});
+  const track={id:'source:p:0',importedPlaylistId:'p',position:0,title:'Source track',provider:'SPOTIFY',playbackMode:'OFFICIAL_EMBED'};
+  const f=vi.fn(async()=>res({provider:'YOUTUBE',playbackMode:'SOURCE_MATCH',accessScope:'playlist-import',playlistId:'p',position:0,track,sourceQueue:[track],canChoose:true}));vi.stubGlobal('fetch',f);
+  await usePlayerStore.getState().playTrack({...track,position:'playlist'});
+  expect(usePlayerStore.getState().activePlatformEmbed).toMatchObject({playbackMode:'SOURCE_MATCH',track,sourceQueue:[track]});
+  f.mockResolvedValue(res({provider:'YOUTUBE',playbackMode:'OFFICIAL_EMBED',embedUrl:'https://www.youtube-nocookie.com/embed/abcdefghijk',videoId:'abcdefghijk',accessScope:'playlist-import',playlistId:'p',position:0,track,canChoose:true}));
+  await usePlayerStore.getState().playTrack(track);
+  expect(usePlayerStore.getState().activePlatformEmbed.provider).toBe('YOUTUBE');
+  expect(__getAudioElementForTests().getAttribute('src')).toBeNull();
+  const stop=vi.fn(),unregister=registerPlatformFrameStop(stop);
+  usePlayerStore.getState().chooseSourceVersion();expect(stop).toHaveBeenCalledOnce();
+  expect(usePlayerStore.getState().activePlatformEmbed.playbackMode).toBe('SOURCE_MATCH');
+  unregister();
+ });
  it('resolves an imported Spotify position through owner access and keeps repeated source positions available',async()=>{
   useUserStore.setState({user:{id:'listener',role:'LISTENER'}});
   const track={id:'source:p:0',importedPlaylistId:'p',position:0,title:'Source track',provider:'SPOTIFY',playbackMode:'OFFICIAL_EMBED',isStreamable:false};

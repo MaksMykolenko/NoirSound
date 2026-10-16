@@ -6,13 +6,15 @@ const { playlistLink, rankCandidates, MAX_IMPORT_TRACKS } = require('../lib/play
 const { publicTrackWhere } = require('../lib/publicVisibility');
 const { createPlaylistSources } = require('../providers/playlistSources');
 const { auditData } = require('../lib/auditLog');
-const { sourceItem, sourcePlayback, sourcePlaylistView, sourcePlaylistPlayback } = require('../lib/sourcePlaylist');
+const { sourceItem, sourcePlayback, sourcePlaylistView, sourcePlaylistPlayback, canResolveSource } = require('../lib/sourcePlaylist');
+const { createYoutubeMatches } = require('../providers/youtubeMatches');
 const body = (properties, required=Object.keys(properties)) => ({body:{type:'object',additionalProperties:false,properties,required}});
 const text = (maxLength=300) => ({type:'string',minLength:1,maxLength});
 const rate = max => ({rateLimit:{max,timeWindow:'1 minute',keyGenerator:request=>request.user?.id || request.ip}});
 
 module.exports = async function playlistImportRoutes(fastify, options) {
   const env=options.env || process.env, sources=options.sources || createPlaylistSources({env});
+  const youtube=options.youtubeMatches || createYoutubeMatches({env,redis:options.redis});
   const tokens=createImportTokens(env.COOKIE_SECRET);
   const sessionKey=request=>crypto.createHash('sha256').update(request.user.id+':'+request.sessionId).digest('hex');
   const cookieOptions={httpOnly:true,secure:env.NODE_ENV==='production',sameSite:'lax',path:'/api/playlist-import',maxAge:900};
@@ -64,8 +66,8 @@ module.exports = async function playlistImportRoutes(fastify, options) {
     return {...loaded,provider,entries,preview,unavailable:entries.filter(entry=>entry.unavailable).length};
   });
 
-  async function ownedSource(request) {
-    const playlist=await fastify.prisma.playlist.findUnique({where:{id:request.params.id},select:{id:true,creatorId:true,isPublic:true,sourceImport:true}});
+  async function ownedSource(request,db=fastify.prisma) {
+    const playlist=await db.playlist.findUnique({where:{id:request.params.id},select:{id:true,creatorId:true,isPublic:true,sourceImport:true}});
     if(!playlist || playlist.creatorId!==request.user.id || playlist.isPublic || !sourcePlaylistView(playlist))C.fail('IMPORT_PLAYLIST_INACCESSIBLE',404);
     return playlist;
   }
@@ -74,16 +76,46 @@ module.exports = async function playlistImportRoutes(fastify, options) {
   });
   fastify.get('/source/:id/playback/:position',{config:rate(60)},async request=>{
     const playlist=await ownedSource(request);
-    if(request.params.position==='playlist') {
+    const source=playlist.sourceImport;
+    const useYoutube=source.provider==='SPOTIFY' && youtube.configured();
+    if(request.params.position==='playlist' && !useYoutube) {
       const playback=sourcePlaylistPlayback(playlist.sourceImport);
       if(!playback)C.fail('IMPORT_TRACK_UNAVAILABLE',409);
       return {...playback,provider:playlist.sourceImport.provider,playbackMode:'OFFICIAL_EMBED',accessScope:'playlist-import',playlistId:playlist.id,wholePlaylist:true,total:playlist.sourceImport.items.length};
     }
-    if(!/^\d{1,4}$/.test(request.params.position))C.fail('IMPORT_INPUT_INVALID',400);
-    const position=Number(request.params.position),item=playlist.sourceImport.items[position];
-    const playback=item && !item.unavailable && sourcePlayback(playlist.sourceImport.provider,item.sourceId);
+    if(request.params.position!=='playlist'&&!/^\d{1,4}$/.test(request.params.position))C.fail('IMPORT_INPUT_INVALID',400);
+    const position=request.params.position==='playlist'?source.items.findIndex(item=>canResolveSource(item)||item.youtubeId):Number(request.params.position),item=source.items[position];
+    const view=sourcePlaylistView(playlist,true);
+    const common={accessScope:'playlist-import',playlistId:playlist.id,position,total:source.items.length,track:view.items[position],canChoose:useYoutube&&item&&canResolveSource(item),...(request.params.position==='playlist'?{sourceQueue:view.items}:{})};
+    const alternative=item&&sourcePlayback('YOUTUBE',item.youtubeId);
+    if(useYoutube && item && canResolveSource(item) && !alternative) return {...common,provider:'YOUTUBE',playbackMode:'SOURCE_MATCH'};
+    const playback=alternative || (item && !item.unavailable && sourcePlayback(source.provider,item.sourceId));
     if(!playback)C.fail('IMPORT_TRACK_UNAVAILABLE',409);
-    return {...playback,provider:playlist.sourceImport.provider,playbackMode:'OFFICIAL_EMBED',accessScope:'playlist-import',playlistId:playlist.id,position,total:playlist.sourceImport.items.length};
+    return {...common,...playback,provider:alternative?'YOUTUBE':source.provider,videoId:alternative?item.youtubeId:source.provider==='YOUTUBE'?item.sourceId:undefined,playbackMode:'OFFICIAL_EMBED'};
+  });
+  const itemFingerprint=item=>crypto.createHash('sha256').update(JSON.stringify([item.sourceId,item.title,item.artist])).digest('hex');
+  function matchItem(playlist,position) {
+    if(!/^\d{1,4}$/.test(position))C.fail('IMPORT_INPUT_INVALID',400);
+    const item=playlist.sourceImport.items[Number(position)];
+    if(playlist.sourceImport.provider!=='SPOTIFY'||!item||!canResolveSource(item))C.fail('IMPORT_TRACK_UNAVAILABLE',409);
+    return item;
+  }
+  fastify.post('/source/:id/alternatives/:position',{config:rate(10),schema:body({url:text(1000)},[])},async request=>{
+    const playlist=await ownedSource(request),item=matchItem(playlist,request.params.position);
+    const candidates=request.body.url?[await youtube.inspect(request.body.url)]:await youtube.search(item);
+    return {candidates:candidates.map(candidate=>({...candidate,selection:tokens.seal({user:request.user.id,session:sessionKey(request),playlistId:playlist.id,position:Number(request.params.position),fingerprint:itemFingerprint(item),videoId:candidate.videoId},'youtube-selection')}))};
+  });
+  fastify.post('/source/:id/choice/:position',{config:rate(30),schema:body({selection:text(8000)})},async request=>{
+    const selected=tokens.open(request.body.selection,'youtube-selection');
+    if(!selected||selected.user!==request.user.id||selected.session!==sessionKey(request)||selected.playlistId!==request.params.id||selected.position!==Number(request.params.position)||!sourcePlayback('YOUTUBE',selected.videoId))C.fail('IMPORT_PREVIEW_EXPIRED',409);
+    return fastify.prisma.$transaction(async tx=>{
+      await C.catalogLock(tx);
+      const playlist=await ownedSource(request,tx),item=matchItem(playlist,request.params.position);
+      if(itemFingerprint(item)!==selected.fingerprint)C.fail('IMPORT_PREVIEW_EXPIRED',409);
+      const items=playlist.sourceImport.items.map((entry,index)=>index===selected.position?{...entry,youtubeId:selected.videoId}:entry);
+      await tx.playlist.update({where:{id:playlist.id},data:{sourceImport:{...playlist.sourceImport,items}}});
+      return {saved:true};
+    });
   });
   fastify.post('/matches',{config:rate(60),schema:body({entries:{type:'array',minItems:1,maxItems:5,items:{type:'object',additionalProperties:false,required:['title','artist'],properties:{title:text(),artist:{type:'string',maxLength:200},duration:{anyOf:[{type:'number',minimum:0,maximum:36000},{type:'null'}]},needsReview:{type:'boolean'}}}}})},async request=>{
     const results=await Promise.all(request.body.entries.map(async entry=>{

@@ -1775,7 +1775,10 @@
       "IMPORT_PREVIEW_EXPIRED": "Podgląd wygasł. Wczytaj playlistę ponownie.",
       "IMPORT_TRACK_UNAVAILABLE": "Ten utwór jest niedostępny w serwisie źródłowym.",
       "IMPORT_PLAYLIST_CHANGED": "Playlista zmieniła się podczas importu. Spróbuj ponownie.",
-      "EXTERNAL_BETA_DISABLED": "Katalog zewnętrzny wyłączony. Odśwież dopasowania."
+      "EXTERNAL_BETA_DISABLED": "Katalog zewnętrzny wyłączony. Odśwież dopasowania.",
+      "IMPORT_SEARCH_QUOTA": "Osiągnięto dzienny limit wyszukiwania YouTube. Zapisane wersje działają; wklej link do filmu lub wyszukaj jutro.",
+      "IMPORT_VIDEO_INVALID": "Wklej pełny link youtube.com/watch?v=… lub youtu.be/…",
+      "IMPORT_VIDEO_UNAVAILABLE": "Tego filmu nie można osadzić. Wybierz inny."
     },
     "changeSource": "Wybierz inną playlistę",
     "loading": "Wczytywanie całej playlisty…",
@@ -1789,9 +1792,17 @@
     "trackUnavailable": "Niedostępne w serwisie źródłowym",
     "playTrack": "Słuchaj {{title}}",
     "openTrack": "Otwórz {{title}} w serwisie źródłowym",
-    "sourcePlaybackNote": "Źródło: {{provider}}. Naciśnij ▶ obok utworu, a następnie Play w oficjalnym odtwarzaczu. Dostępność i pełne odtwarzanie zależą od serwisu, konta i przeglądarki.",
+    "sourcePlaybackNote": "Źródło listy: {{provider}}. Naciśnij ▶ obok utworu. Dla Spotify wybierz wersję z YouTube; zostanie zapamiętana i będzie odtwarzana tutaj w NoirSound.",
     "spotifyPlaybackNote": "Spotify może odtwarzać tylko fragment. Pełne utwory mogą wymagać zalogowania do Spotify i obsługiwanej przeglądarki.",
     "previousTrack": "Poprzedni utwór",
-    "nextTrack": "Następny utwór"
+    "nextTrack": "Następny utwór",
+    "chooseVersionHelp": "Wybierz wersję z YouTube: sprawdź tytuł, kanał i czas trwania. Będzie odtwarzana tutaj w NoirSound i zapamiętana na przyszłość.",
+    "searchingVersions": "Szukamy wersji na YouTube…",
+    "noVersions": "Nie znaleziono wersji. Możesz wkleić link do filmu.",
+    "chooseAndPlay": "Wybierz i słuchaj tutaj",
+    "videoLink": "Lub link do filmu YouTube",
+    "checkVideo": "Sprawdź film",
+    "changeVersion": "Zmień wersję utworu",
+    "videoPlaybackFailed": "YouTube nie odtworzył tego filmu. Wybierz inną wersję."
   }
 }

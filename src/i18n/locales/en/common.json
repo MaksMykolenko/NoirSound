@@ -1765,7 +1765,10 @@
       "IMPORT_PREVIEW_EXPIRED": "The preview expired. Load the playlist again.",
       "IMPORT_TRACK_UNAVAILABLE": "This track is unavailable on the source service.",
       "IMPORT_PLAYLIST_CHANGED": "Playlist changed during import. Please retry.",
-      "EXTERNAL_BETA_DISABLED": "External catalog disabled. Refresh matches."
+      "EXTERNAL_BETA_DISABLED": "External catalog disabled. Refresh matches.",
+      "IMPORT_SEARCH_QUOTA": "The daily YouTube search limit has been reached. Saved versions still work; paste a video link or search again tomorrow.",
+      "IMPORT_VIDEO_INVALID": "Paste a full youtube.com/watch?v=… or youtu.be/… link.",
+      "IMPORT_VIDEO_UNAVAILABLE": "This video cannot be embedded. Choose another video."
     },
     "changeSource": "Choose another playlist",
     "loading": "Loading the entire playlist…",
@@ -1779,9 +1782,17 @@
     "trackUnavailable": "Unavailable on the source service",
     "playTrack": "Listen to {{title}}",
     "openTrack": "Open {{title}} on the source service",
-    "sourcePlaybackNote": "Source: {{provider}}. Press ▶ beside a track, then Play in the official player. Availability and full playback depend on the service, account and browser.",
+    "sourcePlaybackNote": "List source: {{provider}}. Press ▶ next to a track. For Spotify, choose a YouTube version once; it will be remembered and play here in NoirSound.",
     "spotifyPlaybackNote": "Spotify may play only a preview. Full tracks may require signing in to Spotify and a supported browser.",
     "previousTrack": "Previous track",
-    "nextTrack": "Next track"
+    "nextTrack": "Next track",
+    "chooseVersionHelp": "Choose the YouTube version: check its title, channel, and duration. It will play here in NoirSound and be remembered for next time.",
+    "searchingVersions": "Searching YouTube versions…",
+    "noVersions": "No versions found. You can paste a video link.",
+    "chooseAndPlay": "Choose and play here",
+    "videoLink": "Or a YouTube video link",
+    "checkVideo": "Check video",
+    "changeVersion": "Change track version",
+    "videoPlaybackFailed": "YouTube could not play this video. Choose another version."
   }
 }

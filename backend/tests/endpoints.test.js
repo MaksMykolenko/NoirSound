@@ -49,10 +49,11 @@ describe('NoirSound backend integration', () => {
     add: queueAdd
   };
   const previousRateMultiplier = process.env.RATE_LIMIT_MULTIPLIER;
+  const youtubeMatches = {configured:vi.fn(()=>false),search:vi.fn(async()=>[{videoId:'abcdefghijk',title:'Fixture version',channel:'Fixture',duration:180}])};
 
   beforeAll(async () => {
     process.env.RATE_LIMIT_MULTIPLIER = '10';
-    app = buildServer({ storage, audioQueue });
+    app = buildServer({ storage, audioQueue, youtubeMatches });
     await app.ready();
 
     await seedDemo(app.prisma);
@@ -305,11 +306,21 @@ describe('NoirSound backend integration', () => {
         expect(listed.trackCount).toBe(717);expect(listed.sourceImport.items).toBeUndefined();
         const playback = await supertest(app.server).get(`/api/playlist-import/source/${playlist.id}/playback/716`).set('Cookie', listenerCookie);
         expect(playback.statusCode).toBe(200);expect(playback.body.embedUrl).toBe('https://open.spotify.com/embed/track/1234567890123456789012');
+        youtubeMatches.configured.mockReturnValue(true);
+        const match = await supertest(app.server).post(`/api/playlist-import/source/${playlist.id}/alternatives/716`).set('Cookie', listenerCookie).send({});
+        expect(match.statusCode).toBe(200);
+        const choice = await supertest(app.server).post(`/api/playlist-import/source/${playlist.id}/choice/716`).set('Cookie', listenerCookie).send({selection:match.body.candidates[0].selection});
+        expect(choice.statusCode).toBe(200);
+        const persisted = await app.prisma.playlist.findUnique({where:{id:playlist.id}});
+        expect(persisted.sourceImport.items).toHaveLength(717);expect(persisted.sourceImport.items[716].youtubeId).toBe('abcdefghijk');
+        const fullPlayback = await supertest(app.server).get(`/api/playlist-import/source/${playlist.id}/playback/716`).set('Cookie', listenerCookie);
+        expect(fullPlayback.body).toMatchObject({provider:'YOUTUBE',videoId:'abcdefghijk',playbackMode:'OFFICIAL_EMBED'});
         expect((await supertest(app.server).get(`/api/playlists/${playlist.id}`)).statusCode).toBe(404);
         expect((await supertest(app.server).get(`/api/playlist-import/source/${playlist.id}/playback/716`).set('Cookie', artistCookie)).statusCode).toBe(404);
         expect((await supertest(app.server).patch(`/api/playlists/${playlist.id}`).set('Cookie', listenerCookie).send({isPublic:true})).statusCode).toBe(409);
         expect((await supertest(app.server).post(`/api/playlists/${playlist.id}/tracks`).set('Cookie', listenerCookie).send({trackId:'fixture-native'})).statusCode).toBe(409);
       } finally {
+        youtubeMatches.configured.mockReturnValue(false);
         await app.prisma.playlist.delete({ where: { id: playlist.id } });
       }
     });

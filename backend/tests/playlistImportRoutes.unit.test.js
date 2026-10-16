@@ -5,24 +5,25 @@ import routes from '../src/routes/playlistImport';
 import tokenModule from '../src/lib/importTokens';
 
 describe('playlist import authorization and confirmation',()=>{
-  let app,db,playlists,visible,sources;
+  let app,db,playlists,visible,sources,youtubeMatches;
   const entry={title:'Fixture',artist:'Artist',duration:180};
   const post=(path,payload,user='a')=>app.inject({method:'POST',url:'/api/playlist-import/'+path,headers:user?{'x-fixture-user':user}:{},payload});
   beforeEach(async()=>{
     visible=true;playlists=new Map();vi.stubEnv('EXTERNAL_CATALOG_PUBLIC','false');
     db={
       track:{findMany:vi.fn(async()=>[{id:'native',title:'Fixture',primaryArtistName:'Artist',durationSeconds:180}]),findFirst:vi.fn(async()=>visible?{id:'native'}:null)},
-      playlist:{findUnique:vi.fn(async({where})=>playlists.get(where.id)),create:vi.fn(async({data})=>{playlists.set(data.id,{...data,_count:{tracks:data.tracks?.create.length||0}});return data;})},
+      playlist:{findUnique:vi.fn(async({where})=>playlists.get(where.id)),create:vi.fn(async({data})=>{playlists.set(data.id,{...data,_count:{tracks:data.tracks?.create.length||0}});return data;}),update:vi.fn(async({where,data})=>{Object.assign(playlists.get(where.id),data);return playlists.get(where.id);})},
       auditLog:{create:vi.fn(async()=>{})},$executeRaw:vi.fn(async()=>{}),
       $transaction:async fn=>fn(db),
     };
     sources={capabilities:()=>({SPOTIFY:true,YOUTUBE:false,SOUNDCLOUD:false}),load:vi.fn(async()=>({name:'Source playlist',entries:[entry]})),spotifyExchange:vi.fn(async()=>({access:'server-token',expires:Date.now()+900000}))};
+    youtubeMatches={configured:vi.fn(()=>false),search:vi.fn(async()=>[{videoId:'abcdefghijk',title:'Artist — Fixture',channel:'Artist',duration:180}]),inspect:vi.fn()};
     app=Fastify();app.decorate('prisma',db);app.decorate('authenticate',async(request,reply)=>{
       if(!request.headers['x-fixture-user'])return reply.code(401).send({error:'Unauthorized'});
       request.user={id:request.headers['x-fixture-user'],role:'LISTENER'};request.sessionId='session-'+request.user.id;
     });
     await app.register(cookie);
-    await app.register(routes,{prefix:'/api/playlist-import',sources,env:{COOKIE_SECRET:'test-only',SPOTIFY_CLIENT_ID:'fixture',SPOTIFY_REDIRECT_URI:'https://example.test/api/playlist-import/spotify/callback',FRONTEND_ORIGIN:'https://example.test'}});
+    await app.register(routes,{prefix:'/api/playlist-import',sources,youtubeMatches,env:{COOKIE_SECRET:'test-only',SPOTIFY_CLIENT_ID:'fixture',SPOTIFY_REDIRECT_URI:'https://example.test/api/playlist-import/spotify/callback',FRONTEND_ORIGIN:'https://example.test'}});
     await app.ready();
   });
   afterEach(async()=>{await app.close();vi.unstubAllEnvs();});
@@ -131,5 +132,36 @@ describe('playlist import authorization and confirmation',()=>{
     expect((await get('status',null)).statusCode).toBe(401);
     playlists.get(id).isPublic=true;
     expect((await get('status')).statusCode).toBe(404);
+  });
+  it('remembers a listener’s YouTube choice without changing source order or exposing it to other users',async()=>{
+    youtubeMatches.configured.mockReturnValue(true);
+    const saved=await post('commit',await sourcePreview()),id=saved.json().id;
+    const get=position=>app.inject({url:`/api/playlist-import/source/${id}/playback/${position}`,headers:{'x-fixture-user':'a'}});
+    expect((await get(716)).json()).toMatchObject({playbackMode:'SOURCE_MATCH',provider:'YOUTUBE',position:716,track:{title:'Position 717'}});
+    expect(youtubeMatches.search).not.toHaveBeenCalled();
+    const match=await post(`source/${id}/alternatives/716`,{});
+    const selection=match.json().candidates[0].selection;
+    expect((await post(`source/${id}/choice/716`,{selection},'b')).statusCode).toBe(409);
+    expect((await post(`source/${id}/choice/715`,{selection})).statusCode).toBe(409);
+    expect((await post(`source/${id}/choice/716`,{selection:'forged'})).statusCode).toBe(409);
+    expect((await post(`source/${id}/choice/716`,{selection})).json()).toEqual({saved:true});
+    expect((await get(716)).json()).toMatchObject({provider:'YOUTUBE',playbackMode:'OFFICIAL_EMBED',videoId:'abcdefghijk',position:716});
+    expect(playlists.get(id).sourceImport.items).toHaveLength(717);
+    expect(playlists.get(id).sourceImport.items[0].youtubeId).toBeUndefined();
+    expect((await post(`source/${id}/alternatives/716`,{},'b')).statusCode).toBe(404);
+    playlists.get(id).isPublic=true;
+    expect((await post(`source/${id}/choice/716`,{selection})).statusCode).toBe(404);
+  });
+  it('starts a Spotify list inside NoirSound and rejects a stale match after source metadata changes',async()=>{
+    youtubeMatches.configured.mockReturnValue(true);
+    const saved=await post('commit',await sourcePreview(3)),id=saved.json().id;
+    const playback=await app.inject({url:`/api/playlist-import/source/${id}/playback/playlist`,headers:{'x-fixture-user':'a'}});
+    expect(playback.json()).toMatchObject({playbackMode:'SOURCE_MATCH',position:0,sourceQueue:[{position:0},{position:1},{position:2}]});
+    youtubeMatches.inspect.mockResolvedValue({videoId:'abcdefghijk',title:'Verified link'});
+    const found=await post(`source/${id}/alternatives/1`,{url:'https://youtu.be/abcdefghijk'});
+    expect(youtubeMatches.inspect).toHaveBeenCalledWith('https://youtu.be/abcdefghijk');
+    const selection=found.json().candidates[0].selection;
+    playlists.get(id).sourceImport.items[1].title='Changed';
+    expect((await post(`source/${id}/choice/1`,{selection})).statusCode).toBe(409);
   });
 });

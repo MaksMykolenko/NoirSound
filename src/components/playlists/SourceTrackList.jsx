@@ -22,7 +22,7 @@ export default function SourceTrackList({ tracks, onPlay, currentId }) {
       {tracks.slice(offset,offset+PAGE_SIZE).map((track,index)=><li key={track.id||offset+index} className={`flex min-h-16 items-center gap-3 py-3 ${currentId&&currentId===track.id?'text-brand-red':''}`}>
         <span className="w-9 shrink-0 text-right text-xs tabular-nums text-zinc-500">{offset+index+1}</span>
         <div className="min-w-0 flex-1"><p className="break-words text-sm font-medium">{track.title}</p><p className="break-words text-xs text-zinc-400">{track.artistName||track.artist}</p>{track.unavailable&&<p className="mt-1 text-xs text-amber-300">{t('playlistImport.trackUnavailable')}</p>}</div>
-        {onPlay && <button type="button" disabled={track.unavailable||track.playbackMode!=='OFFICIAL_EMBED'} onClick={()=>onPlay(track)} className="ns-icon-button shrink-0 disabled:opacity-30" aria-label={t('playlistImport.playTrack',{title:track.title})}><Play size={18}/></button>}
+        {onPlay && <button type="button" disabled={(track.unavailable&&!track.canResolve)||track.playbackMode!=='OFFICIAL_EMBED'} onClick={()=>onPlay(track)} className="ns-icon-button shrink-0 disabled:opacity-30" aria-label={t('playlistImport.playTrack',{title:track.title})}><Play size={18}/></button>}
         {track.canonicalUrl && <a href={track.canonicalUrl} target="_blank" rel="noopener noreferrer" className="ns-icon-button shrink-0" aria-label={t('playlistImport.openTrack',{title:track.title})}><ExternalLink size={16}/></a>}
       </li>)}
     </ol>

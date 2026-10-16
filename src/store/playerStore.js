@@ -408,8 +408,18 @@ export const usePlayerStore = create((set, get) => {
       const embed = track?.importedPlaylistId ? await importedPlayback(track.importedPlaylistId, track.position, playbackAbort.signal) : track?.recordingId ? await resolveExternalPlayback(track, playbackAbort.signal) : await resolvePlatformEmbed(provider, url, playbackAbort.signal);
       if (generation !== playbackGeneration || useUserStore.getState().user?.id !== user?.id) return;
       const origins = {SPOTIFY:'https://open.spotify.com',SOUNDCLOUD:'https://w.soundcloud.com',APPLE_MUSIC:'https://embed.music.apple.com',YOUTUBE:'https://www.youtube-nocookie.com'};
-      if (embed.playbackMode !== 'OFFICIAL_EMBED' || embed.provider !== provider || new URL(embed.embedUrl).origin !== origins[provider]) throw new Error('EXTERNAL_EMBED_UNSUPPORTED');
-      set({activePlatformEmbed:{...embed,track,sourceQueue,ownerId:user?.id,generation},currentTrack:track || {id:`embed:${generation}`,title:provider,provider,playbackMode:'OFFICIAL_EMBED',isStreamable:false,hasLyrics:false},isPlayerCollapsed:false});
+      const sourceMatch = track?.importedPlaylistId && embed.accessScope==='playlist-import' && embed.provider==='YOUTUBE' && embed.playbackMode==='SOURCE_MATCH';
+      const importedAlternative = track?.importedPlaylistId && provider==='SPOTIFY' && embed.provider==='YOUTUBE' && embed.accessScope==='playlist-import';
+      if (!sourceMatch && (embed.playbackMode !== 'OFFICIAL_EMBED' || (embed.provider !== provider && !importedAlternative) || new URL(embed.embedUrl).origin !== origins[embed.provider])) throw new Error('EXTERNAL_EMBED_UNSUPPORTED');
+      const resolvedTrack = embed.track || track;
+      set({activePlatformEmbed:{...embed,track:resolvedTrack,sourceQueue:embed.sourceQueue || sourceQueue,ownerId:user?.id,generation},currentTrack:resolvedTrack || {id:`embed:${generation}`,title:provider,provider,playbackMode:'OFFICIAL_EMBED',isStreamable:false,hasLyrics:false},isPlayerCollapsed:false});
+    },
+
+    chooseSourceVersion: () => {
+      const embed=get().activePlatformEmbed;
+      if(!embed?.canChoose)return;
+      stopPlatformPlayback();
+      set({activePlatformEmbed:{...embed,playbackMode:'SOURCE_MATCH',generation:++playbackGeneration}});
     },
 
     closePlatformEmbed: () => {

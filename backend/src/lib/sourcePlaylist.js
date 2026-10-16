@@ -3,6 +3,7 @@
 const { CatalogError } = require('./externalCatalog');
 const { playlistLink } = require('./playlistImport');
 const providers = new Set(['SPOTIFY', 'YOUTUBE', 'SOUNDCLOUD']);
+const canResolveSource = item => Boolean(item.artist && item.title && item.title !== 'Unavailable track');
 
 function sourcePlayback(provider, id) {
   if (provider === 'SPOTIFY' && /^[A-Za-z0-9]{22}$/.test(id || '')) {
@@ -39,13 +40,17 @@ function sourcePlaylistView(playlist, includeItems = false) {
     total: source.items.length,
     unavailable: source.items.filter(item => item.unavailable).length,
     ...(includeItems ? { items: source.items.map((entry, position) => {
-      const playback = sourcePlayback(source.provider, entry.sourceId);
+      const alternative = sourcePlayback('YOUTUBE', entry.youtubeId);
+      const playback = alternative || sourcePlayback(source.provider, entry.sourceId);
       return {
         ...entry, position, id: `source:${playlist.id}:${position}`,
         provider: source.provider, artistName: entry.artist,
+        sourceUnavailable: Boolean(entry.unavailable), unavailable: !alternative && Boolean(entry.unavailable),
+        canResolve: source.provider === 'SPOTIFY' && canResolveSource(entry),
+        playbackProvider: alternative ? 'YOUTUBE' : source.provider,
         importedPlaylistId: playlist.id,
         canonicalUrl: playback?.canonicalUrl || null,
-        playbackMode: playback && !entry.unavailable ? 'OFFICIAL_EMBED' : 'UNAVAILABLE',
+        playbackMode: alternative || (playback && !entry.unavailable) || (source.provider === 'SPOTIFY' && canResolveSource(entry)) ? 'OFFICIAL_EMBED' : 'UNAVAILABLE',
         isStreamable: false, hasLyrics: false,
       };
     }) } : {}),
@@ -61,4 +66,4 @@ function sourcePlaylistPlayback(source) {
   return { canonicalUrl, embedUrl: `https://w.soundcloud.com/player/?url=${encodeURIComponent(canonicalUrl)}` };
 }
 
-module.exports = { sourcePlayback, sourceItem, sourcePlaylistView, sourcePlaylistPlayback };
+module.exports = { sourcePlayback, sourceItem, sourcePlaylistView, sourcePlaylistPlayback, canResolveSource };
