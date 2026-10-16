@@ -3,14 +3,23 @@ const { CatalogError } = require('../lib/externalCatalog');
 const SCOPES = ['streaming', 'user-read-email', 'user-read-private', 'user-read-playback-state', 'user-modify-playback-state'];
 const hasPlaybackScopes = scope => SCOPES.every(value => String(scope || '').split(' ').includes(value));
 
-function createSpotifyPlayback({ fetchImpl = globalThis.fetch, env = process.env } = {}) {
-  async function request(url, options) {
+function createSpotifyPlayback({ fetchImpl = globalThis.fetch, env = process.env, delay = ms => new Promise(resolve => setTimeout(resolve, ms)) } = {}) {
+  async function request(url, options, retryDevice = false) {
     let response;
-    try { response = await fetchImpl(url, { ...options, redirect: 'error', signal: AbortSignal.timeout(10000) }); }
-    catch { throw new CatalogError('SPOTIFY_PLAYBACK_UNAVAILABLE', 502); }
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try { response = await fetchImpl(url, { ...options, redirect: 'error', signal: AbortSignal.timeout(10000) }); }
+      catch { throw new CatalogError('SPOTIFY_PLAYBACK_UNAVAILABLE', 502); }
+      // A newly registered SDK device may emit ready just before the Web API
+      // can address it. Retry only that device, never another connected device.
+      if (!retryDevice || response.status !== 404 || attempt === 2) break;
+      await response.body?.cancel();
+      await delay((attempt + 1) * 500);
+    }
     if (!response.ok) {
       await response.body?.cancel();
-      throw new CatalogError(response.status === 401 ? 'SPOTIFY_PLAYBACK_CONNECT' : response.status === 403 ? 'SPOTIFY_PLAYBACK_PREMIUM' : response.status === 429 ? 'SPOTIFY_PLAYBACK_RATE_LIMIT' : 'SPOTIFY_PLAYBACK_UNAVAILABLE', response.status === 429 ? 429 : 409);
+      const error = new CatalogError(response.status === 401 ? 'SPOTIFY_PLAYBACK_CONNECT' : response.status === 403 ? 'SPOTIFY_PLAYBACK_PREMIUM' : response.status === 429 ? 'SPOTIFY_PLAYBACK_RATE_LIMIT' : 'SPOTIFY_PLAYBACK_UNAVAILABLE', response.status === 429 ? 429 : 409);
+      error.upstreamStatus = response.status;
+      throw error;
     }
     return response;
   }
@@ -26,8 +35,8 @@ function createSpotifyPlayback({ fetchImpl = globalThis.fetch, env = process.env
   async function play(access, deviceId, sourceId) {
     const response = await request('https://api.spotify.com/v1/me/player/play?' + new URLSearchParams({ device_id: deviceId }), {
       method: 'PUT', headers: { Authorization: 'Bearer ' + access, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ uris: ['spotify:track:' + sourceId] }),
-    });
+      body: JSON.stringify({ uris: ['spotify:track:' + sourceId], position_ms: 0 }),
+    }, true);
     await response.body?.cancel();
   }
   return { refresh, play };

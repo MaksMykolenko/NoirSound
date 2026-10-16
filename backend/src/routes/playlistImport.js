@@ -47,6 +47,7 @@ module.exports = async function playlistImportRoutes(fastify, options) {
   fastify.setErrorHandler((error,_request,reply)=>{
     const known=error instanceof C.CatalogError;
     const status=known?error.statusCode:error.validation?400:error.statusCode>=400&&error.statusCode<500?error.statusCode:500;
+    if(error.upstreamStatus)fastify.log.warn({code:error.code,upstreamStatus:error.upstreamStatus},'Playlist provider request failed');
     if(status>=500 && !known)fastify.log.error({code:error.code || 'IMPORT_FAILED'},'Playlist import failed');
     reply.code(status).send({error:known?error.code:error.validation?'IMPORT_INPUT_INVALID':status===429?'IMPORT_RATE_LIMITED':'IMPORT_FAILED'});
   });

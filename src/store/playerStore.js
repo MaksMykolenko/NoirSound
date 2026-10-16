@@ -62,7 +62,7 @@ export function registerPlatformFrameStop(stop) {
   stopPlatformFrame = stop;
   return () => { if (stopPlatformFrame === stop) stopPlatformFrame = null; };
 }
-function stopPlatformPlayback() { stopPlatformFrame?.(); stopPlatformFrame = null; stopSpotify(); }
+function stopPlatformPlayback(keepSpotify = false) { stopPlatformFrame?.(); stopPlatformFrame = null; if (keepSpotify) spotifyController?.suspend(); else stopSpotify(); }
 let configureAudio = () => {};
 let likesRequest = null;
 let likesGeneration = 0;
@@ -430,7 +430,7 @@ export const usePlayerStore = create((set, get) => {
         const userId=useUserStore.getState().user?.id;
         const generation=++playbackGeneration;
         playbackAbort?.abort(); playbackAbort=new AbortController();
-        stopPlatformPlayback(); audio?.pause(); audio?.removeAttribute?.('src'); releaseCachedSource();
+        stopPlatformPlayback(track.provider === 'SPOTIFY'); audio?.pause(); audio?.removeAttribute?.('src'); releaseCachedSource();
         if(connectPresenceService.currentTrackId)connectPresenceService.notifyStop();
         const initialQueue=newQueue || get().queue;
         set({activePlatformEmbed:null,currentTrack:track,playbackEngine:'spotify',isPlaying:false,isPlayerCollapsed:false,lyricsFullscreenOpen:false,progress:0,duration:track.duration||0,playbackLoading:true,playbackError:null,queue:initialQueue.filter(canStreamTrack),originalQueue:newQueue?[...initialQueue.filter(canStreamTrack)]:get().originalQueue,queueSource:queueSource||get().queueSource});
@@ -451,11 +451,12 @@ export const usePlayerStore = create((set, get) => {
             return;
           }
           if(resolved.playbackMode!=='SPOTIFY_SDK' || selected.provider!=='SPOTIFY')throw new Error('IMPORT_AUDIO_UNAVAILABLE');
-          spotifyController=createSpotifyController({
+          const callbacks={
             onState:state=>{if(current())set({isPlaying:state.isPlaying,progress:state.progress,duration:state.duration,playbackLoading:false,playbackError:null,...(state.coverUrl?{currentTrack:{...get().currentTrack,coverUrl:state.coverUrl}}:{})});},
             onEnded:()=>{if(current())get().handleEnded();}, onError:code=>{if(current()&&code!=='SPOTIFY_PLAYBACK_AUTOPLAY')stopSpotify();fail(code);},
-          });
-          await spotifyController.start(selected,get().volume);
+          };
+          if(!spotifyController)spotifyController=createSpotifyController(callbacks);
+          await spotifyController.start(selected,get().volume,callbacks);
         } catch(error) { if(error.name!=='AbortError') { if(current())stopSpotify(); fail(error.code||error.message); } }
         return;
       }

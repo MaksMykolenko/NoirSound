@@ -1,5 +1,5 @@
 const sdk = vi.hoisted(()=>({controllers:[],callbacks:[]}));
-vi.mock('../../services/spotifyPlayback',()=>({createSpotifyController:vi.fn(callbacks=>{const controller={start:vi.fn(async()=>{}),destroy:vi.fn(),toggle:vi.fn(async()=>{}),pause:vi.fn(async()=>{}),seek:vi.fn(async()=>{}),volume:vi.fn(async()=>{})};sdk.controllers.push(controller);sdk.callbacks.push(callbacks);return controller;})}));
+vi.mock('../../services/spotifyPlayback',()=>({createSpotifyController:vi.fn(callbacks=>{const controller={start:vi.fn(async(_track,_volume,nextCallbacks)=>{controller.callbacks=nextCallbacks;}),suspend:vi.fn(),destroy:vi.fn(),toggle:vi.fn(async()=>{}),pause:vi.fn(async()=>{}),seek:vi.fn(async()=>{}),volume:vi.fn(async()=>{})};sdk.controllers.push(controller);sdk.callbacks.push(callbacks);return controller;})}));
 import {beforeEach,afterEach,describe,it,expect,vi} from 'vitest';
 import connectPresenceService from '../../services/noirsoundConnect';
 import {useUserStore} from '../userStore';
@@ -54,10 +54,10 @@ describe('one global player across providers',()=>{
   expect(usePlayerStore.getState()).toMatchObject({isPlaying:true,progress:42,duration:180,playbackLoading:false});
   usePlayerStore.getState().togglePlay();usePlayerStore.getState().seek(70);usePlayerStore.getState().setVolume(.3);
   expect(sdk.controllers[0].toggle).toHaveBeenCalledOnce();expect(sdk.controllers[0].seek).toHaveBeenCalledWith(70);expect(sdk.controllers[0].volume).toHaveBeenCalledWith(.3);
-  usePlayerStore.getState().next();await vi.waitFor(()=>expect(sdk.controllers).toHaveLength(2));
-  expect(sdk.controllers[0].destroy).toHaveBeenCalled();expect(usePlayerStore.getState().currentTrack.id).toBe('source:p:1');
-  useUserStore.setState({user:null});expect(sdk.controllers[1].destroy).toHaveBeenCalled();
-  sdk.callbacks[1].onState({isPlaying:true,progress:50,duration:180});expect(usePlayerStore.getState().currentTrack).toBeNull();
+  usePlayerStore.getState().next();await vi.waitFor(()=>expect(sdk.controllers[0].start).toHaveBeenCalledTimes(2));
+  expect(sdk.controllers).toHaveLength(1);expect(sdk.controllers[0].destroy).not.toHaveBeenCalled();expect(sdk.controllers[0].suspend).toHaveBeenCalled();expect(usePlayerStore.getState().currentTrack.id).toBe('source:p:1');
+  useUserStore.setState({user:null});expect(sdk.controllers[0].destroy).toHaveBeenCalled();
+  sdk.controllers[0].callbacks.onState({isPlaying:true,progress:50,duration:180});expect(usePlayerStore.getState().currentTrack).toBeNull();
  });
  it('an imported resolution cannot override native playback after switching tracks',async()=>{
   let resolve;vi.stubGlobal('fetch',vi.fn(()=>new Promise(r=>{resolve=r;})));
