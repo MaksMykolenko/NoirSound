@@ -46,9 +46,10 @@ export function summarizeE2E(report) {
   for (const suite of report.suites || []) visit(suite);
   // Landing adds four real catalog/player/navigation cases and two real creator
   // upload/auth cases. The two shipped listener-preferences cases verify real
-  // persisted likes/volume and avatar upload/reload. Fixtures remain separate.
-  if (counts.real !== 72 || counts.httpFixture !== 8 || counts.demo !== 8) throw new Error(`E2E coverage changed: ${JSON.stringify(counts)}; review the expected 72 real / 8 HTTP / 8 demo cases explicitly.`);
-  return { ...counts, passed: 88, failed: 0, skipped: 0, interrupted: 0, notRun: 0 };
+  // persisted likes/volume and avatar upload/reload. Five additional fullscreen
+  // fixture cases cover portrait/landscape/desktop layout, timed lyrics and missing artwork.
+  if (counts.real !== 72 || counts.httpFixture !== 8 || counts.demo !== 13) throw new Error(`E2E coverage changed: ${JSON.stringify(counts)}; review the expected 72 real / 8 HTTP / 13 demo cases explicitly.`);
+  return { ...counts, passed: 93, failed: 0, skipped: 0, interrupted: 0, notRun: 0 };
 }
 
 export function summarizeClosedE2E(report) {

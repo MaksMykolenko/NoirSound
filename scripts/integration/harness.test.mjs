@@ -18,7 +18,7 @@ const environment = () => ({
 const report = () => ({ suites: [{ specs: [
   ...Array.from({ length: 72 }, (_, index) => ({ file: 'real.spec.js', title: `real ${index}`, tests: [{ projectName: 'chromium', expectedStatus: 'passed', status: 'expected', results: [{ status: 'passed' }] }] })),
   ...Array.from({ length: 8 }, (_, index) => ({ file: 'ui-interactions.spec.js', title: `HTTP ${index}`, tests: [{ projectName: 'chromium', expectedStatus: 'passed', status: 'expected', results: [{ status: 'passed' }] }] })),
-  ...Array.from({ length: 8 }, (_, index) => ({ file: 'demo.spec.js', title: `demo ${index}`, tests: [{ projectName: 'chromium-demo', expectedStatus: 'passed', status: 'expected', results: [{ status: 'passed' }] }] })),
+  ...Array.from({ length: 13 }, (_, index) => ({ file: 'demo.spec.js', title: `demo ${index}`, tests: [{ projectName: 'chromium-demo', expectedStatus: 'passed', status: 'expected', results: [{ status: 'passed' }] }] })),
 ] }] });
 
 test('accepts only the generated isolated service scope', () => assert.doesNotThrow(() => assertTestEnvironment(environment())));
@@ -90,7 +90,7 @@ test('backend direct invocation rejects arbitrary DATABASE_URL_TEST before conne
   assert.match(result.stderr, /Generated disposable test identity required/);
   assert.doesNotMatch(result.stderr, /postgresql:\/\//);
 });
-test('classifies all 88 cases without conflating fixtures and real services', () => assert.deepEqual(summarizeE2E(report()), { real: 72, httpFixture: 8, demo: 8, passed: 88, failed: 0, skipped: 0, interrupted: 0, notRun: 0 }));
+test('classifies all 93 cases without conflating fixtures and real services', () => assert.deepEqual(summarizeE2E(report()), { real: 72, httpFixture: 8, demo: 13, passed: 93, failed: 0, skipped: 0, interrupted: 0, notRun: 0 }));
 test('closed-mode coverage requires exactly 8 real-service cases and no retry or skip', () => {
   const closed = { suites: [{ specs: Array.from({ length: 8 }, (_, index) => ({ file: 'landing-closed.spec.js', title: `closed ${index}`, tests: [{ projectName: 'chromium-closed', expectedStatus: 'passed', status: 'expected', results: [{ status: 'passed' }] }] })) }] };
   assert.equal(summarizeClosedE2E(closed).passed, 8);
