@@ -1,6 +1,7 @@
 'use strict';
 
 const { CREATOR_TYPES, MAX_DISPLAY_NAME_LENGTH, MAX_NOTE_LENGTH, sanitizeUrl } = require('./creators');
+const { randomBytes } = require('node:crypto');
 
 class RegistrationValidationError extends Error {
   constructor(code, message) { super(message); this.code = code; }
@@ -81,12 +82,16 @@ function validateCreatorInput(body, fallbackDisplayName) {
 function validateRegistration(body) {
   const input = body && typeof body === 'object' && !Array.isArray(body) ? body : {};
   const email = validateEmail(input.email);
-  const username = validateUsername(input.username);
+  // New accounts only need email and password. Never expose an email address
+  // (or its local part) as a public handle. Explicit legacy inputs stay validated.
+  const username = input.username === undefined
+    ? `listener_${randomBytes(10).toString('hex')}`
+    : validateUsername(input.username);
   if (typeof input.password !== 'string' || input.password.length < 8
     || input.password.length > 128 || !input.password.trim() || input.password.includes('\u0000')) {
     invalid('REGISTER_PASSWORD_INVALID', 'Password must contain 8–128 characters.');
   }
-  const displayName = validateDisplayName(input.displayName);
+  const displayName = input.displayName === undefined ? 'Listener' : validateDisplayName(input.displayName);
   if (input.accountType !== undefined && !['LISTENER', 'CREATOR'].includes(input.accountType)) {
     invalid('REGISTER_ACCOUNT_TYPE_INVALID', 'Account type must be LISTENER or CREATOR.');
   }

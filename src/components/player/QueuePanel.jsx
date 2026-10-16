@@ -72,7 +72,7 @@ export default function QueuePanel({ isOpen, onClose, surface = 'standard' }) {
     setQueue([]);
   };
   const positionClass = surface === 'fullscreen'
-    ? 'right-0 bottom-[var(--ns-fullscreen-mobile-controls-height)] top-[var(--ns-mobile-header-height)] z-[var(--ns-z-fullscreen-panel)] lg:bottom-[var(--ns-player-height)] lg:top-[var(--ns-header-height)]'
+    ? 'right-0 bottom-[var(--ns-fullscreen-mobile-controls-height)] top-[var(--ns-mobile-header-height)] z-[var(--ns-z-fullscreen-panel)] lg:bottom-[var(--ns-fullscreen-desktop-controls-height)] lg:top-[var(--ns-header-height)]'
     : `right-0 ${isPlayerCollapsed ? 'bottom-[var(--ns-mobile-nav-height)]' : 'bottom-0'} top-0 z-[var(--ns-z-modal)] lg:bottom-[var(--ns-player-height)] lg:top-[var(--ns-header-height)]`;
   const backdropClass = surface === 'fullscreen'
     ? 'z-[var(--ns-z-fullscreen-panel)]'

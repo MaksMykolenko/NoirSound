@@ -90,7 +90,7 @@ describe('Home real API states', () => {
 
     expect(screen.getByTestId('home-hero')).toBeInTheDocument();
     expect(screen.getByTestId('home-hero-discover')).toHaveTextContent(i18n.t('actions.discoverMusic'));
-    expect(screen.getByTestId('home-hero-upload')).toHaveTextContent(i18n.t('actions.uploadTrack'));
+    expect(screen.queryByTestId('home-hero-upload')).not.toBeInTheDocument();
   });
 
   it('shows one polished catalogue empty state without fake tracks or a duplicate artist empty state', async () => {
@@ -174,62 +174,26 @@ describe('Home real API states', () => {
     expect(screen.getByTestId('location-probe')).toHaveTextContent(`/discover?content=${contentType}&sort=recent`);
   });
 
-  it('routes a genre chip to Discover with a taxonomy filter', async () => {
-    const user = userEvent.setup();
-    renderHome();
-
-    // Genre chip text is English by design (never an i18n lookup) — see
-    // NOIRSOUND_GENRE_ENGLISH_ONLY_REPORT.md.
-    const genreBrowser = screen.getByTestId('home-genre-browser');
-    await user.click(within(genreBrowser).getByRole('button', { name: 'Hip-Hop' }));
-
-    expect(screen.getByTestId('location-probe')).toHaveTextContent('/discover?genre=hip_hop');
-  });
-
   it('renders the localized music-first hero without the removed product-card strip', async () => {
     await i18n.changeLanguage('uk');
     renderHome();
 
-    expect(screen.getByText(i18n.t('home.title'))).toBeInTheDocument();
-    expect(screen.getByText(i18n.t('home.subtitle'))).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: i18n.t('nav.home') })).toBeInTheDocument();
+    expect(screen.queryByText(i18n.t('start.discoverDescription'))).not.toBeInTheDocument();
     expect(screen.queryByTestId('home-features')).not.toBeInTheDocument();
     expect(screen.queryByText('Find your next sound')).not.toBeInTheDocument();
   });
 
-  it('keeps Browse-by-Genre chips in English under a non-English UI language', async () => {
-    await i18n.changeLanguage('uk');
+  it('keeps the first screen focused on listening without repeated promotion or an empty taxonomy', () => {
     renderHome();
-
-    const genreBrowser = screen.getByTestId('home-genre-browser');
-    expect(within(genreBrowser).getByRole('button', { name: 'Hip-Hop' })).toBeInTheDocument();
-    expect(within(genreBrowser).getByRole('button', { name: 'Electronic' })).toBeInTheDocument();
-    expect(within(genreBrowser).getByRole('button', { name: 'World' })).toBeInTheDocument();
-    expect(within(genreBrowser).queryByText('Електроніка')).not.toBeInTheDocument();
-    expect(within(genreBrowser).queryByText('Світова')).not.toBeInTheDocument();
-
-    await i18n.changeLanguage('en');
+    expect(screen.queryByTestId('home-genre-browser')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('home-beats-info-card')).not.toBeInTheDocument();
   });
 
-  it('renders the Beats info showcase card and routes discover action', async () => {
+  it('opens discovery from the single hero action', async () => {
     const user = userEvent.setup();
     renderHome();
-
-    const card = screen.getByTestId('home-beats-info-card');
-    expect(card).toBeInTheDocument();
-    expect(within(card).getByText(i18n.t('beats.homeInfoTitle'))).toBeInTheDocument();
-    expect(within(card).getByText(i18n.t('beats.homeInfoFeat1Title'))).toBeInTheDocument();
-
-    const discoverBtn = screen.getByTestId('home-beats-info-discover');
-    await user.click(discoverBtn);
-    expect(screen.getByTestId('location-probe')).toHaveTextContent('/discover?content=BEAT');
-  });
-
-  it('routes upload action from Beats info card', async () => {
-    const user = userEvent.setup();
-    renderHome();
-
-    const uploadBtn = screen.getByTestId('home-beats-info-upload');
-    await user.click(uploadBtn);
-    expect(screen.getByTestId('location-probe')).toHaveTextContent('/upload');
+    await user.click(screen.getByTestId('home-hero-discover'));
+    expect(screen.getByTestId('location-probe')).toHaveTextContent('/discover');
   });
 });

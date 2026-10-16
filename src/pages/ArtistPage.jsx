@@ -376,21 +376,20 @@ export default function ArtistPage() {
 
       <nav className="ns-tabs-scroll flex gap-1 overflow-x-auto border-b border-zinc-800/70" aria-label={t('profile.creatorSections')}>
         {[
-          ['artist-music', t('artist.music')],
-          ['artist-beats', t('artist.beats')],
-          ['artist-playlists', t('artist.playlists')],
+          [musicTracks.length > 0 && 'artist-music', t('artist.music')],
+          [beatTracks.length > 0 && 'artist-beats', t('artist.beats')],
+          [artistPlaylists.length > 0 && 'artist-playlists', t('artist.playlists')],
           ['artist-about', t('profile.about')],
-        ].map(([target, label]) => (
+        ].filter(([target]) => target).map(([target, label]) => (
           <a key={target} href={`#${target}`} className="ns-tab min-h-11 shrink-0 border-b-2 border-transparent px-4 py-3 text-sm font-semibold text-zinc-400 hover:border-zinc-700 hover:text-zinc-100">
             {label}
           </a>
         ))}
       </nav>
 
-      <section className="ns-page-section" data-testid="artist-popular" aria-labelledby="artist-popular-title">
+      {popularTracks.length > POPULAR_TRACK_LIMIT && <section className="ns-page-section" data-testid="artist-popular" aria-labelledby="artist-popular-title">
         <div className="ns-section-header-row">
           <h2 id="artist-popular-title" className="ns-section-title">{t('profile.popular')}</h2>
-          {popularTracks.length > POPULAR_TRACK_LIMIT && (
             <button
               type="button"
               onClick={() => setShowAllPopular((value) => !value)}
@@ -399,18 +398,8 @@ export default function ArtistPage() {
             >
               {showAllPopular ? t('profile.showPopularOnly') : t('profile.viewAll')}
             </button>
-          )}
         </div>
 
-        {popularTracks.length === 0 ? (
-          <div className="ns-artist-empty-section">
-            <Music2 size={20} aria-hidden="true" />
-            <div>
-              <h3>{t('empty.noReleasesYet')}</h3>
-              <p>{t('profile.artistNoTracksDesc')}</p>
-            </div>
-          </div>
-        ) : (
           <div className="ns-track-list">
             {visiblePopularTracks.map((track, index) => (
               <TrackListItem
@@ -422,10 +411,9 @@ export default function ArtistPage() {
               />
             ))}
           </div>
-        )}
-      </section>
+      </section>}
 
-      <section id="artist-music" className="ns-page-section scroll-mt-24" data-testid="artist-discography" aria-labelledby="artist-discography-title">
+      {(musicTracks.length > 0 || artistTracks.length === 0) && <section id="artist-music" className="ns-page-section scroll-mt-24" data-testid="artist-discography" aria-labelledby="artist-discography-title">
         <div className="ns-section-header-row">
           <h2 id="artist-discography-title" className="ns-section-title">{t('artist.music')}</h2>
         </div>
@@ -444,24 +432,14 @@ export default function ArtistPage() {
             ))}
           </div>
         )}
-      </section>
+      </section>}
 
-      <section id="artist-beats" className="ns-page-section scroll-mt-24" data-testid="artist-beats" aria-labelledby="artist-beats-title">
+      {beatTracks.length > 0 && <section id="artist-beats" className="ns-page-section scroll-mt-24" data-testid="artist-beats" aria-labelledby="artist-beats-title">
         <div className="ns-section-header-row">
           <div>
             <h2 id="artist-beats-title" className="ns-section-title">{t('artist.beats')}</h2>
-            <p className="mt-1 text-sm text-zinc-500">{t('artist.beatsByCreator')}</p>
           </div>
         </div>
-        {beatTracks.length === 0 ? (
-          <div className="ns-artist-empty-section">
-            <Radio size={20} aria-hidden="true" />
-            <div>
-              <h3>{t('beats.noBeats')}</h3>
-              <p>{t('artist.noBeatsUploaded')}</p>
-            </div>
-          </div>
-        ) : (
           <div className="ns-artist-discography-grid">
             {beatTracks.map((track) => (
               <ArtistReleaseCard
@@ -472,19 +450,14 @@ export default function ArtistPage() {
               />
             ))}
           </div>
-        )}
-      </section>
+      </section>}
 
-      <section id="artist-playlists" className="ns-page-section scroll-mt-24" data-testid="artist-playlists" aria-labelledby="artist-playlists-title">
+      {artistPlaylists.length > 0 && <section id="artist-playlists" className="ns-page-section scroll-mt-24" data-testid="artist-playlists" aria-labelledby="artist-playlists-title">
         <h2 id="artist-playlists-title" className="ns-section-title">{t('artist.playlists')}</h2>
-        {artistPlaylists.length === 0 ? (
-          <p className="mt-3 text-ns-body-sm text-zinc-500">{t('artist.noPlaylists')}</p>
-        ) : (
           <div className="mt-4 grid grid-cols-1 gap-4 min-[430px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             {artistPlaylists.map((playlist) => <PlaylistCard key={playlist.id} playlist={playlist} />)}
           </div>
-        )}
-      </section>
+      </section>}
 
       <div className={`ns-artist-detail-grid ${socialItems.length === 0 ? 'ns-artist-detail-grid--single' : ''}`}>
         <section id="artist-about" className="ns-artist-detail-panel scroll-mt-24" data-testid="artist-about" aria-labelledby="artist-about-title">

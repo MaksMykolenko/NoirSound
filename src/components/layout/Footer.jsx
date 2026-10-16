@@ -1,28 +1,19 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { LEGAL_NAV } from '../../constants/legalContent';
 
-/**
- * Lightweight footer with legal/policy links. Rendered at the bottom of the
- * main scroll area so the required public-beta legal surfaces are reachable
- * from anywhere in the app.
- */
 export default function Footer() {
-  const year = new Date().getFullYear();
+  const { t } = useTranslation();
   return (
-    <footer className="mt-12 border-t border-[var(--ns-border-subtle)] pb-2 pt-6 font-sans tabular-nums text-ns-meta text-zinc-500">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-          {LEGAL_NAV.map((item) => (
-            <Link key={item.slug} to={item.path} className="hover:text-zinc-300 transition-colors">
-              {item.label}
-            </Link>
-          ))}
-        </div>
-      </div>
-      <p className="mt-3 text-zinc-600">
-        © {year} NoirSound · Independent music platform · Public beta
-      </p>
+    <footer className="mt-10 flex flex-wrap items-start justify-between gap-x-6 gap-y-2 border-t border-[var(--ns-border-subtle)] py-5 text-ns-meta text-zinc-500">
+      <span>© {new Date().getFullYear()} NoirSound</span>
+      <details className="max-w-full text-right">
+        <summary className="min-h-8 cursor-pointer hover:text-zinc-300">{t('interface.legal')}</summary>
+        <nav aria-label={t('interface.legal')} className="mt-2 flex max-w-lg flex-wrap justify-end gap-x-4 gap-y-2">
+          {LEGAL_NAV.map(item => <Link key={item.slug} to={item.path} className="inline-flex min-h-8 items-center hover:text-zinc-300">{item.label}</Link>)}
+        </nav>
+      </details>
     </footer>
   );
 }

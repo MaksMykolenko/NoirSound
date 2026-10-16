@@ -92,8 +92,8 @@ function canStreamTrack(track) {
 }
 
 function readPlayerCollapsed() {
-  try { return typeof window !== 'undefined' && window.localStorage.getItem('noirsound.playerCollapsed') === 'true'; }
-  catch { return false; }
+  try { return typeof window === 'undefined' || window.localStorage.getItem('noirsound.playerCollapsed') !== 'false'; }
+  catch { return true; }
 }
 
 function persistPlayerCollapsed(collapsed) {

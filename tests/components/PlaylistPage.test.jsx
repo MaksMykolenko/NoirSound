@@ -137,12 +137,12 @@ describe('PlaylistPage — playlist detail table', () => {
   afterEach(cleanup);
 
   describe('header', () => {
-    it('renders type label, visibility, description, creator, saves, and updated date', async () => {
+    it('renders one visibility label, description, creator, saves, and updated date', async () => {
       getPlaylistById.mockResolvedValue(buildPlaylist({ isOwner: true }));
       renderPlaylistPage();
       await screen.findByText('Late Night Circuit');
 
-      expect(screen.getByText(i18n.t('playlists.typeLabel'))).toBeInTheDocument();
+      expect(screen.queryByText(i18n.t('playlists.typeLabel'))).not.toBeInTheDocument();
       expect(screen.getByText(i18n.t('playlists.public'))).toBeInTheDocument();
       expect(screen.getByText('Music for 3am drives.')).toBeInTheDocument();
       expect(screen.getByText(i18n.t('playlists.by', { creator: 'DJ Nova' }))).toBeInTheDocument();
@@ -283,16 +283,17 @@ describe('PlaylistPage — playlist detail table', () => {
       )).toBeInTheDocument();
     });
 
-    it('queues all playable tracks from the header Add to queue button', async () => {
+    it('queues all playable tracks from the playlist menu', async () => {
       const addTracksToQueue = vi.fn();
       resetPlayerStore({ addTracksToQueue });
       getPlaylistById.mockResolvedValue(buildPlaylist({ isOwner: true }));
       renderPlaylistPage();
       await screen.findByText('Late Night Circuit');
 
-      fireEvent.click(screen.getByRole('button', { name: i18n.t('playlists.addToQueue') }));
+      fireEvent.click(screen.getByRole('button', { name: i18n.t('playlists.moreActionsFor', { title: 'Late Night Circuit' }) }));
+      fireEvent.click(within(screen.getByRole('menu')).getByText(i18n.t('contextMenu.addPlaylistToQueue')));
 
-      expect(addTracksToQueue).toHaveBeenCalledTimes(1);
+      await waitFor(() => expect(addTracksToQueue).toHaveBeenCalledTimes(1));
       expect(addTracksToQueue.mock.calls[0][0].map((item) => item.id)).toEqual(['t-a', 't-b', 't-c']);
     });
   });
@@ -369,7 +370,7 @@ describe('PlaylistPage — playlist detail table', () => {
         i18n.t('playlists.moveTrackUp', { title: 'Chrome Heart' })
       )).toBeInTheDocument();
 
-      fireEvent.click(screen.getByRole('button', { name: i18n.t('playlists.sortByTitle') }));
+      fireEvent.change(screen.getByRole('combobox', { name: i18n.t('playlists.customOrder') }), { target: { value: 'title' } });
 
       expect(within(table).queryByLabelText(
         i18n.t('playlists.moveTrackUp', { title: 'Chrome Heart' })

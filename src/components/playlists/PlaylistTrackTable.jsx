@@ -392,17 +392,12 @@ export default function PlaylistTrackTable({
   );
   const isCustomOrder = sortKey === null;
 
-  const handleSort = (key) => {
-    if (sortKey === key) setSortDir((current) => (current === 'asc' ? 'desc' : 'asc'));
-    else { setSortKey(key); setSortDir('asc'); }
-  };
-
   if (!tracks || tracks.length === 0) return null;
 
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3 px-1 pb-3">
-        <div className="flex min-w-0 flex-1 items-center gap-2 sm:hidden">
+        <div className="flex min-w-0 w-full max-w-xs items-center gap-2">
           <label className="min-w-0 flex-1">
             <span className="sr-only">{t('playlists.customOrder')}</span>
             <select
@@ -430,30 +425,6 @@ export default function PlaylistTrackTable({
               {sortDir === 'desc' ? <ArrowDown size={14} /> : <ArrowUp size={14} />}
             </button>
           )}
-        </div>
-        <div className="hidden flex-wrap items-center gap-1.5 sm:flex">
-          <button
-            type="button"
-            onClick={() => { setSortKey(null); setSortDir('asc'); }}
-            className={`min-h-8 rounded border px-2.5 py-1 font-sans text-ns-label font-medium transition-colors ${
-              isCustomOrder ? 'border-brand-red/30 bg-brand-red/10 text-rose-300' : 'border-zinc-800 text-zinc-500 hover:text-zinc-300'
-            }`}
-          >
-            {t('playlists.customOrder')}
-          </button>
-          {SORT_OPTIONS.map(({ key, labelKey }) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => handleSort(key)}
-              className={`inline-flex min-h-8 items-center gap-1 rounded border px-2.5 py-1 font-sans text-ns-label font-medium transition-colors ${
-                sortKey === key ? 'border-zinc-700 bg-zinc-800 text-zinc-100' : 'border-zinc-800 text-zinc-500 hover:text-zinc-300'
-              }`}
-            >
-              {t(labelKey)}
-              {sortKey === key && (sortDir === 'desc' ? <ArrowDown size={11} /> : <ArrowUp size={11} />)}
-            </button>
-          ))}
         </div>
         {!isCustomOrder && owner && (
           <p className="hidden text-ns-label text-zinc-500 lg:block">{t('playlists.reorderDisabledWhileSorted')}</p>

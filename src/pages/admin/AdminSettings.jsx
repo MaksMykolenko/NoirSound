@@ -18,9 +18,8 @@ export default function AdminSettings() {
             t('admin.settingCsrf'),
             t('admin.settingAudit'),
             t('admin.settingSecrets'),
-          ].map((setting, index) => (
+          ].map((setting) => (
             <li key={setting} className="flex items-start gap-3 px-5 py-3">
-              <span className="mt-0.5 font-sans tabular-nums text-ns-meta text-[var(--ns-accent-text)]">{String(index + 1).padStart(2, '0')}</span>
               <span>{setting}</span>
             </li>
           ))}

@@ -46,16 +46,18 @@ for (const creatorType of ['LISTENER', 'ARTIST', 'BEATMAKER', 'BOTH']) {
     await page.goto('/');
     await page.getByRole('button', { name: /create account/i }).first().click();
     const dialog = page.getByRole('dialog');
-    if (creatorType !== 'LISTENER') {
-      await dialog.getByRole('tab', { name: 'Creator', exact: true }).click();
-      await dialog.getByRole('button', { name: { ARTIST: 'Artist', BEATMAKER: 'Beatmaker', BOTH: 'Both' }[creatorType], exact: true }).click();
-    }
-    await dialog.locator('input[name="username"]').fill(username);
-    await dialog.locator('input[name="displayName"]').fill(`Smoke ${creatorType}`);
     await dialog.getByLabel('Email address', { exact: true }).fill(email);
+    await expect(dialog.getByLabel('Password', { exact: true })).toHaveCount(0);
+    await dialog.getByRole('button', { name: 'Continue', exact: true }).click();
     await dialog.getByLabel('Password', { exact: true }).fill(password);
     await dialog.locator('button[type="submit"]').click();
     await expect(dialog).toBeHidden();
+    if (creatorType !== 'LISTENER') {
+      await page.getByRole('button', { name: 'Register as Creator', exact: true }).click();
+      await dialog.getByLabel('Artist name', { exact: true }).fill(`Smoke ${creatorType}`);
+      await dialog.getByRole('button', { name: 'Request publishing access', exact: true }).click();
+      await expect(dialog).toBeHidden();
+    }
     await page.reload();
     const me = await page.request.get(`${API_BASE}/auth/me`);
     expect(me.status()).toBe(200);
@@ -68,7 +70,7 @@ for (const creatorType of ['LISTENER', 'ARTIST', 'BEATMAKER', 'BOTH']) {
       expect(stored.creatorRegistration).toBeNull();
     } else {
       expect(stored.artistProfile.userId).toBe(user.id);
-      expect(stored.creatorRegistration).toMatchObject({ creatorType, intendsMusic: creatorType !== 'BEATMAKER', intendsBeats: creatorType !== 'ARTIST' });
+      expect(stored.creatorRegistration).toMatchObject({ creatorType: 'BOTH', displayName: `Smoke ${creatorType}`, intendsMusic: true, intendsBeats: true });
       expect(user.canUploadTracks).toBe(false);
     }
     for (const route of ['/discover', '/library', '/upload']) {
@@ -77,10 +79,11 @@ for (const creatorType of ['LISTENER', 'ARTIST', 'BEATMAKER', 'BOTH']) {
     }
     await expectGate(page.request);
     const logout = page.waitForResponse(response => response.url().endsWith('/api/auth/logout') && response.request().method() === 'POST');
-    const userMenu = page.getByRole('button', { name: `Profile: @${username}`, exact: true });
-    await expect(userMenu).toBeVisible();
-    await userMenu.click();
-    await page.getByRole('menuitem', { name: 'Log Out', exact: true }).click();
+    const userMenu = page.getByRole('button', { name: new RegExp(`@${user.username}`, 'i') });
+    if (await userMenu.isVisible()) {
+      await userMenu.click();
+    }
+    await page.getByRole('menuitem', { name: /sign out|log out/i }).or(page.getByRole('button', { name: /sign out|log out/i })).first().click();
     expect((await logout).status()).toBe(200);
     expect((await page.request.get(`${API_BASE}/auth/me`)).status()).toBe(401);
     await uiLogin(page, email);

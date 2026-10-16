@@ -8,6 +8,16 @@ function expectCode(payload, code) {
 }
 
 describe('authoritative registration policy', () => {
+  it('accepts just email and password without exposing private email in public identity', () => {
+    const input = { email: ' Private.Person@Example.Test ', password: 'eight-ok', role: 'ADMIN', canUploadTracks: true };
+    const result = validateRegistration(input);
+    expect(result).toMatchObject({ email: 'private.person@example.test', displayName: 'Listener', password: 'eight-ok', creator: null });
+    expect(result.username).toMatch(/^listener_[a-f0-9]{20}$/);
+    expect(result.username).not.toContain('private');
+    expect(result).not.toHaveProperty('role');
+    expect(result).not.toHaveProperty('canUploadTracks');
+    expect(validateRegistration(input).username).not.toBe(result.username);
+  });
   it('normalizes identifiers and preserves password whitespace without composition requirements', () => {
     expect(validateRegistration({ ...valid, email: ' Person@Example.Test ', username: ' Person_123 ', password: ' eight spaces ' }))
       .toMatchObject({ email: valid.email, username: valid.username, password: ' eight spaces ', creator: null });

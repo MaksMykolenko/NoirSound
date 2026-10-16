@@ -52,7 +52,7 @@ describe('Library Music / Beats separation', () => {
     ]);
   });
 
-  it('shows each liked item once in its matching library tab', async () => {
+  it('shows each liked item once using the Music and Beats filters', async () => {
     const user = userEvent.setup();
     render(
       <MemoryRouter initialEntries={['/library?tab=beats']}>
@@ -63,25 +63,24 @@ describe('Library Music / Beats separation', () => {
     expect(await screen.findByTestId('library-track-beat-1')).toHaveTextContent('Saved Beat');
     expect(screen.queryByTestId('library-track-music-1')).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole('tab', { name: i18n.t('beats.likedMusic') }));
+    await user.click(screen.getByRole('button', { name: i18n.t('content.music'), exact: true }));
     await waitFor(() => {
       expect(screen.getByTestId('library-track-music-1')).toHaveTextContent('Saved Song');
     });
     expect(screen.queryByTestId('library-track-beat-1')).not.toBeInTheDocument();
   });
 
-  it('shows one liked shortcut with a breakdown and opens both content types', async () => {
+  it('shows one liked shortcut with a total and opens both content types', async () => {
     await i18n.changeLanguage('uk');
     const user = userEvent.setup();
     render(<MemoryRouter initialEntries={['/library?tab=liked']}><LibrarySidebarSection /><Library /></MemoryRouter>);
     const liked = screen.getByTestId('library-shortcut-liked');
     expect(screen.queryByTestId('library-shortcut-music')).not.toBeInTheDocument();
     expect(screen.queryByTestId('library-shortcut-beats')).not.toBeInTheDocument();
-    expect(await within(liked).findByText('Музика: 1')).toBeInTheDocument();
-    expect(await within(liked).findByText('Біти: 1')).toBeInTheDocument();
+    expect(await within(liked).findByText(i18n.t('library.trackCount', { count: 2 }))).toBeInTheDocument();
     expect(await screen.findByTestId('library-track-music-1')).toBeInTheDocument();
     expect(await screen.findByTestId('library-track-beat-1')).toBeInTheDocument();
-    await user.click(screen.getByRole('tab', { name: i18n.t('beats.likedBeats') }));
+    await user.click(screen.getByRole('button', { name: i18n.t('content.beats'), exact: true }));
     expect(await screen.findByTestId('library-track-beat-1')).toBeInTheDocument();
     expect(screen.queryByTestId('library-track-music-1')).not.toBeInTheDocument();
     await user.click(liked);
@@ -96,8 +95,7 @@ describe('Library Music / Beats separation', () => {
     getLikedTracks.mockResolvedValue([{ id: 'beat-1', title: 'Saved Beat', contentType: 'BEAT' }]);
     stores.player.likedTracks = ['beat-1'];
     rerender(<MemoryRouter initialEntries={['/library?tab=music']}><LibrarySidebarSection /><Library /></MemoryRouter>);
-    expect(await within(screen.getByTestId('library-shortcut-liked')).findByText('Music: 0')).toBeInTheDocument();
+    expect(await within(screen.getByTestId('library-shortcut-liked')).findByText(i18n.t('library.trackCount', { count: 1 }))).toBeInTheDocument();
     await waitFor(() => expect(screen.queryByTestId('library-track-music-1')).not.toBeInTheDocument());
-    expect(within(screen.getByTestId('library-shortcut-liked')).getByText('Beats: 1')).toBeInTheDocument();
   });
 });

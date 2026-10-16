@@ -49,7 +49,7 @@ export default function Header() {
         </div>
 
         {/* Search Bar */}
-        <form role="search" onSubmit={submitSearch} className="relative w-full">
+        {location.pathname !== '/discover' && <form role="search" onSubmit={submitSearch} className="relative w-full">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500" size={16} />
           <input
             type="search"
@@ -60,7 +60,7 @@ export default function Header() {
             className="ns-field w-full rounded-md py-2 pl-10 pr-4 text-sm placeholder-zinc-600"
             aria-label={t('header.searchLabel')}
           />
-        </form>
+        </form>}
       </div>
 
         {/* User options */}
@@ -74,7 +74,6 @@ export default function Header() {
               aria-haspopup="menu"
               aria-label={t('nav.profile')}
             >
-              <span className="text-sm font-semibold text-zinc-300 hidden xl:block">@{user.username}</span>
               <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-brand-red font-bold text-[var(--ns-on-accent)]">
                 <FallbackAvatar
                   src={user.avatarUrl}

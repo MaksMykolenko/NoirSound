@@ -1,3 +1,4 @@
+import startResources from './startResources';
 import i18n from 'i18next';
 import landingResources from './landingResources';
 import landingCreatorResources from './landingCreatorResources';
@@ -9,8 +10,9 @@ import ukCommon from './locales/uk/common.json';
 import plCommon from './locales/pl/common.json';
 import ruCommon from './locales/ru/common.json';
 
-const mergeCommon = (commonJson, landingRes, creatorRes) => ({
+const mergeCommon = (commonJson, landingRes, creatorRes, startRes) => ({
   ...commonJson,
+  start: startRes,
   header: {
     ...commonJson.header,
     signOut: commonJson.header?.signOut || commonJson.admin?.signOut || commonJson.header?.logout || 'Sign out',
@@ -26,10 +28,10 @@ const mergeCommon = (commonJson, landingRes, creatorRes) => ({
 });
 
 const resources = {
-  en: { common: mergeCommon(enCommon, landingResources.en, landingCreatorResources.en) },
-  uk: { common: mergeCommon(ukCommon, landingResources.uk, landingCreatorResources.uk) },
-  pl: { common: mergeCommon(plCommon, landingResources.pl, landingCreatorResources.pl) },
-  ru: { common: mergeCommon(ruCommon, landingResources.ru, landingCreatorResources.ru) },
+  en: { common: mergeCommon(enCommon, landingResources.en, landingCreatorResources.en, startResources.en) },
+  uk: { common: mergeCommon(ukCommon, landingResources.uk, landingCreatorResources.uk, startResources.uk) },
+  pl: { common: mergeCommon(plCommon, landingResources.pl, landingCreatorResources.pl, startResources.pl) },
+  ru: { common: mergeCommon(ruCommon, landingResources.ru, landingCreatorResources.ru, startResources.ru) },
 };
 
 const customDetector = {

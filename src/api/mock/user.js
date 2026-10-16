@@ -44,13 +44,15 @@ export async function login(email) {
 }
 
 export async function register(userData) {
+  const username = userData.username || `listener_${crypto.randomUUID().replaceAll('-', '').slice(0, 20)}`;
+  const displayName = userData.displayName || 'Listener';
   const isCreator = userData.accountType === 'CREATOR';
   const creatorRegistration = isCreator ? {
     id: 'mock-reg-id',
     creatorType: userData.creatorType || 'ARTIST',
     intendsMusic: userData.intendsMusic ?? true,
     intendsBeats: userData.intendsBeats ?? false,
-    displayName: userData.displayName || userData.username,
+    displayName,
     portfolioUrl: userData.portfolioUrl || null,
     primaryPlatformUrl: userData.primaryPlatformUrl || null,
     status: 'REGISTERED',
@@ -59,7 +61,9 @@ export async function register(userData) {
   currentDemoUser = {
     ...demoUser,
     ...userData,
-    role: userData.role || 'LISTENER',
+    username,
+    displayName,
+    role: 'LISTENER',
     creatorRegistration
   };
   return { user: currentDemoUser };
@@ -132,6 +136,7 @@ export async function onboardCreator(creatorData) {
   };
   currentDemoUser = {
     ...current,
+    ...(creatorData.displayName ? { displayName: creatorData.displayName } : {}),
     creatorRegistration,
   };
   return { user: currentDemoUser, creatorRegistration };

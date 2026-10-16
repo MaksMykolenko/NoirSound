@@ -25,7 +25,8 @@ describe('Role Leak & Presentation Protection Contracts', () => {
 
     expect(screen.queryByText('System Admin')).not.toBeInTheDocument();
     expect(screen.queryByText(/System Administrator/i)).not.toBeInTheDocument();
-    expect(screen.getByText('Listener')).toBeInTheDocument();
+    expect(screen.queryByText('Listener')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Admin User' })).toBeInTheDocument();
   });
 
   it('filters out raw ADMIN / internal roles from artist focus genres in mapper', () => {

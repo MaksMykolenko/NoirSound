@@ -121,9 +121,10 @@ test('searches beyond sixty records and restores server filters through detail, 
   await page.getByRole('tab', { name: 'Beats', exact: true }).click();
   await expectCount(page, 30, 160);
   await expect(catalogue(page).getByTestId('beat-badge')).toHaveCount(30);
+  await page.getByRole('button', { name: 'Filters', exact: true }).click();
   await chooseFilter(page, 'beat-filter-style-trigger', 'Trap');
   await expectCount(page, 30, 80);
-  await chooseFilter(page, 'beat-filter-bpm-trigger', '120–149 BPM');
+  await chooseFilter(page, 'beat-filter-bpm-trigger', '120-149 BPM');
   const filtered = fixture.publicTracks.filter(track => track.contentType === 'BEAT' && track.beatStyle === 'Trap' && track.beatBpm >= 120 && track.beatBpm <= 149);
   await expectCount(page, filtered.length, filtered.length);
   await page.reload();
@@ -200,6 +201,8 @@ test('later-page playback, likes and playlist actions persist without pagination
   expect(playback.playbackMode).toBe('NATIVE');
   expect(new URL(playback.url).protocol).toMatch(/^https?:$/);
   if (isMobile) {
+    await expect(page.getByTestId('mobile-collapsed-player')).toBeVisible();
+    await page.getByTestId('mobile-collapsed-player').getByRole('button', { name: 'Expand player', exact: true }).click();
     const player = page.getByRole('dialog', { name: `Now Playing: ${track.title}`, exact: true });
     await expect(player.getByRole('button', { name: 'Pause', exact: true })).toBeVisible();
     await player.getByRole('button', { name: 'Collapse player', exact: true }).click();

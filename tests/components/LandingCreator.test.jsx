@@ -152,14 +152,15 @@ describe('landing creator handoff', () => {
     const revokeUrl = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
     const { unmount } = render(<UploadForm />);
     const cover = new File(['cover'], 'cover.png', { type: 'image/png' });
+    await user.click(screen.getByText(i18n.t('start.optionalDetails')));
     await user.upload(screen.getByLabelText(i18n.t('uploadForm.artworkFileLabel')), cover);
     await user.click(screen.getByRole('button', { name: i18n.t('uploadForm.primaryGenre') }));
     await user.click(screen.getByRole('option', { name: /^Pop/ }));
-    await user.click(screen.getByRole('button', { name: i18n.t('uploadForm.submit') }));
+    await user.click(screen.getByRole('button', { name: i18n.t('start.publishTrack') }));
     expect(screen.getByRole('alert')).toHaveTextContent(i18n.t('uploadForm.rightsRequired'));
     expect(upload).not.toHaveBeenCalled();
     await user.click(screen.getByRole('checkbox', { name: i18n.t('uploadForm.rightsConfirmation') }));
-    await user.click(screen.getByRole('button', { name: i18n.t('uploadForm.submit') }));
+    await user.click(screen.getByRole('button', { name: i18n.t('start.publishTrack') }));
     expect(upload).toHaveBeenCalledTimes(1);
     const payload = upload.mock.calls[0][0];
     expect(payload).toMatchObject({ title: 'Original', audioFile: file, coverFile: cover, copyrightConfirmed: true, contentType: 'MUSIC' });
@@ -176,7 +177,7 @@ describe('landing creator handoff', () => {
     render(<TestFlow />);
     await user.type(screen.getByLabelText('Track title'), 'Guest draft');
     await user.click(screen.getByRole('button', { name: 'Continue to upload' }));
-    await user.click(screen.getByRole('button', { name: i18n.t('header.signIn') }));
+    await user.click(screen.getByRole('button', { name: i18n.t('auth.createAccount') }));
     expect(useUserStore.getState().isAuthModalOpen).toBe(true);
     act(() => useUserStore.setState({ user: { id: 'signed-in', role: 'ARTIST', canUploadTracks: true } }));
     expect(screen.getByLabelText(i18n.t('uploadForm.trackTitle'))).toHaveValue('Guest draft');
@@ -189,7 +190,7 @@ describe('landing creator handoff', () => {
     render(<TestFlow />);
     await user.type(screen.getByLabelText('Track title'), 'Waiting for access');
     await user.click(screen.getByRole('button', { name: 'Continue to upload' }));
-    expect(screen.getByRole('heading', { name: i18n.t('uploadForm.creatorAccessRequired') })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: i18n.t('start.requestTitle') })).toBeInTheDocument();
     expect(useLandingDraftStore.getState().draft.title).toBe('Waiting for access');
     expect(upload).not.toHaveBeenCalled();
     expect(ensureProfile).not.toHaveBeenCalled();

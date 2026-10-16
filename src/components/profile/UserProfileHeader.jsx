@@ -63,7 +63,6 @@ export default function UserProfileHeader({
   const bannerUrl = isRenderableBannerUrl(user.bannerUrl) ? user.bannerUrl.trim() : null;
   const showBannerImage = Boolean(bannerUrl && !bannerFailed);
   const isOwner = Boolean(viewerUserId && user.id && viewerUserId === user.id);
-  const isCreator = Boolean(user.isCreator || user.artistProfileId || user.role === 'ARTIST');
 
   useEffect(() => {
     setBannerFailed(false);
@@ -81,7 +80,7 @@ export default function UserProfileHeader({
 
   return (
     <>
-    <section ref={headerRef} className="ns-profile-hero" data-testid="user-profile-header" data-owner={isOwner || undefined}>
+    <section ref={headerRef} className="ns-profile-hero" data-testid="user-profile-header" data-owner={isOwner || undefined} data-has-banner={showBannerImage}>
       <div className="ns-profile-hero__banner-wrap">
         <div
           className="ns-profile-hero__banner"
@@ -157,29 +156,18 @@ export default function UserProfileHeader({
               {user.username && (
                 <p className="break-all font-sans tabular-nums text-ns-label text-zinc-400">@{user.username}</p>
               )}
-              {isCreator ? (
-                <span className="inline-flex items-center gap-0.5 font-mono text-xs font-semibold text-brand-purple tracking-wider">
-                  <span className="text-brand-purple/60">#</span>
-                  <span>{t('profile.creator')}</span>
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-0.5 font-mono text-xs font-semibold text-zinc-400 tracking-wider">
-                  <span className="text-zinc-600">#</span>
-                  <span>{t('profile.listener')}</span>
-                </span>
-              )}
             </div>
           </div>
 
-          <p className="ns-profile-hero__bio max-w-2xl whitespace-pre-line text-sm leading-relaxed text-zinc-300 md:text-base">
-            {user.bio || t('profile.noBio')}
-          </p>
+          {user.bio && <p className="ns-profile-hero__bio max-w-2xl whitespace-pre-line text-sm leading-relaxed text-zinc-300 md:text-base">
+            {user.bio}
+          </p>}
 
           <div className="flex flex-wrap items-center gap-4 pt-1 font-sans tabular-nums text-ns-label text-zinc-500 xl:pt-0">
-            <span className="flex items-center space-x-1">
+            {user.location && <span className="flex items-center space-x-1">
               <MapPin size={12} className="text-zinc-600" aria-hidden="true" />
-              <span>{user.location || t('profile.locationPrivate')} · {isCreator ? t('profile.creator') : t('profile.listener')}</span>
-            </span>
+              <span>{user.location}</span>
+            </span>}
             <span className="flex items-center space-x-1">
               <Calendar size={12} className="text-zinc-600" aria-hidden="true" />
               <span>{t('profile.joined', { date: joinedLabel })}</span>

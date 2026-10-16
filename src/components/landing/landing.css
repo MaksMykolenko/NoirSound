@@ -64,7 +64,7 @@
 .ns-landing .button-light:hover{background:white}
 .ns-landing .button-accent{background:var(--accent);color:white}
 .ns-landing .button-accent:hover{background:#ff5373}
-.ns-landing .text-link{display:inline-flex;align-items:center;gap:12px;min-height:48px;color:#a1a1a7;font-size:13px;transition:color .2s}
+.ns-landing .text-link{display:inline-flex;align-items:center;gap:12px;min-height:48px;color:#b8b8bf;font-size:14px;transition:color .2s}
 .ns-landing .text-link:hover{color:#fff}
 .ns-landing .text-link .icon{width:17px;height:17px}
 .ns-landing .hero{height:max(850px,100svh);max-height:1160px;position:relative;padding:calc(var(--header) + 84px) var(--pad) 80px;isolation:isolate;overflow:clip;--hero:0}
@@ -668,3 +668,15 @@ to{transform:none;opacity:1}
   .ns-landing .landing-account-menu{position:static}
   .ns-landing .landing-account-menu>[role="menu"]{right:var(--pad)}
 }
+
+/* First visit: listening is the primary action; the release editor is optional. */
+.ns-landing .hero-buttons { flex-wrap:wrap; gap:16px; }
+.ns-landing .hero-buttons .button-accent { background:var(--accent); color:#fff; padding:0 24px; border:1px solid var(--accent); }
+.ns-landing .hero-buttons .button-light { background:#171719; border:1px solid #45454b; color:#e4e4e7; }
+.ns-landing .hero-buttons .button-light:hover { background:#27272a; }
+.ns-landing .hero-buttons .button { font-size:14px; }
+.ns-landing .creator-preview-disclosure { align-self:start; border:1px solid #333338; padding:20px; }
+.ns-landing .creator-preview-disclosure > summary { cursor:pointer; min-height:44px; display:list-item; color:#e4e4e7; font-size:16px; }
+.ns-landing .creator-preview-disclosure .release-editor { margin-top:16px; transform:none; }
+.ns-landing .create-scene { min-height:auto; height:auto; }
+.ns-landing .create-sticky { position:relative; min-height:0; height:auto; padding-top:70px; padding-bottom:70px; }

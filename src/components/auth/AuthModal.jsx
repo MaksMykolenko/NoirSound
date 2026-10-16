@@ -1,6 +1,6 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { X, Mail, Lock, User, AtSign, Loader2, Headphones, Music2, Link as LinkIcon } from 'lucide-react';
+import { X, Mail, Lock, Loader2 } from 'lucide-react';
 import { useLogin, useRegister } from '../../hooks/mutations/useAuth';
 import { onboardCreator } from '../../api/user';
 import { getGoogleAuthorizationUrl } from '../../api/client';
@@ -25,457 +25,135 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login', init
   const addToast = useToastStore((state) => state.addToast);
   const currentUser = useUserStore((state) => state.user);
   const fetchCurrentUser = useUserStore((state) => state.fetchCurrentUser);
-  const [isSubmittingOnboarding, setIsSubmittingOnboarding] = useState(false);
   const [mode, setMode] = useState(initialMode);
-  const [accountType, setAccountType] = useState(initialAccountType);
-  const [creatorType, setCreatorType] = useState('ARTIST');
-  const [intendsMusic, setIntendsMusic] = useState(true);
-  const [intendsBeats, setIntendsBeats] = useState(false);
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    username: '',
-    displayName: '',
-    primaryPlatformUrl: '',
-  });
+  const [registrationStep, setRegistrationStep] = useState('email');
+  const [formData, setFormData] = useState({ email: '', password: '' });
   const [errorMsg, setErrorMsg] = useState('');
+  const [creatorName, setCreatorName] = useState('');
+  const [isSubmittingOnboarding, setIsSubmittingOnboarding] = useState(false);
   const modalRef = useDialogFocusTrap(isOpen, onClose);
-  const emailRef = useRef(null);
-
   const loginMutation = useLogin();
   const registerMutation = useRegister();
-  const isLoading = loginMutation.isPending || registerMutation.isPending || isSubmittingOnboarding;
   const hasLandingDraft = useLandingDraftStore((state) => Boolean(state.draft));
-
   const isRegister = mode === 'register';
-  const isCreator = isRegister && accountType === 'CREATOR';
-  const isExistingUserUpgrade = Boolean(currentUser && !currentUser.creatorRegistration && isCreator);
+  const isExistingUserUpgrade = Boolean(currentUser && initialAccountType === 'CREATOR' && isRegister);
+  const isEmailStep = isRegister && !isExistingUserUpgrade && registrationStep === 'email';
+  const isPasswordStep = isRegister && !isExistingUserUpgrade && registrationStep === 'password';
+  const isLoading = loginMutation.isPending || registerMutation.isPending || isSubmittingOnboarding;
 
   useEffect(() => {
     if (!isOpen) return;
     setMode(initialMode);
-    setAccountType(initialAccountType || 'LISTENER');
+    setRegistrationStep('email');
     setErrorMsg('');
-  }, [initialMode, initialAccountType, isOpen]);
+    setFormData({ email: '', password: '' });
+    setCreatorName(currentUser?.displayName === 'Listener' ? '' : currentUser?.displayName || '');
+  }, [initialMode, isOpen, currentUser?.displayName]);
 
   if (!isOpen) return null;
 
-  const handleChange = (e) => {
-    setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    if (isLoading) return;
     setErrorMsg('');
-  };
-
-  const handleCreatorTypeChange = (type) => {
-    setCreatorType(type);
-    if (type === 'ARTIST') {
-      setIntendsMusic(true);
-      setIntendsBeats(false);
-    } else if (type === 'BEATMAKER') {
-      setIntendsMusic(false);
-      setIntendsBeats(true);
-    } else if (type === 'BOTH') {
-      setIntendsMusic(true);
-      setIntendsBeats(true);
+    if (isEmailStep) {
+      if (!event.currentTarget.reportValidity()) return;
+      setFormData((previous) => ({ ...previous, email: previous.email.trim() }));
+      setRegistrationStep('password');
+      return;
     }
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setErrorMsg('');
-
     try {
       if (isExistingUserUpgrade) {
         setIsSubmittingOnboarding(true);
-        await onboardCreator({
-          creatorType,
-          intendsMusic: Boolean(intendsMusic),
-          intendsBeats: Boolean(intendsBeats),
-          portfolioUrl: formData.primaryPlatformUrl?.trim() || null,
-          primaryPlatformUrl: formData.primaryPlatformUrl?.trim() || null,
-        });
+        await onboardCreator({ displayName: creatorName.trim(), creatorType: 'BOTH', intendsMusic: true, intendsBeats: true });
         await fetchCurrentUser();
-        addToast(
-          t('auth.creatorSuccess') ||
-            'Creator account registered! Your profile is ready. You will have upload access as soon as our creator phase opens.',
-          'success'
-        );
-        onClose();
-        return;
-      }
-
-      if (mode === 'login') {
-        await loginMutation.mutateAsync({ email: formData.email, password: formData.password });
-        addToast(t('auth.loginSuccess') || 'Welcome back!', 'success');
+        addToast(t('start.creatorRequestSent'), 'success');
+      } else if (isRegister) {
+        // Publishing setup is offered on /upload, once the account exists.
+        await registerMutation.mutateAsync({ email: formData.email.trim(), password: formData.password });
+        addToast(t('start.accountCreated'), 'success');
       } else {
-        const isCreatorAcc = accountType === 'CREATOR';
-        const payload = {
-          email: formData.email.trim(),
-          password: formData.password,
-          username: formData.username.trim(),
-          displayName: (formData.displayName || formData.username).trim(),
-          accountType: isCreatorAcc ? 'CREATOR' : 'LISTENER',
-        };
-
-        if (isCreatorAcc) {
-          payload.creatorType = creatorType;
-          payload.intendsMusic = Boolean(intendsMusic);
-          payload.intendsBeats = Boolean(intendsBeats);
-          if (formData.primaryPlatformUrl && formData.primaryPlatformUrl.trim()) {
-            payload.primaryPlatformUrl = formData.primaryPlatformUrl.trim();
-            payload.portfolioUrl = formData.primaryPlatformUrl.trim();
-          }
-        }
-
-        await registerMutation.mutateAsync(payload);
-        if (isCreatorAcc) {
-          addToast(
-            t('auth.creatorSuccess') ||
-              'Creator account registered! Your profile is ready. You will have upload access as soon as our creator phase opens.',
-            'success'
-          );
-        } else {
-          addToast(
-            t('auth.listenerSuccess') || 'Account created! NoirSound public listening opens soon.',
-            'success'
-          );
-        }
+        await loginMutation.mutateAsync({ email: formData.email.trim(), password: formData.password });
+        addToast(t('auth.loginSuccess'), 'success');
       }
       onClose();
-    } catch (err) {
-      setErrorMsg(err.message);
+    } catch (error) {
+      setErrorMsg(error.message);
     } finally {
       setIsSubmittingOnboarding(false);
     }
   };
 
   return (
-    <div
-      className="fixed inset-0 z-[var(--ns-z-dialog)] flex items-end justify-center bg-[var(--ns-overlay)] p-0 sm:items-center sm:p-4"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
-    >
-      <div
-        ref={modalRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="auth-modal-title"
-        className="relative max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-t-lg border border-[var(--ns-border)] bg-[var(--ns-card-solid)] shadow-[var(--ns-shadow-modal)] mobile-safe-bottom sm:rounded-lg"
-        onClick={e => e.stopPropagation()}
-      >
-        <button
-          onClick={onClose}
-          className="ns-icon-button absolute right-4 top-4 cursor-pointer"
-          aria-label={t('auth.closeDialog')}
-        >
-          <X size={16} />
-        </button>
-
+    <div className="fixed inset-0 z-[var(--ns-z-dialog)] flex items-end justify-center bg-[var(--ns-overlay)] p-0 sm:items-center sm:p-4"
+      onMouseDown={(event) => { if (event.target === event.currentTarget && !isLoading) onClose(); }}>
+      <div ref={modalRef} role="dialog" aria-modal="true" aria-labelledby="auth-modal-title" aria-describedby="auth-modal-description"
+        className="relative max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-t-lg border border-[var(--ns-border)] bg-[var(--ns-card-solid)] shadow-[var(--ns-shadow-modal)] mobile-safe-bottom sm:rounded-lg">
+        <button type="button" onClick={onClose} disabled={isLoading} className="ns-icon-button absolute right-4 top-4 cursor-pointer" aria-label={t('auth.closeDialog')}><X size={16} /></button>
         <div className="p-6 sm:p-8">
-          <div className="mb-6 pr-8 text-left">
-            <h2 id="auth-modal-title" className="mb-1 font-sans text-2xl font-bold tracking-tight text-[var(--ns-text)]">
-              {isExistingUserUpgrade
-                ? (t('landing.creator.upgradeButton') || 'Register as Creator')
-                : mode === 'login'
-                ? t('header.signIn')
-                : isCreator
-                ? t('auth.joinCreator') || 'Register as Creator'
-                : t('auth.join') || 'Join NoirSound'}
+          <div className="mb-6 pr-8">
+            <h2 id="auth-modal-title" className="mb-2 text-2xl font-bold tracking-tight text-[var(--ns-text)]">
+              {isExistingUserUpgrade ? t('start.requestAccess') : isPasswordStep ? t('start.createPassword') : isRegister ? t('auth.join') : t('header.signIn')}
             </h2>
-            <p className="text-sm text-zinc-400">
-              {isExistingUserUpgrade
-                ? `@${currentUser.username} • ${(t('landing.creator.listenerUpgradePrompt') || 'Register your creator profile to get ready for publishing.')}`
-                : mode === 'login'
-                ? t('empty.signInDesc')
-                : isCreator
-                ? t('auth.creatorDescription') || 'Claim your artist handle, establish your profile, and be first in line to publish.'
-                : t('auth.registerDescription') || 'Create your account to start streaming and discovering independent sound.'}
+            <p id="auth-modal-description" className="text-sm leading-relaxed text-[var(--ns-text-secondary)]">
+              {isExistingUserUpgrade ? t('start.creatorAccessDescription') : isPasswordStep ? t('start.passwordStepDescription') : isRegister ? t('start.emailStepDescription') : t('start.loginDescription')}
             </p>
           </div>
-
-          {/* Account Type Selector for Registration */}
-          {isRegister && !isExistingUserUpgrade && (
-            <div className="mb-5 flex rounded-lg border border-zinc-800 bg-zinc-900/80 p-1" role="tablist" aria-label="Account Type">
-              <button
-                type="button"
-                role="tab"
-                aria-selected={accountType === 'LISTENER'}
-                onClick={() => setAccountType('LISTENER')}
-                className={`flex flex-1 items-center justify-center gap-2 rounded-md py-2 text-xs font-semibold transition-colors cursor-pointer ${
-                  accountType === 'LISTENER'
-                    ? 'bg-zinc-800 text-white shadow-sm'
-                    : 'text-zinc-400 hover:text-zinc-200'
-                }`}
-              >
-                <Headphones size={14} />
-                <span>{t('auth.listenerTab') || 'Listener'}</span>
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={accountType === 'CREATOR'}
-                onClick={() => setAccountType('CREATOR')}
-                className={`flex flex-1 items-center justify-center gap-2 rounded-md py-2 text-xs font-semibold transition-colors cursor-pointer ${
-                  accountType === 'CREATOR'
-                    ? 'bg-brand-red text-white shadow-sm'
-                    : 'text-zinc-400 hover:text-zinc-200'
-                }`}
-              >
-                <Music2 size={14} />
-                <span>{t('auth.creatorTab') || 'Creator'}</span>
-              </button>
-            </div>
-          )}
-
-          {/* Creator Options */}
-          {isCreator && (
-            <div className="mb-5 space-y-3.5 rounded-lg border border-zinc-800/80 bg-zinc-900/40 p-3.5">
-              <div>
-                <label className="text-xs font-medium text-zinc-300 block mb-1.5">
-                  {t('auth.creatorTypeLabel') || 'I identify as:'}
-                </label>
-                <div className="grid grid-cols-3 gap-1.5 text-xs">
-                  {[
-                    ['ARTIST', t('auth.creatorTypes.ARTIST') || 'Artist'],
-                    ['BEATMAKER', t('auth.creatorTypes.BEATMAKER') || 'Beatmaker'],
-                    ['BOTH', t('auth.creatorTypes.BOTH') || 'Both'],
-                  ].map(([val, label]) => (
-                    <button
-                      key={val}
-                      type="button"
-                      onClick={() => handleCreatorTypeChange(val)}
-                      className={`py-1.5 px-2 rounded text-center font-medium transition-colors cursor-pointer ${
-                        creatorType === val
-                          ? 'bg-brand-red/20 text-brand-red border border-brand-red/50'
-                          : 'bg-zinc-900 text-zinc-400 border border-zinc-800 hover:text-zinc-200'
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className="text-xs font-medium text-zinc-300 block mb-1">
-                  {t('auth.intendsLabel') || 'What will you publish?'}
-                </label>
-                <div className="flex gap-4 text-xs">
-                  <label className="inline-flex items-center gap-1.5 cursor-pointer text-zinc-300">
-                    <input
-                      type="checkbox"
-                      checked={intendsMusic}
-                      onChange={(e) => setIntendsMusic(e.target.checked)}
-                      className="rounded border-zinc-700 bg-zinc-900 text-brand-red focus:ring-0"
-                    />
-                    <span>{t('auth.intendsMusic') || 'Music / Songs'}</span>
-                  </label>
-                  <label className="inline-flex items-center gap-1.5 cursor-pointer text-zinc-300">
-                    <input
-                      type="checkbox"
-                      checked={intendsBeats}
-                      onChange={(e) => setIntendsBeats(e.target.checked)}
-                      className="rounded border-zinc-700 bg-zinc-900 text-brand-red focus:ring-0"
-                    />
-                    <span>{t('auth.intendsBeats') || 'Beats / Instrumentals'}</span>
-                  </label>
-                </div>
-              </div>
-
-              {isExistingUserUpgrade && (
-                <div>
-                  <label htmlFor="auth-platform-url-upgrade" className="text-xs font-medium text-zinc-300 block mb-1">
-                    {t('auth.portfolioUrlPlaceholder') || 'Portfolio Link'}
-                  </label>
-                  <div className="relative">
-                    <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={16} />
-                    <input
-                      id="auth-platform-url-upgrade"
-                      type="url"
-                      name="primaryPlatformUrl"
-                      placeholder={t('auth.portfolioUrlPlaceholder') || 'https://soundcloud.com/... (optional)'}
-                      value={formData.primaryPlatformUrl}
-                      onChange={handleChange}
-                      className="ns-field w-full pl-10 pr-4 text-xs"
-                      disabled={isLoading}
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Google SSO Button (shown when not registering as creator) */}
-          {!isCreator && !isExistingUserUpgrade && (
-            <>
-              <button
-                type="button"
-                disabled={isLoading}
-                onClick={() => window.location.assign(getGoogleAuthorizationUrl())}
-                aria-describedby={hasLandingDraft ? 'auth-landing-draft-notice' : undefined}
-                className="flex h-11 w-full cursor-pointer items-center justify-center gap-3 rounded-md border border-[var(--ns-border)] bg-zinc-900 font-medium text-zinc-100 transition-colors hover:bg-zinc-800 disabled:opacity-50"
-              >
-                <GoogleIcon />
-                <span>{t('auth.continueGoogle')}</span>
-              </button>
-              {hasLandingDraft && <p id="auth-landing-draft-notice" className="mt-3 text-sm leading-relaxed text-zinc-400">{t('landing.creator.googleDraftNotice')}</p>}
-
-              <div className="flex items-center gap-3 my-5" aria-hidden="true">
-                <span className="h-px flex-1 bg-zinc-800" />
-                <span className="font-sans tabular-nums text-ns-meta uppercase text-zinc-500">{t('auth.or')}</span>
-                <span className="h-px flex-1 bg-zinc-800" />
-              </div>
-            </>
-          )}
-
+          {!isExistingUserUpgrade && !isPasswordStep && <>
+            <button type="button" disabled={isLoading} onClick={() => window.location.assign(getGoogleAuthorizationUrl())}
+              aria-describedby={hasLandingDraft ? 'auth-landing-draft-notice' : undefined}
+              className="flex min-h-11 w-full cursor-pointer items-center justify-center gap-3 rounded-md border border-[var(--ns-border)] bg-[var(--ns-input-bg)] px-3 font-medium text-[var(--ns-text)] hover:border-[var(--ns-text-secondary)] disabled:opacity-50">
+              <GoogleIcon /> {t('auth.continueGoogle')}
+            </button>
+            {hasLandingDraft && <p id="auth-landing-draft-notice" className="mt-3 text-sm text-[var(--ns-text-secondary)]">{t('landing.creator.googleDraftNotice')}</p>}
+            <div className="my-5 flex items-center gap-3" aria-hidden="true"><span className="h-px flex-1 bg-[var(--ns-border)]" /><span className="text-xs text-[var(--ns-text-secondary)]">{t('auth.or')}</span><span className="h-px flex-1 bg-[var(--ns-border)]" /></div>
+          </>}
           <form onSubmit={handleSubmit} className="space-y-4">
-            {!isExistingUserUpgrade && isRegister && (
-              <>
+            {isExistingUserUpgrade && <label className="block space-y-2 text-sm text-[var(--ns-text)]">
+              <span>{t('start.artistName')}</span>
+              <input className="ns-field px-4" required maxLength={120} value={creatorName} disabled={isLoading} onChange={(event) => setCreatorName(event.target.value)} autoComplete="nickname" />
+            </label>}
+            {!isExistingUserUpgrade && <>
+              {isPasswordStep && <div className="flex flex-wrap items-center justify-between gap-x-3 rounded-md bg-[var(--ns-input-bg)] px-3 py-2 text-sm">
+                <span className="min-w-0 break-all text-[var(--ns-text)]">{formData.email}</span>
+                <button type="button" disabled={isLoading}
+                  onClick={() => { setRegistrationStep('email'); setErrorMsg(''); }}
+                  className="min-h-11 shrink-0 cursor-pointer font-medium text-[var(--ns-accent)] hover:underline disabled:opacity-50">
+                  {t('start.changeEmail')}
+                </button>
+              </div>}
+              {[
+                ...(!isPasswordStep ? [{ name: 'email', label: t('auth.email'), placeholder: t('auth.emailPlaceholder'), type: 'email', Icon: Mail }] : []),
+                ...(!isEmailStep ? [{ name: 'password', label: t('auth.password'), placeholder: t('auth.password'), type: 'password', Icon: Lock }] : []),
+              ].map(({ name, label, placeholder, type, Icon }) => <div key={name} className="space-y-1.5">
+                <label htmlFor={`auth-${name}`} className="block text-sm font-medium text-[var(--ns-text)]">{label}</label>
                 <div className="relative">
-                  <label htmlFor="auth-username" className="sr-only">{t('auth.username')}</label>
-                  <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={16} />
-                  <input
-                    id="auth-username"
-                    type="text"
-                    name="username"
-                    required
-                    placeholder={t('auth.username')}
-                    value={formData.username}
-                    onChange={handleChange}
-                    className="ns-field w-full pl-10 pr-4"
-                    disabled={isLoading}
-                    aria-describedby={errorMsg ? 'auth-error' : undefined}
-                  />
+                  <Icon aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ns-text-secondary)]" size={16} />
+                  <input id={`auth-${name}`} name={name} type={type} required autoFocus={name === 'email' || isPasswordStep}
+                    autoComplete={name === 'email' ? 'email' : isRegister ? 'new-password' : 'current-password'}
+                    minLength={name === 'password' && isRegister ? 8 : undefined}
+                    maxLength={name === 'password' && isRegister ? 128 : name === 'email' ? 254 : undefined}
+                    placeholder={placeholder} value={formData[name]} disabled={isLoading}
+                    onChange={(event) => { setFormData((prev) => ({ ...prev, [name]: event.target.value })); setErrorMsg(''); }}
+                    className="ns-field w-full pl-10 pr-4 text-base sm:text-sm" aria-invalid={Boolean(errorMsg)}
+                    aria-describedby={[errorMsg && 'auth-error', name === 'password' && isRegister && 'auth-password-help'].filter(Boolean).join(' ') || undefined} />
                 </div>
-                <div className="relative">
-                  <label htmlFor="auth-display-name" className="sr-only">{t('auth.displayname')}</label>
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={16} />
-                  <input
-                    id="auth-display-name"
-                    type="text"
-                    name="displayName"
-                    required
-                    placeholder={isCreator ? (t('auth.artistNamePlaceholder') || 'Artist / Stage Name') : t('auth.displaynamePlaceholder')}
-                    value={formData.displayName}
-                    onChange={handleChange}
-                    className="ns-field w-full pl-10 pr-4"
-                    disabled={isLoading}
-                    aria-describedby={errorMsg ? 'auth-error' : undefined}
-                  />
-                </div>
-
-                {isCreator && (
-                  <div className="relative">
-                    <label htmlFor="auth-platform-url" className="sr-only">Portfolio or Profile Link</label>
-                    <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={16} />
-                    <input
-                      id="auth-platform-url"
-                      type="url"
-                      name="primaryPlatformUrl"
-                      placeholder={t('auth.portfolioUrlPlaceholder') || 'https://soundcloud.com/... (optional)'}
-                      value={formData.primaryPlatformUrl}
-                      onChange={handleChange}
-                      className="ns-field w-full pl-10 pr-4"
-                      disabled={isLoading}
-                    />
-                  </div>
-                )}
-              </>
-            )}
-
-            {!isExistingUserUpgrade && (
-              <>
-                <div className="relative">
-                  <label htmlFor="auth-email" className="sr-only">{t('auth.email')}</label>
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={16} />
-                  <input
-                    id="auth-email"
-                    ref={emailRef}
-                    autoFocus={!isCreator}
-                    type="email"
-                    name="email"
-                    required
-                    placeholder={t('auth.emailPlaceholder')}
-                    value={formData.email}
-                    onChange={handleChange}
-                    className="ns-field w-full pl-10 pr-4"
-                    disabled={isLoading}
-                    aria-invalid={Boolean(errorMsg)}
-                    aria-describedby={errorMsg ? 'auth-error' : undefined}
-                  />
-                </div>
-
-                <div className="relative">
-                  <label htmlFor="auth-password" className="sr-only">{t('auth.password')}</label>
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={16} />
-                  <input
-                    id="auth-password"
-                    type="password"
-                    name="password"
-                    required
-                    placeholder={t('auth.password')}
-                    value={formData.password}
-                    onChange={handleChange}
-                    className="ns-field w-full pl-10 pr-4"
-                    disabled={isLoading}
-                    aria-invalid={Boolean(errorMsg)}
-                    aria-describedby={errorMsg ? 'auth-error' : undefined}
-                  />
-                </div>
-              </>
-            )}
-
-            {errorMsg && (
-              <div id="auth-error" className="rounded-md border ns-status-badge ns-status-danger p-3 text-center text-sm" role="alert">
-                {errorMsg}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full ns-button-primary px-5 disabled:opacity-50 flex items-center justify-center space-x-2 cursor-pointer"
-            >
+                {name === 'password' && isRegister && <p id="auth-password-help" className="text-sm text-[var(--ns-text-secondary)]">{t('start.passwordHelp')}</p>}
+              </div>)}
+              {isEmailStep && <p className="text-sm leading-relaxed text-[var(--ns-text-secondary)]">{t('start.passwordNext')}</p>}
+            </>}
+            {errorMsg && <div id="auth-error" className="rounded-md border ns-status-badge ns-status-danger p-3 text-sm" role="alert">{errorMsg}</div>}
+            <button type="submit" disabled={isLoading} className="ns-button-primary flex w-full cursor-pointer items-center justify-center gap-2 px-5 disabled:opacity-50">
               {isLoading && <Loader2 size={16} className="animate-spin" />}
-              <span>
-                {isExistingUserUpgrade
-                  ? (t('landing.creator.upgradeButton') || 'Register as Creator')
-                  : mode === 'login'
-                  ? t('header.signIn')
-                  : isCreator
-                  ? t('auth.registerAsCreator') || 'Register as Creator'
-                  : t('actions.create') || 'Create Account'}
-              </span>
+              {isExistingUserUpgrade ? t('start.requestAccess') : isEmailStep ? t('start.continue') : isRegister ? t('auth.createAccount') : t('header.signIn')}
             </button>
           </form>
-
-          {!isExistingUserUpgrade && (
-            <div className="mt-6 text-center text-sm text-zinc-500">
-              {mode === 'login' ? (
-                <p>
-                  {t('auth.noAccount')}{' '}
-                  <button
-                    type="button"
-                    onClick={() => setMode('register')}
-                    className="text-brand-red hover:text-[var(--ns-text-primary)] transition-colors font-medium cursor-pointer"
-                  >
-                    {t('auth.signUp')}
-                  </button>
-                </p>
-              ) : (
-                <p>
-                  {t('auth.haveAccount')}{' '}
-                  <button
-                    type="button"
-                    onClick={() => setMode('login')}
-                    className="text-brand-red hover:text-[var(--ns-text-primary)] transition-colors font-medium cursor-pointer"
-                  >
-                    {t('header.signIn')}
-                  </button>
-                </p>
-              )}
-            </div>
-          )}
+          {!isExistingUserUpgrade && <div className="mt-5 text-center text-sm text-[var(--ns-text-secondary)]">
+            {isRegister ? t('auth.haveAccount') : t('auth.noAccount')}{' '}
+            <button type="button" disabled={isLoading} onClick={() => { setMode(isRegister ? 'login' : 'register'); setRegistrationStep('email'); setErrorMsg(''); }} className="min-h-11 cursor-pointer font-semibold text-[var(--ns-accent)] hover:underline">
+              {isRegister ? t('header.signIn') : t('auth.signUp')}
+            </button>
+          </div>}
         </div>
       </div>
     </div>

@@ -2,17 +2,14 @@ import SpotifyPlaybackConnection from '../components/playlists/SpotifyPlaybackCo
 import { sourcePlaylistTrack } from '../utils/sourcePlaylist';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  ArrowLeft,
   Clock,
   Edit3,
   Heart,
-  ListPlus,
   LoaderCircle,
   Lock,
   MoreHorizontal,
   Pause,
   Play,
-  Share2,
   Shuffle,
   Trash2,
 } from 'lucide-react';
@@ -289,20 +286,6 @@ export default function PlaylistPage() {
     }
   };
 
-  const handleShare = async () => {
-    const url = window.location.href;
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: playlist.name, url });
-        return;
-      } catch (shareError) {
-        if (shareError?.name === 'AbortError') return;
-      }
-    }
-    await navigator.clipboard.writeText(url);
-    addToast('Playlist link copied.', 'success');
-  };
-
   const handleDelete = async () => {
     setPending('delete');
     try {
@@ -323,11 +306,6 @@ export default function PlaylistPage() {
         description={`${tracks.length === 1 ? '1 track' : `${tracks.length} tracks`}${playlist.description ? ` · ${playlist.description}` : ` · Listen to ${playlist.name}, a playlist by ${playlist.creator} on NoirSound.`}`}
         canonical={`https://noirsound.co/playlist/${playlist.id}`}
       />
-      <button onClick={() => navigate(-1)} className="flex min-h-11 w-fit items-center gap-2 px-1 text-sm font-semibold text-zinc-400 transition-colors hover:text-[var(--ns-text-primary)]">
-        <ArrowLeft size={14} />
-        <span>Back</span>
-      </button>
-
       <section
         data-testid="playlist-hero"
         data-playlist-id={playlist.id}
@@ -345,7 +323,6 @@ export default function PlaylistPage() {
 
         <div className="min-w-0 space-y-4 text-center md:pr-12 md:text-left">
           <div className="flex flex-wrap items-center justify-center gap-2 md:justify-start">
-            <p className="ns-eyebrow">{t('playlists.typeLabel')}</p>
             <span className="inline-flex items-center gap-1.5 font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-zinc-500">
               {playlist.isPublic === false && <Lock size={11} />}
               {playlist.isPublic === false ? t('playlists.private') : t('playlists.public')}
@@ -353,7 +330,7 @@ export default function PlaylistPage() {
           </div>
           <div>
             <h1 className="ns-display-title ns-display-title--entity">{playlist.name}</h1>
-            <p className="text-sm text-zinc-400 mt-2">{playlist.description || t('playlists.noDescription')}</p>
+            {playlist.description && <p className="text-sm text-zinc-400 mt-2">{playlist.description}</p>}
           </div>
           <div className="flex flex-wrap items-center justify-center gap-3 font-sans tabular-nums text-ns-meta text-zinc-500 md:justify-start">
             {playlist.ownerArtistId ? (
@@ -378,9 +355,6 @@ export default function PlaylistPage() {
             <button onClick={handleShuffle} disabled={playableTracks.length === 0} className="ns-button-secondary hidden min-w-11 items-center justify-center gap-2 px-4 disabled:opacity-40 sm:inline-flex" aria-label={t('playlists.shuffle')}>
               <Shuffle size={15} /> <span>{t('playlists.shuffle')}</span>
             </button>
-            {!playlist.sourceImport && <button onClick={() => player.addTracksToQueue(playableTracks)} disabled={playableTracks.length === 0} className="ns-button-secondary hidden min-w-11 items-center justify-center gap-2 px-4 disabled:opacity-40 sm:inline-flex" aria-label={t('playlists.addToQueue')}>
-              <ListPlus size={15} /> <span>{t('playlists.addToQueue')}</span>
-            </button>}
             {!owner && (
               <button onClick={handleToggleSaved} disabled={pending === 'save'} className="ns-button-secondary inline-flex min-w-11 items-center justify-center gap-2 px-3 sm:px-4" aria-label={playlist.isSaved ? t('playlists.saved') : t('playlists.save')}>
                 {pending === 'save' ? <LoaderCircle size={15} className="animate-spin" /> : <Heart size={15} fill={playlist.isSaved ? 'currentColor' : 'none'} />}
@@ -392,9 +366,6 @@ export default function PlaylistPage() {
                 <Edit3 size={15} /> <span className="hidden sm:inline">{t('playlists.edit')}</span>
               </button>
             )}
-            <button onClick={handleShare} disabled={playlist.isPublic === false} className="ns-icon-button !min-h-11 !min-w-11 hidden disabled:opacity-30 sm:inline-flex" aria-label={t('playlists.share')}>
-              <Share2 size={16} />
-            </button>
           </div>
         </div>
       </section>

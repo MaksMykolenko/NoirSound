@@ -291,7 +291,7 @@ describe('ArtistPage', () => {
     await i18n.changeLanguage('en');
   });
 
-  it('renders one complete h1 and keeps the required section order', async () => {
+  it('renders one complete h1 and avoids repeating a small catalog in Popular', async () => {
     getArtistById.mockResolvedValue(baseArtist);
     getTracksByArtist.mockResolvedValue(tracks);
     renderArtist();
@@ -313,10 +313,9 @@ describe('ArtistPage', () => {
       i18n.t('profile.monthlyListeners'),
     ]);
 
-    const popular = screen.getByTestId('artist-popular');
+    expect(screen.queryByTestId('artist-popular')).not.toBeInTheDocument();
     const discography = screen.getByTestId('artist-discography');
     const about = screen.getByTestId('artist-about');
-    expect(popular.nextElementSibling).toBe(discography);
     expect(discography.compareDocumentPosition(about) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
@@ -380,7 +379,7 @@ describe('ArtistPage', () => {
 
   it('renders release cards as real track links and mobile-safe Popular actions', async () => {
     getArtistById.mockResolvedValue(baseArtist);
-    getTracksByArtist.mockResolvedValue(tracks);
+    getTracksByArtist.mockResolvedValue([...tracks, ...Array.from({ length: 4 }, (_, index) => ({ ...tracks[0], id: `extra-${index}`, title: `Extra ${index}` }))]);
     renderArtist();
 
     const popular = await screen.findByTestId('artist-popular');

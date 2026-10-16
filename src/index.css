@@ -2799,3 +2799,7 @@ body.is-sidebar-resizing * {
 /* Archive design surfaces retain their contrast in every supported theme. */
 :root { --ns-design-ink: #fff; --ns-design-end: #000; }
 :root[data-theme='light-minimal'] { --ns-design-ink: var(--ns-text); --ns-design-end: var(--ns-card-solid); }
+
+/* Empty profile artwork should not consume the first screen. */
+.ns-profile-hero[data-has-banner="false"] .ns-profile-hero__banner { height: 5rem; }
+.ns-profile-hero[data-has-banner="false"] .ns-profile-hero__banner-fallback { background: transparent; }

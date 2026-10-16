@@ -1,23 +1,23 @@
 import { test, expect } from '@playwright/test';
+import { installFinalDesignFixtures } from './_interactionFixtures';
+
+test.beforeEach(async ({ page }) => { await installFinalDesignFixtures(page); });
 
 test.describe('Home navigation', () => {
   test.use({ viewport: { width: 1440, height: 900 } });
 
-  test('genre chip pre-fills Discover', async ({ page }) => {
+  test('primary listening action opens the catalog directly', async ({ page }) => {
     await page.goto('/home');
-    const hipHopChip = page.locator('[data-genre-kind="genre"][data-genre-value="hip_hop"]');
-    await expect(hipHopChip).toHaveCount(1);
-    await hipHopChip.click();
-    await expect(page).toHaveURL(/\/discover\?genre=hip_hop$/);
-    await expect(
-      page.getByTestId('genre-quick-tabs').getByRole('button', { name: 'Hip-Hop', exact: true })
-    ).toBeVisible();
+    await page.getByTestId('home-hero-discover').click();
+    await expect(page).toHaveURL(/\/discover/);
+    await expect(page.getByTestId('discover-all-content')).toBeVisible();
   });
 
-  test('Upload CTA reaches the existing auth-guarded upload flow', async ({ page }) => {
+  test('creator publishing remains reachable from account navigation', async ({ page }) => {
     await page.goto('/home');
-    await page.getByTestId('home-hero-upload').click();
-    await expect(page).toHaveURL(/\/upload$/);
+    await page.getByRole('button', { name: 'Profile', exact: true }).click();
+    await page.getByRole('menuitem', { name: 'Creator Dashboard' }).click();
+    await expect(page).toHaveURL(/\/dashboard$/);
     await expect(page.locator('main')).toBeVisible();
   });
 });
@@ -29,8 +29,8 @@ test.describe('Home localization', () => {
     await page.addInitScript(() => localStorage.setItem('noirsound_language', 'uk'));
     await page.goto('/home');
     await page.waitForLoadState('networkidle');
-    await expect(page.getByTestId('home-hero')).toContainText('Знайдіть свій наступний звук');
-    await expect(page.getByTestId('home-genre-browser')).toBeVisible();
+    await expect(page.getByTestId('home-hero')).toContainText('Головна');
+    await expect(page.getByTestId('home-genre-browser')).toHaveCount(0);
 
   });
 });

@@ -53,8 +53,8 @@
     "expand": "Rozwiń",
     "lyrics": "Tekst utworu",
     "lyricsUnavailable": "Tekst utworu niedostępny",
-    "openLyrics": "Otwórz tekst na pełnym ekranie",
-    "closeLyrics": "Zamknij pełnoekranowy tekst",
+    "openLyrics": "Otwórz odtwarzacz pełnoekranowy",
+    "closeLyrics": "Zamknij odtwarzacz pełnoekranowy",
     "lyricsFullscreenTitle": "Odtwarzacz tekstu",
     "emptyQueueHelp": "Dodaj utwory do odtworzenia w następnej kolejności.",
     "collapsedPlayer": "Zwinięty odtwarzacz",
@@ -1454,6 +1454,7 @@
     "editLyrics": "Edytuj tekst",
     "noLyrics": "Tekst tego utworu nie jest jeszcze dostępny.",
     "unavailable": "Nie udało się załadować tekstu.",
+    "followPlayback": "Śledź odtwarzanie",
     "providedByArtist": "Tekst dostarczony przez artystę",
     "language": "Język tekstu",
     "type": "Typ tekstu",
@@ -1466,7 +1467,7 @@
     "open": "Otwórz tekst",
     "close": "Zamknij tekst",
     "backToPlayer": "Wróć do odtwarzacza",
-    "fullscreenLabel": "Pełnoekranowy odtwarzacz tekstu dla {{title}}",
+    "fullscreenLabel": "Teraz odtwarzane: {{title}}",
     "preview": "Podgląd",
     "remove": "Usuń tekst",
     "saved": "Tekst zapisany.",
@@ -1816,5 +1817,8 @@
       "IMPORT_AUDIO_UNAVAILABLE": "Pełne audio tego utworu nie jest dostępne w NoirSound.",
       "IMPORT_TRACK_UNAVAILABLE": "Ten utwór jest niedostępny w źródle."
     }
+  },
+  "interface": {
+    "legal": "Zasady i pomoc"
   }
 }

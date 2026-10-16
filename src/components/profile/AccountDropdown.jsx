@@ -1,7 +1,8 @@
 import React, { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { User, Settings, LayoutDashboard, LogOut } from 'lucide-react';
+import { User, Settings, LayoutDashboard, Upload, ShieldAlert, LogOut } from 'lucide-react';
+import { useUserStore } from '../../store/userStore';
 import { useToastStore } from '../../store/toastStore';
 import { useLogout } from '../../hooks/mutations/useAuth';
 import ThemeSwitcher from '../ui/ThemeSwitcher';
@@ -12,6 +13,8 @@ export default function AccountDropdown({ isOpen, onClose, anchorRef }) {
   const { t } = useTranslation();
   const { addToast } = useToastStore();
   const logoutMutation = useLogout();
+  const user = useUserStore((state) => state.user);
+  const canCreate = ['ARTIST', 'ADMIN'].includes(user?.role);
 
   useEffect(() => {
     function handleOutsideClick(e) {
@@ -99,14 +102,32 @@ export default function AccountDropdown({ isOpen, onClose, anchorRef }) {
         <span>{t('header.profileSettings')}</span>
       </button>
 
-      <button
+      {canCreate && <button
         onClick={() => handleNavigate('/dashboard')}
         className="flex min-h-11 w-full cursor-pointer items-center space-x-3 px-4 py-2.5 text-left text-sm font-medium text-zinc-300 transition-colors hover:bg-zinc-900 hover:text-zinc-100"
         role="menuitem"
       >
         <LayoutDashboard size={14} className="text-zinc-500" />
         <span>{t('header.creatorDashboard')}</span>
-      </button>
+      </button>}
+
+      {!canCreate && <button
+        onClick={() => handleNavigate('/upload')}
+        className="flex min-h-11 w-full cursor-pointer items-center gap-3 px-4 py-2.5 text-left text-sm font-medium text-zinc-300 hover:bg-zinc-900 hover:text-zinc-100"
+        role="menuitem"
+      >
+        <Upload size={14} className="text-zinc-500" />
+        <span>{t('start.forCreators')}</span>
+      </button>}
+
+      {user?.role === 'ADMIN' && <button
+        onClick={() => handleNavigate('/admin')}
+        className="flex min-h-11 w-full cursor-pointer items-center gap-3 px-4 py-2.5 text-left text-sm font-medium text-zinc-300 hover:bg-zinc-900 hover:text-zinc-100"
+        role="menuitem"
+      >
+        <ShieldAlert size={14} className="text-zinc-500" />
+        <span>{t('admin.admin')}</span>
+      </button>}
 
       <div className="h-px bg-zinc-900/60 my-1"></div>
 

@@ -1,9 +1,8 @@
 import React, { useId, useState } from 'react';
-import { ArrowUpRight, CheckCircle2, Upload } from 'lucide-react';
+import { ArrowUpRight, Upload } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useLandingDraftStore } from '../../store/landingDraftStore';
-import { useUserStore } from '../../store/userStore';
 import { BATCH_MAX_FILE_BYTES, validateSelectedFiles } from '../upload/batch/batchUploadUtils';
 import LandingReleasePreview from './LandingReleasePreview';
 
@@ -11,8 +10,6 @@ export default function LandingCreatorSection() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { draft, lostDraft, updateDraft, requestUpload } = useLandingDraftStore();
-  const user = useUserStore((s) => s.user);
-  const openAuth = useUserStore((s) => s.setAuthModalOpen);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [fileError, setFileError] = useState(false);
   const [dragging, setDragging] = useState(false);
@@ -22,8 +19,6 @@ export default function LandingCreatorSection() {
   const contentType = draft?.contentType || 'MUSIC';
   const audioFile = draft?.audioFile;
 
-  const isCreatorRegistered = Boolean(user?.creatorRegistration);
-  const canUploadTracks = Boolean(user?.canUploadTracks);
 
   function chooseFile(file) {
     if (!file) return;
@@ -56,59 +51,14 @@ export default function LandingCreatorSection() {
             </ol>
 
             <div className="creator-cta-box">
-              {isCreatorRegistered ? (
-                <div className="creator-cta-content">
-                  <div className="creator-cta-status">
-                    <CheckCircle2 size={16} aria-hidden="true" />
-                    <span>{t('landing.creator.registeredBadge') || 'Creator Profile Active'}</span>
-                  </div>
-                  <p className="creator-cta-text">
-                    {canUploadTracks
-                      ? (t('landing.creator.canUploadNotice') || 'You have upload access enabled! Open the app to publish.')
-                      : (t('landing.creator.pendingNotice') || `Registered as ${user.creatorRegistration?.creatorType}. Upload tools will open when the creator rollout begins.`)}
-                  </p>
-                  {canUploadTracks && (
-                    <button
-                      type="button"
-                      onClick={continueUpload}
-                      className="button button-accent creator-cta-button"
-                    >
-                      <span>{t('landing.publish') || 'Open Studio'}</span>
-                      <ArrowUpRight size={14} aria-hidden="true" />
-                    </button>
-                  )}
-                </div>
-              ) : user ? (
-                <div className="creator-cta-content">
-                  <p className="creator-cta-text">
-                    {t('landing.creator.listenerUpgradePrompt') || 'You are registered as a Listener. Register your creator profile to get ready for publishing.'}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => openAuth(true, 'register', 'CREATOR')}
-                    className="button button-accent creator-cta-button"
-                  >
-                    <ArrowUpRight size={14} aria-hidden="true" />
-                    <span>{t('landing.creator.upgradeButton') || 'Register as Creator'}</span>
-                  </button>
-                </div>
-              ) : (
-                <div className="creator-cta-content">
-                  <p className="creator-cta-text">
-                    {t('landing.creator.joinPrompt') || 'Ready to share your music or beats with NoirSound? Register your creator account now.'}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => openAuth(true, 'register', 'CREATOR')}
-                    className="button button-accent creator-cta-button"
-                  >
-                    <ArrowUpRight size={14} aria-hidden="true" />
-                    <span>{t('landing.creator.registerButton') || 'Register as Creator'}</span>
-                  </button>
-                </div>
-              )}
+              <p className="creator-cta-text">{t('start.uploadIntro')}</p>
+              <button type="button" onClick={continueUpload} className="button button-accent creator-cta-button">
+                {t('landing.publish')}<ArrowUpRight size={16} aria-hidden="true" />
+              </button>
             </div>
           </div>
+          <details className="creator-preview-disclosure">
+            <summary>{t('landing.creator.seePreview')}</summary>
           <div className="release-editor">
             <div className="editor-top"><span className="editor-dot" aria-hidden="true" /><span>{t('landing.creator.newRelease')}</span><span className="editor-badge">{t('landing.creator.previewBadge')}</span></div>
             <div className="editor-cover">
@@ -142,6 +92,7 @@ export default function LandingCreatorSection() {
               {lostDraft && <p className="editor-disclaimer" role="status">{t('landing.creator.lostDraft')}</p>}
             </div>
           </div>
+          </details>
         </div>
       </div>
       <LandingReleasePreview open={previewOpen} onClose={() => setPreviewOpen(false)} title={title.trim()} artistCredit={artistCredit.trim()} contentType={contentType} onContinue={continueUpload} />

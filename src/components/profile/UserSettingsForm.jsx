@@ -130,33 +130,37 @@ export default function UserSettingsForm() {
         }}
       />
 
-      <ProfileBannerEditor
-        currentBannerUrl={user?.bannerUrl || ''}
-        pendingFile={pendingBannerFile}
-        removalRequested={bannerRemovalRequested}
-        disabled={isSubmitting}
-        progress={bannerProgress}
-        statusMessage={bannerStatus}
-        onSelectFile={(file) => {
-          setPendingBannerFile(file);
-          setBannerRemovalRequested(false);
-          setBannerStatus('');
-          setErrorMsg('');
-          setIsSaved(false);
-        }}
-        onConfirmRemove={() => {
-          setPendingBannerFile(null);
-          setBannerRemovalRequested(Boolean(user?.bannerUrl));
-          setBannerStatus('');
-          setErrorMsg('');
-          setIsSaved(false);
-        }}
-        onUndoRemove={() => {
-          setBannerRemovalRequested(false);
-          setBannerStatus('');
-          setIsSaved(false);
-        }}
-      />
+      <details className="border-b border-zinc-800 py-3">
+        <summary className="cursor-pointer py-2 text-sm text-zinc-300">{t('profile.bannerSectionTitle')}</summary>
+        <ProfileBannerEditor
+          currentBannerUrl={user?.bannerUrl || ''}
+          pendingFile={pendingBannerFile}
+          removalRequested={bannerRemovalRequested}
+          disabled={isSubmitting}
+          progress={bannerProgress}
+          statusMessage={bannerStatus}
+          onSelectFile={(file) => {
+            setPendingBannerFile(file);
+            setBannerRemovalRequested(false);
+            setBannerStatus('');
+            setErrorMsg('');
+            setIsSaved(false);
+          }}
+          onConfirmRemove={() => {
+            setPendingBannerFile(null);
+            setBannerRemovalRequested(Boolean(user?.bannerUrl));
+            setBannerStatus('');
+            setErrorMsg('');
+            setIsSaved(false);
+          }}
+          onUndoRemove={() => {
+            setBannerRemovalRequested(false);
+            setBannerStatus('');
+            setIsSaved(false);
+          }}
+        />
+
+      </details>
 
       {/* Inputs grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -273,13 +277,20 @@ export default function UserSettingsForm() {
         <LanguageSwitcher />
       </div>
 
-      {/* Desktop Connect & Discord Rich Presence */}
-      <AudioCacheSettings />
-      <DesktopConnectSettings className="border-b border-zinc-800/70 pb-5" />
+      <details className="border-b border-zinc-800/70 pb-4">
+        <summary className="min-h-11 cursor-pointer py-3 text-sm font-medium text-zinc-300 hover:text-zinc-100">{t('audioCache.title')}</summary>
+        <AudioCacheSettings />
+      </details>
 
-      {/* Appearance is intentionally after profile identity and language so the
-          full theme gallery never pushes biography editing out of reach. */}
-      <ThemeSelector className="border-b border-zinc-800/70 pb-5" />
+      <details className="border-b border-zinc-800/70 pb-4">
+        <summary className="min-h-11 cursor-pointer py-3 text-sm font-medium text-zinc-300 hover:text-zinc-100">{t('settings.appearance')}</summary>
+        <ThemeSelector className="pt-3" />
+      </details>
+
+      <details className="border-b border-zinc-800/70 pb-4">
+        <summary className="min-h-11 cursor-pointer py-3 text-sm font-medium text-zinc-300 hover:text-zinc-100">NoirSound Connect</summary>
+        <DesktopConnectSettings className="pt-3" />
+      </details>
 
       {/* Compact footer action stays clear of the fixed player and mobile navigation. */}
       <div className="flex justify-end border-t border-zinc-800/60 pt-4">

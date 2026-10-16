@@ -26,6 +26,7 @@ test('playlist playback and keyboard menus preserve native editable context menu
   await page.keyboard.press('Escape'); await expect(page.getByRole('menu')).toHaveCount(0);
 
   await page.goto('/upload'); await ready(page);
+  await page.locator('summary').filter({ hasText: 'Cover, description and tags' }).click();
   for (const selector of ['input[type="text"]', 'textarea']) {
     const input = page.locator('main').first().locator(selector).filter({ visible: true }).first();
     await expect(input).toBeVisible();
@@ -46,11 +47,8 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
     const fixture = await installFixtures(page);
     await page.setViewportSize(viewport); await page.goto('/track/qa-track-1'); await ready(page);
     await page.getByTestId('track-hero').getByRole('button', { name: /^Play/ }).first().click();
-    if (viewport.width < 1024) {
-      const expand = visibleButton(page, 'Expand player');
-      if (await expand.count()) await expand.click();
-    }
-    await visibleButton(page, 'Open fullscreen lyrics').click();
+    await visibleButton(page, 'Expand player').click();
+    await visibleButton(page, 'Open fullscreen player').click();
     const lyrics = page.getByTestId('fullscreen-lyrics-player');
     await expect(lyrics).toBeVisible();
     await expect(lyrics.getByText('The city falls quiet', { exact: false })).toBeVisible();
@@ -69,7 +67,7 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
     await page.keyboard.press('Escape');
     await expect(queue).toHaveCount(0); await expect(lyrics).toBeVisible();
     await page.keyboard.press('Escape'); await expect(lyrics).toHaveCount(0);
-    await expect(visibleButton(page, 'Open fullscreen lyrics')).toBeFocused();
+    await expect(visibleButton(page, 'Open fullscreen player')).toBeFocused();
     expect(fixture.unknown).toEqual([]);
   });
 }
@@ -92,6 +90,7 @@ test('Enter on the mobile filter Close button cannot select an option', async ({
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/discover?content=BEAT'); await ready(page);
+  await page.getByRole('button', { name: 'Filters', exact: true }).click();
   const trigger = page.getByTestId('beat-filter-bpm-trigger'); await trigger.click();
   const panel = page.getByTestId('beat-filter-bpm-trigger-panel'); await expect(panel).toBeVisible();
   const close = panel.getByRole('button', { name: 'Close', exact: true });
@@ -131,7 +130,8 @@ test('auth switching retains keyboard focus within the dialog and Escape dismiss
   await page.getByRole('button', { name: /^sign in$/i }).filter({ visible: true }).first().click();
   const dialog = page.getByRole('dialog'); await expect(dialog).toBeVisible();
   await dialog.getByRole('button', { name: /^sign up$/i }).click();
-  await expect(dialog.getByLabel('Password', { exact: true })).toBeVisible();
+  await expect(dialog.getByLabel('Email address', { exact: true })).toBeVisible();
+  await expect(dialog.getByLabel('Password', { exact: true })).toHaveCount(0);
   for (let index = 0; index < 16; index += 1) {
     await page.keyboard.press('Tab');
     expect(await dialog.evaluate(node => node.contains(document.activeElement))).toBe(true);
@@ -151,6 +151,7 @@ test('unsaved profile changes survive switching tabs without sending an update',
   await page.goto('/profile?tab=settings'); await ready(page);
   const biography = page.getByLabel('Biography', { exact: true });
   await biography.fill('Unsaved biography kept while switching tabs');
+  await page.locator('summary').filter({ hasText: 'Profile banner' }).click();
   await page.getByLabel('Choose a profile banner', { exact: true }).setInputFiles('public/images/cover_phonk.png');
   const preview = page.getByAltText('Profile banner preview', { exact: true });
   const previewUrl = await preview.getAttribute('src');

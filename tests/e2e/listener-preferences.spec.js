@@ -39,6 +39,7 @@ test('Space pauses from the page; saved likes and volume survive a full reload',
   await expect(page.locator('main')).toContainText(fixtureTracks[0].title);
   await expect(page.locator('vite-error-overlay')).toHaveCount(0);
   await page.getByRole('button', { name: 'Play track', exact: true }).click();
+  await page.getByRole('button', { name: 'Expand player', exact: true }).filter({ visible: true }).click();
   const player = page.getByTestId('desktop-player');
   const play = player.getByTestId('standard-player-play-button');
   await expect(play).toHaveAttribute('aria-label', 'Pause');

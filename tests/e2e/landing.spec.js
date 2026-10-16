@@ -136,6 +136,7 @@ test('showcase playback survives landing, Discover, track and Home navigation wi
   const targetRow = showcaseRows(page).filter({ hasText: target.title });
   await expect(targetRow).toHaveCount(1);
   await targetRow.click();
+  await page.getByRole('button', { name: 'Expand player', exact: true }).filter({ visible: true }).click();
   const player = page.getByTestId('desktop-player');
   const playButton = player.getByTestId('standard-player-play-button');
   await expect(playButton).toHaveAttribute('aria-label', 'Pause');
@@ -171,7 +172,7 @@ test('showcase playback survives landing, Discover, track and Home navigation wi
   await page.keyboard.press('Escape');
   await expect(queue).toBeHidden();
   await expect(queueButton).toBeFocused();
-  const lyricsButton = player.getByRole('button', { name: 'Open fullscreen lyrics' });
+  const lyricsButton = player.getByRole('button', { name: 'Open fullscreen player' });
   await lyricsButton.click();
   await expect(page.getByTestId('fullscreen-lyrics-player')).toBeVisible();
   await expect(page.getByText('Words from the real landing fixture.', { exact: true })).toBeVisible();

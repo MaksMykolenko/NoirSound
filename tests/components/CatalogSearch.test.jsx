@@ -43,7 +43,7 @@ function renderCatalog(entries = ['/discover'], { headers = false } = {}) {
   render(<QueryClientProvider client={client}><MemoryRouter initialEntries={entries} initialIndex={entries.length - 1}><ContextMenuProvider>
     {headers && <><Header /><MobileHeader onOpenDrawer={vi.fn()} /></>}
     <Navigation />
-    <Routes><Route path="/discover" element={<Discover />} /><Route path="/track/:id" element={<Link to={entries.at(-1)}>Return to catalog</Link>} /><Route path="/previous" element={<p>Previous route</p>} /></Routes>
+    <Routes><Route path="/home" element={<h1>Home</h1>} /><Route path="/discover" element={<Discover />} /><Route path="/track/:id" element={<Link to={entries.at(-1)}>Return to catalog</Link>} /><Route path="/previous" element={<p>Previous route</p>} /></Routes>
   </ContextMenuProvider></MemoryRouter></QueryClientProvider>);
   return client;
 }
@@ -113,7 +113,9 @@ describe('catalog server-state correctness', () => {
     await catalogText(older.title);
     expect([...screen.getByTestId('all-releases').querySelectorAll('[data-track-id]')].map((element) => element.dataset.trackId)).toEqual(['older', 'newer']);
     expect(screen.getByTestId('catalog-results-summary')).toHaveTextContent('Showing 2 of 170');
-    expect(within(screen.getByTestId('discover-genre-tiles')).getByRole('button', { name: /House.*129/ })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Filters', exact: true }));
+    fireEvent.click(screen.getByTestId('catalog-genre-trigger'));
+    expect(screen.getByRole('option', { name: /House.*129/ })).toBeInTheDocument();
   });
 
   it('debounces Unicode search with replace history and resets the cursor for filter changes', async () => {
@@ -189,12 +191,12 @@ describe('catalog server-state correctness', () => {
   it('submits header search into the same catalog URL and lets mobile Search focus that query', async () => {
     serveCatalog(() => Promise.resolve(page([late])));
     useUserStore.setState({ user: { id: 'viewer' } });
-    renderCatalog(['/discover?content=BEAT&style=Trap'], { headers: true });
+    renderCatalog(['/home'], { headers: true });
     const headerInput = screen.getByRole('searchbox', { name: 'Search NoirSound' });
     fireEvent.change(headerInput, { target: { value: '  Łódź Нічний %_#  ' } });
     fireEvent.submit(headerInput.closest('form'));
     await waitFor(() => expect(calls().at(-1)[0].q).toBe('Łódź Нічний %_#'));
-    expect(calls().at(-1)[0]).toMatchObject({ contentType: 'BEAT', style: 'Trap' });
+    expect(screen.queryByRole('searchbox', { name: 'Search NoirSound' })).not.toBeInTheDocument();
     await waitFor(() => expect(screen.getByTestId('discover-all-content')).toHaveFocus());
     fireEvent.click(screen.getByRole('button', { name: 'Search', exact: true }));
     await waitFor(() => expect(screen.getByRole('searchbox', { name: 'Search catalog' })).toHaveFocus());
@@ -205,7 +207,7 @@ describe('catalog server-state correctness', () => {
       styles: [{ value: 'Rare style', label: 'Rare style', count: 400 }],
       meta: { optionLimit: 100, truncated: { styles: true, moods: false, keys: false }, availableOptions: { styles: 101, moods: 0, keys: 0 } },
     } })));
-    renderCatalog(['/discover?content=BEAT']);
+    renderCatalog(['/discover?content=BEAT&style=Trap']);
     await catalogText('Release beat');
     fireEvent.click(screen.getByTestId('beat-filter-style-trigger'));
     expect(screen.getByRole('option', { name: 'Trap', exact: true })).toBeInTheDocument();
@@ -229,33 +231,25 @@ describe('catalog server-state correctness', () => {
     expect(calls()).toHaveLength(requestsBeforeDetail);
   });
 
-  it('normalizes direct contentType links without losing the mode or search in editorial View all links', async () => {
+  it('normalizes direct contentType links and keeps the search when sorting', async () => {
     serveCatalog(() => Promise.resolve(page([first])));
     renderCatalog(['/discover?contentType=MUSIC&q=night&sort=played']);
     await catalogText(first.title);
-    fireEvent.click(within(screen.getByTestId('discover-new-releases')).getByRole('link', { name: 'View all' }));
+    fireEvent.click(screen.getByTestId('catalog-sort-trigger'));
+    fireEvent.click(screen.getByRole('option', { name: 'Recently added' }));
     await waitFor(() => expect(calls().at(-1)[0]).toMatchObject({ contentType: 'MUSIC', q: 'night', sort: 'recent', cursor: null }));
     const url = new URL(screen.getByTestId('catalog-location').textContent, 'http://test.local');
     expect(url.searchParams.get('content')).toBe('MUSIC');
     expect(url.searchParams.has('contentType')).toBe(false);
-    expect(url.hash).toBe('#discover-catalog');
-    await waitFor(() => expect(screen.getByTestId('discover-all-content')).toHaveFocus());
-    screen.getByRole('searchbox', { name: 'Search catalog' }).focus();
-    fireEvent.click(within(screen.getByTestId('discover-new-releases')).getByRole('link', { name: 'View all' }));
-    await waitFor(() => expect(screen.getByTestId('discover-all-content')).toHaveFocus());
   });
 
   it('focuses a direct catalog anchor after leading results settle without jumping again while typing', async () => {
-    const editorial = deferred();
-    getCatalogTracks.mockImplementation((options) => options.limit === 30 ? Promise.resolve(page([first])) : editorial.promise);
+    serveCatalog(() => Promise.resolve(page([first])));
     renderCatalog(['/discover#discover-catalog']);
     const section = screen.getByTestId('discover-all-content');
     const scrollToCatalog = vi.fn();
     section.scrollIntoView = scrollToCatalog;
     await catalogText(first.title);
-    expect(section).not.toHaveFocus();
-    expect(scrollToCatalog).not.toHaveBeenCalled();
-    await act(async () => editorial.resolve(page([])));
     await waitFor(() => expect(section).toHaveFocus());
     expect(scrollToCatalog).toHaveBeenCalledTimes(1);
 
@@ -270,21 +264,13 @@ describe('catalog server-state correctness', () => {
 });
 
 
-describe('design preset integration', () => {
-  it('atomically replaces filters, keeps preset state in the URL and clears it on manual filtering', async () => {
+describe('simplified filter integration', () => {
+  it('clears a shared preset through ordinary filters without leaving hidden URL constraints', async () => {
     serveCatalog(() => Promise.resolve(page([first])));
-    renderCatalog(['/discover?content=BEAT&q=old&style=Drill&mood=Dark&key=F%23+Minor&sort=liked']);
+    renderCatalog(['/discover?content=BEAT&vibe=night-drive&genre=synthwave&bpm=120-149&style=Trap&sort=liked']);
     await catalogText(first.title);
-    fireEvent.click(screen.getByRole('button', { name: 'Night Drive', exact: true }));
-    await waitFor(() => expect(calls().at(-1)[0]).toMatchObject({genre:'synthwave',bpm:'120-149',q:'',style:'',mood:'',key:'',sort:'recent',contentType:'BEAT'}));
-    expect(screen.getByRole('button', { name: 'Night Drive', exact:true })).toHaveAttribute('aria-pressed','true');
-    fireEvent.click(screen.getByRole('button', { name: 'Lo-Fi Chill', exact:true }));
-    await waitFor(() => expect(calls().at(-1)[0]).toMatchObject({genre:'lofi',bpm:'under-90'}));
-    fireEvent.click(screen.getByRole('button', { name: 'Lo-Fi Chill', exact:true }));
-    await waitFor(() => expect(calls().at(-1)[0]).toMatchObject({genre:'',bpm:'',q:''}));
-    fireEvent.click(screen.getByRole('button', { name: 'Heavy Trap', exact:true }));
-    fireEvent.click(screen.getByRole('tab', { name: 'Music', exact:true }));
-    await waitFor(() => expect(calls().at(-1)[0]).toMatchObject({contentType:'MUSIC',bpm:''}));
+    fireEvent.click(screen.getByRole('button', { name: i18n.t('discover.clearFilters'), exact: true }));
+    await waitFor(() => expect(calls().at(-1)[0]).toMatchObject({genre:'',bpm:'',style:'',sort:'recent',contentType:'BEAT'}));
     expect(screen.getByTestId('catalog-location')).not.toHaveTextContent('vibe=');
   });
 });

@@ -1,10 +1,8 @@
-import SyncedLyricsView from '../lyrics/SyncedLyricsView';
-import { playerArtistLabel } from '../../utils/playerTrackPresentation';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft,
+  ChevronDown,
   FileText,
   ListMusic,
   RotateCcw,
@@ -13,6 +11,9 @@ import { getTrackLyrics } from '../../api/lyrics';
 import { usePlayerStore } from '../../store/playerStore';
 import FallbackCover from '../ui/FallbackCover';
 import QueuePanel from './QueuePanel';
+import FullscreenArtworkBackdrop from './FullscreenArtworkBackdrop';
+import FullscreenLyricsText from './FullscreenLyricsText';
+import './fullscreen-player.css';
 import {
   DesktopPlayerBarContent,
   MobilePlayerProgress,
@@ -38,6 +39,7 @@ export default function FullscreenLyricsPlayer({
 }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const lyricsScrollRef = useRef(null);
   const [lyrics, setLyrics] = useState(null);
   const [loading, setLoading] = useState(false);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -85,7 +87,7 @@ export default function FullscreenLyricsPlayer({
     closeLyricsFullscreen();
     if (ownsHistoryEntry) {
       event.preventDefault();
-      const trackPath = `/track/${currentTrack.id}`;
+      const trackPath = event.currentTarget.getAttribute('href') || `/track/${currentTrack.id}`;
       if (`${window.location.pathname}${window.location.search}${window.location.hash}` === trackPath) {
         navigate(-1);
       } else {
@@ -103,6 +105,11 @@ export default function FullscreenLyricsPlayer({
   useEffect(() => {
     if (!currentTrack?.id) return undefined;
 
+    if (lyricsScrollRef.current) {
+      lyricsScrollRef.current.scrollTop = 0;
+      const stage = lyricsScrollRef.current.closest('.ns-immersive-stage');
+      if (stage) stage.scrollTop = 0;
+    }
     const cachedLyrics = getCachedFullscreenLyrics(currentTrack.id);
     if (cachedLyrics) {
       setLyrics(cachedLyrics);
@@ -157,7 +164,6 @@ export default function FullscreenLyricsPlayer({
   if (!currentTrack) return null;
 
   const isLiked = likedTracks.includes(currentTrack.id);
-  const longTitleClass = (currentTrack.title || '').length > 60 ? '!text-2xl !leading-snug' : '';
   const retry = () => {
     deleteCachedFullscreenLyrics(currentTrack.id);
     setRetryVersion((version) => version + 1);
@@ -170,62 +176,61 @@ export default function FullscreenLyricsPlayer({
       aria-modal="true"
       aria-label={t('lyrics.fullscreenLabel', { title: currentTrack.title })}
       data-testid="fullscreen-lyrics-player"
-      className="ns-lyrics-fullscreen fixed inset-0 z-[var(--ns-z-fullscreen)] flex h-[100dvh] w-screen flex-col overflow-hidden bg-[var(--ns-bg)] text-zinc-100"
+      className="ns-lyrics-fullscreen ns-immersive-player"
     >
-      <header className="relative z-10 flex min-h-[var(--ns-header-height)] shrink-0 items-center gap-3 border-b border-[var(--ns-border-subtle)] px-4 pb-3 pt-[calc(.75rem+env(safe-area-inset-top))] sm:px-6 lg:px-8 lg:py-3">
+      <FullscreenArtworkBackdrop key={currentTrack.coverUrl || 'no-cover'} src={currentTrack.coverUrl} paused={!isPlaying} />
+      <header className="ns-immersive-header">
         <button
           type="button"
           onClick={closeWithHistory}
-          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md border border-[var(--ns-border)] bg-zinc-900 text-zinc-200 transition-colors hover:bg-surface-hover hover:text-zinc-100"
+          className="ns-immersive-close"
           aria-label={t('player.closeLyrics')}
           title={t('lyrics.backToPlayer')}
           data-testid="fullscreen-lyrics-back"
         >
-          <ArrowLeft size={21} />
+          <ChevronDown size={24} />
         </button>
-        <FallbackCover
-          src={currentTrack?.coverUrl}
-          title={currentTrack?.title}
-          artistName={currentTrack?.artistName}
-          genre={currentTrack?.genre}
-          className="h-11 w-11 shrink-0 rounded border border-[var(--ns-border)] sm:h-12 sm:w-12"
-          imageClassName="object-cover"
-        />
-        <div className="min-w-0">
-          <h1 title={currentTrack?.title} className="ns-fullscreen-compact-title truncate font-sans text-sm font-bold text-zinc-100 sm:text-base">{currentTrack?.title}</h1>
-          <p title={currentTrack?.artistName} className="truncate font-sans tabular-nums text-ns-meta text-zinc-500 sm:text-xs">{playerArtistLabel(currentTrack)}</p>
+        <div className="ns-immersive-heading">
+          <span>{t('player.nowPlaying')}</span>
+          <h1 className="sr-only">{currentTrack.title}</h1>
           <PlaybackErrorStatus error={playbackError} />
         </div>
+        <span className="ns-immersive-wordmark" aria-hidden="true">NoirSound</span>
       </header>
 
-      <main className="relative z-10 flex min-h-0 flex-1 overflow-hidden">
-        <aside className="hidden min-h-0 w-[min(31vw,28rem)] shrink-0 flex-col overflow-y-auto border-r border-[var(--ns-border-subtle)] p-8 lg:flex xl:p-12">
-          <div className="my-auto w-full shrink-0">
+      <main className="ns-immersive-stage">
+        <aside className="ns-immersive-record">
           <FallbackCover
-            src={currentTrack?.coverUrl}
-            title={currentTrack?.title}
-            artistName={currentTrack?.artistName}
-            genre={currentTrack?.genre}
-            className="mx-auto aspect-square w-full max-w-[min(100%,30vh)] shrink-0 rounded-sm border border-[var(--ns-border)] shadow-lg"
+            key={currentTrack.id}
+            src={currentTrack.coverUrl}
+            title={currentTrack.title}
+            artistName={currentTrack.artistName}
+            genre={currentTrack.genre}
+            loading="eager"
+            className="ns-immersive-cover"
             imageClassName="object-cover"
           />
-          <div className="mt-6">
-            <p className="font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-brand-red">{t('player.nowPlaying')}</p>
-            <h2 className={`break-words ns-display-title ns-display-title--fullscreen mt-2 text-zinc-100 ${longTitleClass}`}>{currentTrack.title}</h2>
-            <p className="mt-1 font-sans tabular-nums text-sm text-zinc-500">{playerArtistLabel(currentTrack)}</p>
-          </div>
+          <div className="ns-immersive-identity" data-testid="fullscreen-track-info">
+            <PlayerTrackInfo
+              track={currentTrack}
+              isLiked={isLiked}
+              onToggleLike={() => toggleLikeTrack(currentTrack.id)}
+              onOpenTrack={closeForNavigation}
+              className="min-w-0 w-full"
+            />
           </div>
         </aside>
 
         <div
-          className="ns-fullscreen-lyrics-scroll min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain px-5 py-8 sm:px-10 sm:py-12 lg:px-[clamp(3rem,7vw,7rem)] lg:py-16"
+          key={currentTrack.id}
+          ref={lyricsScrollRef}
+          className="ns-immersive-lyrics"
           data-testid="fullscreen-lyrics-scroll"
+          tabIndex={0}
+          role="region"
+          aria-label={t('player.lyrics')}
+          aria-busy={loading}
         >
-          {!(lyrics?.lyricsType === 'SYNCED' && lyrics.lyricsSynced?.length) && <div className="ns-fullscreen-mobile-display mb-8 lg:hidden">
-            <p className="font-sans text-ns-meta font-medium uppercase tracking-ns-label text-brand-red">{t('player.nowPlaying')}</p>
-            <h2 className={`break-words ns-display-title ns-display-title--fullscreen mt-1 text-zinc-100 ${longTitleClass}`}>{currentTrack.title}</h2>
-            <p className="mt-1 font-sans text-sm text-zinc-500">{playerArtistLabel(currentTrack)}</p>
-          </div>}
           {loading ? (
             <div className="mx-auto max-w-4xl space-y-5 animate-pulse" role="status" aria-label={t('lyrics.loading')}>
               {[82, 64, 91, 56, 74, 87, 62].map((width) => (
@@ -234,9 +239,9 @@ export default function FullscreenLyricsPlayer({
               <span className="sr-only">{t('lyrics.loading')}</span>
             </div>
           ) : loadFailed ? (
-            <div className="grid min-h-full place-items-center py-12 text-center">
+            <div className="ns-immersive-empty">
               <div className="max-w-sm">
-                <div className="mx-auto grid h-16 w-16 place-items-center rounded-lg border border-[var(--ns-border)] bg-surface-noir text-zinc-400">
+                <div className="ns-immersive-empty-icon">
                   <FileText size={28} />
                 </div>
                 <h2 className="mt-5 font-sans text-xl font-bold text-zinc-100">{t('lyrics.unavailable')}</h2>
@@ -247,18 +252,17 @@ export default function FullscreenLyricsPlayer({
               </div>
             </div>
           ) : lyrics?.hasLyrics && (lyrics.lyricsText || lyrics.lyricsSynced?.length) ? (
-            <div className="mx-auto max-w-4xl">
-              {lyrics.lyricsType === 'SYNCED' && lyrics.lyricsSynced?.length ? <SyncedLyricsView key={currentTrack.id} trackId={currentTrack.id} lines={lyrics.lyricsSynced} progress={progress} onSeek={seek} /> : <p className="whitespace-pre-wrap break-words font-sans text-[clamp(1.25rem,2.5vw,2.125rem)] font-semibold leading-[1.6] text-zinc-200">
-                {lyrics.lyricsText}
-              </p>}
-              <p className="mt-14 border-t border-[var(--ns-border-subtle)] pt-5 font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-zinc-500">
-                {lyrics.source === 'LRCLIB' ? <a href='https://lrclib.net' target='_blank' rel='noreferrer'>LRCLIB</a> : t('lyrics.providedByArtist')}
-              </p>
-            </div>
+            <FullscreenLyricsText
+              key={currentTrack.id}
+              lyrics={lyrics}
+              progress={progress}
+              onSeek={seek}
+              scrollRef={lyricsScrollRef}
+            />
           ) : (
-            <div className="grid min-h-full place-items-center py-12 text-center">
+            <div className="ns-immersive-empty">
               <div className="max-w-sm">
-                <div className="mx-auto grid h-16 w-16 place-items-center rounded-lg border border-[var(--ns-border)] bg-surface-noir text-zinc-400">
+                <div className="ns-immersive-empty-icon">
                   <FileText size={28} />
                 </div>
                 <h2 className="mt-5 font-sans text-xl font-bold text-zinc-100">{t('lyrics.noLyrics')}</h2>
@@ -268,13 +272,11 @@ export default function FullscreenLyricsPlayer({
         </div>
       </main>
 
-      <footer className="relative z-10 shrink-0" data-testid="fullscreen-lyrics-controls">
-        <div
-          className="hidden h-[var(--ns-player-height)] items-center justify-between border-t border-[var(--ns-border-subtle)] bg-[var(--ns-player-bg)] px-4 select-none md:px-8 lg:flex"
-          data-testid="fullscreen-standard-desktop-playerbar"
-        >
+      <footer className="ns-immersive-footer" data-testid="fullscreen-lyrics-controls">
+        <div className="ns-immersive-desktop-controls" data-testid="fullscreen-standard-desktop-playerbar">
           <DesktopPlayerBarContent
             track={currentTrack}
+            showTrackInfo={false}
             isPlaying={isPlaying}
             volume={volume}
             progress={progress}
@@ -282,7 +284,6 @@ export default function FullscreenLyricsPlayer({
             repeatMode={repeatMode}
             shuffle={shuffle}
             isLiked={isLiked}
-            lyricsAvailable
             lyricsActive
             isQueueOpen={isQueueOpen}
             onTogglePlay={togglePlay}
@@ -300,40 +301,16 @@ export default function FullscreenLyricsPlayer({
             onOpenTrack={closeForNavigation}
           />
         </div>
-
-        <div
-          className="ns-fullscreen-mobile-controls space-y-2 border-t border-[var(--ns-border-subtle)] bg-[var(--ns-player-bg)] px-4 pb-[calc(.65rem+var(--ns-safe-area-bottom))] pt-2 select-none lg:hidden"
-          data-testid="fullscreen-standard-mobile-playerbar"
-        >
-          <div className="flex min-w-0 items-center gap-1">
-            <PlayerTrackInfo
-              track={currentTrack}
-              isLiked={isLiked}
-              onToggleLike={() => toggleLikeTrack(currentTrack.id)}
-              onOpenTrack={closeForNavigation}
-              className="min-w-0 flex-1"
-            />
-            <button
-              type="button"
-              onClick={closeWithHistory}
-              className="ns-icon-button text-brand-red border-brand-red/30"
-              aria-label={t('player.closeLyrics')}
-              aria-pressed={true}
-            >
-              <FileText size={17} />
-            </button>
-            <button
-              type="button"
-              onClick={onToggleQueue}
-              className={`ns-icon-button ${
-                isQueueOpen ? 'text-brand-red border-brand-red/30' : 'text-zinc-500'
-              }`}
-              aria-label={t('player.openQueue')}
-              aria-expanded={isQueueOpen}
-            >
-              <ListMusic size={17} />
-            </button>
-          </div>
+        <div className="ns-immersive-mobile-controls" data-testid="fullscreen-standard-mobile-playerbar">
+          <button
+            type="button"
+            onClick={onToggleQueue}
+            className="ns-immersive-queue"
+            aria-label={t('player.openQueue')}
+            aria-expanded={isQueueOpen}
+          >
+            <ListMusic size={20} />
+          </button>
           <MobilePlayerProgress progress={progress} duration={duration} onSeek={seek} />
           <MobilePlayerTransportControls
             isPlaying={isPlaying}

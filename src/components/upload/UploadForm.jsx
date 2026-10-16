@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { UploadCloud, CheckCircle, FileAudio, Image as ImageIcon, Music, AlertCircle } from 'lucide-react';
 import { useUploadTrack, pollUploadStatus } from '../../hooks/mutations/useUploadTrack';
 import { useUserStore } from '../../store/userStore';
 import { useToastStore } from '../../store/toastStore';
-import { ensureMyArtistProfile } from '../../api/user';
+import { ensureMyArtistProfile, onboardCreator } from '../../api/user';
 import LoadingState from '../ui/LoadingState';
 import GenrePicker from '../ui/GenrePicker';
 import { getLocalizedGenre } from '../../i18n/genreLabels';
@@ -19,6 +19,14 @@ export default function UploadForm() {
   const { t } = useTranslation();
   const { user, authHydrated, setAuthModalOpen, fetchCurrentUser } = useUserStore();
   const addToast = useToastStore((state) => state.addToast);
+  const errorRef = useRef(null);
+  const [creatorName, setCreatorName] = useState(user?.displayName === 'Listener' ? '' : user?.displayName || '');
+  const [trackId, setTrackId] = useState(null);
+  const [audioPreviewUrl, setAudioPreviewUrl] = useState('');
+  const [optionalOpen, setOptionalOpen] = useState(false);
+  const [beatOpen, setBeatOpen] = useState(false);
+  const [lyricsOpen, setLyricsOpen] = useState(false);
+  const [statusCheckFailed, setStatusCheckFailed] = useState(false);
   const [profileSetupStatus, setProfileSetupStatus] = useState('idle'); // idle | loading
   const [landingDraft] = useState(() => {
     const draft = useLandingDraftStore.getState().draft;
@@ -62,6 +70,7 @@ export default function UploadForm() {
   const [uploadId, setUploadId] = useState(null);
 
   const uploadMutation = useUploadTrack();
+  const onPublished = uploadMutation.onPublished;
 
   useEffect(() => {
     if (!landingDraft || !['idle', 'error'].includes(uploadStatus)) return;
@@ -76,14 +85,23 @@ export default function UploadForm() {
     setErrorMsg('');
 
     if (!audioFile) return setErrorMsg(t('uploadForm.audioRequired'));
-    if (!coverFile) return setErrorMsg(t('uploadForm.artworkRequired'));
-    if (!title.trim()) return setErrorMsg(t('uploadForm.titleRequired'));
+    if (!title.trim() || title.trim().length > 150) return setErrorMsg(t('start.titleHelp'));
     if (!genre) return setErrorMsg(t('uploadForm.genreRequired'));
+    if (contentType === 'BEAT' && beatMetadata.beatBpm !== '' && (!Number.isInteger(Number(beatMetadata.beatBpm)) || Number(beatMetadata.beatBpm) < 40 || Number(beatMetadata.beatBpm) > 240)) {
+      setBeatOpen(true);
+      return setErrorMsg(t('start.bpmError'));
+    }
+    if (tags.split(',').map((tag) => tag.trim()).filter(Boolean).some((tag) => tag.length > 30) || tags.split(',').filter((tag) => tag.trim()).length > 20) {
+      setOptionalOpen(true);
+      return setErrorMsg(t('start.tagsError'));
+    }
     if (!rightsChecked) return setErrorMsg(t('uploadForm.rightsRequired'));
     if (lyricsCounts(lyricsForm.lyricsText).lines > MAX_LYRICS_LINES) {
+      setLyricsOpen(true);
       return setErrorMsg(t('lyrics.tooLong'));
     }
     if (lyricsForm.lyricsText.trim() && !lyricsForm.lyricsRightsConfirmed) {
+      setLyricsOpen(true);
       return setErrorMsg(t('lyrics.rightsRequired'));
     }
 
@@ -105,6 +123,8 @@ export default function UploadForm() {
       
       setUploadProgress(100);
       setUploadId(res.uploadId);
+      setTrackId(res.trackId);
+      setStatusCheckFailed(false);
       setUploadStatus('processing');
     } catch (err) {
       // The backend reports this specific failure as a stable code
@@ -124,37 +144,39 @@ export default function UploadForm() {
 
   useEffect(() => {
     let poller = null;
+    let cancelled = false;
     
     const checkStatus = async () => {
       if (!uploadId) return;
       try {
         const res = await pollUploadStatus(uploadId);
-        if (res.status === 'PROCESSING') {
-          setUploadStatus('processing');
-        } else if (res.status === 'READY') {
+        if (cancelled) return;
+        if (res.status === 'READY') {
           setUploadStatus('success');
-          clearInterval(poller);
+          onPublished?.();
         } else if (res.status === 'FAILED') {
           setErrorMsg(res.error || t('uploadForm.processingFailed'));
           setUploadStatus('error');
-          clearInterval(poller);
+        } else {
+          poller = setTimeout(checkStatus, 3000);
         }
       } catch (err) {
+        if (cancelled) return;
         setErrorMsg(err.message || t('uploadForm.statusFailed'));
+        setStatusCheckFailed(true);
         setUploadStatus('error');
-        clearInterval(poller);
       }
     };
 
     if (uploadStatus === 'processing') {
-      poller = setInterval(checkStatus, 3000);
       checkStatus(); // Initial check
     }
 
     return () => {
-      if (poller) clearInterval(poller);
+      cancelled = true;
+      if (poller) clearTimeout(poller);
     };
-  }, [uploadStatus, uploadId, t]);
+  }, [uploadStatus, uploadId, t, onPublished]);
 
   useEffect(() => {
     if (!coverFile) {
@@ -165,6 +187,43 @@ export default function UploadForm() {
     setCoverPreviewUrl(previewUrl);
     return () => URL.revokeObjectURL(previewUrl);
   }, [coverFile]);
+
+  useEffect(() => {
+    if (!audioFile) { setAudioPreviewUrl(''); return undefined; }
+    const url = URL.createObjectURL(audioFile);
+    setAudioPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [audioFile]);
+
+  useEffect(() => { if (errorMsg) errorRef.current?.focus(); }, [errorMsg]);
+
+  const chooseAudio = (file) => {
+    if (!file) return;
+    if (!['audio/mpeg', 'audio/wav', 'audio/x-wav', 'audio/flac', 'audio/aac', 'audio/ogg'].includes(file.type) || !file.size || file.size > 50 * 1024 * 1024) {
+      setErrorMsg(t('start.audioError')); return;
+    }
+    setAudioFile(file);
+    setTitle((value) => value.trim() ? value : file.name.replace(/\.[^.]+$/, '').replace(/_/g, ' ').slice(0, 150));
+    setErrorMsg('');
+  };
+  const chooseCover = (file) => {
+    if (!file) return;
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || !file.size || file.size > 5 * 1024 * 1024) {
+      setErrorMsg(t('start.coverError')); return;
+    }
+    setCoverFile(file); setErrorMsg('');
+  };
+  const requestPublishing = async (event) => {
+    event.preventDefault();
+    if (!creatorName.trim() || profileSetupStatus === 'loading') return;
+    setProfileSetupStatus('loading'); setErrorMsg('');
+    try {
+      await onboardCreator({ displayName: creatorName.trim(), creatorType: 'BOTH', intendsMusic: true, intendsBeats: true });
+      await fetchCurrentUser();
+      addToast(t('start.creatorRequestSent'), 'success');
+    } catch (error) { setErrorMsg(error.message); }
+    finally { setProfileSetupStatus('idle'); }
+  };
 
   const handleReset = () => {
     if (landingDraft) useLandingDraftStore.getState().clearDraft();
@@ -185,6 +244,11 @@ export default function UploadForm() {
     setCoverFile(null);
     setErrorMsg('');
     setUploadId(null);
+    setTrackId(null);
+    setStatusCheckFailed(false);
+    setOptionalOpen(false);
+    setBeatOpen(false);
+    setLyricsOpen(false);
     setUploadStatus('idle');
     setUploadProgress(0);
   };
@@ -200,38 +264,44 @@ export default function UploadForm() {
           <UploadCloud size={30} />
         </div>
         <div className="space-y-2">
-          <h2 className="text-xl font-bold text-zinc-100">{t('empty.signInTitle')}</h2>
+          <h2 className="text-xl font-bold text-zinc-100">{t('start.uploadSignInTitle')}</h2>
           <p className="text-sm leading-relaxed text-zinc-400">
-            {t('empty.signInDesc')}
+            {t('start.uploadSignInDescription')}
           </p>
           {landingDraft && <p className="text-sm leading-relaxed text-zinc-400">{t('landing.creator.localNotice')}</p>}
           {lostLandingDraft && <p role="status" className="text-sm leading-relaxed text-zinc-400">{t('landing.creator.lostDraft')}</p>}
         </div>
         <button
           type="button"
-          onClick={() => setAuthModalOpen(true)}
+          onClick={() => setAuthModalOpen(true, 'register')}
           className="w-full ns-button-primary px-5 cursor-pointer"
         >
-          {t('header.signIn')}
+          {t('auth.createAccount')}
         </button>
+        <button type="button" className="min-h-11 text-sm underline text-zinc-300" onClick={() => setAuthModalOpen(true, 'login')}>{t('auth.haveAccount')} {t('header.signIn')}</button>
       </div>
     );
   }
 
   if (!['ARTIST', 'ADMIN'].includes(user.role)) {
-    return (
-      <div className="mx-auto max-w-lg space-y-4 rounded-md border border-zinc-800 bg-surface-noir/50 p-6 text-center">
-        <AlertCircle size={30} className="mx-auto text-[var(--ns-warning)]" />
-        <div>
-          <h2 className="text-xl font-bold text-zinc-100">{t('uploadForm.creatorAccessRequired')}</h2>
-          <p className="text-sm leading-relaxed text-zinc-400 mt-2">
-            {t('uploadForm.creatorAccessHelp')}
-          </p>
-          {landingDraft && <p className="mt-2 text-sm leading-relaxed text-zinc-400">{t('landing.creator.localNotice')}</p>}
-          {lostLandingDraft && <p role="status" className="mt-2 text-sm leading-relaxed text-zinc-400">{t('landing.creator.lostDraft')}</p>}
-        </div>
-      </div>
-    );
+    const pending = Boolean(user.creatorRegistration);
+    return <div className="mx-auto max-w-lg space-y-5 rounded-lg border border-zinc-800 p-6">
+      <h2 className="text-xl font-bold text-zinc-100">{t(pending ? 'start.requestPendingTitle' : 'start.requestTitle')}</h2>
+      <p className="text-sm leading-relaxed text-zinc-300">{t(pending ? 'start.creatorPending' : 'start.creatorAccessDescription')}</p>
+      {pending ? <button type="button" className="ns-button-secondary px-4" disabled={profileSetupStatus === 'loading'} onClick={async () => {
+        setProfileSetupStatus('loading');
+        try { await fetchCurrentUser(); } catch (error) { setErrorMsg(error.message); }
+        finally { setProfileSetupStatus('idle'); }
+      }}>{t('start.refreshAccess')}</button> : <form onSubmit={requestPublishing} className="space-y-4">
+        <label className="block space-y-2"><span className="text-sm font-medium text-zinc-200">{t('start.artistName')}</span>
+          <input required maxLength={120} className="ns-field px-4" value={creatorName} onChange={(event) => setCreatorName(event.target.value)} autoComplete="nickname" />
+        </label>
+        <p className="text-sm text-zinc-400">{t('start.artistNameHelp')}</p>
+        <button type="submit" disabled={profileSetupStatus === 'loading'} className="ns-button-primary w-full px-4 disabled:opacity-50">{t('start.requestAccess')}</button>
+      </form>}
+      {errorMsg && <p ref={errorRef} tabIndex={-1} role="alert" className="text-sm text-[var(--ns-danger)]">{errorMsg}</p>}
+      {landingDraft && <p className="text-sm text-zinc-400">{t('landing.creator.localNotice')}</p>}
+    </div>;
   }
 
   // Role alone (ARTIST/ADMIN) does not guarantee a working ArtistProfile —
@@ -277,9 +347,9 @@ export default function UploadForm() {
           <CheckCircle size={32} />
         </div>
         <div className="space-y-2">
-          <h3 className="text-xl font-bold text-zinc-100">{t('uploadForm.readyToPublish')}</h3>
+          <h3 className="text-xl font-bold text-zinc-100">{t('start.published')}</h3>
           <p className="text-sm text-zinc-400">
-            {t('uploadForm.uploadSuccess', { title })}
+            {t('start.publishSuccess', { title })}
           </p>
         </div>
 
@@ -305,17 +375,25 @@ export default function UploadForm() {
           </div>
         </div>
 
-        <div className="flex space-x-3">
+        <div className="flex flex-wrap gap-3">
+          {trackId && <a href={`/track/${trackId}`} className="ns-button-primary flex-1 px-4 text-sm">{t('start.openRelease')}</a>}
           <button
             onClick={handleReset}
             className="flex-1 ns-button-secondary px-4 text-sm cursor-pointer"
           >
-            Upload Another
+            {t('start.uploadAnother')}
           </button>
         </div>
       </div>
     );
   }
+
+  if (statusCheckFailed) return <div className="mx-auto max-w-lg space-y-4 p-6" role="alert">
+    <h2 className="text-xl font-bold text-zinc-100">{t('start.checkStatusTitle')}</h2>
+    <p className="text-sm text-zinc-300">{t('start.checkStatusHelp')}</p>
+    <p className="text-sm text-zinc-400">{errorMsg}</p>
+    <button type="button" className="ns-button-primary px-4" onClick={() => { setStatusCheckFailed(false); setErrorMsg(''); setUploadStatus('processing'); }}>{t('actions.retry')}</button>
+  </div>;
 
   if (uploadStatus !== 'idle' && uploadStatus !== 'error') {
     return (
@@ -336,12 +414,10 @@ export default function UploadForm() {
             aria-label={t('uploadForm.uploadProgress')}
             aria-valuemin="0"
             aria-valuemax="100"
-            aria-valuenow={uploadStatus === 'uploading' ? uploadProgress : 100}
           >
             {uploadStatus === 'uploading' ? (
               <div
-                className="absolute left-0 top-0 h-full bg-brand-red transition-all duration-300"
-                style={{ width: `${uploadProgress}%` }}
+                className="absolute left-0 top-0 h-full w-full animate-pulse bg-brand-red"
               />
             ) : (
               <div className="absolute left-0 top-0 h-full w-full animate-pulse bg-brand-red" />
@@ -350,8 +426,8 @@ export default function UploadForm() {
 
           <div className="flex justify-between items-center text-sm text-zinc-400 font-semibold px-1">
             <span>
-              {uploadStatus === 'uploading' && t('uploadForm.progressPercent', { progress: uploadProgress })}
-              {uploadStatus === 'processing' && t('uploadForm.awaitingWorker')}
+              {uploadStatus === 'uploading' && t('uploadForm.sendingFiles')}
+              {uploadStatus === 'processing' && t('start.processingAudio')}
             </span>
           </div>
         </div>
@@ -384,7 +460,7 @@ export default function UploadForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mx-auto grid max-w-6xl gap-7 xl:grid-cols-[minmax(0,1fr)_19rem] xl:items-start" noValidate>
+    <form onSubmit={handleSubmit} className="mx-auto max-w-3xl space-y-6" noValidate>
       <div className="min-w-0 space-y-8">
         {landingDraft && (
           <div className="space-y-2 border-l-2 border-zinc-600 pl-4 text-sm leading-relaxed text-zinc-400" role="status">
@@ -394,30 +470,30 @@ export default function UploadForm() {
         )}
         {lostLandingDraft && <p role="status" className="text-sm leading-relaxed text-zinc-400">{t('landing.creator.lostDraft')}</p>}
         {errorMsg && (
-          <div id="upload-error" className="flex items-start gap-2.5 border-l-2 border-[var(--ns-danger)] bg-[color-mix(in_srgb,var(--ns-danger)_10%,transparent)] p-3.5 text-sm text-[var(--ns-danger)]" role="alert">
+          <div ref={errorRef} tabIndex={-1} id="upload-error" className="flex items-start gap-2.5 border-l-2 border-[var(--ns-danger)] bg-[color-mix(in_srgb,var(--ns-danger)_10%,transparent)] p-3.5 text-sm text-[var(--ns-danger)]" role="alert">
             <AlertCircle size={16} className="mt-0.5 shrink-0" />
             <span className="font-semibold">{errorMsg}</span>
           </div>
         )}
 
+        <p className="text-sm text-zinc-300">{t('start.publishingAs', { name: user.displayName || user.username })}</p>
         <section aria-label={t('content.uploadAs')}>
           <ContentTypeSelector value={contentType} onChange={setContentType} idPrefix="single-upload-content-type" />
         </section>
 
         <section className="space-y-4" aria-labelledby="upload-assets-title">
           <div>
-            <h2 id="upload-assets-title" className="text-base font-semibold text-zinc-100">{t('uploadForm.assets')}</h2>
-            <p className="mt-1 text-sm text-zinc-500">{t('uploadForm.assetsHelp')}</p>
+            <h2 id="upload-assets-title" className="text-base font-semibold text-zinc-100">{t('start.audioStep')}</h2>
           </div>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="space-y-4">
             <div className={`group relative min-h-44 cursor-pointer focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--ns-accent)] rounded-md border border-dashed p-6 text-center transition-colors ${
               audioFile ? 'border-brand-red/35 bg-brand-red/5' : 'border-zinc-800 bg-zinc-950/25 hover:border-zinc-700'
             }`}>
               <input
                 id="track-audio"
                 type="file"
-                accept=".mp3,.wav,.flac,audio/mpeg,audio/wav,audio/flac"
-                onChange={(e) => setAudioFile(e.target.files[0])}
+                accept=".mp3,.wav,.flac,.aac,.ogg,audio/mpeg,audio/wav,audio/x-wav,audio/flac,audio/aac,audio/ogg"
+                onChange={(e) => { chooseAudio(e.target.files[0]); e.target.value = ''; }}
                 className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
                 aria-label={t('uploadForm.audioFileLabel')}
                 aria-describedby={errorMsg ? 'upload-error' : undefined}
@@ -430,7 +506,7 @@ export default function UploadForm() {
                   <span title={audioFile?.name} className="block truncate text-sm font-bold text-zinc-200">
                     {audioFile ? audioFile.name : t('uploadForm.selectAudio')}
                   </span>
-                  <span className="mt-1 block text-ns-label text-zinc-400">{t('uploadForm.audioFormats')}</span>
+                  <span className="mt-1 block text-ns-label text-zinc-400">{t('start.audioFormats')}</span>
                   {audioFile && (
                     <span className="mt-2 block text-ns-label text-[var(--ns-success)]">
                       {t('uploadForm.selectedMegabytes', { size: (audioFile.size / (1024 * 1024)).toFixed(1) })}
@@ -440,41 +516,13 @@ export default function UploadForm() {
               </div>
             </div>
 
-            <div className={`group relative min-h-44 cursor-pointer focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--ns-accent)] overflow-hidden rounded-md border border-dashed p-5 text-center transition-colors ${
-              coverFile ? 'border-brand-red/35 bg-brand-red/5' : 'border-zinc-800 bg-zinc-950/25 hover:border-zinc-700'
-            }`}>
-              <input
-                id="track-artwork"
-                type="file"
-                accept="image/*"
-                onChange={(e) => setCoverFile(e.target.files[0])}
-                className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                aria-label={t('uploadForm.artworkFileLabel')}
-                aria-describedby={errorMsg ? 'upload-error' : undefined}
-              />
-              <div className="flex flex-col items-center justify-center space-y-3.5">
-                {coverPreviewUrl ? (
-                  <img src={coverPreviewUrl} alt={t('uploadForm.artworkPreview')} className="h-20 w-20 rounded object-cover border border-zinc-700" />
-                ) : (
-                  <div className="rounded border border-zinc-800 bg-zinc-900 p-3 text-zinc-400 transition-colors group-hover:border-brand-red/35 group-hover:text-brand-red">
-                    <ImageIcon size={24} />
-                  </div>
-                )}
-                <div className="min-w-0 max-w-full">
-                  <span title={coverFile?.name} className="block truncate text-sm font-bold text-zinc-200">
-                    {coverFile ? coverFile.name : t('uploadForm.selectArtwork')}
-                  </span>
-                  <span className="mt-1 block text-ns-label text-zinc-400">{t('uploadForm.artworkFormats')}</span>
-                </div>
-              </div>
-            </div>
+            {audioPreviewUrl && <audio controls preload="metadata" src={audioPreviewUrl} className="w-full" aria-label={t('start.audioPreview')} />}
           </div>
         </section>
 
         <section className="space-y-5 border-t border-zinc-800/70 pt-6" aria-labelledby="upload-details-title">
           <div>
-            <h2 id="upload-details-title" className="text-base font-semibold text-zinc-100">{t('uploadForm.releaseDetails')}</h2>
-            <p className="mt-1 text-sm text-zinc-500">{t('uploadForm.releaseDetailsHelp')}</p>
+            <h2 id="upload-details-title" className="text-base font-semibold text-zinc-100">{t('start.detailsStep')}</h2>
           </div>
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
             <div className="space-y-1.5">
@@ -482,6 +530,7 @@ export default function UploadForm() {
               <input
                 id="track-title"
                 type="text"
+                maxLength={150}
                 placeholder={t('uploadForm.titlePlaceholder')}
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
@@ -504,11 +553,46 @@ export default function UploadForm() {
             </div>
           </div>
 
+        </section>
+        <details className="rounded-lg border border-zinc-800 p-4" open={optionalOpen} onToggle={(event) => setOptionalOpen(event.currentTarget.open)}>
+          <summary className="min-h-7 cursor-pointer text-sm font-semibold text-zinc-200">{t('start.optionalDetails')}</summary>
+          <div className="space-y-5 pt-4">
+            <p className="text-sm text-zinc-400">{t('start.coverHelp')}</p>
+            <div className={`group relative min-h-44 cursor-pointer focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--ns-accent)] overflow-hidden rounded-md border border-dashed p-5 text-center transition-colors ${
+              coverFile ? 'border-brand-red/35 bg-brand-red/5' : 'border-zinc-800 bg-zinc-950/25 hover:border-zinc-700'
+            }`}>
+              <input
+                id="track-artwork"
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                onChange={(e) => { chooseCover(e.target.files[0]); e.target.value = ''; }}
+                className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                aria-label={t('uploadForm.artworkFileLabel')}
+                aria-describedby={errorMsg ? 'upload-error' : undefined}
+              />
+              <div className="flex flex-col items-center justify-center space-y-3.5">
+                {coverPreviewUrl ? (
+                  <img src={coverPreviewUrl} alt={t('uploadForm.artworkPreview')} className="h-20 w-20 rounded object-cover border border-zinc-700" />
+                ) : (
+                  <div className="rounded border border-zinc-800 bg-zinc-900 p-3 text-zinc-400 transition-colors group-hover:border-brand-red/35 group-hover:text-brand-red">
+                    <ImageIcon size={24} />
+                  </div>
+                )}
+                <div className="min-w-0 max-w-full">
+                  <span title={coverFile?.name} className="block truncate text-sm font-bold text-zinc-200">
+                    {coverFile ? coverFile.name : t('uploadForm.selectArtwork')}
+                  </span>
+                  <span className="mt-1 block text-ns-label text-zinc-400">{t('uploadForm.artworkFormats')}</span>
+                </div>
+              </div>
+            </div>
+            {coverFile && <button type="button" onClick={() => setCoverFile(null)} className="min-h-11 text-sm underline text-zinc-300">{t('start.removeCover')}</button>}
           <div className="space-y-1.5">
             <label htmlFor="track-description" className="font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-zinc-400">{t('uploadForm.description')}</label>
             <textarea
               id="track-description"
-              rows={4}
+              rows={3}
+              maxLength={2000}
               placeholder={t('uploadForm.descriptionPlaceholder')}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -528,17 +612,16 @@ export default function UploadForm() {
             />
             <p className="pt-0.5 text-ns-label leading-relaxed text-zinc-500">{t('uploadForm.tagsHelper')}</p>
           </div>
-        </section>
 
-        {contentType === 'BEAT' && (
-          <BeatMetadataFields
-            value={beatMetadata}
-            onChange={setBeatMetadata}
-            idPrefix="single-upload-beat"
-          />
-        )}
 
-        <details className="border-y border-zinc-800/70 py-4">
+          </div>
+        </details>
+        {contentType === 'BEAT' && <details className="rounded-lg border border-zinc-800 p-4" open={beatOpen} onToggle={(event) => setBeatOpen(event.currentTarget.open)}>
+          <summary className="min-h-7 cursor-pointer text-sm font-semibold text-zinc-200">{t('start.optionalBeat')}</summary>
+          <BeatMetadataFields value={beatMetadata} onChange={setBeatMetadata} idPrefix="single-upload-beat" />
+        </details>}
+
+        <details className="rounded-lg border border-zinc-800 p-4" open={lyricsOpen} onToggle={(event) => setLyricsOpen(event.currentTarget.open)}>
           <summary className="cursor-pointer text-sm font-bold text-zinc-200 marker:text-brand-red">
             {t('upload.lyricsSection')}
           </summary>
@@ -552,30 +635,7 @@ export default function UploadForm() {
         </details>
       </div>
 
-      <aside className="space-y-5 border-t border-zinc-800/80 pt-5 xl:sticky xl:top-6 xl:border-l xl:border-t-0 xl:pl-6 xl:pt-0">
-        <div>
-          <p className="font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-brand-red">
-            {t('uploadForm.releaseChecklist')}
-          </p>
-          <dl className="mt-3 divide-y divide-zinc-800/70 text-sm">
-            {[
-              [Boolean(audioFile), t('uploadForm.selectAudio')],
-              [Boolean(coverFile), t('uploadForm.selectArtwork')],
-              [Boolean(title.trim()), t('uploadForm.trackTitle')],
-              [Boolean(genre), t('uploadForm.primaryGenre')],
-            ].map(([ready, label]) => (
-              <div key={label} className="flex items-center justify-between gap-3 py-2.5">
-                <dt className="text-zinc-400">{label}</dt>
-                <dd className={ready ? 'text-[var(--ns-success)]' : 'text-zinc-600'}>
-                  {ready
-                    ? t('batchUpload.ready')
-                    : t('uploadForm.required')}
-                </dd>
-              </div>
-            ))}
-          </dl>
-        </div>
-
+      <aside className="space-y-4 border-t border-zinc-800 pt-5">
         <label className="flex min-h-14 cursor-pointer select-none items-start gap-3 border-y border-zinc-800/70 py-4">
           <input
             type="checkbox"
@@ -595,10 +655,10 @@ export default function UploadForm() {
           disabled={uploadMutation.isPending}
           className="ns-button-primary w-full cursor-pointer px-5 text-sm disabled:opacity-50"
         >
-          {t('uploadForm.submit')}
+          {t(contentType === 'BEAT' ? 'start.publishBeat' : 'start.publishTrack')}
         </button>
         <p className="text-ns-label leading-relaxed text-zinc-500">
-          {t('uploadForm.processingNote')}
+          {t('start.publishNote')}
         </p>
       </aside>
     </form>

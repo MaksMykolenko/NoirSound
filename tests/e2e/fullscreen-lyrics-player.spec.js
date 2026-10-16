@@ -48,8 +48,9 @@ test.describe('Fullscreen lyrics player — mock smoke', { tag: '@demo' }, () =>
     await page.setViewportSize({ width: 1280, height: 720 });
     await page.getByRole('button', { name: 'Play track' }).click();
 
+    await page.getByRole('button', { name: 'Expand player', exact: true }).filter({ visible: true }).click();
     const player = page.getByTestId('desktop-player');
-    const openLyrics = player.getByRole('button', { name: 'Open fullscreen lyrics' });
+    const openLyrics = player.getByRole('button', { name: 'Open fullscreen player' });
     const standardPlayButton = player.getByTestId('standard-player-play-button');
     await expect(standardPlayButton).toBeVisible();
     await expect(openLyrics).toBeEnabled();
@@ -59,7 +60,7 @@ test.describe('Fullscreen lyrics player — mock smoke', { tag: '@demo' }, () =>
     const standardBar = page.getByTestId('fullscreen-standard-desktop-playerbar');
     await expect(fullscreen).toBeVisible();
     await expect(fullscreen.getByText('City lights dissolve in rain')).toBeVisible();
-    await expect(standardBar.getByTestId('standard-player-track-info')).toContainText('Nightcrawler');
+    await expect(fullscreen.getByTestId('fullscreen-track-info')).toContainText('Nightcrawler');
     await expect(standardBar.getByTestId('standard-player-transport')).toBeVisible();
     await expect(standardBar.getByRole('button', { name: 'Previous track' })).toBeVisible();
     await expect(standardBar.getByRole('button', { name: 'Next track' })).toBeVisible();
@@ -107,11 +108,12 @@ test.describe('Fullscreen lyrics player — mock smoke', { tag: '@demo' }, () =>
     await expect.poll(async () => Number(await player.getByRole('slider', { name: 'Track progress' }).inputValue())).toBeGreaterThan(20);
   });
 
-  test('keeps controls reachable on mobile and disables unavailable lyrics', async ({ page }) => {
+  test('keeps controls reachable on mobile and opens tracks without lyrics', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await requireDemoMode(page);
     await page.getByRole('button', { name: 'Play track' }).click();
-    const mobileLyricsButton = page.locator('button[aria-label="Open fullscreen lyrics"]:visible');
+    await page.getByRole('button', { name: 'Expand player', exact: true }).filter({ visible: true }).click();
+    const mobileLyricsButton = page.locator('button[aria-label="Open fullscreen player"]:visible');
     await expect(mobileLyricsButton).toHaveCount(1);
     await mobileLyricsButton.click();
 
@@ -119,7 +121,7 @@ test.describe('Fullscreen lyrics player — mock smoke', { tag: '@demo' }, () =>
     const controls = page.getByTestId('fullscreen-standard-mobile-playerbar');
     await expect(fullscreen).toBeVisible();
     await expect(fullscreen.getByTestId('fullscreen-lyrics-back')).toBeVisible();
-    await expect(controls.getByTestId('standard-player-track-info')).toContainText('Nightcrawler');
+    await expect(fullscreen.getByTestId('fullscreen-track-info')).toContainText('Nightcrawler');
     await expect(controls.getByTestId('standard-mobile-player-progress')).toBeVisible();
     await expect(controls.getByTestId('standard-mobile-player-transport')).toBeVisible();
     await expect(controls.getByRole('button', { name: 'Previous track' })).toBeVisible();
@@ -131,8 +133,114 @@ test.describe('Fullscreen lyrics player — mock smoke', { tag: '@demo' }, () =>
     await expect(mobileLyricsButton).toBeFocused();
     await page.goto('/track/2');
     await page.getByRole('button', { name: 'Play track' }).click();
-    const unavailableLyricsButton = page.locator('button[aria-label="Lyrics unavailable"]:visible');
-    await expect(unavailableLyricsButton).toHaveCount(1);
-    await expect(unavailableLyricsButton).toBeDisabled();
+    const fullscreenButton = page.locator('button[aria-label="Open fullscreen player"]:visible');
+    await expect(fullscreenButton).toBeEnabled();
+    await fullscreenButton.click();
+    await expect(fullscreen.getByText('Lyrics are not available for this track yet.')).toBeVisible();
+    await expect(controls.getByRole('button', { name: 'Pause', exact: true })).toBeVisible();
+
   });
+});
+
+for (const viewport of [{ width: 360, height: 800 }, { width: 844, height: 390 }, { width: 1440, height: 900 }]) {
+  test(`immersive player fits ${viewport.width}×${viewport.height} and keeps controls visible @demo`, async ({ page }, testInfo) => {
+    const errors = [];
+    page.on('pageerror', error => errors.push(error.message));
+    page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
+    await page.setViewportSize(viewport);
+    await requireDemoMode(page);
+    await page.getByRole('button', { name: 'Play track', exact: true }).click();
+    await page.getByRole('button', { name: 'Expand player', exact: true }).filter({ visible: true }).click();
+    await page.getByRole('button', { name: 'Open fullscreen player', exact: true }).filter({ visible: true }).click();
+    const fullscreen = page.getByTestId('fullscreen-lyrics-player');
+    const playButton = fullscreen.getByRole('button', { name: 'Pause', exact: true }).filter({ visible: true });
+    await expect(playButton).toBeInViewport();
+    await expect(fullscreen.getByTestId('fullscreen-lyrics-back')).toBeInViewport();
+    await expect(fullscreen.locator('.ns-immersive-cover')).toBeInViewport();
+    await expect(fullscreen.getByText('City lights dissolve in rain', { exact: false })).toBeVisible();
+    await expect(fullscreen.getByTestId('fullscreen-artwork-backdrop').locator('img')).toHaveAttribute('data-loaded', 'true');
+    await playButton.click();
+    await expect(fullscreen.getByRole('button', { name: 'Play', exact: true }).filter({ visible: true })).toBeVisible();
+    expect(await fullscreen.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+    const footer = fullscreen.getByTestId('fullscreen-lyrics-controls');
+    await expect(footer).toBeInViewport();
+    const footerBox = await footer.boundingBox();
+    const coverBox = await fullscreen.locator('.ns-immersive-cover').boundingBox();
+    const identity = fullscreen.getByTestId('fullscreen-track-info');
+    await expect(identity).toBeInViewport();
+    const identityBox = await identity.boundingBox();
+    expect(identityBox.y).toBeGreaterThanOrEqual(coverBox.y + coverBox.height);
+    expect(identityBox.y + identityBox.height).toBeLessThanOrEqual(footerBox.y);
+    await expect(footer.getByTestId('standard-player-track-info')).toHaveCount(0);
+    expect(Math.abs(footerBox.y + footerBox.height - viewport.height)).toBeLessThanOrEqual(1);
+    expect(coverBox.y + coverBox.height).toBeLessThanOrEqual(footerBox.y);
+    if (viewport.width >= 1024) {
+      const controls = footer.getByTestId('fullscreen-standard-desktop-playerbar');
+      await expect(controls.getByRole('slider', { name: 'Track progress' })).toBeInViewport();
+      await expect(controls.getByRole('slider', { name: 'Volume' })).toBeInViewport();
+    }
+    await expect(page.locator('vite-error-overlay')).toHaveCount(0);
+    await expect(fullscreen).toHaveCSS('opacity', '1');
+    await expect(fullscreen.getByTestId('fullscreen-artwork-backdrop').locator('img')).toHaveCSS('opacity', '0.72');
+    await page.screenshot({ path: testInfo.outputPath('player.png') });
+    await fullscreen.getByRole('button', { name: 'Open play queue' }).filter({ visible: true }).click();
+    await expect(fullscreen.getByRole('dialog', { name: 'Play Queue' })).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(fullscreen).toBeVisible();
+    expect(errors).toEqual([]);
+  });
+}
+
+test('timed lyrics follow seek, allow manual reading, and update on the next track @demo', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await requireDemoMode(page);
+  // Fixture only: exercise the timed-lyrics API shape without publishing lyrics.
+  await page.evaluate(async () => {
+    const { cacheFullscreenLyrics } = await import('/src/components/player/fullscreenLyricsCache.js');
+    cacheFullscreenLyrics('1', {
+      trackId: '1', hasLyrics: true, lyricsType: 'SYNCED', lyricsText: '',
+      lyricsSynced: Array.from({ length: 9 }, (_, index) => ({ time: index * 10, text: `Timed lyric line ${index + 1}` })),
+    });
+  });
+  await page.getByRole('button', { name: 'Play Late Night Phonk', exact: true }).click();
+  await page.getByRole('button', { name: 'Expand player', exact: true }).filter({ visible: true }).click();
+  await page.getByRole('button', { name: 'Open fullscreen player', exact: true }).filter({ visible: true }).click();
+  const fullscreen = page.getByTestId('fullscreen-lyrics-player');
+  const controls = page.getByTestId('fullscreen-standard-desktop-playerbar');
+  await controls.getByRole('button', { name: 'Pause', exact: true }).click();
+  const seek = controls.getByRole('slider', { name: 'Track progress' });
+  await seek.fill('31');
+  await expect(fullscreen.getByRole('button', { name: 'Timed lyric line 4', exact: true })).toHaveAttribute('aria-current', 'true');
+  await fullscreen.getByRole('button', { name: 'Timed lyric line 7', exact: true }).click();
+  await expect(seek).toHaveValue('60');
+  await expect(fullscreen.getByRole('button', { name: 'Timed lyric line 7', exact: true })).toHaveAttribute('aria-current', 'true');
+  await fullscreen.getByTestId('fullscreen-lyrics-scroll').hover();
+  await page.mouse.wheel(0, -300);
+  await expect(fullscreen.getByRole('button', { name: 'Follow playback' })).toBeVisible();
+  await fullscreen.getByRole('button', { name: 'Follow playback' }).click();
+  await expect(fullscreen.getByRole('button', { name: 'Follow playback' })).toBeHidden();
+  const activeColor = await fullscreen.getByRole('button', { name: 'Timed lyric line 7', exact: true }).evaluate(el => getComputedStyle(el).color);
+  const inactiveColor = await fullscreen.getByRole('button', { name: 'Timed lyric line 6', exact: true }).evaluate(el => getComputedStyle(el).color);
+  expect(activeColor).not.toBe(inactiveColor);
+  await page.screenshot({ path: testInfo.outputPath('timed-lyrics.png') });
+  expect(await fullscreen.getByTestId('fullscreen-artwork-backdrop').locator('img').evaluate(el => getComputedStyle(el).animationName)).toBe('none');
+  await controls.getByRole('button', { name: 'Next track', exact: true }).click();
+  await expect(fullscreen).toBeVisible();
+  await expect(fullscreen.getByText('Lyrics are not available for this track yet.')).toBeVisible();
+  await expect(fullscreen.getByTestId('fullscreen-track-info')).not.toContainText('Nightcrawler');
+});
+
+test('missing artwork keeps the fullscreen player usable @demo', async ({ page }, testInfo) => {
+  await page.route('**/images/cover_phonk.png', route => route.fulfill({ status: 404, body: '' }));
+  await requireDemoMode(page);
+  await page.getByRole('button', { name: 'Play track', exact: true }).click();
+  await page.getByRole('button', { name: 'Expand player', exact: true }).filter({ visible: true }).click();
+  await page.getByRole('button', { name: 'Open fullscreen player', exact: true }).filter({ visible: true }).click();
+  const fullscreen = page.getByTestId('fullscreen-lyrics-player');
+  await expect(fullscreen.locator('.ns-immersive-cover')).toHaveAttribute('role', 'img');
+  await expect(fullscreen.getByTestId('fullscreen-artwork-backdrop').locator('img')).toHaveCount(0);
+  await expect(fullscreen.getByRole('button', { name: 'Pause', exact: true }).filter({ visible: true })).toBeVisible();
+  await expect(fullscreen).toHaveCSS('opacity', '1');
+  await page.screenshot({ path: testInfo.outputPath('missing-cover.png') });
 });

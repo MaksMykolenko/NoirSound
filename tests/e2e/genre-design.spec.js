@@ -1,100 +1,58 @@
 import { test, expect } from '@playwright/test';
 import { API_BASE, backendUp, loginApi, uploadTrackViaApi } from './_helpers.js';
 
-async function openMorePicker(page) {
-  await page.getByTestId('genre-quick-tabs').getByRole('button').last().click();
-  await expect(page.getByTestId('genre-more-panel')).toBeVisible();
-  await page.getByTestId('genre-picker-trigger').click();
-  await expect(page.getByTestId('genre-picker-panel')).toBeVisible();
+async function openGenreFilter(page) {
+  await page.getByTestId('catalog-genre-trigger').click();
+  await expect(page.getByTestId('catalog-genre-trigger-panel')).toBeVisible();
 }
 
 test.describe('Discover genre filters — desktop', () => {
   test.use({ viewport: { width: 1440, height: 900 } });
-
-  test('More opens the grouped picker, search filters, selecting sets the chip', async ({ page }) => {
-    await page.goto('/discover');
-    await openMorePicker(page);
-
-    // Search filters the option list.
-    await page.getByTestId('genre-search').fill('jazz');
-    await expect(page.locator('[data-genre-option="jazz"]')).toBeVisible();
-    await expect(page.locator('[data-genre-option="techno"]')).toHaveCount(0);
-
-    // Selecting updates the visible, removable chip with the localized label.
-    await page.locator('[data-genre-option="jazz"]').click();
-    await expect(page.getByTestId('genre-picker-panel')).toHaveCount(0);
-    const chip = page.getByTestId('active-genre-chip');
-    await expect(chip).toBeVisible();
-    await expect(chip).toContainText('Jazz');
+  test('a shared genre is visible and removable even when it has no releases', async ({ page }) => {
+    await page.goto('/discover?genre=jazz');
+    await openGenreFilter(page);
+    await expect(page.getByRole('option', { name: /^Jazz/ })).toBeVisible();
+    await page.getByRole('option', { name: 'All', exact: true }).click();
+    await expect(page).not.toHaveURL(/genre=/);
+    await expect(page.getByTestId('catalog-genre-trigger-panel')).toHaveCount(0);
   });
-
-  test('picker closes with Escape', async ({ page }) => {
-    await page.goto('/discover');
-    await openMorePicker(page);
+  test('picker closes with Escape and returns focus', async ({ page }) => {
+    await page.goto('/discover?genre=jazz');
+    await openGenreFilter(page);
     await page.keyboard.press('Escape');
-    await expect(page.getByTestId('genre-picker-panel')).toHaveCount(0);
+    await expect(page.getByTestId('catalog-genre-trigger-panel')).toHaveCount(0);
+    await expect(page.getByTestId('catalog-genre-trigger')).toBeFocused();
   });
 });
 
 test.describe('Discover genre filters — mobile', () => {
   test.use({ viewport: { width: 390, height: 844 } });
-
-  test('mobile picker searches and closes from its backdrop', async ({ page }) => {
-    await page.goto('/discover');
-    await openMorePicker(page);
-
-    // The search input inside the sheet is usable (not covered by chrome).
-    await page.getByTestId('genre-search').click();
-    await page.getByTestId('genre-search').fill('phonk');
-    await expect(page.locator('[data-genre-option="phonk"]')).toBeVisible();
-
-    // Backdrop closes the sheet.
+  test('mobile picker keeps a shared choice visible and closes from its backdrop', async ({ page }) => {
+    await page.goto('/discover?genre=phonk');
+    await openGenreFilter(page);
+    await expect(page.getByRole('option', { name: /^Phonk/ })).toBeVisible();
     await page.mouse.click(5, 5);
-    await expect(page.getByTestId('genre-picker-panel')).toHaveCount(0);
+    await expect(page.getByTestId('catalog-genre-trigger-panel')).toHaveCount(0);
   });
 });
 
-// Genre names are always English, regardless of the active UI language
-// (en/uk/pl/ru) — see NOIRSOUND_GENRE_ENGLISH_ONLY_REPORT.md. These specs
-// assert English text appears (and the old localized text does not) under
-// every non-English UI language NoirSound ships.
 test.describe('Genre taxonomy remains English across UI languages', () => {
   test.use({ viewport: { width: 390, height: 844 } });
-
-  const LOCALIZED_URBAN_TAB = { uk: 'Хіп-хоп', pl: 'Hip-hop', ru: 'Хип-хоп' };
-
   for (const lng of ['uk', 'pl', 'ru']) {
-    test(`${lng}: quick tabs render in English`, async ({ page }) => {
+    test(`${lng}: active genre names remain English`, async ({ page }) => {
       await page.addInitScript((l) => localStorage.setItem('noirsound_language', l), lng);
-      await page.goto('/discover');
-      await page.waitForSelector('[data-testid="genre-quick-tabs"]');
-
-      // Genre-group tab text is the English label, not a translation.
-      await expect(page.getByRole('button', { name: 'Hip-Hop', exact: true })).toBeVisible();
-      await expect(page.getByRole('button', { name: 'Electronic', exact: true })).toBeVisible();
-      await expect(page.getByRole('button', { name: 'World', exact: true })).toBeVisible();
-      // The old per-language "Hip-Hop" translation must be gone.
-      const localized = LOCALIZED_URBAN_TAB[lng];
-      if (localized && localized !== 'Hip-Hop') {
-        await expect(page.getByText(localized, { exact: true })).toHaveCount(0);
-      }
-
+      await page.goto('/discover?genre=hip_hop');
+      await expect(page.getByTestId('catalog-genre-trigger')).toContainText('Hip-Hop');
+      await expect(page.locator('.ns-discover-filter-chip').filter({ hasText: 'Hip-Hop' })).toBeVisible();
     });
-
-    test(`${lng}: full picker options and the active chip render in English`, async ({ page }) => {
+    test(`${lng}: picker options remain English and the active chip clears the selection`, async ({ page }) => {
       await page.addInitScript((l) => localStorage.setItem('noirsound_language', l), lng);
-      await page.goto('/discover');
-      await openMorePicker(page);
-
-      await page.getByTestId('genre-search').fill('jazz');
-      const jazzOption = page.locator('[data-genre-option="jazz"]');
-      await expect(jazzOption).toBeVisible();
-      await expect(jazzOption).toContainText('Jazz');
-
-      await jazzOption.click();
-      const chip = page.getByTestId('active-genre-chip');
-      await expect(chip).toBeVisible();
-      await expect(chip).toContainText('Jazz');
+      await page.goto('/discover?genre=jazz');
+      await openGenreFilter(page);
+      await expect(page.getByRole('option', { name: /^Jazz/ })).toBeVisible();
+      await page.keyboard.press('Escape');
+      await page.locator('.ns-discover-filter-chip').filter({ hasText: 'Jazz' }).click();
+      await expect(page).not.toHaveURL(/genre=/);
     });
   }
 });

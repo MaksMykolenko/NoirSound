@@ -10,70 +10,48 @@ test.beforeEach(async ({ page }) => {
 test.describe('Discover content and interactions', () => {
   test.use({ viewport: { width: 1440, height: 900 } });
 
-  test('All, Music, and Beats expose distinct useful information architecture', async ({ page }) => {
+  test('All, Music, and Beats share one clear catalog with filters on demand', async ({ page }) => {
     await page.goto('/discover');
     await expect(page.getByRole('heading', { level: 1, name: 'Discover' })).toBeVisible();
-    for (const testId of [
-      'discover-trending',
-      'discover-trending-week',
-      'discover-new-releases',
-      'discover-fresh-beats',
-      'discover-creators',
-      'discover-genre-tiles',
-      'discover-all-content',
-    ]) {
-      await expect(page.getByTestId(testId)).toBeVisible();
-    }
-
+    await expect(page.getByTestId('discover-all-content')).toBeVisible();
+    await expect(page.getByTestId('discover-trending')).toHaveCount(0);
+    await expect(page.getByTestId('catalog-genre-trigger')).toHaveCount(0);
     await page.getByRole('tab', { name: 'Music', exact: true }).click();
     await expect(page.getByRole('heading', { level: 1, name: 'Discover Music' })).toBeVisible();
-    await expect(page.getByTestId('discover-new-releases')).toBeVisible();
-    await expect(page.getByTestId('discover-genre-tiles')).toBeVisible();
-    await expect(page.getByTestId('discover-fresh-beats')).toHaveCount(0);
     await expect(page.getByTestId('all-releases').getByTestId('beat-badge')).toHaveCount(0);
-
     await page.getByRole('tab', { name: 'Beats', exact: true }).click();
     await expect(page.getByRole('heading', { level: 1, name: 'Discover Beats' })).toBeVisible();
-    for (const testId of [
-      'beat-discover-filters',
-      'discover-style-tiles',
-      'discover-mood-tiles',
-      'discover-creators',
-      'discover-all-content',
-    ]) {
-      await expect(page.getByTestId(testId)).toBeVisible();
-    }
-    await expect(page.getByTestId('discover-new-releases')).toHaveCount(0);
-    await expect(page.getByTestId('discover-genre-tiles')).toHaveCount(0);
+    await page.getByRole('button', { name: 'Filters', exact: true }).click();
+    await expect(page.getByTestId('beat-discover-filters')).toBeVisible();
+    await expect(page.getByTestId('discover-style-tiles')).toHaveCount(0);
     await expect(page.getByTestId('beat-discover-filters').locator('select')).toHaveCount(0);
-
   });
 
   test('Beat dropdown keyboard state survives history and refresh', async ({ page }) => {
     await page.goto('/discover?content=BEAT');
+    await page.getByRole('button', { name: 'Filters', exact: true }).click();
     const bpm = page.getByTestId('beat-filter-bpm-trigger');
     await bpm.focus();
     await bpm.press('ArrowDown');
     await page.getByRole('option', { name: 'Any BPM', exact: true }).press('ArrowDown');
     await page.getByRole('option', { name: '< 90 BPM', exact: true }).press('ArrowDown');
-    await page.getByRole('option', { name: '90–119 BPM', exact: true }).press('ArrowDown');
-    await page.getByRole('option', { name: '120–149 BPM', exact: true }).press('Enter');
+    await page.getByRole('option', { name: '90-119 BPM', exact: true }).press('ArrowDown');
+    await page.getByRole('option', { name: '120-149 BPM', exact: true }).press('Enter');
     await expect(page).toHaveURL(/bpm=120-149/);
     await expect(bpm).toBeFocused();
 
-    const style = page.getByTestId('beat-filter-style-trigger');
-    await style.click();
-    await page.getByRole('option', { name: /^Trap/ }).click();
-    await expect(page).toHaveURL(/style=Trap/);
-    await expect(style).toBeFocused();
-
+    const sort = page.getByTestId('catalog-sort-trigger');
+    await sort.click();
+    await page.getByRole('option', { name: 'Most played', exact: true }).click();
+    await expect(page).toHaveURL(/sort=played/);
+    await expect(sort).toBeFocused();
     await page.goBack();
-    await expect(page).not.toHaveURL(/style=Trap/);
+    await expect(page).not.toHaveURL(/sort=played/);
     await page.goForward();
-    await expect(page).toHaveURL(/style=Trap/);
+    await expect(page).toHaveURL(/sort=played/);
     await page.reload();
-    await expect(page.getByTestId('beat-filter-bpm-trigger')).toContainText('120–149 BPM');
-    await expect(page.getByTestId('beat-filter-style-trigger')).toContainText('Trap');
+    await expect(page.getByTestId('beat-filter-bpm-trigger')).toContainText('120-149 BPM');
+    await expect(page.getByTestId('catalog-sort-trigger')).toContainText('Most played');
   });
 
   test('Beat rows preserve player, context menu, playlist, and producer actions', { tag: '@demo' }, async ({ page }) => {
@@ -114,6 +92,7 @@ test.describe('Discover mobile filters and Beat metadata', () => {
 
     await page.getByRole('tab', { name: 'Beats', exact: true }).click();
 
+    await page.getByRole('button', { name: 'Filters', exact: true }).click();
     await page.getByTestId('beat-filter-bpm-trigger').click();
     const panel = page.getByTestId('beat-filter-bpm-trigger-panel');
     await expect(panel).toBeVisible();

@@ -1,11 +1,11 @@
 import { TrackSaveIcon, TrackPlayingIndicator } from '../components/tracks/TrackVisuals';
 import TrackSourceIcon from '../components/tracks/TrackSourceIcon';
-import { canPlayTrack, canQueueTrack } from '../utils/trackPlayback';
+import { canPlayTrack } from '../utils/trackPlayback';
 import React, { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import PageMeta from '../components/meta/PageMeta';
 import { useTranslation } from 'react-i18next';
-import { Play, Pause, Plus, Check, Clock, Headphones, Share2, MoreHorizontal, MessageCircle, ArrowRight } from 'lucide-react';
+import { Play, Pause, Clock, Headphones, MoreHorizontal, MessageCircle } from 'lucide-react';
 import { usePlayerStore } from '../store/playerStore';
 import { useToastStore } from '../store/toastStore';
 import { getTrackById, getCatalogTracks } from '../api';
@@ -13,7 +13,6 @@ import { formatDuration, formatTime } from '../utils/formatTime';
 import { formatNumber } from '../utils/formatLocale';
 import Waveform from '../components/player/Waveform';
 import CommentSection from '../components/ui/CommentSection';
-import ReportButton from '../components/ui/ReportButton';
 import EmptyState from '../components/ui/EmptyState';
 import ErrorState from '../components/ui/ErrorState';
 import FallbackCover from '../components/ui/FallbackCover';
@@ -54,9 +53,6 @@ export default function TrackPage() {
     seek,
     likedTracks,
     toggleLikeTrack,
-    queue,
-    addToQueue,
-    removeFromQueue,
     updateTrackMetadata
   } = usePlayerStore();
 
@@ -137,12 +133,11 @@ export default function TrackPage() {
   const isCurrent = currentTrack?.id === track.id;
   const isPlayingThis = isCurrent && isPlaying;
   const isLiked = likedTracks.includes(track.id);
-  const inQueue = queue.some((qt) => qt.id === track.id);
   const external = track.playbackSource === 'external';
   const canPlay = canPlayTrack(track);
   const canEditLyrics = !external && (user?.role === 'ADMIN' || user?.artistProfileId === track.artistId);
   const isBeat = isBeatTrack(track);
-  const hasDetailSidebar = Boolean(track.artistId) || relatedTracks.length > 0;
+  const hasDetailSidebar = relatedTracks.length > 0;
 
   const genreLabel = getLocalizedGenre(track.genre);
   const showGenre = Boolean(genreLabel) && genreLabel !== 'No genre';
@@ -150,31 +145,10 @@ export default function TrackPage() {
   const hasDuration = durationStr !== '—';
   const releaseStr = formatReleaseDate(track.releaseDate, i18n.language);
   const playCount = Number(track.plays || 0);
-  const trackNote = external ? (track.playbackMode === 'OFFICIAL_EMBED' ? t('playlistImport.playbackErrors.IMPORT_AUDIO_UNAVAILABLE') : track.playbackMode === 'LINK_OUT' ? t('externalMusic.openPlatform') : track.provider) : playCount === 0
-    ? t('trackPage.beFirstToListen')
-    : isBeat
-      ? t('beats.producedBy', { name: track.artistName })
-      : t('trackPage.uploadedBy', { name: track.artistName });
-
   const handlePlayClick = () => {
     if (!canPlay) return;
     if (isCurrent && track.playbackMode !== 'OFFICIAL_EMBED') togglePlay();
     else playTrack(track, [track]);
-  };
-
-  const handleQueueClick = () => {
-    if (!canQueueTrack(track)) return;
-    if (inQueue) removeFromQueue(track.id);
-    else addToQueue(track);
-  };
-
-  const handleShare = async () => {
-    const url = typeof window !== 'undefined' ? window.location.href : '';
-    if (typeof navigator !== 'undefined' && navigator.share) {
-      try { await navigator.share({ title: track.title, url }); return; } catch { return; }
-    }
-    try { await navigator?.clipboard?.writeText(url); } catch { /* clipboard may be blocked */ }
-    addToast(t('trackPage.linkCopied'), 'success');
   };
 
   const handleLyricsChanged = (result) => {
@@ -273,17 +247,17 @@ export default function TrackPage() {
                 <h1 className="ns-display-title ns-display-title--entity text-zinc-100 ns-track-detail-title">
                   {track.title}
                 </h1>
-                <button
-                  type="button"
-                  disabled={!track.artistId}
-                  onClick={() => navigate(`/artist/${track.artistId}`)}
+                {track.artistId ? (
+                <Link
+                  to={`/artist/${track.artistId}`}
                   className="inline-flex max-w-full items-center gap-2.5 break-words text-zinc-400 hover:text-zinc-100 transition-colors font-semibold text-sm cursor-pointer"
                 >
                   <span className="h-7 w-7 shrink-0 overflow-hidden rounded-full border border-zinc-800" aria-hidden="true">
                     <FallbackAvatar src={track.artistAvatarUrl} name={track.artistName} className="h-full w-full" imageClassName="object-cover" />
                   </span>
                   <span className="min-w-0 break-words">{track.artistName}</span>
-                </button>
+                </Link>
+                ) : <span className="text-base text-zinc-300">{track.artistName}</span>}
               </div>
 
               {/* Actions */}
@@ -309,32 +283,6 @@ export default function TrackPage() {
                   <TrackSaveIcon saved={isLiked} />
                 </button>
 
-                <button
-                  onClick={handleQueueClick}
-                  disabled={!canQueueTrack(track)}
-                  className={`${iconActionClass(inQueue)} hidden disabled:opacity-40 disabled:cursor-not-allowed sm:inline-flex`}
-                  title={inQueue ? t('trackPage.removeFromQueue') : t('trackPage.addToQueue')}
-                  aria-label={inQueue ? t('trackPage.removeFromQueue') : t('trackPage.addToQueue')}
-                  aria-pressed={inQueue}
-                >
-                  {inQueue ? <Check size={16} /> : <Plus size={16} />}
-                </button>
-
-                <button
-                  onClick={handleShare}
-                  className={`${iconActionClass(false)} hidden sm:inline-flex`}
-                  title={t('trackPage.share')}
-                  aria-label={t('trackPage.share')}
-                >
-                  <Share2 size={16} />
-                </button>
-
-                <ReportButton
-                  targetType="TRACK"
-                  targetId={track.id}
-                  className="ml-0 min-h-11 min-w-11 justify-center rounded-md border border-zinc-800 bg-zinc-900 px-3 hover:border-brand-red/35 sm:ml-1"
-                  label={<span className="sr-only">{t('reports.title')}</span>}
-                />
               </div>
 
               {/* Compact metadata row (secondary, wraps on mobile) */}
@@ -364,13 +312,14 @@ export default function TrackPage() {
               </div>
 
               {/* Subtle contextual note */}
-              <p className="text-sm text-zinc-500/90">{trackNote}</p>
+
             </div>
           </>
         </section>
 
         {/* WAVEFORM — visually attached to the hero */}
-        {track.playbackMode !== 'OFFICIAL_EMBED' && <section className="space-y-3 border-y border-zinc-800/60 bg-zinc-950/15 px-1 py-5 sm:px-3">
+        {track.playbackMode !== 'OFFICIAL_EMBED' && Array.isArray(track.waveform) && track.waveform.length > 0 && (
+        <section className="space-y-3 border-y border-zinc-800/60 bg-zinc-950/15 px-1 py-5 sm:px-3">
           <div className="flex items-center justify-between gap-4">
             <h2 className="ns-eyebrow">{t('trackPage.waveform')}</h2>
             <span className="text-ns-label font-sans tabular-nums text-zinc-500 select-none">
@@ -391,7 +340,8 @@ export default function TrackPage() {
           {isCurrent && (
             <p className="text-ns-label text-zinc-500 select-none">{t('trackPage.seekHint')}</p>
           )}
-        </section>}
+        </section>
+        )}
       </div>
 
       {/* Lyrics, description, comments / conditional related rail */}
@@ -406,7 +356,7 @@ export default function TrackPage() {
           className={`min-w-0 space-y-6 xl:space-y-8 ${hasDetailSidebar ? 'xl:col-span-8' : 'xl:col-span-12'}`}
           data-testid="track-main-column"
         >
-          {!external && (!isBeat || track.hasLyrics) && (
+          {!external && (track.hasLyrics || canEditLyrics) && (
             <TrackLyricsCard
               track={track}
               canEdit={canEditLyrics}
@@ -459,6 +409,7 @@ export default function TrackPage() {
             </section>
           )}
 
+          {(track.description || track.tags?.length > 0) && (
           <section className="space-y-3 border-t border-zinc-800/60 pt-6">
             <h2 className="ns-section-title">{t('trackPage.description')}</h2>
             {track.description ? (
@@ -479,6 +430,7 @@ export default function TrackPage() {
               </div>
             )}
           </section>
+          )}
 
           {!external && <section className="border-t border-zinc-800/60 pt-6">
             <CommentSection trackId={track.id} />
@@ -492,24 +444,6 @@ export default function TrackPage() {
 
         {hasDetailSidebar && (
           <div className="min-w-0 space-y-6 self-start xl:col-span-4">
-            {track.artistId && (
-              <section className="rounded-xl border border-zinc-800 bg-zinc-950 p-5" data-testid="track-artist-card" aria-labelledby="track-artist-card-title">
-                <div className="flex items-center gap-3">
-                  <span className="h-12 w-12 shrink-0 overflow-hidden rounded-full border border-zinc-800" aria-hidden="true">
-                    <FallbackAvatar src={track.artistAvatarUrl} name={track.artistName} className="h-full w-full" imageClassName="object-cover" />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <h2 id="track-artist-card-title" className="break-words text-sm font-bold text-zinc-100">{track.artistName}</h2>
-                    <p className="mt-0.5 text-xs text-zinc-400">{t(isBeat ? 'discover.producer' : 'discover.artist')}</p>
-                  </div>
-                </div>
-                <Link to={`/artist/${track.artistId}`} className="ns-button-secondary mt-4 flex min-h-11 w-full items-center justify-center gap-2 px-3 text-xs font-semibold">
-                  <span>{t('contextMenu.goToArtist')}</span>
-                  <ArrowRight size={13} aria-hidden="true" />
-                </Link>
-              </section>
-            )}
-
             {/* Related tracks are a real secondary rail only when data exists. */}
             {relatedTracks.length > 0 && (
               <aside

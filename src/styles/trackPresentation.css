@@ -191,7 +191,7 @@
   .ns-quick-tracks { grid-template-columns: 1fr; }
   .ns-quick-track__play { margin-right: 8px; }
   .ns-track-detail .ns-track-hero > .min-w-0 { text-align: left; padding-right: 0; }
-  .ns-track-detail .ns-track-hero .justify-center { justify-content: flex-start; }
+  .ns-track-detail .ns-track-hero > .min-w-0 .justify-center { justify-content: flex-start; }
   .ns-track-detail .ns-track-detail-title { font-size: 32px; }
 }
 @media (prefers-reduced-motion: reduce) {

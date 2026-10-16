@@ -169,7 +169,6 @@ export default function Dashboard() {
       <div className="flex flex-col justify-between gap-4 border-b border-zinc-800/60 pb-5 md:flex-row md:items-center">
         <div>
           <h1 className="ns-page-title">{t('dashboard.title')}</h1>
-          <p className="ns-page-lede">{t('dashboard.subtitle')}</p>
         </div>
         <button type="button" onClick={() => navigate('/upload')} className="ns-button-primary px-5 inline-flex items-center gap-2 w-fit">
           <PlusCircle size={16} />

@@ -4,28 +4,25 @@ import { Heart, History, ListMusic, Plus, Search, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import {
   createPlaylist,
-  getArtists,
   getFollowedArtists,
   getMyPlaylists,
 } from '../../api';
-import { isMockMode } from '../../api/mode';
 import { usePlayerStore } from '../../store/playerStore';
 import { useUserStore } from '../../store/userStore';
 import SidebarArtistItem from '../artists/SidebarArtistItem';
 import CreatePlaylistModal from '../playlists/CreatePlaylistModal';
 import SidebarPlaylistItem from '../playlists/SidebarPlaylistItem';
 import useLikedCollection from '../../hooks/useLikedCollection';
-import { isBeatTrack } from '../../utils/trackContent';
 
 export default function LibrarySidebarSection({ onItemClick }) {
   const navigate = useNavigate();
-  const demoMode = isMockMode();
   const { user, setAuthModalOpen } = useUserStore();
   const { recentlyPlayed } = usePlayerStore();
   const { tracks: likedTracks, loading: likesLoading, error: likesError } = useLikedCollection();
   const [playlists, setPlaylists] = useState([]);
   const [artists, setArtists] = useState([]);
   const [search, setSearch] = useState('');
+  const [searchOpen, setSearchOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [playlistRevision, setPlaylistRevision] = useState(0);
 
@@ -41,23 +38,13 @@ export default function LibrarySidebarSection({ onItemClick }) {
       setArtists([]);
       return;
     }
-    if (demoMode) {
-      Promise.all([getMyPlaylists(), getArtists()])
-        .then(([playlistData, artistData]) => {
-          setPlaylists(playlistData);
-          setArtists(artistData.slice(0, 4));
-        })
-        .catch(() => {});
-      return;
-    }
-
     Promise.all([getMyPlaylists(), getFollowedArtists()])
       .then(([playlistData, artistData]) => {
         setPlaylists(playlistData);
         setArtists(artistData);
       })
       .catch(() => {});
-  }, [demoMode, playlistRevision, user]);
+  }, [playlistRevision, user]);
 
   const filteredPlaylists = useMemo(
     () => playlists.filter((playlist) =>
@@ -88,9 +75,6 @@ export default function LibrarySidebarSection({ onItemClick }) {
   };
 
   const { t } = useTranslation();
-  const likedBeatsCount = likedTracks.filter(isBeatTrack).length;
-  const likedMusicCount = likedTracks.length - likedBeatsCount;
-
   const handleNav = (path) => {
     navigate(path);
     if (onItemClick) onItemClick();
@@ -101,23 +85,27 @@ export default function LibrarySidebarSection({ onItemClick }) {
       <div className="mb-3 flex items-center justify-between px-2">
         <button onClick={() => handleNav('/library')} className="flex items-center gap-2 text-zinc-200 cursor-pointer">
           <ListMusic size={16} className="text-brand-red" />
-          <span className="font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label">{t('nav.yourLibrary')}</span>
+          <span className="font-sans text-sm font-semibold">{t('nav.library')}</span>
         </button>
+        <div className="flex items-center">
+        <button type="button" onClick={() => { setSearchOpen(value => !value); setSearch(''); }} aria-label={t('nav.filterLibrary')} aria-expanded={searchOpen} className="ns-media-action"><Search size={15} /></button>
         <button onClick={openCreatePlaylist} className="ns-media-action cursor-pointer" aria-label="Create playlist">
           <Plus size={15} />
         </button>
+        </div>
       </div>
 
-      <div className="relative px-2 mb-3">
+      {searchOpen && <div className="relative px-2 mb-3">
         <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-600" size={13} />
         <input
+          autoFocus
           aria-label={t('nav.filterLibrary')}
           value={search}
           onChange={(event) => setSearch(event.target.value)}
           placeholder={t('nav.filterLibrary')}
           className="ns-field h-9 pl-9 pr-3 text-base"
         />
-      </div>
+      </div>}
 
       <div className="flex-1 overflow-y-auto px-1 space-y-4 pb-6">
         <div className="space-y-1.5">
@@ -127,10 +115,7 @@ export default function LibrarySidebarSection({ onItemClick }) {
             </span>
             <span className="min-w-0 flex-1">
               <strong className="block text-sm text-zinc-200 truncate">{t('library.allLiked')}</strong>
-              <small className="mt-0.5 flex flex-wrap gap-x-2 gap-y-0.5 text-ns-label text-zinc-500">
-                <span className="whitespace-nowrap">{t('library.music')}: {likesLoading || likesError ? '—' : likedMusicCount}</span>
-                <span className="whitespace-nowrap">{t('library.beats')}: {likesLoading || likesError ? '—' : likedBeatsCount}</span>
-              </small>
+              <small className="mt-0.5 block text-ns-label text-zinc-500">{likesLoading || likesError ? '—' : t('library.trackCount', { count: likedTracks.length })}</small>
             </span>
           </button>
           <button onClick={() => handleNav('/library?tab=recently')} className="flex w-full cursor-pointer items-center gap-3 rounded-lg p-2.5 text-left transition-colors hover:bg-zinc-900/55">
@@ -157,7 +142,7 @@ export default function LibrarySidebarSection({ onItemClick }) {
           <section className="space-y-1.5">
             <h3 className="flex items-center gap-2 px-2 font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-zinc-500">
               <Users size={12} />
-              {demoMode ? 'Demo Artists' : t('nav.followedArtists')}
+              {t('nav.followedArtists')}
             </h3>
             {filteredArtists.map((artist) => (
               <SidebarArtistItem key={artist.id} artist={artist} />

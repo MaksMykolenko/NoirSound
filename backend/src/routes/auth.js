@@ -145,6 +145,9 @@ async function authRoutes(fastify, _options) {
       const userId = request.user.id;
       const creator = validateCreatorInput(request.body || {}, request.user.displayName || request.user.username);
       const registration = await fastify.prisma.$transaction(async (client) => {
+        if (request.body?.displayName !== undefined) {
+          await client.user.update({ where: { id: userId }, data: { displayName: creator.displayName } });
+        }
         await ensureArtistProfile(client, userId);
         const registration = await client.creatorRegistration.upsert({
           where: { userId },

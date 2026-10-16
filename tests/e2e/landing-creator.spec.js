@@ -43,11 +43,12 @@ test('guest preview preserves its File through sign-in and publishes through the
     if (request.method() === 'POST' && new URL(request.url()).pathname === '/api/uploads/track/init') uploadInitiations += 1;
   });
   await page.goto('/#create');
+  await page.locator('.creator-preview-disclosure > summary').click();
   await page.getByLabel('Choose your audio', { exact: true }).setInputFiles({ name: fileName, mimeType: 'audio/wav', buffer: wav });
   await page.getByLabel('Track title', { exact: true }).fill(title);
   await page.getByLabel('Artist name in preview', { exact: true }).fill('A different preview author');
   await page.getByRole('radio', { name: 'Beat', exact: true }).check();
-  const preview = page.getByRole('button', { name: 'See preview', exact: true });
+  const preview = page.locator('.release-editor').getByRole('button', { name: 'See preview', exact: true });
   await preview.click();
   await expect(page.getByRole('dialog').getByRole('heading', { name: title })).toBeVisible();
   await page.keyboard.press('Escape');
@@ -65,16 +66,17 @@ test('guest preview preserves its File through sign-in and publishes through the
   expect(uploadInitiations).toBe(0);
   expect(await prisma.track.count({ where: { title } })).toBe(0);
 
+  await page.locator('summary').filter({ hasText: 'Cover, description and tags' }).click();
   await page.getByLabel('Select track artwork', { exact: true }).setInputFiles({ name: 'cover.png', mimeType: 'image/png', buffer: ONE_PIXEL_PNG });
   await page.getByRole('button', { name: 'Primary Genre', exact: true }).click();
   await page.getByRole('option', { name: 'Electronic', exact: true }).click();
-  const submit = page.getByRole('button', { name: 'Submit track to processing', exact: true });
+  const submit = page.getByRole('button', { name: 'Publish beat', exact: true });
   await submit.click();
   await expect(page.getByRole('alert')).toContainText('rights');
   expect(uploadInitiations).toBe(0);
   await page.getByRole('checkbox', { name: 'I confirm that I own the rights to this track or have permission to publish it.', exact: true }).check();
   await submit.click();
-  await expect(page.getByRole('heading', { name: 'Ready to Publish', exact: true })).toBeVisible({ timeout: 120_000 });
+  await expect(page.getByRole('heading', { name: 'Your release is live', exact: true })).toBeVisible({ timeout: 120_000 });
   expect(uploadInitiations).toBe(1);
 
   const me = await page.request.get(`${API_BASE}/auth/me`);
@@ -102,17 +104,20 @@ test('a listener receives the existing artist-access guidance, keeps the SPA dra
     if (request.method() === 'POST' && new URL(request.url()).pathname.startsWith('/api/uploads/')) uploadRequests += 1;
   });
   await page.goto('/#create');
+  await page.locator('.creator-preview-disclosure > summary').click();
   await page.getByLabel('Track title', { exact: true }).fill(title);
   await page.getByLabel('Choose your audio', { exact: true }).setInputFiles({ name: fileName, mimeType: 'audio/wav', buffer: makeWavBuffer() });
   await page.getByRole('button', { name: 'Continue to upload', exact: true }).click();
   await signInFromUpload(page, 'listener@noirsound.com');
-  await expect(page.getByRole('heading', { name: 'Creator access required', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Start sharing your music', exact: true })).toBeVisible();
   expect(uploadRequests).toBe(0);
   expect(await prisma.track.count({ where: { title } })).toBe(0);
   await page.goBack();
+  await page.locator('.creator-preview-disclosure > summary').click();
   await expect(page.getByLabel('Track title', { exact: true })).toHaveValue(title);
   await expect(page.getByText(fileName, { exact: true })).toBeVisible();
   await page.reload();
+  await page.locator('.creator-preview-disclosure > summary').click();
   await expect(page.getByText('The previous local draft was cleared after a reload or sign-in redirect. Enter the details and choose your audio again.', { exact: true })).toBeVisible();
   await expect(page.getByLabel('Track title', { exact: true })).toHaveValue('');
   expect(uploadRequests).toBe(0);

@@ -1,7 +1,7 @@
 import ImportPlaylistModal from '../components/playlists/ImportPlaylistModal';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Heart, History, ListMusic, Plus, Radio, Users } from 'lucide-react';
+import { Heart, History, ListMusic, Plus, Users } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   getArtists,
@@ -33,14 +33,12 @@ export default function Library() {
 
   const tabs = [
     { id: 'liked', label: t('library.allLiked'), icon: Heart },
-    { id: 'music', label: t('beats.likedMusic'), icon: Heart },
-    { id: 'beats', label: t('beats.likedBeats'), icon: Radio },
     { id: 'playlists', label: t('nav.playlists'), icon: ListMusic },
     { id: 'recently', label: t('nav.recentlyPlayed'), icon: History },
     { id: 'artists', label: t('nav.followedArtists'), icon: Users },
   ];
 
-  const activeTab = tabs.some((tab) => tab.id === requestedTab) ? requestedTab : 'liked';
+  const activeTab = ['music', 'beats', ...tabs.map(tab => tab.id)].includes(requestedTab) ? requestedTab : 'liked';
   const tabsRef = useScrollableTabs(activeTab);
   const demoMode = isMockMode();
 
@@ -125,10 +123,12 @@ export default function Library() {
         {pageMeta}
         <EmptyState
           iconName="Library"
-          title={t('empty.signInTitle')}
-          description={t('empty.signInDesc')}
-          actionText={t('header.signIn')}
-          onAction={() => setAuthModalOpen(true)}
+          title={t('start.libraryTitle')}
+          description={t('start.libraryDescription')}
+          actionText={t('auth.createAccount')}
+          onAction={() => setAuthModalOpen(true, 'register')}
+          secondaryActionText={t('header.signIn')}
+          onSecondaryAction={() => setAuthModalOpen(true, 'login')}
         />
       </>
     );
@@ -140,7 +140,6 @@ export default function Library() {
       <header className="flex flex-col items-start justify-between gap-4 sm:flex-row">
         <div>
           <h1 className="ns-page-title">{t('nav.yourLibrary')}</h1>
-          <p className="ns-page-lede">{t('library.subtitle')}</p>
         </div>
         <div className="flex flex-wrap gap-2">
         <button type="button" onClick={()=>setImportOpen(true)} className="ns-button-secondary min-h-11 px-4 text-sm">{t('playlistImport.title')}</button>
@@ -153,7 +152,7 @@ export default function Library() {
       <div ref={tabsRef} className="ns-tabs-scroll ns-tabs-polish flex shrink-0 gap-1 overflow-x-auto border-b border-zinc-800/60" role="tablist">
         {tabs.map((tab) => {
           const Icon = tab.icon;
-          const active = activeTab === tab.id;
+          const active = activeTab === tab.id || (tab.id === 'liked' && isLikedTab);
           return (
             <button
               key={tab.id}
@@ -185,7 +184,18 @@ export default function Library() {
         })}
       </div>
 
-      <div id="library-tab-panel" role="tabpanel" aria-labelledby={`library-tab-${activeTab}`} className="pt-2">
+      {isLikedTab && (
+        <div className="flex flex-wrap gap-2" role="group" aria-label={t('content.contentType')}>
+          {[['liked', t('content.all')], ['music', t('library.music')], ['beats', t('library.beats')]].map(([id, label]) => (
+            <button key={id} type="button" aria-pressed={activeTab === id}
+              onClick={() => setSearchParams({ tab: id })}
+              className={`min-h-10 rounded-full px-4 text-sm transition-colors ${activeTab === id ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-400 hover:bg-zinc-900'}`}>
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+      <div id="library-tab-panel" role="tabpanel" aria-labelledby={`library-tab-${isLikedTab ? 'liked' : activeTab}`} className="pt-2">
         {error || (isLikedTab && likesError) ? (
           <ErrorState
             title={t('media.libraryUnavailable')}

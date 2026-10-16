@@ -19,6 +19,7 @@ export default function DiscoverVibeBar({
   activeVibe,
   onSelectVibe,
   totalResults,
+  showVibes = true,
 }) {
   const { t } = useTranslation();
 
@@ -42,8 +43,8 @@ export default function DiscoverVibeBar({
           maxLength={120}
           value={searchDraft}
           onChange={(e) => onSearchChange?.(e.target.value)}
-          placeholder={t('header.searchPlaceholder') || 'Search tracks, artists, beats, vibes...'}
-          className="w-full rounded-xl border border-zinc-800/90 bg-zinc-950/80 py-3.5 pl-12 pr-28 text-sm text-zinc-100 placeholder-zinc-500 shadow-inner backdrop-blur-md transition-all focus:border-brand-red/60 focus:bg-zinc-900/90 focus:outline-none focus:ring-1 focus:ring-brand-red/50"
+          placeholder={t('start.searchMusic')}
+          className="w-full rounded-xl border border-zinc-800/90 bg-zinc-950/80 py-3.5 pl-12 pr-14 text-base sm:pr-28 sm:text-sm text-zinc-100 placeholder-zinc-500 shadow-inner backdrop-blur-md transition-all focus:border-brand-red/60 focus:bg-zinc-900/90 focus:outline-none focus:ring-1 focus:ring-brand-red/50"
         />
 
         <div className="absolute right-3 flex items-center gap-1.5">
@@ -51,7 +52,7 @@ export default function DiscoverVibeBar({
             <button
               type="button"
               onClick={() => onSearchChange?.('')}
-              className="rounded-md p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200"
+              className="rounded-md min-h-11 min-w-11 flex items-center justify-center text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
               aria-label={t('redesign.clearSearch')}
             >
               <X size={15} />
@@ -67,7 +68,7 @@ export default function DiscoverVibeBar({
       </form>
 
       {/* Quick Vibe Presets Strip */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs scrollbar-none">
+      {showVibes && <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs scrollbar-none">
         <span className="shrink-0 font-semibold text-zinc-500 uppercase tracking-wider text-[10px] pl-1 pr-1">
           {t('redesign.quickVibes')}
         </span>
@@ -94,7 +95,7 @@ export default function DiscoverVibeBar({
             </button>
           );
         })}
-      </div>
+      </div>}
     </div>
   );
 }

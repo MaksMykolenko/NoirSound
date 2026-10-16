@@ -45,11 +45,6 @@ export default function LandingPage() {
     return () => cancelAnimationFrame(frame);
   }, [location.key, location.hash, navigationType]);
 
-  const words = key => t(key).split(' ').map((word, index) => (
-    <React.Fragment key={`${key}-${index}`}>
-      <span>{word.endsWith('.') ? <>{word.slice(0, -1)}<span className="accent">.</span></> : word}</span>{' '}
-    </React.Fragment>
-  ));
 
   const dismissNotice = () => {
     const next = new URLSearchParams(searchParams);
@@ -94,70 +89,26 @@ export default function LandingPage() {
             </h1>
 
             <div className="hero-bottom">
-              <p>{t('landing.heroCopy')}</p>
+              <p>{t('start.heroDescription')}</p>
 
               {user ? (
-                <div className="landing-user-status" role="status">
-                  <div className="landing-user-status-inner">
-                    <div className="landing-user-info">
-                      <span className="landing-user-role-badge">
-                        {isAdmin ? 'ADMINISTRATOR' : isCreator ? `CREATOR • ${user.creatorRegistration?.creatorType}` : 'LISTENER'}
-                      </span>
-                      <span className="landing-user-name">@{user.username}</span>
-                    </div>
-                    <p className="landing-user-message">
-                      {isAdmin
-                        ? (t('landing.adminNotice') || 'Admin mode active — you have full platform and admin console access.')
-                        : isCreator
-                        ? (user.canUploadTracks
-                            ? (t('landing.creatorActiveNotice') || 'Creator access enabled! Your profile is ready and you can publish tracks.')
-                            : (t('landing.creatorPendingNotice') || 'Creator profile registered! Your artist handle is reserved. Upload access will activate soon.'))
-                        : (t('landing.listenerNotice') || "You're registered as a Listener. Full platform access is opening soon.")}
-                    </p>
-                    <div className="landing-user-actions">
-                      {isAdmin && (
-                        <Link to="/admin" className="button button-accent text-xs">
-                          {t('admin.admin') || 'Admin Console'} <ArrowUpRight size={14} />
-                        </Link>
-                      )}
-                      {(isAdmin || publicAppEnabled) && (
-                        <Link to="/discover" className="button button-light text-xs">
-                          {t('landing.openPlatform') || 'Open Platform'} <ArrowUpRight size={14} />
-                        </Link>
-                      )}
-                      {!isCreator && !isAdmin && (
-                        <button
-                          type="button"
-                          onClick={() => openAuth(true, 'register', 'CREATOR')}
-                          className="button button-accent text-xs cursor-pointer"
-                        >
-                          <ArrowRight size={13} aria-hidden="true" />
-                          <span>{t('landing.creator.upgradeButton') || 'Register as Creator'}</span>
-                        </button>
-                      )}
-                    </div>
-                  </div>
+                <div className="hero-buttons">
+                  {(isAdmin || publicAppEnabled) ? (
+                    <Link to="/discover" className="button button-accent">
+                      <Play size={16} />{t('landing.openPlatform')}
+                    </Link>
+                  ) : <p>{t('landing.listenerNotice')}</p>}
+                  {isCreator && !user.canUploadTracks && <p>{t('start.creatorPending')}</p>}
                 </div>
               ) : (
                 <div className="hero-buttons">
-                  <button
-                    type="button"
-                    className="button button-accent cursor-pointer"
-                    onClick={() => openAuth(true, 'register', 'LISTENER')}
-                  >
-                    {t('auth.createAccount') || 'Create Account'}
-                    <ArrowRight className="icon" aria-hidden="true" />
-                  </button>
-                  <button
-                    type="button"
-                    className="button button-light cursor-pointer"
-                    onClick={() => openAuth(true, 'register', 'CREATOR')}
-                  >
-                    {t('landing.becomeCreator')}
-                    <ArrowUpRight className="icon" aria-hidden="true" />
-                  </button>
-                  <Link className="text-link" to="/#listen">
-                    {t('landing.hear')}
+                  {publicAppEnabled ? <Link className="button button-accent" to="/discover">
+                    <Play className="icon" aria-hidden="true" />{t('start.listenFree')}
+                  </Link> : <Link className="button button-accent" to="/#listen">
+                    <Play className="icon" aria-hidden="true" />{t('landing.listen')}
+                  </Link>}
+                  <Link className="button button-light" to={publicAppEnabled ? '/upload' : '/#create'}>
+                    {t('start.forCreators')}<ArrowUpRight className="icon" aria-hidden="true" />
                   </Link>
                 </div>
               )}
@@ -182,29 +133,14 @@ export default function LandingPage() {
             </div>
           </div>
           <div className="hero-foot">
-            <Link className="scroll-cue" to="/#statement">
+            <Link className="scroll-cue" to="/#listen">
               <span className="scroll-line" />
               {t('landing.scroll')}
             </Link>
           </div>
         </section>
 
-        <section className="statement" id="statement" aria-label={t('landing.statementLabel')}>
-          <span className="eyebrow statement-label">{t('landing.statementLabel')}</span>
-          <p className="manifesto">{words('landing.statementFirst')}<br />{words('landing.statementSecond')}</p>
-          <div className="statement-foot">
-            <span>{t('landing.statementNote')}</span>
-            <span className="fine-index">↓ 01 / {t('landing.listen')}</span>
-          </div>
-        </section>
-
         <LandingListenSection />
-
-        <section className="interlude" aria-label={t('landing.interludeLabel')}>
-          <div className="interlude-text" aria-hidden="true">
-            {t('landing.interludeListen')} <span>{t('landing.interludeCreate')}</span> {t('landing.interludeRepeat')}
-          </div>
-        </section>
 
         <LandingCreatorSection />
 
@@ -228,13 +164,9 @@ export default function LandingPage() {
                 <ArrowRight className="icon" aria-hidden="true" />
               </button>
             )}
-            <button
-              type="button"
-              className="text-link cursor-pointer"
-              onClick={() => openAuth(true, 'register', 'CREATOR')}
-            >
+            <Link className="text-link" to={publicAppEnabled ? '/upload' : '/#create'}>
               {t('landing.publish')}<ArrowUpRight className="icon" aria-hidden="true" />
-            </button>
+            </Link>
           </div>
           <div className="closing-wordmark" aria-hidden="true">NoirSound.</div>
         </section>

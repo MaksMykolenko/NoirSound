@@ -1,4 +1,3 @@
-import {useMockApi} from '../../api/client';
 import { playerTrackHref, playerArtistLabel } from '../../utils/playerTrackPresentation';
 import { TrackSaveIcon } from '../tracks/TrackVisuals';
 import TrackSourceIcon from '../tracks/TrackSourceIcon';
@@ -15,7 +14,7 @@ import {
   X,
   Music,
   ChevronDown,
-  FileText,
+  Maximize2,
   MoreHorizontal
 } from 'lucide-react';
 import FallbackCover from '../ui/FallbackCover';
@@ -57,7 +56,6 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
   } = usePlayerStore();
 
   const isLiked = currentTrack ? likedTracks.includes(currentTrack.id) : false;
-  const lyricsAvailable = Boolean(currentTrack?.hasLyrics || (!useMockApi && currentTrack?.isStreamable && currentTrack?.playbackSource !== 'landing'));
   const { contextMenuProps: trackContextMenuProps, openFromButton: openTrackActions } =
     useTrackContextMenu(currentTrack);
   const desktopPlayerHeight = 'h-[var(--ns-player-height)]';
@@ -105,6 +103,7 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
   }, [isPlayerCollapsed, collapsePlayer, lyricsFullscreenOpen, isQueueOpen, mobileSheetOpen]);
 
+  if (!currentTrack && isPlayerCollapsed) return null;
 
   return (
     <>
@@ -144,7 +143,7 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
                 <p title={currentTrack.artistName} className="text-ns-label text-zinc-400 truncate mt-0.5 font-medium">{playerArtistLabel(currentTrack)} <TrackSourceIcon track={currentTrack} /></p>
               </div>
               <div className="flex items-center space-x-2 shrink-0">
-                {lyricsAvailable && (
+                {currentTrack && (
                   <button
                     onClick={(event) => {
                       event.stopPropagation();
@@ -154,7 +153,7 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
                     aria-label={t('player.openLyrics')}
                     aria-pressed={lyricsFullscreenOpen}
                   >
-                    <FileText size={14} />
+                    <Maximize2 size={14} />
                   </button>
                 )}
                 <button
@@ -234,7 +233,6 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
             shuffle={shuffle}
             isLiked={isLiked}
             playbackError={playbackError}
-            lyricsAvailable={lyricsAvailable}
             lyricsActive={lyricsFullscreenOpen}
             isQueueOpen={isQueueOpen}
             onTogglePlay={togglePlay}
@@ -386,16 +384,13 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
                 <MoreHorizontal size={18} />
               </button>
               <button
-                onClick={() => lyricsAvailable && openLyricsFullscreen()}
-                disabled={!lyricsAvailable}
-                className={`ns-icon-button ${
-                  lyricsAvailable ? 'cursor-pointer' : 'cursor-not-allowed opacity-35'
-                } ${lyricsFullscreenOpen ? 'text-brand-red border-brand-red/30' : 'text-zinc-500'}`}
-                title={lyricsAvailable ? t('player.lyrics') : t('player.lyricsUnavailable')}
-                aria-label={lyricsAvailable ? t('player.openLyrics') : t('player.lyricsUnavailable')}
+                onClick={openLyricsFullscreen}
+                className={`ns-icon-button cursor-pointer ${lyricsFullscreenOpen ? 'text-brand-red border-brand-red/30' : 'text-zinc-500'}`}
+                title={t('player.openLyrics')}
+                aria-label={t('player.openLyrics')}
                 aria-pressed={lyricsFullscreenOpen}
               >
-                <FileText size={18} />
+                <Maximize2 size={18} />
               </button>
               <button
                 onClick={onToggleQueue}

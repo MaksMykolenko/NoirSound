@@ -32,6 +32,11 @@ export default function useDiscoverUrlState() {
       next.delete('cursor');
       next.delete('page');
       next.delete('vibe');
+      const content = readDiscoverParams(current).contentType;
+      next.delete('contentType');
+      next.delete('view');
+      if (content === 'ALL') next.delete('content');
+      else next.set('content', content);
       mutate(next);
       return next;
     }, options);

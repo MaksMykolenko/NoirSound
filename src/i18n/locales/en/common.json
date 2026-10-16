@@ -53,8 +53,8 @@
     "expand": "Expand",
     "lyrics": "Lyrics",
     "lyricsUnavailable": "Lyrics unavailable",
-    "openLyrics": "Open fullscreen lyrics",
-    "closeLyrics": "Close fullscreen lyrics",
+    "openLyrics": "Open fullscreen player",
+    "closeLyrics": "Close fullscreen player",
     "lyricsFullscreenTitle": "Lyrics player",
     "emptyQueueHelp": "Add tracks to play next.",
     "collapsedPlayer": "Collapsed player",
@@ -1450,6 +1450,7 @@
     "editLyrics": "Edit lyrics",
     "noLyrics": "Lyrics are not available for this track yet.",
     "unavailable": "Lyrics could not be loaded.",
+    "followPlayback": "Follow playback",
     "providedByArtist": "Lyrics provided by the artist",
     "language": "Lyrics language",
     "type": "Lyrics type",
@@ -1462,7 +1463,7 @@
     "open": "Open lyrics",
     "close": "Close lyrics",
     "backToPlayer": "Back to player",
-    "fullscreenLabel": "Fullscreen lyrics player for {{title}}",
+    "fullscreenLabel": "Now playing: {{title}}",
     "preview": "Preview",
     "remove": "Remove lyrics",
     "saved": "Lyrics saved.",
@@ -1806,5 +1807,8 @@
       "IMPORT_AUDIO_UNAVAILABLE": "No full audio source is available for this track in NoirSound.",
       "IMPORT_TRACK_UNAVAILABLE": "This track is unavailable at its source."
     }
+  },
+  "interface": {
+    "legal": "Legal & help"
   }
 }
