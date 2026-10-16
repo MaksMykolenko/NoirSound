@@ -1,13 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Heart, History, ListMusic, Plus, Radio, Users } from 'lucide-react';
+import { Heart, History, ListMusic, Plus, Users } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   getArtists,
   getFollowedArtists,
-  getLikedTracks,
   getMyPlaylists,
-  getTracks,
   createPlaylist,
   setPlaylistSaved,
 } from '../api';
@@ -24,6 +22,7 @@ import CreatePlaylistModal from '../components/playlists/CreatePlaylistModal';
 import PageMeta from '../components/meta/PageMeta';
 import useScrollableTabs from '../hooks/useScrollableTabs';
 import { isBeatTrack } from '../utils/trackContent';
+import useLikedCollection from '../hooks/useLikedCollection';
 
 export default function Library() {
   const { t } = useTranslation();
@@ -32,33 +31,31 @@ export default function Library() {
   const requestedTab = searchParams.get('tab');
 
   const tabs = [
-    { id: 'music', label: t('beats.likedMusic'), icon: Heart },
-    { id: 'beats', label: t('beats.likedBeats'), icon: Radio },
+    { id: 'liked', label: t('library.allLiked'), icon: Heart },
     { id: 'playlists', label: t('nav.playlists'), icon: ListMusic },
     { id: 'recently', label: t('nav.recentlyPlayed'), icon: History },
     { id: 'artists', label: t('nav.followedArtists'), icon: Users },
   ];
 
-  const normalizedRequestedTab = requestedTab === 'liked' ? 'music' : requestedTab;
-  const activeTab = tabs.some((tab) => tab.id === normalizedRequestedTab) ? normalizedRequestedTab : 'music';
+  const activeTab = ['music', 'beats', ...tabs.map(tab => tab.id)].includes(requestedTab) ? requestedTab : 'liked';
   const tabsRef = useScrollableTabs(activeTab);
   const demoMode = isMockMode();
 
   const { user, authHydrated, setAuthModalOpen } = useUserStore();
   const {
-    likedTracks,
     recentlyPlayed,
     recentlyPlayedError,
     loadRecentlyPlayed,
   } = usePlayerStore();
 
-  const [tracks, setTracks] = useState([]);
   const [artists, setArtists] = useState([]);
   const [playlists, setPlaylists] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isCreateOpen, setCreateOpen] = useState(false);
   const [playlistRevision, setPlaylistRevision] = useState(0);
+  const { tracks: likedSongs, loading: likesLoading, error: likesError } = useLikedCollection(playlistRevision);
+  const isLikedTab = ['liked', 'music', 'beats'].includes(activeTab);
 
   useEffect(() => {
     const refresh = () => setPlaylistRevision((current) => current + 1);
@@ -68,34 +65,22 @@ export default function Library() {
 
   useEffect(() => {
     if (!user) return;
+    let active = true;
     setLoading(true);
-    if (demoMode) {
-      Promise.all([getTracks(), getArtists(), getMyPlaylists()])
-        .then(([nextTracks, nextArtists, nextPlaylists]) => {
-          setTracks(nextTracks);
-          setArtists(nextArtists);
-          setPlaylists(nextPlaylists);
-          setError(null);
-        })
-        .catch((requestError) => setError(requestError.message))
-        .finally(() => setLoading(false));
-      return;
-    }
-
-    // Real API mode: load user's real collection
-    Promise.all([getLikedTracks(), getFollowedArtists(), getMyPlaylists()])
-      .then(([realLiked, realArtists, realPlaylists]) => {
-        setTracks(realLiked);
-        setArtists(realArtists);
-        setPlaylists(realPlaylists);
+    Promise.all([demoMode ? getArtists() : getFollowedArtists(), getMyPlaylists()])
+      .then(([nextArtists, nextPlaylists]) => {
+        if (!active) return;
+        setArtists(nextArtists);
+        setPlaylists(nextPlaylists);
         setError(null);
       })
-      .catch((requestError) => setError(requestError.message))
-      .finally(() => setLoading(false));
+      .catch((requestError) => { if (active) setError(requestError.message); })
+      .finally(() => { if (active) setLoading(false); });
 
-    loadRecentlyPlayed().catch(() => {
+    if (!demoMode) loadRecentlyPlayed().catch(() => {
       // Player store retains error for recently played tab
     });
+    return () => { active = false; };
   }, [demoMode, loadRecentlyPlayed, playlistRevision, user]);
 
   const handleCreatePlaylist = async (playlistData) => {
@@ -117,14 +102,9 @@ export default function Library() {
     window.dispatchEvent(new CustomEvent('noirsound:playlists-changed'));
   };
 
-  const likedSongs = useMemo(() => {
-    if (demoMode) {
-      return tracks.filter((track) => likedTracks.includes(track.id));
-    }
-    return tracks;
-  }, [demoMode, likedTracks, tracks]);
   const likedMusic = useMemo(() => likedSongs.filter((track) => !isBeatTrack(track)), [likedSongs]);
   const likedBeats = useMemo(() => likedSongs.filter(isBeatTrack), [likedSongs]);
+  const visibleLikedTracks = activeTab === 'beats' ? likedBeats : activeTab === 'music' ? likedMusic : likedSongs;
 
   const pageMeta = (
     <PageMeta
@@ -141,10 +121,12 @@ export default function Library() {
         {pageMeta}
         <EmptyState
           iconName="Library"
-          title={t('empty.signInTitle')}
-          description={t('empty.signInDesc')}
-          actionText={t('header.signIn')}
-          onAction={() => setAuthModalOpen(true)}
+          title={t('start.libraryTitle')}
+          description={t('start.libraryDescription')}
+          actionText={t('auth.createAccount')}
+          onAction={() => setAuthModalOpen(true, 'register')}
+          secondaryActionText={t('header.signIn')}
+          onSecondaryAction={() => setAuthModalOpen(true, 'login')}
         />
       </>
     );
@@ -156,7 +138,6 @@ export default function Library() {
       <header className="flex flex-col items-start justify-between gap-4 sm:flex-row">
         <div>
           <h1 className="ns-page-title">{t('nav.yourLibrary')}</h1>
-          <p className="ns-page-lede">{t('library.subtitle')}</p>
         </div>
         <button type="button" onClick={() => setCreateOpen(true)} className="ns-button-primary inline-flex min-h-11 shrink-0 items-center gap-2 px-4 text-sm">
           <Plus size={15} aria-hidden="true" /> {t('playlists.new')}
@@ -166,7 +147,7 @@ export default function Library() {
       <div ref={tabsRef} className="ns-tabs-scroll ns-tabs-polish flex shrink-0 gap-1 overflow-x-auto border-b border-zinc-800/60" role="tablist">
         {tabs.map((tab) => {
           const Icon = tab.icon;
-          const active = activeTab === tab.id;
+          const active = activeTab === tab.id || (tab.id === 'liked' && isLikedTab);
           return (
             <button
               key={tab.id}
@@ -198,14 +179,25 @@ export default function Library() {
         })}
       </div>
 
-      <div id="library-tab-panel" role="tabpanel" aria-labelledby={`library-tab-${activeTab}`} className="pt-2">
-        {error ? (
+      {isLikedTab && (
+        <div className="flex flex-wrap gap-2" role="group" aria-label={t('content.contentType')}>
+          {[['liked', t('content.all')], ['music', t('library.music')], ['beats', t('library.beats')]].map(([id, label]) => (
+            <button key={id} type="button" aria-pressed={activeTab === id}
+              onClick={() => setSearchParams({ tab: id })}
+              className={`min-h-10 rounded-full px-4 text-sm transition-colors ${activeTab === id ? 'bg-zinc-800 text-zinc-100' : 'text-zinc-400 hover:bg-zinc-900'}`}>
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+      <div id="library-tab-panel" role="tabpanel" aria-labelledby={`library-tab-${isLikedTab ? 'liked' : activeTab}`} className="pt-2">
+        {error || (isLikedTab && likesError) ? (
           <ErrorState
             title={t('media.libraryUnavailable')}
-            message={error}
+            message={error || likesError}
             onRetry={() => setPlaylistRevision((current) => current + 1)}
           />
-        ) : loading ? (
+        ) : loading || (isLikedTab && likesLoading) ? (
           <LoadingState type={activeTab === 'playlists' || activeTab === 'artists' ? 'grid' : 'list'} count={4} />
         ) : activeTab === 'recently' ? (
           recentlyPlayedError ? (
@@ -229,18 +221,18 @@ export default function Library() {
               ))}
             </div>
           )
-        ) : activeTab === 'music' || activeTab === 'beats' ? (
-          (activeTab === 'beats' ? likedBeats : likedMusic).length === 0 ? (
+        ) : isLikedTab ? (
+          visibleLikedTracks.length === 0 ? (
             <EmptyState
               iconName="Heart"
               title={activeTab === 'beats' ? t('beats.noLikedBeats') : t('empty.noLikedSongs')}
               description={activeTab === 'beats' ? t('beats.likeBeatsDesc') : t('profile.likeTracksDesc')}
               actionText={t('actions.discoverMusic')}
-              onAction={() => navigate(activeTab === 'beats' ? '/discover?content=BEAT' : '/discover?content=MUSIC')}
+              onAction={() => navigate(activeTab === 'beats' ? '/discover?content=BEAT' : activeTab === 'music' ? '/discover?content=MUSIC' : '/discover')}
             />
           ) : (
             <div className="space-y-1">
-              {(activeTab === 'beats' ? likedBeats : likedMusic).map((track, index, collection) => (
+              {visibleLikedTracks.map((track, index, collection) => (
                 <TrackListItem key={track.id} track={track} index={index} tracksContext={collection} />
               ))}
             </div>

@@ -4,9 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { ArrowRight } from 'lucide-react';
 import { getCatalogTracks, getArtistsWithTracks } from '../api';
 import HomeHero from '../components/home/HomeHero';
-import BrowseByGenre from '../components/home/BrowseByGenre';
-import CreatorCallout from '../components/home/CreatorCallout';
-import BeatsInfoCard from '../components/home/BeatsInfoCard';
+import HomeQuickPicks from '../components/home/HomeQuickPicks';
 import PageMeta from '../components/meta/PageMeta';
 import TrackCard from '../components/tracks/TrackCard';
 import ArtistCard from '../components/artists/ArtistCard';
@@ -65,14 +63,6 @@ export default function Home() {
     });
   }, [authHydrated, loadRecentlyPlayed, user]);
 
-  const handleGenreSelect = ({ kind, value }) => {
-    if (kind === 'more') {
-      navigate('/discover?browse=all');
-      return;
-    }
-    navigate(`/discover?${kind}=${encodeURIComponent(value)}`);
-  };
-
   return (
     <div className="flex flex-col gap-8 lg:gap-10">
       <PageMeta
@@ -82,24 +72,15 @@ export default function Home() {
       />
       <HomeHero
         onDiscover={() => navigate('/discover')}
-        onUpload={() => navigate('/upload')}
       />
 
       {recentlyPlayed.length > 0 && (
         <section data-testid="home-continue-listening" className="space-y-4">
-          <div>
-            <h2 className="ns-section-title">{t('home.continueListening')}</h2>
-            <p className="mt-1 text-sm text-zinc-500">{t('home.continueListeningDesc')}</p>
-          </div>
-          <div
-            data-testid="home-continue-grid"
-            className="ns-tabs-scroll -mx-4 flex gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:[grid-template-columns:repeat(auto-fill,minmax(min(240px,100%),1fr))] sm:gap-5 sm:px-0"
-          >
-            {recentlyPlayed.slice(0, 8).map((track) => (
-              <div key={track.id} className="w-[min(74vw,18rem)] shrink-0 sm:w-full sm:max-w-[17.5rem] sm:justify-self-start">
-                <TrackCard track={track} tracksContext={recentlyPlayed} />
-              </div>
-            ))}
+          <div data-testid="home-continue-grid">
+            <HomeQuickPicks
+              tracks={recentlyPlayed}
+              title={t('home.continueListening')}
+            />
           </div>
         </section>
       )}
@@ -108,7 +89,6 @@ export default function Home() {
         <div className="flex flex-wrap items-end gap-x-5 gap-y-2">
           <div className="min-w-0">
             <h2 className="ns-section-title">{t('home.newMusic')}</h2>
-            <p className="mt-1 text-sm text-zinc-500">{t('home.newMusicDesc')}</p>
           </div>
           <button
             type="button"
@@ -159,7 +139,6 @@ export default function Home() {
         <div className="flex flex-wrap items-end gap-x-5 gap-y-2">
           <div className="min-w-0">
             <h2 className="ns-section-title">{t('beats.freshBeats')}</h2>
-            <p className="mt-1 text-sm text-zinc-500">{t('home.freshBeatsDesc')}</p>
           </div>
           <button
             type="button"
@@ -198,13 +177,11 @@ export default function Home() {
         </div>
       </section>
 
-      <BeatsInfoCard />
 
       {!loading && !error && newMusicTracks.length > 0 && featuredArtists.length > 0 && (
         <section className="space-y-4">
           <div>
             <h2 className="ns-section-title">{t('home.featuredArtists')}</h2>
-            <p className="mt-1 text-sm text-zinc-500">{t('home.featuredArtistsDesc')}</p>
           </div>
           <div
             data-testid="home-artist-grid"
@@ -219,9 +196,7 @@ export default function Home() {
         </section>
       )}
 
-      <BrowseByGenre onSelect={handleGenreSelect} />
 
-      <CreatorCallout onUpload={() => navigate('/upload')} />
 
       <div data-testid="home-bottom-safe-area" className="h-px w-full" aria-hidden="true" />
     </div>

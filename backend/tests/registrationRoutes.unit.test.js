@@ -26,6 +26,11 @@ beforeEach(async () => {
       findFirst: vi.fn(async ({ where }) => state.users.find(user => (where.OR || [where]).some(filter =>
         Object.entries(filter).some(([key, value]) => user[key]?.toLowerCase() === (value.equals || value).toLowerCase()))) || null),
       findUnique: vi.fn(async ({ where }) => state.users.find(user => user.id === where.id) || null),
+      update: vi.fn(async ({ where, data }) => {
+        const user = state.users.find(row => row.id === where.id);
+        Object.assign(user, data);
+        return user;
+      }),
       create: vi.fn(async ({ data }) => {
         if (uniqueConflict) throw { code: 'P2002', meta: { target: [uniqueConflict] } };
         const user = { id: `user-${state.users.length + 1}`, status: 'ACTIVE', futureInternalColumn: 'internal-user', ...data };
@@ -145,6 +150,7 @@ describe('registration and onboarding HTTP contracts', () => {
     expect(res.statusCode).toBe(200);
     expect(res.json().creatorRegistration.creatorType).toBe('BEATMAKER');
     expect(res.json().user.role).toBe('LISTENER');
+    expect(res.json().user.displayName).toBe('Beat Maker');
     expect(res.body).not.toMatch(/adminNote|reviewedAt|enabledAt|futureSecret|futureInternalColumn/);
     expect(res.json().creatorRegistration).not.toHaveProperty('status');
     expect(state.creators[0].adminNote).toBe(staffOnly.adminNote);

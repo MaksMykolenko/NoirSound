@@ -366,11 +366,9 @@ async function tracksRoutes(fastify, _options) {
         return reply.status(404).send({ error: 'Track cover not found' });
       }
 
-      const coverUrl = await fastify.storage.createPresignedGetUrl(
-        track.coverImageKey,
-        3600
+      return await require('../services/images').sendCoverImage(
+        fastify.storage, track.coverImageKey, request, reply, fastify.log
       );
-      return reply.redirect(coverUrl, 302);
     } catch (error) {
       fastify.log.error(error);
       return reply.status(500).send({ error: 'Internal Server Error' });

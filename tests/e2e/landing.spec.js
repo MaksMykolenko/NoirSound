@@ -136,6 +136,7 @@ test('showcase playback survives landing, Discover, track and Home navigation wi
   const targetRow = showcaseRows(page).filter({ hasText: target.title });
   await expect(targetRow).toHaveCount(1);
   await targetRow.click();
+  await page.getByRole('button', { name: 'Expand player', exact: true }).filter({ visible: true }).click();
   const player = page.getByTestId('desktop-player');
   const playButton = player.getByTestId('standard-player-play-button');
   await expect(playButton).toHaveAttribute('aria-label', 'Pause');
@@ -159,8 +160,8 @@ test('showcase playback survives landing, Discover, track and Home navigation wi
   await expect(page.getByRole('heading', { level: 1, name: target.title })).toBeVisible();
   await expect(page).toHaveURL(new RegExp(`/track/${target.id}$`));
   state = await expectSharedAudio(page, audio, state);
-  await page.getByRole('link', { name: 'NoirSound home', exact: true }).filter({ visible: true }).click();
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Yoursound.');
+  await page.getByRole('link', { name: 'NoirSound Discover', exact: true }).filter({ visible: true }).click();
+  await expect(page).toHaveURL(/\/discover$/);
   state = await expectSharedAudio(page, audio, state);
 
   const queueButton = player.getByRole('button', { name: 'Open play queue' });
@@ -171,7 +172,7 @@ test('showcase playback survives landing, Discover, track and Home navigation wi
   await page.keyboard.press('Escape');
   await expect(queue).toBeHidden();
   await expect(queueButton).toBeFocused();
-  const lyricsButton = player.getByRole('button', { name: 'Open fullscreen lyrics' });
+  const lyricsButton = player.getByRole('button', { name: 'Open fullscreen player' });
   await lyricsButton.click();
   await expect(page.getByTestId('fullscreen-lyrics-player')).toBeVisible();
   await expect(page.getByText('Words from the real landing fixture.', { exact: true })).toBeVisible();
@@ -233,14 +234,15 @@ test('mobile navigation traps and restores focus, and persisted motion preferenc
   expect(await page.evaluate(() => document.body.style.overflow)).toBe('');
 });
 
-test('landing locale changes preserve authored titles and app theme, and metadata follows refreshed public deep links', async ({ page }) => {
+test('saved landing locales preserve authored titles and app theme, and metadata follows refreshed public deep links', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light-minimal');
   await expect(showcaseRows(page)).toHaveCount(3);
   const titles = await showcaseRows(page).allTextContents();
-  const language = page.getByRole('contentinfo').getByRole('combobox');
   for (const [locale, heading] of [['uk', 'Твоєзвучання.'], ['pl', 'Twojebrzmienie.'], ['ru', 'Твоёзвучание.'], ['en', 'Yoursound.']]) {
-    await language.selectOption(locale);
+    await page.evaluate((value) => localStorage.setItem('noirsound_language', value), locale);
+    await page.reload();
+    await expect(showcaseRows(page)).toHaveCount(3);
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(heading);
     expect(await showcaseRows(page).allTextContents()).toEqual(titles);
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'light-minimal');
@@ -264,8 +266,8 @@ test('landing locale changes preserve authored titles and app theme, and metadat
   await expect(page.getByRole('heading', { level: 1, name: fixture.artistName })).toBeVisible();
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', `https://noirsound.co/artist/${fixture.artistId}`);
   await expect(page.locator('meta[property="og:type"]')).toHaveAttribute('content', 'profile');
-  await page.getByRole('link', { name: 'NoirSound home', exact: true }).filter({ visible: true }).click();
-  await expect(page).toHaveTitle('NoirSound — your sound');
+  await page.getByRole('link', { name: 'NoirSound Discover', exact: true }).filter({ visible: true }).click();
+  await expect(page).toHaveURL(/\/discover$/);
   await expect(page.locator('meta[property="og:type"]')).toHaveAttribute('content', 'website');
   await expect(page.locator('meta[property="og:title"]')).toHaveCount(1);
   await expect(page.locator('meta[name="description"]')).toHaveCount(1);

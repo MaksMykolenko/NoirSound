@@ -1,4 +1,5 @@
 import React from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -37,88 +38,32 @@ describe('LandingPage Hero Buttons', () => {
     expect(cssContent).toMatch(/\.ns-landing \.hero-content button/);
   });
 
-  it('clicking "Create Account" opens register modal with LISTENER mode', async () => {
-    const user = userEvent.setup();
-    const setAuthModalOpen = vi.fn();
-    useUserStore.setState({ setAuthModalOpen });
-
-    const { container } = render(
-      <MemoryRouter>
-        <LandingPage />
-      </MemoryRouter>
-    );
-
-    const heroButtons = container.querySelector('.hero-buttons');
-    expect(heroButtons).not.toBeNull();
-    const createBtn = within(heroButtons).getByRole('button', { name: /create account/i });
-    await user.click(createBtn);
-
-    expect(setAuthModalOpen).toHaveBeenCalledWith(true, 'register', 'LISTENER');
+  it.each(['en', 'uk'])('offers guest listening before creator setup in %s', async (lng) => {
+    await i18n.changeLanguage(lng);
+    const { container } = render(<MemoryRouter><LandingPage /></MemoryRouter>);
+    const hero = within(container.querySelector('.hero-buttons'));
+    expect(hero.getByRole('link', { name: i18n.t('start.listenFree') })).toHaveAttribute('href', '/discover');
+    expect(hero.getByRole('link', { name: i18n.t('start.forCreators') })).toHaveAttribute('href', '/upload');
+    expect(hero.queryByRole('button', { name: i18n.t('auth.createAccount') })).not.toBeInTheDocument();
   });
 
-  it('clicking "Become a creator" opens register modal with CREATOR mode', async () => {
-    const user = userEvent.setup();
-    const setAuthModalOpen = vi.fn();
-    useUserStore.setState({ setAuthModalOpen });
-
-    const { container } = render(
-      <MemoryRouter>
-        <LandingPage />
-      </MemoryRouter>
-    );
-
-    const heroButtons = container.querySelector('.hero-buttons');
-    expect(heroButtons).not.toBeNull();
-    const creatorBtn = within(heroButtons).getByRole('button', { name: /become a creator/i });
-    await user.click(creatorBtn);
-
-    expect(setAuthModalOpen).toHaveBeenCalledWith(true, 'register', 'CREATOR');
-  });
-
-  it('clicking Ukrainian "Створити акаунт" and "Стати автором" works in uk locale', async () => {
-    await i18n.changeLanguage('uk');
-    const user = userEvent.setup();
-    const setAuthModalOpen = vi.fn();
-    useUserStore.setState({ setAuthModalOpen });
-
-    const { container } = render(
-      <MemoryRouter>
-        <LandingPage />
-      </MemoryRouter>
-    );
-
-    const heroButtons = container.querySelector('.hero-buttons');
-    expect(heroButtons).not.toBeNull();
-    const createBtn = within(heroButtons).getByRole('button', { name: /створити акаунт/i });
-    await user.click(createBtn);
-    expect(setAuthModalOpen).toHaveBeenCalledWith(true, 'register', 'LISTENER');
-
-    const creatorBtn = within(heroButtons).getByRole('button', { name: /стати автором/i });
-    await user.click(creatorBtn);
-    expect(setAuthModalOpen).toHaveBeenCalledWith(true, 'register', 'CREATOR');
-  });
-
-  it('renders localized listener notice and upgrade button when signed in as listener in Ukrainian', async () => {
+  it('offers signed-in listeners a direct platform entry in Ukrainian', async () => {
     await i18n.changeLanguage('uk');
     useUserStore.setState({
       user: { id: 'u1', username: 'testuser', role: 'LISTENER', creatorRegistration: null },
       authHydrated: true,
     });
 
-    const { container } = render(
-      <MemoryRouter>
-        <LandingPage />
-      </MemoryRouter>
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter>
+          <LandingPage />
+        </MemoryRouter>
+      </QueryClientProvider>
     );
 
-    // Verify localized listener notice is displayed, NOT the raw key
-    expect(screen.queryByText('landing.listenerNotice')).toBeNull();
-    expect(screen.getByText(/Ви зареєстровані як слухач/i)).toBeDefined();
-
-    // Verify upgrade button is localized, NOT the raw key
-    expect(screen.queryByText('landing.creator.upgradeButton')).toBeNull();
-    const upgradeBtn = screen.getByRole('button', { name: /зареєструватися як креатор/i });
-    expect(upgradeBtn).toBeDefined();
+    expect(screen.getByRole('link', { name: i18n.t('landing.openPlatform') })).toHaveAttribute('href', '/discover');
+    expect(screen.queryByText(i18n.t('start.listenerReady'))).not.toBeInTheDocument();
 
     // Open user menu to access signOut in header
     const userMenuBtn = screen.getByRole('button', { name: /@testuser/i });
@@ -129,10 +74,6 @@ describe('LandingPage Hero Buttons', () => {
     const signOutBtn = screen.getByRole('menuitem', { name: /вийти/i });
     expect(signOutBtn).toBeDefined();
 
-    // Verify css contains max-width constraint for landing-user-status
-    const cssPath = path.resolve(__dirname, '../../src/components/landing/landing.css');
-    const cssContent = fs.readFileSync(cssPath, 'utf8');
-    expect(cssContent).toMatch(/\.ns-landing \.landing-user-status\s*\{[^}]*max-width:\s*440px/);
   });
 
   it('css contains dedicated spacing rules for creator-cta-box', () => {

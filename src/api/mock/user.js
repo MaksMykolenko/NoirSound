@@ -3,7 +3,7 @@ export const demoUser = {
   displayName: 'NoirSound Demo',
   username: 'demo_listener',
   avatarUrl: '/images/artist_avatar.png',
-  bannerUrl: 'linear-gradient(135deg, #2a0812 0%, #090204 100%)',
+  bannerUrl: '#18181b',
   bio: 'Explicit demo-mode listener profile.',
   location: 'Demo environment',
   joinedAt: '2026',
@@ -12,6 +12,7 @@ export const demoUser = {
 
 let currentDemoUser = demoUser;
 let demoBannerObjectUrl = null;
+let demoAvatarObjectUrl = null;
 
 function revokeDemoBannerObjectUrl() {
   if (
@@ -43,13 +44,15 @@ export async function login(email) {
 }
 
 export async function register(userData) {
+  const username = userData.username || `listener_${crypto.randomUUID().replaceAll('-', '').slice(0, 20)}`;
+  const displayName = userData.displayName || 'Listener';
   const isCreator = userData.accountType === 'CREATOR';
   const creatorRegistration = isCreator ? {
     id: 'mock-reg-id',
     creatorType: userData.creatorType || 'ARTIST',
     intendsMusic: userData.intendsMusic ?? true,
     intendsBeats: userData.intendsBeats ?? false,
-    displayName: userData.displayName || userData.username,
+    displayName,
     portfolioUrl: userData.portfolioUrl || null,
     primaryPlatformUrl: userData.primaryPlatformUrl || null,
     status: 'REGISTERED',
@@ -58,7 +61,9 @@ export async function register(userData) {
   currentDemoUser = {
     ...demoUser,
     ...userData,
-    role: userData.role || 'LISTENER',
+    username,
+    displayName,
+    role: 'LISTENER',
     creatorRegistration
   };
   return { user: currentDemoUser };
@@ -66,12 +71,21 @@ export async function register(userData) {
 
 export async function logout() {
   revokeDemoBannerObjectUrl();
+  if (demoAvatarObjectUrl) URL.revokeObjectURL(demoAvatarObjectUrl);
+  demoAvatarObjectUrl = null;
   currentDemoUser = null;
   return { success: true };
 }
 
 export async function updateProfile(profileData) {
   currentDemoUser = { ...(currentDemoUser || demoUser), ...profileData };
+  return currentDemoUser;
+}
+
+export async function uploadProfileAvatar(file) {
+  if (demoAvatarObjectUrl) URL.revokeObjectURL(demoAvatarObjectUrl);
+  demoAvatarObjectUrl = URL.createObjectURL(file);
+  currentDemoUser = { ...(currentDemoUser || demoUser), avatarUrl: demoAvatarObjectUrl };
   return currentDemoUser;
 }
 
@@ -122,6 +136,7 @@ export async function onboardCreator(creatorData) {
   };
   currentDemoUser = {
     ...current,
+    ...(creatorData.displayName ? { displayName: creatorData.displayName } : {}),
     creatorRegistration,
   };
   return { user: currentDemoUser, creatorRegistration };

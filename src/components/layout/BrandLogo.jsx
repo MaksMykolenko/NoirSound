@@ -13,12 +13,12 @@ export default function BrandLogo({ size = 'md', showSubtitle = true, onClick })
 
   return (
     <NavLink
-      to="/"
+      to="/discover"
       onClick={onClick}
       className={`group flex min-h-11 shrink-0 items-center rounded-md transition-colors hover:bg-zinc-900/55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-red/45 ${
         isCompact ? 'gap-2 px-1.5 py-1' : 'w-full gap-3 border-b border-zinc-800/70 px-2.5 py-2.5'
       }`}
-      aria-label="NoirSound home"
+      aria-label="NoirSound Discover"
       aria-describedby={demoMode ? modeDescriptionId : undefined}
     >
       <span className={`flex shrink-0 items-center justify-center rounded-md border border-brand-red/35 bg-brand-red/10 text-brand-red ${isCompact ? 'h-8 w-8' : 'h-10 w-10'}`} aria-hidden="true">

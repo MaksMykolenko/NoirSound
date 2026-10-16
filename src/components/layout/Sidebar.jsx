@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Compass, Home, PlusCircle, LayoutDashboard, ShieldAlert } from 'lucide-react';
+import { Compass, Home, PlusCircle } from 'lucide-react';
 import LibrarySidebarSection from './LibrarySidebarSection';
 import { usePlayerStore } from '../../store/playerStore';
 import BrandLogo from './BrandLogo';
@@ -20,10 +20,6 @@ export default function Sidebar() {
     { to: '/discover', label: t('nav.discover'), icon: Compass },
     ...(canCreate ? [
       { to: '/upload', label: t('nav.upload'), icon: PlusCircle },
-      { to: '/dashboard', label: t('header.creatorDashboard'), icon: LayoutDashboard },
-    ] : []),
-    ...(user?.role === 'ADMIN' ? [
-      { to: '/admin', label: t('admin.admin'), icon: ShieldAlert },
     ] : []),
   ];
 

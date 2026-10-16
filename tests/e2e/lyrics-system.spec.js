@@ -29,6 +29,7 @@ test.describe('Lyrics system', () => {
       mimeType: 'audio/wav',
       buffer: makeWavBuffer(2),
     });
+    await page.locator('summary').filter({ hasText: 'Cover, description and tags' }).click();
     await page.getByLabel('Select track artwork').setInputFiles({
       name: `lyrics-${suffix}.png`,
       mimeType: 'image/png',
@@ -50,8 +51,8 @@ test.describe('Lyrics system', () => {
     await page.getByRole('checkbox', {
       name: 'I confirm that I own the rights to this track or have permission to publish it.',
     }).check();
-    await page.getByRole('button', { name: 'Submit track to processing' }).click();
-    await expect(page.getByRole('heading', { name: 'Ready to Publish' })).toBeVisible({
+    await page.getByRole('button', { name: 'Publish track' }).click();
+    await expect(page.getByRole('heading', { name: 'Your release is live' })).toBeVisible({
       timeout: 120_000,
     });
 
@@ -74,15 +75,16 @@ test.describe('Lyrics system', () => {
     const lyricsCard = page.getByTestId('track-lyrics-card');
     await expect(lyricsCard.getByText(originalLyrics)).toBeVisible();
     await page.getByRole('button', { name: 'Play track' }).click();
+    await page.getByRole('button', { name: 'Expand player', exact: true }).filter({ visible: true }).click();
     const desktopPlayer = page.getByTestId('desktop-player');
     const playerLyricsButton = desktopPlayer.getByRole('button', {
-      name: 'Open fullscreen lyrics',
+      name: 'Open fullscreen player',
       exact: true,
     });
     await expect(playerLyricsButton).toBeEnabled();
     await playerLyricsButton.click();
     const panel = page.getByTestId('fullscreen-lyrics-player');
-    await expect(panel).toHaveAttribute('aria-label', `Fullscreen lyrics player for ${title}`);
+    await expect(panel).toHaveAttribute('aria-label', `Now playing: ${title}`);
     await expect(panel.getByText(originalLyrics)).toBeVisible();
     await expect(panel.getByRole('button', { name: 'Pause' })).toBeVisible();
     await panel.getByTestId('fullscreen-lyrics-back').click();

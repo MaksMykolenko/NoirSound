@@ -6,7 +6,6 @@ import {
   AlertTriangle,
   ArrowRight,
   ArrowUpRight,
-  CheckCircle2,
   Cpu,
   Database,
   EyeOff,
@@ -16,11 +15,8 @@ import {
   HardDriveUpload,
   MessageSquare,
   Music2,
-  ScrollText,
   Server,
-  Settings,
   ShieldAlert,
-  ShieldCheck,
   UsersRound,
   Zap,
 } from 'lucide-react';
@@ -71,7 +67,6 @@ export default function AdminOverview() {
       icon: Music2,
       to: '/admin/tracks?status=PUBLISHED',
       tone: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
-      hint: t('admin.publishedTracksDesc', { defaultValue: 'В активному каталозі' }),
     },
     {
       label: t('admin.hiddenTracks'),
@@ -79,7 +74,6 @@ export default function AdminOverview() {
       icon: EyeOff,
       to: '/admin/tracks?status=HIDDEN',
       tone: 'text-amber-400 bg-amber-500/10 border-amber-500/20',
-      hint: t('admin.hiddenTracksDesc', { defaultValue: 'Приховано / на розгляді' }),
     },
     {
       label: t('admin.activeUsers'),
@@ -87,7 +81,6 @@ export default function AdminOverview() {
       icon: UsersRound,
       to: '/admin/users?status=ACTIVE',
       tone: 'text-sky-400 bg-sky-500/10 border-sky-500/20',
-      hint: t('admin.activeUsersDesc', { defaultValue: 'Зареєстровані акаунти' }),
     },
     {
       label: t('admin.restrictedUsers'),
@@ -95,7 +88,6 @@ export default function AdminOverview() {
       icon: ShieldAlert,
       to: '/admin/users',
       tone: 'text-rose-400 bg-rose-500/10 border-rose-500/20',
-      hint: t('admin.restrictedUsersDesc', { defaultValue: 'Блокування та санкції' }),
     },
     {
       label: t('admin.commentsToday'),
@@ -103,7 +95,6 @@ export default function AdminOverview() {
       icon: MessageSquare,
       to: '/admin/comments',
       tone: 'text-violet-400 bg-violet-500/10 border-violet-500/20',
-      hint: t('admin.commentsTodayDesc', { defaultValue: 'Активність за добу' }),
     },
     {
       label: t('admin.playEventsToday'),
@@ -111,7 +102,6 @@ export default function AdminOverview() {
       icon: Activity,
       to: '/admin/system',
       tone: 'text-[var(--ns-accent)] bg-[var(--ns-accent-soft)] border-[var(--ns-accent-border)]',
-      hint: t('admin.playEventsTodayDesc', { defaultValue: 'Стрімінг за 24 години' }),
     },
   ];
 
@@ -119,56 +109,23 @@ export default function AdminOverview() {
     {
       label: t('admin.pendingReports'),
       value: data?.reports?.pending,
-      status: 'PENDING',
       icon: Flag,
       to: '/admin/reports?status=OPEN',
       tone: 'text-amber-400 bg-amber-500/10 border-amber-500/20',
-      description: t('admin.reportsReviewDesc', { defaultValue: 'Скарги від користувачів' }),
     },
     {
       label: t('admin.failedUploads'),
       value: data?.uploads?.failed,
-      status: 'FAILED',
       icon: AlertTriangle,
       to: '/admin/uploads?status=FAILED',
       tone: 'text-rose-400 bg-rose-500/10 border-rose-500/20',
-      description: t('admin.failedUploadsDesc', { defaultValue: 'Помилки обробки треків' }),
     },
     {
       label: t('admin.processingUploads'),
       value: data?.uploads?.processing,
-      status: 'PROCESSING',
       icon: HardDriveUpload,
       to: '/admin/uploads?status=PROCESSING',
       tone: 'text-sky-400 bg-sky-500/10 border-sky-500/20',
-      description: t('admin.processingUploadsDesc', { defaultValue: 'Файли в черзі конвертації' }),
-    },
-  ];
-
-  const quickShortcuts = [
-    {
-      label: t('admin.tracks'),
-      to: '/admin/tracks',
-      icon: Music2,
-      desc: t('admin.catalogManagement', { defaultValue: 'Керування каталогом треків' }),
-    },
-    {
-      label: t('admin.comments'),
-      to: '/admin/comments',
-      icon: MessageSquare,
-      desc: t('admin.commentModeration', { defaultValue: 'Модерація обговорень' }),
-    },
-    {
-      label: t('admin.auditLogs'),
-      to: '/admin/audit-logs',
-      icon: ScrollText,
-      desc: t('admin.auditLogsDesc', { defaultValue: 'Історія дій модерації' }),
-    },
-    {
-      label: t('admin.settings'),
-      to: '/admin/settings',
-      icon: Settings,
-      desc: t('admin.platformConfig', { defaultValue: 'Параметри платформи' }),
     },
   ];
 
@@ -185,8 +142,8 @@ export default function AdminOverview() {
         title={t('admin.overview')}
         description={t('admin.overviewDescription')}
         actions={
-          <div className="flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3.5 py-1.5 text-xs font-semibold text-emerald-400">
-            <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+          <div className={`flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-xs font-semibold ${isHealthy ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400' : 'border-amber-500/20 bg-amber-500/10 text-amber-400'}`}>
+            <span className="h-2 w-2 rounded-full bg-current" />
             <span>{isHealthy ? t('admin.allSystemsReady', { defaultValue: 'Усі системи готові' }) : t('admin.systemAttention', { defaultValue: 'Потрібна увага' })}</span>
           </div>
         }
@@ -218,9 +175,7 @@ export default function AdminOverview() {
                 <span className="mt-1.5 block min-h-[2.25rem] text-xs font-semibold leading-snug text-[var(--ns-text-secondary)] group-hover:text-[var(--ns-text)] line-clamp-2">
                   {card.label}
                 </span>
-                <span className="mt-0.5 block truncate text-ns-meta text-[var(--ns-text-muted)]">
-                  {card.hint}
-                </span>
+
               </div>
             </Link>
           );
@@ -245,7 +200,7 @@ export default function AdminOverview() {
               </span>
             </div>
             <ul className="divide-y divide-[var(--ns-border-subtle)]">
-              {attentionItems.map(({ label, value, status, icon: Icon, to, tone, description }) => (
+              {attentionItems.map(({ label, value, icon: Icon, to, tone }) => (
                 <li key={label}>
                   <Link
                     to={to}
@@ -256,17 +211,13 @@ export default function AdminOverview() {
                         <Icon className="h-4 w-4" aria-hidden="true" />
                       </div>
                       <div className="min-w-0">
-                        <span className="block truncate text-sm font-semibold text-[var(--ns-text)] group-hover:text-[var(--ns-text-primary)]">
+                        <span className="block text-sm font-semibold text-[var(--ns-text)] group-hover:text-[var(--ns-text-primary)]">
                           {label}
-                        </span>
-                        <span className="block truncate text-ns-meta text-[var(--ns-text-muted)]">
-                          {description}
                         </span>
                       </div>
                     </div>
 
                     <div className="flex shrink-0 items-center gap-3">
-                      <StatusBadge status={status} />
                       <span className="min-w-[2.5rem] text-right font-sans text-base font-bold tabular-nums text-[var(--ns-text)]">
                         {valueOrUnavailable(value, unavailable, locale)}
                       </span>
@@ -278,39 +229,7 @@ export default function AdminOverview() {
             </ul>
           </AdminPanel>
 
-          {/* Quick Operational Shortcuts */}
-          <AdminPanel className="overflow-hidden rounded-xl border border-[var(--ns-border-subtle)] bg-[var(--ns-card-solid)] shadow-sm">
-            <div className="border-b border-[var(--ns-border-subtle)] px-5 py-4">
-              <h2 className="text-sm font-bold tracking-tight text-[var(--ns-text)]">
-                {t('admin.quickActions', { defaultValue: 'Швидкі дії' })}
-              </h2>
-            </div>
-            <div className="grid grid-cols-1 gap-px bg-[var(--ns-border-subtle)] sm:grid-cols-2">
-              {quickShortcuts.map((shortcut) => {
-                const Icon = shortcut.icon;
-                return (
-                  <Link
-                    key={shortcut.label}
-                    to={shortcut.to}
-                    className="group flex items-center gap-3.5 bg-[var(--ns-card-solid)] p-4 transition-colors hover:bg-[var(--ns-hover-bg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--ns-accent)]"
-                  >
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[var(--ns-border-subtle)] bg-[var(--ns-bg-elevated)] text-[var(--ns-text-secondary)] transition-colors group-hover:border-[var(--ns-accent-border)] group-hover:text-[var(--ns-accent)]">
-                      <Icon className="h-4 w-4" aria-hidden="true" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-semibold text-[var(--ns-text)] group-hover:text-[var(--ns-text-primary)]">
-                        {shortcut.label}
-                      </span>
-                      <span className="block truncate text-ns-meta text-[var(--ns-text-muted)]">
-                        {shortcut.desc}
-                      </span>
-                    </div>
-                    <ArrowRight className="h-3.5 w-3.5 shrink-0 text-[var(--ns-text-muted)] transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
-                  </Link>
-                );
-              })}
-            </div>
-          </AdminPanel>
+
         </div>
 
         {/* Right Column (5 cols): System Status & Service Health Grid */}
@@ -323,7 +242,6 @@ export default function AdminOverview() {
                   {t('admin.systemStatus')}
                 </h2>
               </div>
-              <StatusBadge status={data?.system?.status} />
             </div>
 
             {/* Structured Service Health Tiles */}
@@ -331,27 +249,20 @@ export default function AdminOverview() {
               {systemCheckNames.map((name) => {
                 const Icon = SYSTEM_SERVICE_ICONS[name] || Server;
                 const status = data?.system?.checks?.[name] || 'unavailable';
-                const isCheckOk = String(status).toUpperCase() === 'OK' || String(status).toUpperCase() === 'HEALTHY';
                 return (
                   <div
                     key={name}
-                    className="flex items-center justify-between gap-2.5 rounded-lg border border-[var(--ns-border-subtle)] bg-[var(--ns-bg-elevated)] p-3 transition-colors hover:border-[var(--ns-border-strong)]"
+                    className="flex flex-col items-start gap-2.5 rounded-lg border border-[var(--ns-border-subtle)] bg-[var(--ns-bg-elevated)] p-3 transition-colors hover:border-[var(--ns-border-strong)]"
                   >
                     <div className="flex min-w-0 items-center gap-2.5">
                       <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[var(--ns-surface-active)] text-[var(--ns-text-secondary)]">
                         <Icon className="h-3.5 w-3.5" aria-hidden="true" />
                       </div>
-                      <span className="truncate text-xs font-semibold text-[var(--ns-text-secondary)]">
+                      <span className="break-words text-xs font-semibold text-[var(--ns-text-secondary)]">
                         {t(`admin.systemChecks.${name}`)}
                       </span>
                     </div>
-                    <div className="flex shrink-0 items-center gap-1.5">
-                      <span
-                        className={`h-1.5 w-1.5 rounded-full ${isCheckOk ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]' : 'bg-rose-400 shadow-[0_0_6px_rgba(244,63,94,0.8)]'}`}
-                        aria-hidden="true"
-                      />
-                      <StatusBadge status={status} />
-                    </div>
+                    <StatusBadge status={status} />
                   </div>
                 );
               })}

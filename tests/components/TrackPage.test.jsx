@@ -51,7 +51,7 @@ describe('TrackPage', () => {
     getCatalogTracks.mockResolvedValue({ items: [] });
   });
 
-  it('shows a compact metadata row (plays, duration, date), genre pill, and note', async () => {
+  it('shows a compact metadata row and one linked artist identity', async () => {
     getTrackById.mockResolvedValue(baseTrack);
     renderTrack();
     await screen.findByText('Midnight Protocol');
@@ -59,10 +59,11 @@ describe('TrackPage', () => {
     expect(screen.getAllByText('1:58').length).toBeGreaterThan(0);
     expect(screen.getByText(/Jun 28, 2026/)).toBeInTheDocument();
     expect(screen.getByText('Rap')).toBeInTheDocument();
-    expect(screen.getByText('Uploaded by Nonexel')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Nonexel' })).toHaveAttribute('href', '/artist/a1');
+    expect(screen.queryByText('Uploaded by Nonexel')).not.toBeInTheDocument();
   });
 
-  it('does not crash when metadata is missing and shows compact empty states', async () => {
+  it('omits empty description and lyrics blocks when metadata is missing', async () => {
     getTrackById.mockResolvedValue({
       ...baseTrack,
       duration: null,
@@ -75,12 +76,13 @@ describe('TrackPage', () => {
     renderTrack();
     await screen.findByText('Midnight Protocol');
     expect(screen.queryByText('1:58')).toBeNull();
-    expect(screen.getByText(i18n.t('trackPage.noDescription'))).toBeInTheDocument();
-    expect(screen.getByText(i18n.t('trackPage.beFirstToListen'))).toBeInTheDocument();
+    expect(screen.queryByText(i18n.t('trackPage.noDescription'))).not.toBeInTheDocument();
+    expect(screen.queryByText(i18n.t('trackPage.beFirstToListen'))).not.toBeInTheDocument();
+    expect(screen.queryByTestId('track-lyrics-card')).not.toBeInTheDocument();
   });
 
-  it('omits related tracks when none are returned and keeps lyrics available', async () => {
-    getTrackById.mockResolvedValue(baseTrack);
+  it('omits related tracks when none are returned and keeps available lyrics', async () => {
+    getTrackById.mockResolvedValue({ ...baseTrack, hasLyrics: true });
     getCatalogTracks.mockResolvedValue({ items: [] });
     renderTrack();
     await screen.findByText('Midnight Protocol');

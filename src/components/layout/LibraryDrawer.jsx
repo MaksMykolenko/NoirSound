@@ -3,7 +3,6 @@ import { X } from 'lucide-react';
 import LibrarySidebarSection from './LibrarySidebarSection';
 import BrandLogo from './BrandLogo';
 import useDialogFocusTrap from '../../hooks/useDialogFocusTrap';
-import LanguageSwitcher from '../ui/LanguageSwitcher';
 
 export default function LibraryDrawer({ isOpen, onClose }) {
   const dialogRef = useDialogFocusTrap(isOpen, onClose);
@@ -41,10 +40,6 @@ export default function LibraryDrawer({ isOpen, onClose }) {
           <LibrarySidebarSection onItemClick={onClose} />
         </div>
 
-        {/* Drawer Footer */}
-        <div className="mt-3 shrink-0 border-t border-zinc-900/80 pt-3">
-          <LanguageSwitcher compact />
-        </div>
       </div>
     </div>
   );

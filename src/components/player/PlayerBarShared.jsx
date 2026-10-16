@@ -1,9 +1,9 @@
+import { TrackSaveIcon } from '../tracks/TrackVisuals';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import {
-  FileText,
-  Heart,
+  Maximize2,
   ListMusic,
   Pause,
   Play,
@@ -57,21 +57,22 @@ export function PlayerTrackInfo({
   const { contextMenuProps, openFromButton } = useTrackContextMenu(track);
   return (
     <div
-      className={`flex items-center space-x-3 ${className}`}
+      key={track?.id}
+      className={`ns-player-track-info ns-player-track-fade flex items-center ${className}`}
       data-testid="standard-player-track-info"
       onContextMenu={contextMenuProps.onContextMenu}
       onKeyDown={contextMenuProps.onKeyDown}
     >
       <FallbackCover
-        src={track.coverUrl}
-        title={track.title}
-        artistName={track.artistName}
-        genre={track.genre}
+        src={track?.coverUrl}
+        title={track?.title}
+        artistName={track?.artistName}
+        genre={track?.genre}
         className="h-14 w-14 shrink-0 animate-fade-in rounded border border-[var(--ns-border-subtle)]"
         imageClassName="object-cover"
       />
       <div className="min-w-0 flex-1">
-        <h4 className="truncate text-ns-card-title font-bold text-zinc-100">
+        <h4 className="truncate text-sm font-medium text-zinc-100">
           <Link
             title={track.title}
             to={`/track/${track.id}`}
@@ -81,9 +82,9 @@ export function PlayerTrackInfo({
             {track.title}
           </Link>
         </h4>
-        <p title={track.artistName} className="text-ns-label text-zinc-350 truncate hover:text-zinc-100 cursor-pointer font-medium">
+        <Link to={`/artist/${track.artistId}`} onClick={onOpenTrack} title={track.artistName} className="block text-xs text-zinc-400 truncate hover:text-zinc-100">
           {track.artistName}
-        </p>
+        </Link>
         <PlaybackErrorStatus error={playbackError} />
       </div>
       <button
@@ -96,7 +97,7 @@ export function PlayerTrackInfo({
         aria-label={t(isLiked ? 'player.unlikeTrack' : 'player.likeTrack', { title: track.title })}
         aria-pressed={isLiked}
       >
-        <Heart size={16} fill={isLiked ? 'currentColor' : 'none'} />
+        <TrackSaveIcon saved={isLiked} />
       </button>
       <button
         type="button"
@@ -246,6 +247,7 @@ export function PlayerVolumeControls({ volume, onSetVolume }) {
 
 export function DesktopPlayerBarContent({
   track,
+  showTrackInfo = true,
   isPlaying,
   volume,
   progress,
@@ -254,7 +256,6 @@ export function DesktopPlayerBarContent({
   shuffle,
   isLiked,
   playbackError,
-  lyricsAvailable,
   lyricsActive,
   isQueueOpen,
   onTogglePlay,
@@ -275,15 +276,17 @@ export function DesktopPlayerBarContent({
 
   return (
     <>
-      <PlayerTrackInfo
-        track={track}
-        isLiked={isLiked}
-        onToggleLike={onToggleLike}
-        playbackError={playbackError}
-        onOpenTrack={onOpenTrack}
-      />
+      {showTrackInfo && (
+        <PlayerTrackInfo
+          track={track}
+          isLiked={isLiked}
+          onToggleLike={onToggleLike}
+          playbackError={playbackError}
+          onOpenTrack={onOpenTrack}
+        />
+      )}
 
-      <div className="flex min-w-0 max-w-2xl flex-1 flex-col items-center px-3 xl:px-5">
+      <div className="flex min-w-0 max-w-2xl flex-1 flex-col items-center px-3 xl:px-5" data-testid="standard-player-playback">
         <PlayerTransportControls
           isPlaying={isPlaying}
           shuffle={shuffle}
@@ -304,23 +307,14 @@ export function DesktopPlayerBarContent({
         <button
           type="button"
           onClick={onLyrics}
-          disabled={!lyricsAvailable}
-          className={`p-2 transition-all focus:outline-none ${
-            lyricsAvailable
-              ? lyricsActive
-                ? 'rounded-md border border-brand-red/30 bg-zinc-900 text-brand-red'
-                : 'text-zinc-500 hover:text-zinc-200 cursor-pointer'
-              : 'text-zinc-700 cursor-not-allowed'
+          className={`p-2 transition-all focus:outline-none cursor-pointer ${
+            lyricsActive ? 'rounded-md border border-brand-red/30 bg-zinc-900 text-brand-red' : 'text-zinc-500 hover:text-zinc-200'
           }`}
-          title={lyricsAvailable ? t('player.lyrics') : t('player.lyricsUnavailable')}
-          aria-label={
-            lyricsAvailable
-              ? lyricsActive ? t('player.closeLyrics') : t('player.openLyrics')
-              : t('player.lyricsUnavailable')
-          }
+          title={t(lyricsActive ? 'player.closeLyrics' : 'player.openLyrics')}
+          aria-label={t(lyricsActive ? 'player.closeLyrics' : 'player.openLyrics')}
           aria-pressed={lyricsActive}
         >
-          <FileText size={18} />
+          <Maximize2 size={18} />
         </button>
         <button
           type="button"

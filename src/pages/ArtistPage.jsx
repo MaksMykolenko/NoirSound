@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -24,6 +24,7 @@ import ArtistReleaseCard from '../components/artists/ArtistReleaseCard';
 import EmptyState from '../components/ui/EmptyState';
 import ErrorState from '../components/ui/ErrorState';
 import FallbackAvatar from '../components/ui/FallbackAvatar';
+import ProfileScrollIdentity from '../components/profile/ProfileScrollIdentity';
 import { sortTracksNewest } from '../utils/presentation';
 import { formatNumber } from '../utils/formatLocale';
 import { getLocalizedGenre } from '../i18n/genreLabels';
@@ -95,6 +96,8 @@ export default function ArtistPage() {
   const setAuthModalOpen = useUserStore((state) => state.setAuthModalOpen);
   const addToast = useToastStore((state) => state.addToast);
   const player = usePlayerStore();
+  const headerRef = useRef(null);
+  const avatarRef = useRef(null);
 
   const [artist, setArtist] = useState(null);
   const [artistTracks, setArtistTracks] = useState([]);
@@ -256,6 +259,7 @@ export default function ArtistPage() {
       />
 
       <section
+        ref={headerRef}
         className="ns-artist-hero"
         data-testid="artist-hero"
         aria-label={artist.name}
@@ -268,7 +272,7 @@ export default function ArtistPage() {
           </div>
         )}
 
-        <div className="ns-artist-hero__artwork ns-avatar-frame">
+        <div ref={avatarRef} className="ns-artist-hero__artwork ns-avatar-frame" data-testid="artist-profile-avatar">
           <FallbackAvatar
             src={artist.avatarUrl}
             name={artist.name}
@@ -360,23 +364,32 @@ export default function ArtistPage() {
         </div>
       </section>
 
+      <ProfileScrollIdentity
+        key={artist.id}
+        headerRef={headerRef}
+        avatarRef={avatarRef}
+        user={artist}
+        displayName={artist.name}
+        avatarAnchor="bottom"
+        semanticFallback={false}
+      />
+
       <nav className="ns-tabs-scroll flex gap-1 overflow-x-auto border-b border-zinc-800/70" aria-label={t('profile.creatorSections')}>
         {[
-          ['artist-music', t('artist.music')],
-          ['artist-beats', t('artist.beats')],
-          ['artist-playlists', t('artist.playlists')],
+          [musicTracks.length > 0 && 'artist-music', t('artist.music')],
+          [beatTracks.length > 0 && 'artist-beats', t('artist.beats')],
+          [artistPlaylists.length > 0 && 'artist-playlists', t('artist.playlists')],
           ['artist-about', t('profile.about')],
-        ].map(([target, label]) => (
+        ].filter(([target]) => target).map(([target, label]) => (
           <a key={target} href={`#${target}`} className="ns-tab min-h-11 shrink-0 border-b-2 border-transparent px-4 py-3 text-sm font-semibold text-zinc-400 hover:border-zinc-700 hover:text-zinc-100">
             {label}
           </a>
         ))}
       </nav>
 
-      <section className="ns-page-section" data-testid="artist-popular" aria-labelledby="artist-popular-title">
+      {popularTracks.length > POPULAR_TRACK_LIMIT && <section className="ns-page-section" data-testid="artist-popular" aria-labelledby="artist-popular-title">
         <div className="ns-section-header-row">
           <h2 id="artist-popular-title" className="ns-section-title">{t('profile.popular')}</h2>
-          {popularTracks.length > POPULAR_TRACK_LIMIT && (
             <button
               type="button"
               onClick={() => setShowAllPopular((value) => !value)}
@@ -385,18 +398,8 @@ export default function ArtistPage() {
             >
               {showAllPopular ? t('profile.showPopularOnly') : t('profile.viewAll')}
             </button>
-          )}
         </div>
 
-        {popularTracks.length === 0 ? (
-          <div className="ns-artist-empty-section">
-            <Music2 size={20} aria-hidden="true" />
-            <div>
-              <h3>{t('empty.noReleasesYet')}</h3>
-              <p>{t('profile.artistNoTracksDesc')}</p>
-            </div>
-          </div>
-        ) : (
           <div className="ns-track-list">
             {visiblePopularTracks.map((track, index) => (
               <TrackListItem
@@ -408,10 +411,9 @@ export default function ArtistPage() {
               />
             ))}
           </div>
-        )}
-      </section>
+      </section>}
 
-      <section id="artist-music" className="ns-page-section scroll-mt-24" data-testid="artist-discography" aria-labelledby="artist-discography-title">
+      {(musicTracks.length > 0 || artistTracks.length === 0) && <section id="artist-music" className="ns-page-section scroll-mt-24" data-testid="artist-discography" aria-labelledby="artist-discography-title">
         <div className="ns-section-header-row">
           <h2 id="artist-discography-title" className="ns-section-title">{t('artist.music')}</h2>
         </div>
@@ -430,24 +432,14 @@ export default function ArtistPage() {
             ))}
           </div>
         )}
-      </section>
+      </section>}
 
-      <section id="artist-beats" className="ns-page-section scroll-mt-24" data-testid="artist-beats" aria-labelledby="artist-beats-title">
+      {beatTracks.length > 0 && <section id="artist-beats" className="ns-page-section scroll-mt-24" data-testid="artist-beats" aria-labelledby="artist-beats-title">
         <div className="ns-section-header-row">
           <div>
             <h2 id="artist-beats-title" className="ns-section-title">{t('artist.beats')}</h2>
-            <p className="mt-1 text-sm text-zinc-500">{t('artist.beatsByCreator')}</p>
           </div>
         </div>
-        {beatTracks.length === 0 ? (
-          <div className="ns-artist-empty-section">
-            <Radio size={20} aria-hidden="true" />
-            <div>
-              <h3>{t('beats.noBeats')}</h3>
-              <p>{t('artist.noBeatsUploaded')}</p>
-            </div>
-          </div>
-        ) : (
           <div className="ns-artist-discography-grid">
             {beatTracks.map((track) => (
               <ArtistReleaseCard
@@ -458,19 +450,14 @@ export default function ArtistPage() {
               />
             ))}
           </div>
-        )}
-      </section>
+      </section>}
 
-      <section id="artist-playlists" className="ns-page-section scroll-mt-24" data-testid="artist-playlists" aria-labelledby="artist-playlists-title">
+      {artistPlaylists.length > 0 && <section id="artist-playlists" className="ns-page-section scroll-mt-24" data-testid="artist-playlists" aria-labelledby="artist-playlists-title">
         <h2 id="artist-playlists-title" className="ns-section-title">{t('artist.playlists')}</h2>
-        {artistPlaylists.length === 0 ? (
-          <p className="mt-3 text-ns-body-sm text-zinc-500">{t('artist.noPlaylists')}</p>
-        ) : (
           <div className="mt-4 grid grid-cols-1 gap-4 min-[430px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             {artistPlaylists.map((playlist) => <PlaylistCard key={playlist.id} playlist={playlist} />)}
           </div>
-        )}
-      </section>
+      </section>}
 
       <div className={`ns-artist-detail-grid ${socialItems.length === 0 ? 'ns-artist-detail-grid--single' : ''}`}>
         <section id="artist-about" className="ns-artist-detail-panel scroll-mt-24" data-testid="artist-about" aria-labelledby="artist-about-title">
@@ -503,10 +490,11 @@ export default function ArtistPage() {
           {(artist.genres || []).length > 0 && (
             <div className="mt-5 border-t border-zinc-800/60 pt-4">
               <p className="ns-eyebrow">{t('profile.focusGenres')}</p>
-              <div className="mt-2 flex flex-wrap gap-2">
+              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-2">
                 {artist.genres.map((genre) => (
-                  <span key={genre} className="ns-pill inline-flex border border-zinc-800 bg-zinc-900 px-2.5 py-1 text-ns-label font-medium text-rose-300">
-                    {getLocalizedGenre(genre)}
+                  <span key={genre} className="inline-flex items-center gap-0.5 font-mono text-xs font-semibold text-rose-400 tracking-wider">
+                    <span className="text-rose-500/60 font-bold" aria-hidden="true">#</span>
+                    <span>{getLocalizedGenre(genre)}</span>
                   </span>
                 ))}
               </div>

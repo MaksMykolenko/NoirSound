@@ -1,22 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  Activity,
-  BarChart3,
-  Heart,
-  ListMusic,
-  Settings,
-  User,
-  UserCheck,
-} from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   getFollowedArtists,
-  getLikedTracks,
   getMyPlaylists,
 } from '../api';
 import { isMockMode } from '../api/mode';
-import { usePlayerStore } from '../store/playerStore';
 import { useUserStore } from '../store/userStore';
 import ArtistCard from '../components/artists/ArtistCard';
 import PlaylistCard from '../components/playlists/PlaylistCard';
@@ -29,27 +19,22 @@ import EmptyState from '../components/ui/EmptyState';
 import ErrorState from '../components/ui/ErrorState';
 import LoadingState from '../components/ui/LoadingState';
 import PageMeta from '../components/meta/PageMeta';
-import useScrollableTabs from '../hooks/useScrollableTabs';
+import useLikedCollection from '../hooks/useLikedCollection';
 
 export default function Profile() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const tabs = [
-    { id: 'overview', label: t('profile.overview'), mobileLabel: t('profile.overview'), icon: User },
-    { id: 'liked', label: t('profile.likedTracks'), mobileLabel: t('profile.likedTracks'), icon: Heart },
-    { id: 'playlists', label: t('profile.playlists'), mobileLabel: t('profile.playlists'), icon: ListMusic },
-    { id: 'artists', label: t('profile.followedArtists'), mobileLabel: t('profile.followedArtists'), icon: UserCheck },
-    { id: 'activity', label: t('profile.activity'), mobileLabel: t('profile.activity'), icon: Activity },
-    { id: 'stats', label: t('profile.stats'), mobileLabel: t('profile.stats'), icon: BarChart3 },
-    { id: 'settings', label: t('profile.settings'), mobileLabel: t('profile.settings'), icon: Settings },
-  ];
+  const [playlists, setPlaylists] = useState([]);
+  const [followedArtists, setFollowedArtists] = useState([]);
+  const [collectionsLoading, setCollectionsLoading] = useState(false);
+  const [collectionsError, setCollectionsError] = useState(null);
+  const [playlistRevision, setPlaylistRevision] = useState(0);
 
-  const activeTab = tabs.some((tab) => tab.id === searchParams.get('tab'))
-    ? searchParams.get('tab')
-    : 'overview';
-  const tabsRef = useScrollableTabs(`${activeTab}:${i18n.resolvedLanguage}`);
+  const requestedTab = searchParams.get('tab');
+  const activeTab = ['overview', 'liked', 'playlists', 'artists', 'stats', 'activity', 'settings'].includes(requestedTab) ? requestedTab : 'overview';
+  const { tracks: likedTracks, loading: likesLoading, error: likesError } = useLikedCollection(playlistRevision);
   const demoMode = isMockMode();
 
   const {
@@ -58,20 +43,7 @@ export default function Profile() {
     authError,
     activity,
     setAuthModalOpen,
-    fetchListeningStats,
   } = useUserStore();
-  const {
-    recentlyPlayed,
-    recentlyPlayedError,
-    loadRecentlyPlayed,
-  } = usePlayerStore();
-
-  const [likedTracks, setLikedTracks] = useState([]);
-  const [playlists, setPlaylists] = useState([]);
-  const [followedArtists, setFollowedArtists] = useState([]);
-  const [collectionsLoading, setCollectionsLoading] = useState(false);
-  const [collectionsError, setCollectionsError] = useState(null);
-  const [playlistRevision, setPlaylistRevision] = useState(0);
 
   useEffect(() => {
     const refresh = () => setPlaylistRevision((current) => current + 1);
@@ -80,21 +52,33 @@ export default function Profile() {
   }, []);
 
   useEffect(() => {
-    if (!user) return;
-    fetchListeningStats().catch(() => {});
-    loadRecentlyPlayed().catch(() => {});
+    if (activeTab === 'settings') {
+      document.querySelector('.ns-main-scroll')?.scrollTo?.({ top: 0, behavior: 'auto' });
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    let active = true;
 
     setCollectionsLoading(true);
     setCollectionsError(null);
-    Promise.all([getLikedTracks(), getMyPlaylists(), getFollowedArtists()])
-      .then(([liked, myPlaylists, artists]) => {
-        setLikedTracks(liked);
+    Promise.all([getMyPlaylists(), getFollowedArtists()])
+      .then(([myPlaylists, artists]) => {
+        if (!active) return;
         setPlaylists(myPlaylists);
         setFollowedArtists(artists);
       })
-      .catch((requestError) => setCollectionsError(requestError))
-      .finally(() => setCollectionsLoading(false));
-  }, [demoMode, fetchListeningStats, loadRecentlyPlayed, playlistRevision, user]);
+      .catch((requestError) => { if (active) setCollectionsError(requestError); })
+      .finally(() => { if (active) setCollectionsLoading(false); });
+    return () => { active = false; };
+  }, [playlistRevision, user?.id]);
+
+  const headerStats = {
+    likedCount: likedTracks.length,
+    playlistsCount: playlists.length,
+    followingCount: followedArtists.length,
+  };
 
   const pageMeta = (
     <PageMeta
@@ -123,107 +107,128 @@ export default function Profile() {
     );
   }
 
-  return (
-    <div className="flex flex-col pb-10">
-      {pageMeta}
-      <UserProfileHeader
-        user={user}
-        viewerUserId={user.id}
-        shareUrl={`https://noirsound.co/profile/${encodeURIComponent(user.username)}`}
-        onEditClick={() => setSearchParams({ tab: 'settings' })}
-      />
+  const navigateToView = (tabKey) => {
+    document.querySelector('.ns-main-scroll')?.scrollTo?.({ top: 0, behavior: 'auto' });
+    if (!tabKey || tabKey === 'overview') {
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete('tab');
+      setSearchParams(nextParams);
+    } else {
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.set('tab', tabKey);
+      setSearchParams(nextParams);
+    }
+  };
 
-      <div
-        ref={tabsRef}
-        data-testid="profile-tabs"
-        className="ns-tabs-scroll ns-tabs-polish sticky top-0 z-10 mt-4 flex shrink-0 scroll-mt-2 gap-1 overflow-x-auto border-b border-zinc-800/60 bg-[var(--ns-bg)] xl:mt-0"
-        role="tablist"
-      >
-        {tabs.map((tab) => {
-          const Icon = tab.icon;
-          const active = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setSearchParams({ tab: tab.id })}
-              role="tab"
-              id={`profile-tab-${tab.id}`}
-              aria-controls="profile-tab-panel"
-              tabIndex={active ? 0 : -1}
-              onKeyDown={(event) => {
-                const index = tabs.findIndex((item) => item.id === tab.id);
-                const next = event.key === 'ArrowRight' ? (index + 1) % tabs.length
-                  : event.key === 'ArrowLeft' ? (index - 1 + tabs.length) % tabs.length
-                    : event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : null;
-                if (next === null) return;
-                event.preventDefault();
-                setSearchParams({ tab: tabs[next].id });
-                document.getElementById(`profile-tab-${tabs[next].id}`)?.focus();
-              }}
-              aria-selected={active}
-              aria-current={active ? 'page' : undefined}
-              className={`ns-tab flex shrink-0 cursor-pointer items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2.5 font-sans text-ns-label font-medium transition-colors sm:gap-2 sm:px-5 sm:py-3 ${tab.id === 'settings' ? 'ml-2' : ''} ${
-                active ? 'border-brand-red text-rose-300' : 'border-transparent text-zinc-500 hover:text-zinc-300'
-              }`}
-            >
-              <Icon size={14} className="shrink-0" />
-              <span className="hidden sm:inline">{tab.label}</span>
-              <span className="inline sm:hidden">{tab.mobileLabel}</span>
-            </button>
-          );
-        })}
-      </div>
+  return (
+    <div className="flex flex-col pb-12">
+      {pageMeta}
+      {activeTab !== 'settings' && (
+        <UserProfileHeader
+          user={user}
+          viewerUserId={user.id}
+          shareUrl={`https://noirsound.co/profile/${encodeURIComponent(user.username)}`}
+          onEditClick={() => navigateToView('settings')}
+          onSettingsClick={() => navigateToView('settings')}
+          stats={headerStats}
+        />
+      )}
+
+      {/* Subview back banner for collections & stats */}
+      {activeTab !== 'overview' && activeTab !== 'settings' && (
+        <div className="mt-4 flex items-center justify-between border-b border-zinc-800/80 pb-3">
+          <button
+            type="button"
+            onClick={() => navigateToView('overview')}
+            className="inline-flex items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-900/60 px-3.5 py-1.5 text-xs font-semibold text-zinc-300 transition-colors hover:border-zinc-700 hover:text-white cursor-pointer group"
+          >
+            <ArrowLeft size={14} className="transition-transform group-hover:-translate-x-0.5" />
+            <span>{t('profile.overview', 'Overview')}</span>
+          </button>
+
+          <span className="font-mono text-xs uppercase tracking-wider text-zinc-400">
+            {activeTab === 'liked'
+              ? t('profile.likedTracks')
+              : activeTab === 'playlists'
+                ? t('profile.playlists')
+                : activeTab === 'artists'
+                  ? t('profile.followedArtists')
+                  : activeTab === 'stats'
+                    ? t('profile.stats')
+                    : activeTab === 'activity'
+                      ? t('profile.activity')
+                      : ''}
+          </span>
+        </div>
+      )}
 
       <div
         data-testid="profile-tab-content"
         id="profile-tab-panel"
-        role="tabpanel"
-        aria-labelledby={`profile-tab-${activeTab}`}
-        className={activeTab === 'settings' ? 'pt-6 xl:pt-4' : 'pt-4 xl:pt-3'}
+        role="region"
+        className={activeTab === 'settings' ? 'pt-6 xl:pt-4' : 'pt-5 xl:pt-4'}
       >
         {activeTab === 'overview' && (
-          <section className="space-y-4">
-            <h2 className="ns-eyebrow px-1">{t('nav.recentlyPlayed')}</h2>
-            {recentlyPlayedError ? (
-              <ErrorState
-                title="Listening history unavailable"
-                message={recentlyPlayedError}
-                onRetry={() => loadRecentlyPlayed()}
-              />
-            ) : recentlyPlayed.length === 0 ? (
-              <EmptyState
-                iconName="History"
-                title={t('empty.nothingPlayed')}
-                description={t('empty.nothingPlayedDesc')}
-                actionText={t('actions.discoverMusic')}
-                onAction={() => navigate('/discover')}
-              />
-            ) : (
-              <div className="space-y-1">
-                {recentlyPlayed.slice(0, 5).map((track, index) => (
-                  <TrackListItem
-                    key={track.id}
-                    track={track}
-                    index={index}
-                    tracksContext={recentlyPlayed}
-                  />
-                ))}
+          collectionsLoading || likesLoading ? <LoadingState type="list" count={4} />
+          : collectionsError || likesError ? <ErrorState title={t('media.libraryUnavailable')} message={collectionsError?.message || likesError} onRetry={() => setPlaylistRevision(value => value + 1)} />
+          : <div className="space-y-8">
+              <section className="space-y-4">
+                <div className="flex items-center justify-between gap-4">
+                  <h2 className="ns-section-title">{t('profile.likedTracks')}</h2>
+                  <button type="button" onClick={() => navigateToView('liked')} className="min-h-11 text-sm text-zinc-400 hover:text-zinc-100">{t('profile.viewAll')}</button>
+                </div>
+                {likedTracks.length > 0 ? (
+                  <div className="ns-track-list">
+                    {likedTracks.slice(0, 5).map((track, index) => <TrackListItem key={track.id} track={track} index={index} tracksContext={likedTracks} />)}
+                  </div>
+                ) : <EmptyState iconName="Heart" title={t('empty.noLikedSongs')} actionText={t('actions.discoverMusic')} onAction={() => navigate('/discover')} />}
+              </section>
+              {playlists.length > 0 && <section className="space-y-4">
+                <div className="flex items-center justify-between gap-4">
+                  <h2 className="ns-section-title">{t('profile.playlists')}</h2>
+                  <button type="button" onClick={() => navigateToView('playlists')} className="min-h-11 text-sm text-zinc-400 hover:text-zinc-100">{t('profile.viewAll')}</button>
+                </div>
+                <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+                  {playlists.slice(0, 4).map(playlist => <PlaylistCard key={playlist.id} playlist={playlist} />)}
+                </div>
+              </section>}
+              {followedArtists.length > 0 && <section className="space-y-4">
+                <div className="flex items-center justify-between gap-4">
+                  <h2 className="ns-section-title">{t('profile.followedArtists')}</h2>
+                  <button type="button" onClick={() => navigateToView('artists')} className="min-h-11 text-sm text-zinc-400 hover:text-zinc-100">{t('profile.viewAll')}</button>
+                </div>
+                <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+                  {followedArtists.slice(0, 4).map(artist => <ArtistCard key={artist.id} artist={artist} />)}
+                </div>
+              </section>}
+              <div className="flex flex-wrap gap-5 border-t border-zinc-800 pt-3">
+                <button type="button" onClick={() => navigateToView('stats')} className="min-h-11 text-sm text-zinc-400 hover:text-zinc-100">{t('profile.stats')}</button>
+                <button type="button" onClick={() => navigateToView('activity')} className="min-h-11 text-sm text-zinc-400 hover:text-zinc-100">{t('profile.activity')}</button>
               </div>
-            )}
-          </section>
+            </div>
         )}
 
         {activeTab === 'stats' && <ListeningStats />}
-        
-        {/* Keep the settings form mounted while moving between profile tabs so
-            an unsaved bio or selected local banner is never silently dropped. */}
+
+        {/* Keep settings form mounted so state is never lost */}
         <div
           data-testid="profile-settings-layout"
           aria-hidden={activeTab !== 'settings'}
-          className={`${activeTab === 'settings' ? 'grid' : 'hidden'} ns-layout-page ns-layout-page--form w-full grid-cols-1 gap-6 xl:grid-cols-12`}
+          className={`${activeTab === 'settings' ? 'block animate-in fade-in slide-in-from-bottom-2 duration-300' : 'hidden'} w-full space-y-6`}
         >
-          <div className="min-w-0 xl:col-span-12">
-            <UserSettingsForm />
+          {activeTab === 'settings' && (
+            <header className="flex flex-wrap items-center justify-between gap-3">
+              <h1 className="ns-page-title">{t('header.profileSettings')}</h1>
+              <button type="button" onClick={() => navigateToView('overview')} className="inline-flex min-h-11 items-center gap-2 text-sm text-zinc-400 hover:text-zinc-100">
+                <ArrowLeft size={16} />{t('profile.backToProfile')}
+              </button>
+            </header>
+          )}
+
+          <div className="ns-layout-page ns-layout-page--form w-full grid-cols-1 gap-6 xl:grid-cols-12">
+            <div className="min-w-0 xl:col-span-12">
+              <UserSettingsForm />
+            </div>
           </div>
         </div>
 
@@ -242,7 +247,7 @@ export default function Profile() {
         )}
 
         {activeTab === 'liked' && (
-          collectionsLoading ? (
+          likesLoading ? (
             <LoadingState type="list" count={3} />
           ) : collectionsError ? (
             <ErrorState
@@ -250,6 +255,8 @@ export default function Profile() {
               message={collectionsError.message || t('errors.generic')}
               onRetry={() => setPlaylistRevision((current) => current + 1)}
             />
+          ) : likesError ? (
+            <ErrorState title={t('media.libraryUnavailable')} message={likesError} onRetry={() => setPlaylistRevision(value => value + 1)} />
           ) : likedTracks.length === 0 ? (
             <EmptyState
               iconName="Heart"

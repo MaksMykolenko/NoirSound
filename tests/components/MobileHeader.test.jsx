@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import i18n from '../../src/i18n';
@@ -63,14 +63,14 @@ describe('MobileHeader', () => {
     expect(screen.getByRole('button', { name: 'Zaloguj się' })).toBeInTheDocument();
   });
 
-  it('renders language switcher select for both guest and authenticated users', () => {
+  it('omits the language control for both guest and authenticated users', () => {
     const { rerender } = render(
       <MemoryRouter>
         <MobileHeader onOpenDrawer={vi.fn()} />
       </MemoryRouter>,
     );
 
-    expect(screen.getByTestId('language-switcher-select')).toBeInTheDocument();
+    expect(screen.queryByTestId('language-switcher-select')).not.toBeInTheDocument();
 
     useUserStore.setState({
       user: { id: 'viewer-1', username: 'viewer' },
@@ -82,19 +82,7 @@ describe('MobileHeader', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByTestId('language-switcher-select')).toBeInTheDocument();
+    expect(screen.queryByTestId('language-switcher-select')).not.toBeInTheDocument();
   });
 
-  it('shows a compact selected code while retaining complete native language options', async () => {
-    render(<MemoryRouter><MobileHeader onOpenDrawer={vi.fn()} /></MemoryRouter>);
-    const switcher = screen.getByTestId('language-switcher-select');
-    const select = within(switcher).getByRole('combobox', { name: 'Language' });
-    expect(within(switcher).getByText('EN', { exact: true })).toHaveAttribute('aria-hidden', 'true');
-    for (const name of ['EN — English', 'UA — Українська', 'PL — Polski', 'RU — Русский']) {
-      expect(within(select).getByRole('option', { name })).toBeInTheDocument();
-    }
-    fireEvent.change(select, { target: { value: 'uk' } });
-    await waitFor(() => expect(select).toHaveValue('uk'));
-    expect(within(switcher).getByText('UA', { exact: true })).toBeInTheDocument();
-  });
 });

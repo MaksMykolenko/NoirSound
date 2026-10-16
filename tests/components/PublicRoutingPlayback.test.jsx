@@ -169,13 +169,13 @@ describe('public layout routing and persistent playback', () => {
     expect(openQueue).toHaveFocus();
     expect(landingHeading.closest('[inert]')).toBeNull();
 
-    const lyricsButton = screen.getByRole('button', { name: 'Open fullscreen lyrics' });
+    const lyricsButton = screen.getByRole('button', { name: 'Open fullscreen player' });
     await user.click(lyricsButton);
     expect(await screen.findByText('Persistent words')).toBeInTheDocument();
     expect(landingHeading.closest('[inert]')).not.toBeNull();
     await user.keyboard('{Escape}');
     await waitFor(() => expect(screen.queryByTestId('fullscreen-lyrics-player')).not.toBeInTheDocument());
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Open fullscreen lyrics' })).toHaveFocus());
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Open fullscreen player' })).toHaveFocus());
     expect(landingHeading.closest('[inert]')).toBeNull();
     expect(document.body.style.overflow).toBe('');
     await act(async () => { await new Promise((resolve) => window.setTimeout(resolve, 20)); });

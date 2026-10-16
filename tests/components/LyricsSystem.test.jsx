@@ -121,8 +121,8 @@ async function openFullscreenTrackLink() {
   });
   render(<PlayerLyricsFixture />);
   await userEvent.click(screen.getByRole('button', { name: i18n.t('player.openLyrics') }));
-  const controls = screen.getByTestId('fullscreen-standard-desktop-playerbar');
-  return within(controls).getByRole('link', { name: track.title });
+  const trackInfo = screen.getByTestId('fullscreen-track-info');
+  return within(trackInfo).getByRole('link', { name: track.title });
 }
 
 function ExclusivePlayerLyricsFixture() {
@@ -281,8 +281,8 @@ describe('lyrics UI', () => {
       name: i18n.t('lyrics.fullscreenLabel', { title: longTitle }),
     });
     expect(within(dialog).getByRole('heading', { level: 1, name: longTitle })).toHaveTextContent(longTitle);
-    const controls = screen.getByTestId('fullscreen-standard-desktop-playerbar');
-    const titleLink = within(controls).getByRole('link', { name: longTitle });
+    const trackInfo = screen.getByTestId('fullscreen-track-info');
+    const titleLink = within(trackInfo).getByRole('link', { name: longTitle });
     expect(titleLink).toHaveTextContent(longTitle);
     await userEvent.click(titleLink);
 
@@ -363,7 +363,7 @@ describe('lyrics UI', () => {
     const appShell = document.querySelector('.ns-app-background');
     const fullscreen = screen.getByTestId('fullscreen-lyrics-player');
     const mobileControls = screen.getByTestId('fullscreen-standard-mobile-playerbar');
-    const trackInfo = within(mobileControls).getByTestId('standard-player-track-info');
+    const trackInfo = within(screen.getByTestId('fullscreen-track-info')).getByTestId('standard-player-track-info');
     const titleLink = within(trackInfo).getByRole('link', { name: track.title });
     expect(appShell).toHaveAttribute('inert');
     expect(document.body.style.overflow).toBe('hidden');
@@ -424,8 +424,8 @@ describe('lyrics UI', () => {
 
     await user.click(screen.getByRole('button', { name: i18n.t('player.openLyrics') }));
     const historyLengthWithSentinel = window.history.length;
-    const desktopControls = screen.getByTestId('fullscreen-standard-desktop-playerbar');
-    await user.click(within(desktopControls).getByRole('link', { name: track.title }));
+    const trackInfo = screen.getByTestId('fullscreen-track-info');
+    await user.click(within(trackInfo).getByRole('link', { name: track.title }));
 
     expect(screen.getByTestId('lyrics-player-route')).toHaveTextContent(`/track/${track.id}`);
     expect(window.history.length).toBe(historyLengthWithSentinel);
@@ -604,7 +604,8 @@ describe('lyrics UI', () => {
     await userEvent.click(screen.getAllByRole('button', { name: i18n.t('player.openLyrics') })[0]);
 
     const controls = screen.getByTestId('fullscreen-standard-desktop-playerbar');
-    expect(within(controls).getByTestId('standard-player-track-info')).toHaveTextContent(track.title);
+    expect(screen.getByTestId('fullscreen-track-info')).toHaveTextContent(track.title);
+    expect(within(controls).queryByTestId('standard-player-track-info')).not.toBeInTheDocument();
     expect(within(controls).getByTestId('standard-player-transport')).toBeInTheDocument();
     expect(within(controls).getByRole('button', { name: 'Previous track' })).toBeInTheDocument();
     expect(within(controls).getByRole('button', { name: 'Next track' })).toBeInTheDocument();
@@ -660,16 +661,67 @@ describe('lyrics UI', () => {
     expect(screen.getByTestId('fullscreen-lyrics-player')).toBeInTheDocument();
   });
 
-  it('disables lyrics controls for a track without lyrics', () => {
+  it('opens the fullscreen player without lyrics and preserves playback', async () => {
+    getTrackLyrics.mockResolvedValue({ trackId: 'no-lyrics', hasLyrics: false });
     usePlayerStore.setState({
       currentTrack: { ...track, id: 'no-lyrics', hasLyrics: false, lyricsType: 'NONE' },
+      isPlaying: true,
+      progress: 21,
     });
     render(<PlayerLyricsFixture />);
-    const unavailable = screen.getAllByRole('button', { name: i18n.t('player.lyricsUnavailable') });
-    expect(unavailable).toHaveLength(1);
-    expect(screen.queryByTestId('mobile-now-playing-sheet')).not.toBeInTheDocument();
-    unavailable.forEach((button) => expect(button).toBeDisabled());
-    fireEvent.keyDown(document, { key: 'Escape' });
-    expect(getTrackLyrics).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole('button', { name: i18n.t('player.openLyrics') }));
+    expect(await screen.findByText(i18n.t('lyrics.noLyrics'))).toBeInTheDocument();
+    expect(usePlayerStore.getState()).toMatchObject({ isPlaying: true, progress: 21 });
+    expect(screen.getByTestId('fullscreen-lyrics-player')).toBeInTheDocument();
   });
+
+  it('recovers from unavailable lyrics without interrupting playback', async () => {
+    getTrackLyrics.mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce({
+      trackId: track.id, hasLyrics: true, lyricsText: 'Recovered words',
+    });
+    usePlayerStore.setState({ currentTrack: track, isPlaying: true, progress: 21 });
+    render(<ExclusivePlayerLyricsFixture />);
+    await userEvent.click(screen.getByRole('button', { name: i18n.t('player.openLyrics') }));
+    await userEvent.click(await screen.findByRole('button', { name: i18n.t('lyrics.retry') }));
+    expect(await screen.findByText('Recovered words')).toBeInTheDocument();
+    expect(usePlayerStore.getState()).toMatchObject({ isPlaying: true, progress: 21 });
+  });
+
+  it('removes a failed atmospheric image and replaces it when the cover changes', async () => {
+    getTrackLyrics.mockResolvedValue({ trackId: track.id, hasLyrics: false });
+    usePlayerStore.setState({ currentTrack: { ...track, coverUrl: '/first.jpg' }, lyricsFullscreenOpen: true });
+    render(<ExclusivePlayerLyricsFixture />);
+    await screen.findByText(i18n.t('lyrics.noLyrics'));
+    const backdrop = screen.getByTestId('fullscreen-artwork-backdrop');
+    fireEvent.error(backdrop.querySelector('img'));
+    expect(backdrop.querySelector('img')).toBeNull();
+    act(() => usePlayerStore.setState({ currentTrack: { ...track, coverUrl: '/next.jpg' } }));
+    const nextImage = screen.getByTestId('fullscreen-artwork-backdrop').querySelector('img');
+    expect(nextImage).toHaveAttribute('src', '/next.jpg');
+    fireEvent.load(nextImage);
+    expect(nextImage).toHaveAttribute('data-loaded', 'true');
+  });
+  it('renders timed-only lyrics, follows progress, and seeks to a selected line', async () => {
+    const seek = vi.fn();
+    getTrackLyrics.mockResolvedValue({
+      trackId: track.id, hasLyrics: true, lyricsType: 'SYNCED', lyricsText: '',
+      lyricsSynced: [{ time: 0, text: 'First timed line' }, { time: 12.4, text: 'Second timed line' }],
+    });
+    usePlayerStore.setState({ currentTrack: track, progress: 2, seek, lyricsFullscreenOpen: true });
+    render(<ExclusivePlayerLyricsFixture />);
+    const first = await screen.findByRole('button', { name: 'First timed line' });
+    const second = screen.getByRole('button', { name: 'Second timed line' });
+    expect(first).toHaveAttribute('aria-current', 'true');
+    expect(second).not.toHaveAttribute('aria-current');
+    act(() => usePlayerStore.setState({ progress: 14 }));
+    expect(second).toHaveAttribute('aria-current', 'true');
+    expect(first).not.toHaveAttribute('aria-current');
+    await userEvent.click(first);
+    expect(seek).toHaveBeenCalledWith(0);
+    fireEvent.wheel(screen.getByTestId('fullscreen-lyrics-scroll'));
+    expect(screen.getByRole('button', { name: i18n.t('lyrics.followPlayback') })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: i18n.t('lyrics.followPlayback') }));
+    expect(screen.queryByRole('button', { name: i18n.t('lyrics.followPlayback') })).toBeNull();
+  });
+
 });

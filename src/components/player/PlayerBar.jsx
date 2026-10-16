@@ -1,3 +1,4 @@
+import { TrackSaveIcon } from '../tracks/TrackVisuals';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
@@ -8,11 +9,10 @@ import {
   Volume2,
   VolumeX,
   ListMusic,
-  Heart,
   X,
   Music,
   ChevronDown,
-  FileText,
+  Maximize2,
   MoreHorizontal
 } from 'lucide-react';
 import FallbackCover from '../ui/FallbackCover';
@@ -54,7 +54,6 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
   } = usePlayerStore();
 
   const isLiked = currentTrack ? likedTracks.includes(currentTrack.id) : false;
-  const lyricsAvailable = Boolean(currentTrack?.hasLyrics);
   const { contextMenuProps: trackContextMenuProps, openFromButton: openTrackActions } =
     useTrackContextMenu(currentTrack);
   const desktopPlayerHeight = 'h-[var(--ns-player-height)]';
@@ -102,6 +101,8 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
   }, [isPlayerCollapsed, collapsePlayer, lyricsFullscreenOpen, isQueueOpen, mobileSheetOpen]);
 
+  if (!currentTrack && isPlayerCollapsed) return null;
+
   return (
     <>
       {/* ========================================================================= */}
@@ -119,10 +120,10 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
               aria-label={t('player.collapsedPlayer')}
             >
               <FallbackCover
-                src={currentTrack.coverUrl}
-                title={currentTrack.title}
-                artistName={currentTrack.artistName}
-                genre={currentTrack.genre}
+                src={currentTrack?.coverUrl}
+                title={currentTrack?.title}
+                artistName={currentTrack?.artistName}
+                genre={currentTrack?.genre}
                 className="w-10 h-10 rounded-lg border border-zinc-900 shrink-0"
                 imageClassName="object-cover"
               />
@@ -140,7 +141,7 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
                 <p title={currentTrack.artistName} className="text-ns-label text-zinc-400 truncate mt-0.5 font-medium">{currentTrack.artistName}</p>
               </div>
               <div className="flex items-center space-x-2 shrink-0">
-                {lyricsAvailable && (
+                {currentTrack && (
                   <button
                     onClick={(event) => {
                       event.stopPropagation();
@@ -150,7 +151,7 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
                     aria-label={t('player.openLyrics')}
                     aria-pressed={lyricsFullscreenOpen}
                   >
-                    <FileText size={14} />
+                    <Maximize2 size={14} />
                   </button>
                 )}
                 <button
@@ -230,7 +231,6 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
             shuffle={shuffle}
             isLiked={isLiked}
             playbackError={playbackError}
-            lyricsAvailable={lyricsAvailable}
             lyricsActive={lyricsFullscreenOpen}
             isQueueOpen={isQueueOpen}
             onTogglePlay={togglePlay}
@@ -283,12 +283,12 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
                 />
               </div>
               {/* Details */}
-              <div className="flex items-center space-x-3 min-w-0 flex-1 pr-2">
+              <div key={currentTrack?.id} className="ns-player-track-fade flex items-center space-x-3 min-w-0 flex-1 pr-2">
                 <FallbackCover
-                  src={currentTrack.coverUrl}
-                  title={currentTrack.title}
-                  artistName={currentTrack.artistName}
-                  genre={currentTrack.genre}
+                  src={currentTrack?.coverUrl}
+                  title={currentTrack?.title}
+                  artistName={currentTrack?.artistName}
+                  genre={currentTrack?.genre}
                   className="w-10 h-10 rounded-lg border border-zinc-900 shrink-0"
                   imageClassName="object-cover"
                 />
@@ -350,13 +350,13 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
       )}
 
       {/* Mobile Expanded Player Sheet (Slides up covering screen) */}
-      {mobileSheetOpen && (
+      {mobileSheetOpen && currentTrack && (
         <div
           ref={mobileSheetRef}
           onContextMenu={trackContextMenuProps.onContextMenu}
           role="dialog"
           aria-modal="true"
-          aria-label={`${t('player.nowPlaying')}: ${currentTrack.title}`}
+          aria-label={`${t('player.nowPlaying')}: ${currentTrack?.title || ''}`}
           data-testid="mobile-now-playing-sheet"
           className="ns-mobile-player-sheet fixed inset-0 z-[var(--ns-z-player-sheet)] flex translate-y-0 select-none flex-col justify-between overflow-hidden bg-[var(--ns-bg)] px-5 pb-[calc(1.5rem+var(--ns-safe-area-bottom))] pt-[calc(1.25rem+var(--ns-safe-area-top))] transition-transform duration-300 ease-out sm:px-6 lg:hidden"
         >
@@ -375,22 +375,19 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
                 type="button"
                 onClick={openTrackActions}
                 className="ns-icon-button text-zinc-500"
-                aria-label={t('playlists.moreActionsFor', { title: currentTrack.title })}
+                aria-label={t('playlists.moreActionsFor', { title: currentTrack?.title || '' })}
                 aria-haspopup="menu"
               >
                 <MoreHorizontal size={18} />
               </button>
               <button
-                onClick={() => lyricsAvailable && openLyricsFullscreen()}
-                disabled={!lyricsAvailable}
-                className={`ns-icon-button ${
-                  lyricsAvailable ? 'cursor-pointer' : 'cursor-not-allowed opacity-35'
-                } ${lyricsFullscreenOpen ? 'text-brand-red border-brand-red/30' : 'text-zinc-500'}`}
-                title={lyricsAvailable ? t('player.lyrics') : t('player.lyricsUnavailable')}
-                aria-label={lyricsAvailable ? t('player.openLyrics') : t('player.lyricsUnavailable')}
+                onClick={openLyricsFullscreen}
+                className={`ns-icon-button cursor-pointer ${lyricsFullscreenOpen ? 'text-brand-red border-brand-red/30' : 'text-zinc-500'}`}
+                title={t('player.openLyrics')}
+                aria-label={t('player.openLyrics')}
                 aria-pressed={lyricsFullscreenOpen}
               >
-                <FileText size={18} />
+                <Maximize2 size={18} />
               </button>
               <button
                 onClick={onToggleQueue}
@@ -407,12 +404,12 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
           </div>
 
           {/* Large cover art */}
-          <div className="ns-mobile-player-sheet__artwork my-auto flex min-h-0 max-h-[38vh] flex-1 items-center justify-center py-3 sm:py-6">
+          <div key={`artwork-${currentTrack?.id}`} className="ns-player-track-fade ns-mobile-player-sheet__artwork my-auto flex min-h-0 max-h-[38vh] flex-1 items-center justify-center py-3 sm:py-6">
             <FallbackCover
-              src={currentTrack.coverUrl}
-              title={currentTrack.title}
-              artistName={currentTrack.artistName}
-              genre={currentTrack.genre}
+              src={currentTrack?.coverUrl}
+              title={currentTrack?.title}
+              artistName={currentTrack?.artistName}
+              genre={currentTrack?.genre}
               className="mobile-player-cover aspect-square h-full max-h-[34vh] w-auto rounded-lg border border-[var(--ns-border)] shadow-2xl"
               imageClassName="object-cover"
             />
@@ -422,7 +419,7 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
           <div className="ns-mobile-player-sheet__controls shrink-0 space-y-5">
             {/* Meta + Like */}
             <div className="flex items-center justify-between">
-              <div className="min-w-0 flex-1 pr-4">
+              <div key={`meta-${currentTrack?.id}`} className="ns-player-track-fade min-w-0 flex-1 pr-4">
                 <h2 className="ns-fullscreen-compact-title truncate text-2xl font-bold text-zinc-100">
                   <Link
                     title={currentTrack.title}
@@ -438,7 +435,8 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
               </div>
               <button
                 onClick={() => toggleLikeTrack(currentTrack.id)}
-                className={`inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-md border transition-colors focus:outline-none ${
+                data-testid="standard-mobile-player-like-button"
+                className={`ns-media-action ${
                   isLiked
                     ? 'bg-rose-500/10 text-brand-red border-brand-red/35'
                     : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-zinc-200'
@@ -447,7 +445,7 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
                 aria-label={t(isLiked ? 'player.unlikeTrack' : 'player.likeTrack', { title: currentTrack.title })}
                 aria-pressed={isLiked}
               >
-                <Heart size={18} fill={isLiked ? 'currentColor' : 'none'} />
+                <TrackSaveIcon saved={isLiked} />
               </button>
             </div>
 

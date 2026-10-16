@@ -2,18 +2,9 @@ import React from 'react';
 import TrackListItem from '../tracks/TrackListItem';
 
 export default function DiscoverRankedList({ tracks = [], compact = false }) {
-  return (
-    <div className={`ns-discover-ranked-list ${compact ? 'ns-discover-ranked-list--compact' : ''}`}>
-      {tracks.map((track, index) => (
-        <TrackListItem
-          key={track.id}
-          track={track}
-          index={index}
-          tracksContext={tracks}
-          compact={compact}
-          showMobileLike
-        />
-      ))}
-    </div>
-  );
+  const validTracks = (Array.isArray(tracks) ? tracks : []).filter(track => Boolean(track?.id));
+  return <div className="ns-track-list ns-discover-ranked-tracks" role="list">
+    {validTracks.map((track, index) => <TrackListItem key={track.id} track={track} index={index}
+      tracksContext={validTracks} compact={compact} role="listitem" />)}
+  </div>;
 }

@@ -17,6 +17,8 @@ export default function PlaylistCard({ playlist, onToggleSaved, onEdit, onDelete
     onDelete,
   });
 
+  if (!playlist || !playlist.id) return null;
+
   const handlePlayClick = async (e) => {
     e.stopPropagation();
     let tracksInPlaylist = playlist.tracks || [];
@@ -43,15 +45,15 @@ export default function PlaylistCard({ playlist, onToggleSaved, onEdit, onDelete
         to={`/playlist/${playlist.id}`}
         className="absolute inset-0 z-0 rounded-[inherit] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-red focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950"
         onKeyDown={contextMenuProps.onKeyDown}
-        aria-label={`Open playlist ${playlist.name}`}
+        aria-label={`Open playlist ${playlist.name || ''}`}
       />
 
       <div className="pointer-events-none relative z-[1]">
       <div className="ns-media-card__artwork relative mb-3 aspect-square overflow-hidden bg-zinc-950">
         <FallbackCover
-          src={playlist.coverUrl}
-          title={playlist.name}
-          artistName={playlist.creator}
+          src={playlist?.coverUrl}
+          title={playlist?.name}
+          artistName={playlist?.creator}
           genre="Playlist"
           className="w-full h-full"
           imageClassName="object-cover"

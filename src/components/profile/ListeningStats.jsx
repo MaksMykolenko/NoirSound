@@ -90,7 +90,7 @@ export default function ListeningStats() {
             <p className="text-sm text-zinc-500">{t('stats.notEnoughData')}</p>
           ) : (
             <div className="space-y-1">
-              {stats.topTracks.slice(0, 5).map(({ track, playCount }) => (
+              {(stats?.topTracks || []).filter((item) => Boolean(item?.track?.id)).slice(0, 5).map(({ track, playCount }) => (
                 <button
                   key={track.id}
                   onClick={() => navigate(`/track/${track.id}`)}
@@ -98,15 +98,15 @@ export default function ListeningStats() {
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <FallbackCover
-                      src={track.coverUrl}
-                      title={track.title}
-                      genre={track.genre}
+                      src={track?.coverUrl}
+                      title={track?.title}
+                      genre={track?.genre}
                       className="h-9 w-9 shrink-0 rounded"
                       imageClassName="object-cover"
                     />
                     <div className="min-w-0">
-                      <h4 title={track.title} className="truncate text-ns-body-sm font-semibold text-zinc-200">{track.title}</h4>
-                      <p className="truncate font-sans tabular-nums text-ns-meta text-zinc-500">{getLocalizedGenre(track.genre) || 'Uncategorized'}</p>
+                      <h4 title={track?.title} className="truncate text-ns-body-sm font-semibold text-zinc-200">{track?.title}</h4>
+                      <p className="truncate font-sans tabular-nums text-ns-meta text-zinc-500">{getLocalizedGenre(track?.genre) || 'Uncategorized'}</p>
                     </div>
                   </div>
                   <span className="text-ns-meta text-zinc-500 font-semibold shrink-0">
@@ -167,17 +167,20 @@ export default function ListeningStats() {
           </div>
         ) : (
           <div className="space-y-4">
-            {stats.topGenres.map((item) => (
-              <div key={item.genre}>
-                <div className="flex justify-between items-center gap-2 text-sm font-bold text-zinc-300 mb-1.5">
-                  <span className="truncate min-w-0">{getLocalizedGenre(item.genre)}</span>
-                  <span className="text-brand-red shrink-0">{item.percent}%</span>
+            {stats.topGenres.map((item) => {
+              const percent = item.percentage ?? item.percent ?? (stats.tracksPlayed ? Math.round((item.count / stats.tracksPlayed) * 100) : 0);
+              return (
+                <div key={item.genre}>
+                  <div className="flex justify-between items-center gap-2 text-sm font-bold text-zinc-300 mb-1.5">
+                    <span className="truncate min-w-0">{getLocalizedGenre(item.genre)}</span>
+                    <span className="text-brand-red shrink-0 font-mono">{percent}%</span>
+                  </div>
+                  <div className="h-1.5 bg-zinc-900 rounded-full overflow-hidden">
+                    <div className="h-full bg-brand-red" style={{ width: `${percent}%` }} />
+                  </div>
                 </div>
-                <div className="h-1.5 bg-zinc-900 rounded-full overflow-hidden">
-                  <div className="h-full bg-brand-red" style={{ width: `${item.percent}%` }} />
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </section>

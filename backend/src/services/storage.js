@@ -68,7 +68,9 @@ async function getObjectMetadata(key) {
     return {
       exists: true,
       size: response.ContentLength,
-      mimeType: response.ContentType
+      mimeType: response.ContentType,
+      etag: response.ETag || null,
+      lastModified: response.LastModified?.toISOString() || null
     };
   } catch (err) {
     if (

@@ -23,9 +23,9 @@ afterEach(() => {
 });
 
 describe('BrandLogo', () => {
-  it('links to Home with an accessible label', () => {
+  it('links to Discover with an accessible label', () => {
     renderBrandLogo();
-    expect(screen.getByRole('link', { name: 'NoirSound home' })).toHaveAttribute('href', '/');
+    expect(screen.getByRole('link', { name: 'NoirSound Discover' })).toHaveAttribute('href', '/discover');
   });
 
   it('announces playing and paused states from the player store', () => {

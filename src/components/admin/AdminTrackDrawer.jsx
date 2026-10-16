@@ -116,10 +116,10 @@ export default function AdminTrackDrawer({ trackId, onClose, onUpdated }) {
           <div className="space-y-5">
             <div className="flex min-w-0 items-center gap-4">
               <FallbackCover
-                src={track.coverUrl}
-                title={track.title}
-                artistName={track.artist?.user?.displayName}
-                genre={track.genre}
+                src={track?.coverUrl}
+                title={track?.title}
+                artistName={track?.artist?.user?.displayName}
+                genre={track?.genre}
                 className="h-20 w-20 shrink-0 rounded-md object-cover"
               />
               <div className="min-w-0">

@@ -1,6 +1,9 @@
 {
   "loadingPage": "Загрузка страницы",
   "errors": {
+    "PROFILE_AVATAR_INVALID": "Не удалось прочитать фото. Выберите другое изображение JPEG, PNG или WebP до 8 МБ.",
+    "PROFILE_AVATAR_UPLOAD_FAILED": "Не удалось сохранить фото профиля. Попробуйте ещё раз.",
+    "PROFILE_AVATAR_BUSY": "Обработка фото сейчас занята. Попробуйте немного позже.",
     "CSRF_VALIDATION_FAILED": "Защищённая сессия устарела. Обновите страницу и попробуйте снова.",
     "RATE_LIMITED": "Слишком много попыток. Подождите немного и попробуйте снова.",
     "PROFILE_BANNER_INVALID": "Этот файл не является корректным баннером JPEG, PNG или WebP.",
@@ -50,8 +53,8 @@
     "expand": "Развернуть",
     "lyrics": "Текст песни",
     "lyricsUnavailable": "Текст песни недоступен",
-    "openLyrics": "Открыть текст на весь экран",
-    "closeLyrics": "Закрыть полноэкранный текст",
+    "openLyrics": "Открыть полноэкранный плеер",
+    "closeLyrics": "Закрыть полноэкранный плеер",
     "lyricsFullscreenTitle": "Плеер с текстом",
     "emptyQueueHelp": "Добавьте треки для дальнейшего воспроизведения.",
     "collapsedPlayer": "Свёрнутый плеер",
@@ -198,6 +201,14 @@
     "removeTrack": "Убрать"
   },
   "profile": {
+    "avatar": "Фото профиля",
+    "chooseAvatar": "Выбрать фото профиля",
+    "uploadAvatar": "Загрузить фото",
+    "replaceAvatar": "Заменить фото",
+    "avatarPreview": "Предпросмотр фото профиля",
+    "avatarHelp": "JPEG, PNG или WebP до 8 МБ. Нажмите «Сохранить изменения», чтобы применить фото.",
+    "avatarInvalidType": "Выберите изображение JPEG, PNG или WebP.",
+    "avatarInvalidSize": "Выберите изображение размером до 8 МБ.",
     "overview": "Обзор",
     "likedTracks": "Любимые",
     "playlists": "Плейлисты",
@@ -230,7 +241,7 @@
     "artistMetrics": "Статистика аудитории артиста",
     "popular": "Популярное",
     "discography": "Дискография",
-    "viewAll": "Посмотреть все",
+    "viewAll": "Посмотреть всё",
     "showPopularOnly": "Показать топ-5",
     "artistNoReleasesDesc": "Релизов пока нет.",
     "openRelease": "Открыть релиз {{title}}",
@@ -305,7 +316,9 @@
     "saved": "Сохранено",
     "savedSuccess": "Изменения профиля сохранены!",
     "artist": "Исполнитель",
-    "openArtist": "Открыть исполнителя {{name}}"
+    "openArtist": "Открыть исполнителя {{name}}",
+    "backToProfile": "Назад к профилю",
+    "changeAvatar": "Изменить фото и настройки"
   },
   "stats": {
     "notEnoughData": "Недостаточно данных для статистики",
@@ -518,7 +531,11 @@
     "showingResults": "Показано {{shown}} из {{total}}",
     "nextPageFailed": "Не удалось загрузить следующие результаты. Текущие результаты сохранены.",
     "sortLiked": "Больше всего лайков",
-    "allResultsLoaded": "Все результаты загружены"
+    "allResultsLoaded": "Все результаты загружены",
+    "playSpotlight": "Слушать сейчас",
+    "pauseSpotlight": "Пауза",
+    "viewRelease": "Детали трека",
+    "spotlightBadge": "Выбор редакции"
   },
   "home": {
     "title": "Найдите своё новое звучание",
@@ -558,7 +575,16 @@
   "library": {
     "subtitle": "Ваша персональная коллекция музыки и история прослушиваний.",
     "music": "Музыка",
-    "beats": "Биты"
+    "beats": "Биты",
+    "trackCount_one": "{{count}} трек",
+    "trackCount_few": "{{count}} трека",
+    "trackCount_many": "{{count}} треков",
+    "trackCount_other": "{{count}} трека",
+    "beatCount_one": "{{count}} бит",
+    "beatCount_few": "{{count}} бита",
+    "beatCount_many": "{{count}} битов",
+    "beatCount_other": "{{count}} бита",
+    "allLiked": "Понравившееся"
   },
   "artist": {
     "music": "Музыка",
@@ -1401,7 +1427,25 @@
       "confirmRevokeTitle": "Отозвать доступ артиста",
       "confirmRevokeDesc": "Это вернет роль @{{username}} на LISTENER.",
       "adminNoteTitle": "Заметка для"
-    }
+    },
+    "save": "Сохранить",
+    "publishedTracksDesc": "Треки, доступные для прослушивания",
+    "hiddenTracksDesc": "Треки, скрытые модераторами",
+    "activeUsersDesc": "Пользователи, активные на платформе",
+    "restrictedUsersDesc": "Пользователи с ограничениями",
+    "commentsTodayDesc": "Комментарии за сегодня",
+    "playEventsTodayDesc": "Прослушивания за сегодня",
+    "reportsReviewDesc": "Жалобы, ожидающие рассмотрения",
+    "failedUploadsDesc": "Неудачные попытки загрузки",
+    "processingUploadsDesc": "Загрузки в обработке",
+    "catalogManagement": "Управление каталогом",
+    "commentModeration": "Модерация комментариев",
+    "auditLogsDesc": "Журналы активности системы",
+    "platformConfig": "Конфигурация платформы",
+    "allSystemsReady": "Все системы работают нормально",
+    "systemAttention": "Система требует внимания",
+    "priority": "Приоритет",
+    "detailedTelemetry": "Подробная телеметрия"
   },
   "lyrics": {
     "title": "Текст песни",
@@ -1410,6 +1454,7 @@
     "editLyrics": "Редактировать текст",
     "noLyrics": "Текст этой песни пока недоступен.",
     "unavailable": "Не удалось загрузить текст.",
+    "followPlayback": "К текущей строке",
     "providedByArtist": "Текст предоставлен артистом",
     "language": "Язык текста",
     "type": "Тип текста",
@@ -1422,7 +1467,7 @@
     "open": "Открыть текст",
     "close": "Закрыть текст",
     "backToPlayer": "Назад к плееру",
-    "fullscreenLabel": "Полноэкранный плеер с текстом для {{title}}",
+    "fullscreenLabel": "Сейчас играет: {{title}}",
     "preview": "Предпросмотр",
     "remove": "Удалить текст",
     "saved": "Текст сохранён.",
@@ -1552,5 +1597,54 @@
       "joinPrompt": "Готовы поделиться своей музыкой или битами? Зарегистрируйте аккаунт креатора.",
       "registerButton": "Зарегистрироваться как креатор"
     }
+  },
+  "redesign": {
+    "clearSearch": "Очистить поиск",
+    "quickVibes": "По настроению:",
+    "resultCount_one": "{{count}} трек",
+    "resultCount_few": "{{count}} трека",
+    "resultCount_many": "{{count}} треков",
+    "resultCount_other": "{{count}} трека",
+    "genreCount_one": "{{count}} жанр",
+    "genreCount_few": "{{count}} жанра",
+    "genreCount_many": "{{count}} жанров",
+    "genreCount_other": "{{count}} жанра",
+    "favoriteCount_one": "{{count}} любимый трек",
+    "favoriteCount_few": "{{count}} любимых трека",
+    "favoriteCount_many": "{{count}} любимых треков",
+    "favoriteCount_other": "{{count}} любимого трека",
+    "soundIdentity": "Музыкальный профиль",
+    "fullBreakdown": "Ваши прослушивания подробно",
+    "listenerPreview": "Ваши музыкальные предпочтения",
+    "compact": "Кратко",
+    "expanded": "Подробно",
+    "less": "Меньше",
+    "more": "Больше",
+    "sonicProfile": "Ваше звучание",
+    "sonicSummary": "Ваш самый прослушиваемый жанр — {{genre}}. На основе истории прослушиваний.",
+    "startCollecting": "Собирайте любимую музыку",
+    "savedDescription": "Здесь собраны треки, которые вы отметили на NoirSound.",
+    "playLiked": "Слушать любимое",
+    "statsUnavailable": "Статистика прослушиваний недоступна",
+    "creatorHub": "Кабинет автора",
+    "creatorDescription": "Публикуйте музыку и биты и управляйте своими релизами.",
+    "artistPage": "Страница артиста",
+    "shareSound": "Поделитесь музыкой",
+    "shareDescription": "Создаёте музыку или биты? Публикуйте свои записи на NoirSound.",
+    "publish": "Опубликовать на NoirSound",
+    "accountSettings": "Профиль и настройки",
+    "editingFor": "Настройки и профиль @{{username}}",
+    "doneEditing": "Завершить редактирование",
+    "vibes": {
+      "night-drive": "Ночная поездка",
+      "heavy-trap": "Мощный трэп",
+      "lofi-focus": "Lo-Fi отдых",
+      "cyber-phonk": "Киберфонк",
+      "melodic-drill": "Мелодичный дрилл",
+      "deep-ambient": "Глубокий космос"
+    }
+  },
+  "interface": {
+    "legal": "Правила и помощь"
   }
 }

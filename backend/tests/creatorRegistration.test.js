@@ -209,6 +209,25 @@ describe('Creator Registration & Public App Gate API', () => {
       expect(responses.every(response => response.body.user.role === 'LISTENER' && !response.body.user.canUploadTracks)).toBe(true);
     });
 
+    it('registers with email and password, then saves one public artist name without granting upload access', async () => {
+      const email = `minimal_${Date.now()}@test.com`;
+      const registered = await supertest(app.server).post('/api/auth/register').send({ email, password: 'password123', role: 'ADMIN' });
+      expect(registered.status).toBe(200);
+      expect(registered.body.user).toMatchObject({ displayName: 'Listener', role: 'LISTENER', canUploadTracks: false });
+      expect(registered.body.user.username).toMatch(/^listener_[a-f0-9]{20}$/);
+      const cookie = registered.headers['set-cookie'];
+      const onboarded = await supertest(app.server).post('/api/auth/creator-onboarding').set('Cookie', cookie)
+        .send({ displayName: 'New Stage Name', creatorType: 'BOTH', intendsMusic: true, intendsBeats: true });
+      expect(onboarded.status).toBe(200);
+      expect(onboarded.body.user).toMatchObject({ displayName: 'New Stage Name', role: 'LISTENER', canUploadTracks: false });
+      const saved = await app.prisma.user.findUnique({ where: { id: registered.body.user.id }, include: { creatorRegistration: true } });
+      expect(saved.displayName).toBe('New Stage Name');
+      expect(saved.creatorRegistration).toMatchObject({ displayName: 'New Stage Name', creatorType: 'BOTH' });
+      const login = await supertest(app.server).post('/api/auth/login').send({ email, password: 'password123' });
+      expect(login.status).toBe(200);
+      expect(login.body.user.displayName).toBe('New Stage Name');
+    });
+
     it('registers a standard listener without creating CreatorRegistration or ArtistProfile', async () => {
       const suffix = Date.now();
       const res = await supertest(app.server)

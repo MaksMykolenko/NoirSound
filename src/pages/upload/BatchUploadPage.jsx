@@ -329,7 +329,6 @@ export default function BatchUploadPage() {
           </Link>
           <span className="mt-4 block font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-brand-red">{t('batchUpload.multiUpload')}</span>
           <h1 className="ns-page-title mt-2">{t('batchUpload.title')}</h1>
-          <p className="ns-page-lede">{t('batchUpload.subtitle')}</p>
         </div>
         {batch && (
           <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2 lg:w-auto">

@@ -117,30 +117,21 @@ describe('Discover catalog integration', () => {
     renderDiscover();
 
     expect(screen.getByRole('heading', { level: 1, name: i18n.t('discover.title') })).toBeInTheDocument();
-    expect(screen.getByText(i18n.t('discover.subtitle'))).toBeInTheDocument();
-    for (const testId of [
-      'discover-trending',
-      'discover-trending-week',
-      'discover-new-releases',
-      'discover-fresh-beats',
-      'discover-creators',
-      'discover-genre-tiles',
-      'discover-all-content',
-    ]) {
-      expect(screen.getByTestId(testId)).toBeInTheDocument();
-    }
-    expect(screen.queryByTestId('discover-style-tiles')).not.toBeInTheDocument();
+    expect(screen.getByTestId('discover-all-content')).toBeInTheDocument();
+    expect(screen.getAllByText(music.title)).toHaveLength(1);
+    expect(screen.getAllByText(beat.title)).toHaveLength(1);
+    expect(screen.queryByTestId('discover-trending')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Filters', exact: true })).toHaveAttribute('aria-expanded', 'false');
   });
 
   it('renders Music copy and excludes Beats from every content surface', () => {
     renderDiscover('/discover?content=MUSIC');
 
     expect(screen.getByRole('heading', { level: 1, name: i18n.t('discover.musicTitle') })).toBeInTheDocument();
-    expect(screen.getByText(i18n.t('discover.musicSubtitle'))).toBeInTheDocument();
     expect(screen.getAllByText('Unique Release').length).toBeGreaterThan(0);
     expect(screen.queryByText('Cold Circuit Beat')).not.toBeInTheDocument();
     expect(screen.queryByTestId('discover-fresh-beats')).not.toBeInTheDocument();
-    expect(screen.getByTestId('discover-genre-tiles')).toBeInTheDocument();
+    expect(screen.queryByTestId('discover-genre-tiles')).not.toBeInTheDocument();
     expect(screen.getByRole('tab', { name: i18n.t('discover.music') })).toHaveAttribute('aria-selected', 'true');
   });
 
@@ -148,14 +139,13 @@ describe('Discover catalog integration', () => {
     renderDiscover('/discover?content=BEAT&style=Trap&mood=Dark&bpm=120-149&key=C%20Minor&sort=played');
 
     expect(screen.getByRole('heading', { level: 1, name: i18n.t('discover.beatsTitle') })).toBeInTheDocument();
-    expect(screen.getByText(i18n.t('discover.beatsSubtitle'))).toBeInTheDocument();
     const filters = screen.getByTestId('beat-discover-filters');
     expect(within(filters).getByTestId('beat-filter-style-trigger')).toHaveTextContent('Trap');
-    expect(within(filters).getByTestId('beat-filter-bpm-trigger')).toHaveTextContent('120–149 BPM');
+    expect(within(filters).getByTestId('beat-filter-bpm-trigger')).toHaveTextContent('120-149 BPM');
     expect(screen.getAllByText('Cold Circuit Beat').length).toBeGreaterThan(0);
     expect(screen.queryByText('Unique Release')).not.toBeInTheDocument();
-    expect(screen.getByTestId('discover-style-tiles')).toBeInTheDocument();
-    expect(screen.getByTestId('discover-mood-tiles')).toBeInTheDocument();
+    expect(screen.queryByTestId('discover-style-tiles')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('discover-mood-tiles')).not.toBeInTheDocument();
     expect(screen.queryByTestId('discover-new-releases')).not.toBeInTheDocument();
     expect(useCatalogTracks).toHaveBeenCalledWith(expect.objectContaining({
       contentType: 'BEAT',
@@ -170,9 +160,9 @@ describe('Discover catalog integration', () => {
 
   it('writes custom Beat dropdown choices into canonical URL state', async () => {
     renderDiscover('/discover?content=BEAT');
-
+    fireEvent.click(screen.getByRole('button', { name: 'Filters', exact: true }));
     fireEvent.click(screen.getByTestId('beat-filter-bpm-trigger'));
-    fireEvent.click(screen.getByRole('option', { name: '120–149 BPM' }));
+    fireEvent.click(screen.getByRole('option', { name: '120-149 BPM' }));
 
     await waitFor(() => {
       expect(screen.getByTestId('location-search')).toHaveTextContent('content=BEAT');
@@ -196,51 +186,26 @@ describe('Discover catalog integration', () => {
     });
   });
 
-  it('shows Made for You only from the current account query signals', () => {
+  it('loads a single catalog instead of additional duplicate recommendation and creator requests', () => {
     useUserStore.setState({ user: { id: 'listener-1' } });
-    mockSuccess({
-      tracks: [music, { ...music, id: 'music-2', title: 'Account-scoped recommendation' }],
-      creators: [artist],
-    });
-    useDiscoverPersonalization.mockReturnValue({
-      data: { likedTracks: [music], recentlyPlayed: [] },
-    });
     renderDiscover();
-
-    expect(screen.getByTestId('discover-made-for-you')).toBeInTheDocument();
-    expect(useDiscoverPersonalization).toHaveBeenCalledWith({
-      userId: 'listener-1',
-      contentType: 'ALL',
-    });
+    expect(useCatalogSelection).not.toHaveBeenCalled();
+    expect(useDiscoverPersonalization).not.toHaveBeenCalled();
+    expect(useArtistsWithTracks).not.toHaveBeenCalled();
+    expect(screen.getAllByText(music.title)).toHaveLength(1);
   });
 
-  it('keeps successful track sections visible when the creator request fails', () => {
-    useArtistsWithTracks.mockReturnValue({
-      data: undefined,
-      isLoading: false,
-      error: new Error('Creator request failed'),
-      refetch: vi.fn(),
-    });
+  it('shows an actionable catalog error instead of an empty-result claim', () => {
+    const refetch = vi.fn();
+    useCatalogTracks.mockReturnValue({ data: undefined, isLoading: false, error: new Error('Try later'), refetch });
     renderDiscover();
-
-    expect(screen.getAllByText('Unique Release').length).toBeGreaterThan(0);
-    expect(screen.getByText(i18n.t('discover.creatorsUnavailable'))).toBeInTheDocument();
+    expect(screen.getByText(i18n.t('discover.catalogueUnavailable'))).toBeInTheDocument();
+    expect(screen.queryByTestId('catalog-results-summary')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    expect(refetch).toHaveBeenCalledOnce();
   });
 
-  it('keeps a successful Trending response visible when the catalogue request fails', () => {
-    const catalogueFailure = new Error('Catalogue request failed');
-    useCatalogTracks.mockReturnValue({ data: undefined, isLoading: false, error: catalogueFailure, refetch: vi.fn() });
-    useCatalogSelection.mockReturnValue({ data: payload([music]), isLoading: false, error: null, refetch: vi.fn() });
-
-    renderDiscover();
-
-    expect(within(screen.getByTestId('discover-trending')).getByText('Unique Release'))
-      .toBeInTheDocument();
-    expect(within(screen.getByTestId('discover-all-content'))
-      .getByText(i18n.t('discover.catalogueUnavailable'))).toBeInTheDocument();
-  });
-
-  it('applies the All-view genre group to Fresh beats', () => {
+  it('preserves legacy group links across music and beats', () => {
     const rockBeat = {
       ...beat,
       id: 'beat-rock',
@@ -252,7 +217,7 @@ describe('Discover catalog integration', () => {
 
     renderDiscover('/discover?group=rock');
 
-    const freshBeats = screen.getByTestId('discover-fresh-beats');
+    const freshBeats = screen.getByTestId('discover-all-content');
     expect(within(freshBeats).getByText('Rock Session Beat')).toBeInTheDocument();
     expect(within(freshBeats).queryByText('Cold Circuit Beat')).not.toBeInTheDocument();
   });
@@ -274,7 +239,7 @@ describe('Discover catalog integration', () => {
   it('announces a genre chip as a clear-filter action', () => {
     renderDiscover('/discover?group=rock');
 
-    expect(screen.getByTestId('active-genre-chip')).toHaveAccessibleName(
+    expect(screen.getByRole('button', { name: `${i18n.t('discover.clearFilter')}: ${QUICK_GROUP_LABELS.rock}` })).toHaveAccessibleName(
       `${i18n.t('discover.clearFilter')}: ${QUICK_GROUP_LABELS.rock}`,
     );
   });

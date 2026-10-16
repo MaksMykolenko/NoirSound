@@ -8,10 +8,10 @@ export function TrackTypeBadge({ track, className = '' }) {
 
   return (
     <span
-      className={`inline-flex shrink-0 items-center rounded border border-brand-red/25 bg-brand-red/10 px-1.5 py-0.5 font-sans text-ns-micro font-semibold uppercase tracking-normal text-rose-300 ${className}`}
+      className={`ns-track-type ${className}`}
       data-testid="beat-badge"
     >
-      {t('content.beat', { defaultValue: 'Beat' })}
+      <span>{t('content.beat', { defaultValue: 'Beat' })}</span>
     </span>
   );
 }

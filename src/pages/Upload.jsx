@@ -10,11 +10,7 @@ export default function Upload() {
     <div className="animate-fade-in space-y-7 [&_.ns-button-primary]:!rounded [&_.ns-button-secondary]:!rounded [&_.ns-field]:!rounded [&_.ns-icon-button]:!rounded">
       <header className="flex flex-col gap-5 border-b border-zinc-800/80 pb-5 lg:flex-row lg:items-end lg:justify-between">
         <div className="max-w-2xl">
-          <span className="font-sans tabular-nums text-ns-meta font-medium uppercase tracking-ns-label text-brand-red">{t('uploadForm.creatorFlowLabel')}</span>
           <h1 className="ns-page-title mt-2">{t('nav.upload')}</h1>
-          <p className="ns-page-lede">
-            {t('uploadForm.pageIntro')}
-          </p>
         </div>
 
         <nav aria-label={t('nav.upload')} className="flex w-full border-b border-zinc-800 lg:w-auto lg:min-w-[24rem]">
