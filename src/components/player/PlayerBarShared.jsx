@@ -24,6 +24,36 @@ import FallbackCover from '../ui/FallbackCover';
 import { useTrackContextMenu } from '../../hooks/useEntityContextMenu';
 import { isMockMode } from '../../api/mode';
 import { resolvePlaybackErrorMessage } from '../../utils/playbackErrorMessage';
+import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
+
+// Icon control shared by the desktop and mobile players: shadcn Button for a
+// visible focus ring and a themed hover surface, plus a tooltip in place of
+// the native title attribute.
+export function PlayerIconButton({ label, tooltip = label, active = false, className, children, ...props }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          aria-label={label}
+          className={cn(
+            'rounded-full text-zinc-400 hover:bg-[var(--ns-hover-bg)] hover:text-zinc-100',
+            active && 'text-brand-red hover:text-brand-red',
+            className,
+          )}
+          {...props}
+        >
+          {children}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent side="top">{tooltip}</TooltipContent>
+    </Tooltip>
+  );
+}
 
 
 export function PlaybackErrorStatus({ error, className = '' }) {
@@ -91,29 +121,26 @@ export function PlayerTrackInfo({
         <TrackSourceIcon track={track} />
         <PlaybackErrorStatus error={playbackError} />
       </div>
-      <button
-        type="button"
+      <PlayerIconButton
         disabled={Boolean(track.previewExternalId || track.importedPlaylistId)}
         onClick={onToggleLike}
-        className={`p-2 transition-colors cursor-pointer shrink-0 focus:outline-none focus:text-brand-red ${
-          isLiked ? 'text-brand-red' : 'text-zinc-500 hover:text-zinc-300'
-        }`}
-        title={t(isLiked ? 'trackPage.unlike' : 'trackPage.like')}
-        aria-label={t(isLiked ? 'player.unlikeTrack' : 'player.likeTrack', { title: track.title })}
+        className="shrink-0"
+        active={isLiked}
+        tooltip={t(isLiked ? 'trackPage.unlike' : 'trackPage.like')}
+        label={t(isLiked ? 'player.unlikeTrack' : 'player.likeTrack', { title: track.title })}
         aria-pressed={isLiked}
       >
         <TrackSaveIcon saved={isLiked} />
-      </button>
-      <button
-        type="button"
+      </PlayerIconButton>
+      <PlayerIconButton
         disabled={Boolean(track.importedPlaylistId)}
         onClick={openFromButton}
-        className="ns-media-action shrink-0 text-zinc-500 hover:text-zinc-200"
-        aria-label={t('playlists.moreActionsFor', { title: track.title })}
+        className="shrink-0"
+        label={t('playlists.moreActionsFor', { title: track.title })}
         aria-haspopup="menu"
       >
         <MoreHorizontal size={16} />
-      </button>
+      </PlayerIconButton>
     </div>
   );
 }
@@ -131,62 +158,42 @@ export function PlayerTransportControls({
   const { t } = useTranslation();
   return (
     <div
-      className="flex items-center space-x-5 mb-1.5 shrink-0"
+      className="flex items-center gap-3 mb-1 shrink-0"
       data-testid="standard-player-transport"
     >
-      <button
-        type="button"
+      <PlayerIconButton
         onClick={onToggleShuffle}
-        className={`p-1 transition-colors cursor-pointer focus:outline-none focus:text-brand-red ${
-          shuffle ? 'text-brand-red' : 'text-zinc-500 hover:text-zinc-300'
-        }`}
-        title={t('playlists.shuffle')}
-        aria-label={t('player.toggleShuffle')}
+        active={shuffle}
+        tooltip={t('playlists.shuffle')}
+        label={t('player.toggleShuffle')}
         aria-pressed={shuffle}
       >
         <Shuffle size={16} />
-      </button>
-      <button
-        type="button"
-        onClick={onPrevious}
-        className="p-1 text-zinc-400 hover:text-zinc-100 transition-colors cursor-pointer focus:outline-none focus:text-zinc-100"
-        title={t('player.previousTrack')}
-        aria-label={t('player.previousTrack')}
-      >
+      </PlayerIconButton>
+      <PlayerIconButton onClick={onPrevious} label={t('player.previousTrack')}>
         <SkipBack size={18} fill="currentColor" />
-      </button>
-      <button
-        type="button"
+      </PlayerIconButton>
+      <PlayerIconButton
         onClick={onTogglePlay}
-        className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-[var(--ns-player-control-bg)] text-[var(--ns-player-control-text)] shadow-md transition-colors hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-brand-red"
-        title={isPlaying ? t('contextMenu.pause') : t('contextMenu.play')}
-        aria-label={isPlaying ? t('contextMenu.pause') : t('contextMenu.play')}
+        label={isPlaying ? t('contextMenu.pause') : t('contextMenu.play')}
         data-testid="standard-player-play-button"
+        className="size-9 bg-[var(--ns-player-control-bg)] text-[var(--ns-player-control-text)] shadow-md hover:bg-[var(--ns-player-control-bg)] hover:text-[var(--ns-player-control-text)] hover:opacity-90"
       >
         {isPlaying
           ? <Pause size={14} fill="currentColor" strokeWidth={0} />
           : <Play size={14} fill="currentColor" strokeWidth={0} className="translate-x-[0.5px]" />}
-      </button>
-      <button
-        type="button"
-        onClick={onNext}
-        className="p-1 text-zinc-400 hover:text-zinc-100 transition-colors cursor-pointer focus:outline-none focus:text-zinc-100"
-        title={t('player.nextTrack')}
-        aria-label={t('player.nextTrack')}
-      >
+      </PlayerIconButton>
+      <PlayerIconButton onClick={onNext} label={t('player.nextTrack')}>
         <SkipForward size={18} fill="currentColor" />
-      </button>
-      <button
-        type="button"
+      </PlayerIconButton>
+      <PlayerIconButton
         onClick={onToggleRepeat}
-        className={`p-1 transition-colors cursor-pointer focus:outline-none focus:text-brand-red ${
-          repeatMode !== 'none' ? 'text-brand-red' : 'text-zinc-500 hover:text-zinc-300'
-        }`}
-        title={t('player.repeatTitle', { mode: t(`player.repeatModes.${repeatMode}`) })}
-        aria-label={t('player.changeRepeatMode', { mode: t(`player.repeatModes.${repeatMode}`) })}
+        active={repeatMode !== 'none'}
+        tooltip={t('player.repeatTitle', { mode: t(`player.repeatModes.${repeatMode}`) })}
+        label={t('player.changeRepeatMode', { mode: t(`player.repeatModes.${repeatMode}`) })}
       >
         <Repeat size={16} />
-      </button>
+      </PlayerIconButton>
     </div>
   );
 }
@@ -226,14 +233,13 @@ export function PlayerVolumeControls({ volume, onSetVolume }) {
       className="flex items-center space-x-2 group/vol max-w-[100px] md:max-w-none"
       data-testid="standard-player-volume"
     >
-      <button
-        type="button"
+      <PlayerIconButton
         onClick={toggleMute}
-        className="text-zinc-500 hover:text-zinc-200 transition-colors cursor-pointer shrink-0 focus:outline-none focus:text-zinc-100"
-        aria-label={volume === 0 ? t('player.unmute') : t('player.mute')}
+        className="shrink-0"
+        label={volume === 0 ? t('player.unmute') : t('player.mute')}
       >
         {volume === 0 ? <VolumeX size={16} /> : <Volume2 size={16} />}
-      </button>
+      </PlayerIconButton>
       <div className="w-16 md:w-20 flex items-center">
         <input
           type="range"
@@ -310,41 +316,28 @@ export function DesktopPlayerBarContent({
         className="flex w-[clamp(14rem,24vw,21rem)] min-w-0 items-center justify-end gap-2"
         data-testid="standard-player-actions"
       >
-        <button
-          type="button"
+        <PlayerIconButton
           onClick={onLyrics}
           data-testid="standard-player-fullscreen-button"
-          className="inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full border-0 bg-transparent p-0 text-zinc-400 transition-colors hover:bg-white/5 hover:text-zinc-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-red"
-          title={t(lyricsActive ? 'player.closeLyrics' : 'player.openLyrics')}
-          aria-label={t(lyricsActive ? 'player.closeLyrics' : 'player.openLyrics')}
+          className="size-10"
+          label={t(lyricsActive ? 'player.closeLyrics' : 'player.openLyrics')}
           aria-pressed={lyricsActive}
         >
           {lyricsActive ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
-        </button>
-        <button
-          type="button"
+        </PlayerIconButton>
+        <PlayerIconButton
           onClick={onToggleQueue}
-          className={`p-2 transition-all cursor-pointer focus:outline-none focus:text-brand-red ${
-            isQueueOpen
-              ? 'rounded-md border border-[var(--ns-border)] bg-zinc-900 text-brand-red'
-              : 'text-zinc-500 hover:text-zinc-200'
-          }`}
-          title={t('player.openQueue')}
-          aria-label={t('player.openQueue')}
+          active={isQueueOpen}
+          className={isQueueOpen ? 'bg-[var(--ns-hover-bg)]' : undefined}
+          label={t('player.openQueue')}
           aria-expanded={isQueueOpen}
         >
           <ListMusic size={18} />
-        </button>
+        </PlayerIconButton>
         <PlayerVolumeControls volume={volume} onSetVolume={onSetVolume} />
-        <button
-          type="button"
-          onClick={onClose}
-          className="p-1.5 text-zinc-500 hover:text-zinc-200 transition-colors cursor-pointer shrink-0 focus:outline-none focus:text-brand-red"
-          title={closeLabel}
-          aria-label={closeLabel}
-        >
+        <PlayerIconButton onClick={onClose} className="shrink-0" label={closeLabel}>
           <X size={18} />
-        </button>
+        </PlayerIconButton>
       </div>
     </>
   );
@@ -391,54 +384,39 @@ export function MobilePlayerTransportControls({
       className="flex items-center justify-between px-4"
       data-testid="standard-mobile-player-transport"
     >
-      <button
-        type="button"
+      <PlayerIconButton
         onClick={onToggleShuffle}
-        className={`p-2 transition-colors cursor-pointer focus:outline-none ${
-          shuffle ? 'text-brand-red' : 'text-zinc-500'
-        }`}
-        aria-label={t('player.toggleShuffle')}
+        active={shuffle}
+        className="size-11"
+        label={t('player.toggleShuffle')}
         aria-pressed={shuffle}
       >
         <Shuffle size={18} />
-      </button>
-      <button
-        type="button"
-        onClick={onPrevious}
-        className="p-2 text-zinc-300 active:text-zinc-100 transition-colors cursor-pointer focus:outline-none"
-        aria-label={t('player.previousTrack')}
-      >
+      </PlayerIconButton>
+      <PlayerIconButton onClick={onPrevious} className="size-11 text-zinc-300" label={t('player.previousTrack')}>
         <SkipBack size={22} fill="currentColor" />
-      </button>
-      <button
-        type="button"
+      </PlayerIconButton>
+      <PlayerIconButton
         onClick={onTogglePlay}
-        className="flex h-16 w-16 cursor-pointer items-center justify-center rounded-full bg-[var(--ns-player-control-bg)] text-[var(--ns-player-control-text)] shadow-md transition-colors active:opacity-85 focus:outline-none focus:ring-2 focus:ring-brand-red"
-        aria-label={isPlaying ? t('contextMenu.pause') : t('contextMenu.play')}
+        label={isPlaying ? t('contextMenu.pause') : t('contextMenu.play')}
         data-testid="standard-mobile-player-play-button"
+        className="size-16 bg-[var(--ns-player-control-bg)] text-[var(--ns-player-control-text)] shadow-md hover:bg-[var(--ns-player-control-bg)] hover:text-[var(--ns-player-control-text)] active:opacity-85"
       >
         {isPlaying
           ? <Pause size={24} fill="currentColor" strokeWidth={0} />
           : <Play size={24} fill="currentColor" strokeWidth={0} className="translate-x-[1px]" />}
-      </button>
-      <button
-        type="button"
-        onClick={onNext}
-        className="p-2 text-zinc-300 active:text-zinc-100 transition-colors cursor-pointer focus:outline-none"
-        aria-label={t('player.nextTrack')}
-      >
+      </PlayerIconButton>
+      <PlayerIconButton onClick={onNext} className="size-11 text-zinc-300" label={t('player.nextTrack')}>
         <SkipForward size={22} fill="currentColor" />
-      </button>
-      <button
-        type="button"
+      </PlayerIconButton>
+      <PlayerIconButton
         onClick={onToggleRepeat}
-        className={`p-2 transition-colors cursor-pointer focus:outline-none ${
-          repeatMode !== 'none' ? 'text-brand-red' : 'text-zinc-500'
-        }`}
-        aria-label={t('player.changeRepeatMode', { mode: t(`player.repeatModes.${repeatMode}`) })}
+        active={repeatMode !== 'none'}
+        className="size-11"
+        label={t('player.changeRepeatMode', { mode: t(`player.repeatModes.${repeatMode}`) })}
       >
         <Repeat size={18} />
-      </button>
+      </PlayerIconButton>
     </div>
   );
 }

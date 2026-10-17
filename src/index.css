@@ -318,6 +318,7 @@
   --ns-z-context-overlay: 225;
   --ns-z-context-menu: 230;
   --ns-z-confirmation: 260;
+  --ns-z-tooltip: 270;
 
   --ns-focus: 0 0 0 3px color-mix(in srgb, var(--ns-accent) 24%, transparent);
 

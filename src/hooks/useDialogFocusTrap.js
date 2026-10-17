@@ -106,7 +106,11 @@ export default function useDialogFocusTrap(isOpen, onClose, { lockScroll = true 
     focusInitial();
     const handleKeyDown = (event) => {
       if (event.key !== 'Escape' && event.key !== 'Tab') return;
-      if (event.defaultPrevented || !isTopmostOverlay(dialogRef.current)) return;
+      // A focus tooltip (Radix) consumes Escape to hide itself; that must not
+      // keep the dialog open. Nested menus/listboxes still block it as before.
+      const consumedByTooltip = event.key === 'Escape'
+        && Boolean(document.querySelector('[data-slot="tooltip-content"]'));
+      if ((event.defaultPrevented && !consumedByTooltip) || !isTopmostOverlay(dialogRef.current)) return;
       if (event.key === 'Escape') {
         event.preventDefault();
         event.stopPropagation();

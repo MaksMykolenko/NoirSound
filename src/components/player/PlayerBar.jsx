@@ -23,7 +23,9 @@ import {
   MobilePlayerProgress,
   MobilePlayerTransportControls,
   PlaybackErrorStatus,
+  PlayerIconButton,
 } from './PlayerBarShared';
+import { Button } from '@/components/ui/button';
 import { useTrackContextMenu } from '../../hooks/useEntityContextMenu';
 import useDialogFocusTrap from '../../hooks/useDialogFocusTrap';
 import { isUnmodifiedPrimaryActivation } from '../../utils/linkActivation';
@@ -213,14 +215,9 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
                 <span className="hidden sm:inline text-zinc-500">• {t('player.selectTrackToStart')}</span>
               </div>
             </div>
-            <button
-              onClick={() => collapsePlayer()}
-              className="p-1 text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer rounded-md hover:bg-zinc-900/60"
-              title={t('player.collapsePlayer')}
-              aria-label={t('player.collapsePlayer')}
-            >
+            <PlayerIconButton onClick={() => collapsePlayer()} label={t('player.collapsePlayer')}>
               <X size={15} />
-            </button>
+            </PlayerIconButton>
           </div>
         ) : (
           <DesktopPlayerBarContent
@@ -315,27 +312,33 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
               </div>
               {/* Controls */}
               <div className="flex shrink-0 items-center gap-1">
-                <button
+                {/* Touch controls: shadcn Button for the focus ring, no hover tooltip. */}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
                   onClick={(e) => {
                     e.stopPropagation();
                     togglePlay();
                   }}
-                  className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-[var(--ns-player-control-bg)] text-[var(--ns-player-control-text)] focus:outline-none"
+                  className="size-10 rounded-full bg-[var(--ns-player-control-bg)] text-[var(--ns-player-control-text)] hover:bg-[var(--ns-player-control-bg)] hover:text-[var(--ns-player-control-text)]"
                   aria-label={isPlaying ? t('contextMenu.pause') : t('contextMenu.play')}
                 >
                   {isPlaying ? <Pause size={13} fill="currentColor" strokeWidth={0} /> : <Play size={13} fill="currentColor" strokeWidth={0} className="translate-x-[0.5px]" />}
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="icon"
                   onClick={(event) => {
                     event.stopPropagation();
                     expandPlayer();
                   }}
-                  className="flex h-10 w-10 items-center justify-center rounded-md text-zinc-500"
+                  className="size-10 text-zinc-500"
                   aria-label={t('player.expandPlayer')}
                 >
                   <ChevronDown size={18} className="rotate-180" />
-                </button>
+                </Button>
               </div>
             </div>
           ) : (
@@ -467,9 +470,9 @@ export default function PlayerBar({ onToggleQueue, isQueueOpen }) {
 
             {/* volume bar */}
             <div className="ns-mobile-player-sheet__volume flex items-center space-x-3 pb-3 pt-1">
-              <button onClick={toggleMute} className="min-w-11 min-h-11 flex items-center justify-center text-zinc-500 focus:outline-none" aria-label={volume === 0 ? t('player.unmute') : t('player.mute')}>
+              <Button type="button" variant="ghost" size="icon" onClick={toggleMute} className="size-11 rounded-full text-zinc-500" aria-label={volume === 0 ? t('player.unmute') : t('player.mute')}>
                 {volume === 0 ? <VolumeX size={16} /> : <Volume2 size={16} />}
-              </button>
+              </Button>
               <input
                 type="range"
                 min="0"
