@@ -24,6 +24,7 @@ import { useUserStore } from '../store/userStore';
 import { useTrackContextMenu } from '../hooks/useEntityContextMenu';
 import { TrackTypeBadge } from '../components/tracks/TrackContentMeta';
 import { isBeatTrack } from '../utils/trackContent';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 function formatReleaseDate(iso, lang) {
   if (!iso) return null;
@@ -189,15 +190,20 @@ export default function TrackPage() {
           data-testid="track-hero"
           data-is-beat={isBeat ? 'true' : 'false'}
         >
-          <button
-            type="button"
-            onClick={openFromButton}
-            className="absolute right-1 top-1 z-20 ns-media-action ns-media-action--card bg-zinc-950/80 text-zinc-300 md:right-0 md:top-4"
-            aria-label={t('playlists.moreActionsFor', { title: track.title })}
-            aria-haspopup="menu"
-          >
-            <MoreHorizontal size={17} />
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                onClick={openFromButton}
+                className="absolute right-1 top-1 z-20 ns-media-action ns-media-action--card bg-zinc-950/80 text-zinc-300 md:right-0 md:top-4"
+                aria-label={t('playlists.moreActionsFor', { title: track.title })}
+                aria-haspopup="menu"
+              >
+                <MoreHorizontal size={17} />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="left">{t('playlists.moreActionsFor', { title: track.title })}</TooltipContent>
+          </Tooltip>
           <>
             {/* Cover */}
             <div className="ns-track-cover group relative mx-auto shrink-0 md:mx-0">
@@ -263,6 +269,7 @@ export default function TrackPage() {
               {/* Actions */}
               <div className="flex flex-wrap items-center justify-center gap-2.5 md:justify-start">
                 <button
+                  type="button"
                   onClick={handlePlayClick}
                   disabled={!canPlay}
                   className="ns-track-main-play"
@@ -273,15 +280,20 @@ export default function TrackPage() {
                   <span className="sr-only">{!canPlay ? t('trackPage.audioUnavailable') : isPlayingThis ? t('trackPage.pauseTrack') : isBeat ? t('beats.playBeat') : t('trackPage.playTrack')}</span>
                 </button>
 
-                <button
-                  onClick={() => toggleLikeTrack(track.id)}
-                  className={iconActionClass(isLiked)}
-                  title={isLiked ? t('trackPage.unlike') : t('trackPage.like')}
-                  aria-label={isLiked ? t('trackPage.unlike') : t('trackPage.like')}
-                  aria-pressed={isLiked}
-                >
-                  <TrackSaveIcon saved={isLiked} />
-                </button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={() => toggleLikeTrack(track.id)}
+                      className={iconActionClass(isLiked)}
+                      aria-label={isLiked ? t('trackPage.unlike') : t('trackPage.like')}
+                      aria-pressed={isLiked}
+                    >
+                      <TrackSaveIcon saved={isLiked} />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">{isLiked ? t('trackPage.unlike') : t('trackPage.like')}</TooltipContent>
+                </Tooltip>
 
               </div>
 
