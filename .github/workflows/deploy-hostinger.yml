@@ -61,6 +61,8 @@ jobs:
             -o UserKnownHostsFile=~/.ssh/known_hosts \
             -o ConnectTimeout=15 \
             -o ConnectionAttempts=1 \
+            -o ServerAliveInterval=30 \
+            -o ServerAliveCountMax=20 \
             "$HOSTINGER_USER@$HOSTINGER_HOST" \
             "APP_DIR=$REMOTE_APP_DIR RELEASE_SHA=$REMOTE_SHA PRODUCTION_DOMAIN=$REMOTE_DOMAIN bash -se" <<'REMOTE'
           set -euo pipefail
