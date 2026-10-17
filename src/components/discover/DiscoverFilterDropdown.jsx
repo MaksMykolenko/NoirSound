@@ -43,8 +43,9 @@ export default function DiscoverFilterDropdown({
     && window.matchMedia(MOBILE_QUERY).matches;
 
   const selected = options.find((option) => option.value === value);
-  const displayLabel = selected?.label || label;
   const selectedValue = Boolean(value);
+  // An unset filter names itself ("Style", "Mood") instead of showing a bare "All".
+  const displayLabel = selectedValue ? (selected?.label || label) : label;
 
   const close = ({ restore = true } = {}) => {
     restoreFocusOnCloseRef.current = restore;

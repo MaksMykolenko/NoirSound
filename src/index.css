@@ -1047,6 +1047,9 @@ main {
 .ns-discover-filter-trigger {
   max-width: min(100%, 15rem);
   padding-inline: var(--ns-space-4);
+  /* Reads as a control at rest, not as plain text. */
+  border-color: var(--ns-border-strong);
+  background: var(--ns-card);
 }
 
 .ns-discover-filter-trigger:hover,
