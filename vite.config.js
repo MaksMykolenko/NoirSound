@@ -19,6 +19,7 @@ export default defineConfig(({ mode }) => {
   resolve: {
     alias: {
       '#api-mode': path.resolve(process.cwd(), selectedApiDirectory),
+      '@': path.resolve(process.cwd(), 'src'),
     },
   },
   test: {

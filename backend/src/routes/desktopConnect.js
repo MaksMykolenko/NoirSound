@@ -710,7 +710,8 @@ module.exports = async function desktopConnectRoutes(fastify, options) {
       // Heartbeat ping interval
       heartbeatTimer = setInterval(() => {
         if (!isAlive) {
-          socket.terminate ? socket.terminate() : socket.close();
+          if (socket.terminate) socket.terminate();
+          else socket.close();
           return;
         }
         isAlive = false;

@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import i18n from '../../src/i18n';
@@ -8,7 +8,7 @@ import Header from '../../src/components/layout/Header';
 import MobileHeader from '../../src/components/layout/MobileHeader';
 import Footer from '../../src/components/layout/Footer';
 import LibraryDrawer from '../../src/components/layout/LibraryDrawer';
-import { DEFAULT_THEME, THEME_IDS } from '../../src/theme/themes';
+import { DEFAULT_THEME } from '../../src/theme/themes';
 import { useThemeStore } from '../../src/store/themeStore';
 import { useUserStore } from '../../src/store/userStore';
 

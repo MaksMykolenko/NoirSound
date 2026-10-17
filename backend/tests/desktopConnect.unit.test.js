@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll, vi } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import jwt from 'jsonwebtoken';
 import desktopPresence from '../src/lib/desktopPresence.js';
 import redisPresence from '../src/lib/redisPresence.js';
@@ -181,7 +181,7 @@ describe('Desktop Connect Server API Routes', () => {
           if (where.id === mockUser.id) return { ...mockUser };
           return null;
         }),
-        update: vi.fn(async ({ where, data }) => {
+        update: vi.fn(async ({ data }) => {
           Object.assign(mockUser, data);
           return { ...mockUser };
         })

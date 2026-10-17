@@ -98,9 +98,10 @@ class RedisPresenceManager {
             ...connectionOptions
           });
 
-      this.client.on('error', (err) => {
-        // gracefully handle logging
-      });
+      // ioredis re-emits 'error' on every reconnect attempt; an unhandled
+      // 'error' event would crash the process. Failures surface to callers
+      // through rejected commands instead.
+      this.client.on('error', () => {});
 
       this.subscribers = new Map(); // channel -> Set<callback>
     }

@@ -31,7 +31,8 @@ export default function DiscoverVibeBar({
         onSubmit={(e) => { e.preventDefault(); onSearchSubmit?.(); }}
         className="relative flex items-center"
       >
-        <div className="pointer-events-none absolute left-4 text-zinc-500 flex items-center">
+        {/* z-10: the input's backdrop-blur creates its own layer and would paint over the icon. */}
+        <div className="pointer-events-none absolute left-4 z-10 text-zinc-500 flex items-center">
           <Search size={18} />
         </div>
         <input
