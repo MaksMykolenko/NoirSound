@@ -2668,15 +2668,16 @@ body.is-sidebar-resizing * {
   place-items: center;
   overflow: hidden;
   container-type: inline-size;
-  background: var(--ns-card-soft);
+  background: color-mix(in srgb, var(--ns-accent) var(--ns-cover-tint, 8%), var(--ns-card-soft));
   border: 1px solid var(--ns-border-strong);
-  color: var(--ns-text-secondary);
+  color: color-mix(in srgb, var(--ns-accent-text) 70%, var(--ns-text-secondary));
 }
 .ns-cover-fallback__initials {
-  font-size: clamp(0.625rem, 12cqi, 1.5rem);
-  font-weight: 600;
+  font-family: var(--ns-font-display);
+  font-size: clamp(0.75rem, 22cqi, 3rem);
+  font-weight: 700;
   line-height: 1;
-  letter-spacing: 0.02em;
+  letter-spacing: -0.01em;
 }
 .ns-media-action {
   display: inline-flex;

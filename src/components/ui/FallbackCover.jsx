@@ -42,6 +42,8 @@ export default function FallbackCover({
       aria-label={t('media.noArtwork', { title: title || t('media.untitled') })}
       data-visual-key={visual.key}
       className={`ns-cover-fallback relative overflow-hidden ${className}`}
+      // Stable per-release tint so a row of missing artwork does not read as unloaded.
+      style={{ '--ns-cover-tint': `${6 + (visual.x % 12)}%` }}
     >
       <span aria-hidden="true" className="ns-cover-fallback__initials">
         {initialsFor(title)}
