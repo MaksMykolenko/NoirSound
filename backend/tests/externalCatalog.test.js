@@ -18,10 +18,9 @@ describe.skipIf(process.env.EXTERNAL_CATALOG_DATABASE_TEST!=='true')('external c
   db=createPrismaClient();
   async function session(role){const u=await db.user.create({data:{email:`external-${role.toLowerCase()}-${suffix}@example.test`,username:`qa_${role.toLowerCase()}_${suffix}`,displayName:'Owned QA fixture',role,status:'ACTIVE'}});userIds.push(u.id);const sid=randomUUID(),token=jwt.sign({userId:u.id,sid},process.env.JWT_SECRET,{expiresIn:'1h'});await db.session.create({data:{id:sid,userId:u.id,token:hashToken(token),expiresAt:new Date(Date.now()+3600000)}});return `token=${token}`;}
   cookie=await session('ADMIN');listener=await session('LISTENER');
-  const audius={getTrack:async()=>legacy,resolve:async()=>legacy,search:async()=>[legacy],browse:async()=>({items:[legacy],next:null}),status:()=> 'LIVE',capabilities:{search:true},playback:async()=>({track:legacy,url:'https://creatornode.audius.co/tracks/cidstream/fixture',playbackMode:'EXTERNAL_STREAM',provider:'AUDIUS'})};
   const apple={...m,provider:'APPLE_MUSIC',externalId:'123456',canonicalUrl:'https://music.apple.com/us/song/123456',playbackMode:'OFFICIAL_EMBED',provenance:'APPLE_MUSIC_PUBLIC_API',title:'Owned API Apple fixture'};
   const catalogAdapters={APPLE_MUSIC:{getTrack:async()=>apple,browse:async()=>({items:[apple],next:null}),status:()=> 'CONFIGURED',capabilities:{search:true}},YOUTUBE:{getTrack:async()=>m,browse:async()=>({items:[m],next:null}),status:()=> 'CONFIGURED',capabilities:{search:true}}};
-  app=buildServer({prisma:db,audius,catalogAdapters,storage:{},audioQueue:{close:async()=>{}},rateLimitRedis:null});await app.ready();
+  app=buildServer({prisma:db,catalogAdapters,storage:{},audioQueue:{close:async()=>{}},rateLimitRedis:null});await app.ready();
  });
  afterAll(async()=>{if(app)await app.close();if(db){await db.externalPlaybackEvent.deleteMany({where:{recordingId:{in:recordIds}}});await db.externalSource.deleteMany({where:{recordingId:{in:recordIds}}});await db.externalRecording.updateMany({where:{id:{in:recordIds}},data:{mergedIntoId:null,parentId:null}});await db.externalRecording.deleteMany({where:{id:{in:recordIds}}});await db.track.deleteMany({where:{id:{in:trackIds}}});await db.auditLog.deleteMany({where:{actorId:{in:userIds}}});await db.user.deleteMany({where:{id:{in:userIds}}});await db.externalCatalogSetting.deleteMany({where:{id:'beta'}});await db.$disconnect();}});
  it('rejects anonymous/listener API, direct URLs and cross-origin writes',async()=>{const closedStatus=await app.inject({url:'/api/external-catalog/status'});expect(closedStatus.statusCode).toBe(200);expect(closedStatus.json()).toMatchObject({enabled:false,canManage:false,providers:[]});expect((await app.inject({url:'/api/external-catalog/search?q=fixture'})).statusCode).toBe(401);expect((await req('/search?q=fixture',null,'GET',listener)).status).toBe(403);expect((await app.inject({url:'/external-music'})).statusCode).toBe(302);expect((await app.inject({method:'POST',url:'/api/external-catalog/import',headers:{cookie,origin:'https://evil.example'},payload:{provider:'YOUTUBE',externalId:fixtureId}})).statusCode).toBe(403);});
@@ -99,7 +98,7 @@ describe.skipIf(process.env.EXTERNAL_CATALOG_DATABASE_TEST!=='true')('external c
    await req('/settings',{enabled:true,reason:'Restore fixture beta'},'PATCH');
   } finally {process.env.EXTERNAL_CATALOG_PUBLIC='false';}
  });
- it('rejects removed providers through every import entry and preserves saved legacy playback',async()=>{
+ it('rejects removed providers through every import entry and refuses legacy Audius playback',async()=>{
   const count=await db.externalRecording.count();
   const target=await create('Owned source policy target');
   for(const provider of ['AUDIUS','APPLE_MUSIC']) {
@@ -118,7 +117,7 @@ describe.skipIf(process.env.EXTERNAL_CATALOG_DATABASE_TEST!=='true')('external c
   const track=await db.track.create({data:{title:legacy.title,primaryArtistName:legacy.artistName,artistId:curator.id,status:'PUBLISHED',isPublic:false,catalogScope:'EXTERNAL_BETA',durationSeconds:120,tags:[]}});
   const record=await db.externalRecording.create({data:{trackId:track.id,curatorId:userIds[0],versionType:'UNKNOWN',metadataProvenance:legacy.provenance,metadataExpiresAt:new Date(Date.now()+86400000),sources:{create:{provider:'AUDIUS',externalId:legacy.externalId,canonicalUrl:legacy.canonicalUrl,playbackMode:'EXTERNAL_STREAM',availability:'AVAILABLE',provenance:legacy.provenance,matchStatus:'CONFIRMED',isPrimary:true,checkedAt:new Date()}}},include:{sources:true}});
   trackIds.push(track.id);recordIds.push(record.id);
-  expect((await req(`/recordings/${record.id}/playback?sourceId=${record.sources[0].id}`,null,'GET')).status).toBe(200);
+  expect((await req(`/recordings/${record.id}/playback?sourceId=${record.sources[0].id}`,null,'GET')).body.error).toBe('EXTERNAL_PROVIDER_UNSUPPORTED');
   const playlist=await db.playlist.create({data:{creatorId:userIds[0],name:'Preserved legacy library',isPublic:false}});
   expect((await app.inject({method:'POST',url:`/api/playlists/${playlist.id}/tracks`,headers:{cookie,origin:'http://localhost:3000'},payload:{trackId:track.id}})).statusCode).toBe(201);
   expect((await req('/recordings',null,'GET')).body.items.some(t=>t.id===track.id)).toBe(false);

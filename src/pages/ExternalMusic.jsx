@@ -32,7 +32,7 @@ function SourceEditor({source,run,pending}) {
   </form></details>;
 }
 function AdminRecordingDetail({recording,versions,audit,records,run,pending}) {
-  const {t}=useTranslation();const play=usePlayerStore(s=>s.playTrack),likes=usePlayerStore(s=>s.likedTracks),toggleLike=usePlayerStore(s=>s.toggleLikeTrack);
+  const {t}=useTranslation();const likes=usePlayerStore(s=>s.likedTracks),toggleLike=usePlayerStore(s=>s.toggleLikeTrack);
   const [reason,setReason]=useState(''),[provider,setProvider]=useState('SPOTIFY'),[url,setUrl]=useState(''),[intoId,setIntoId]=useState(''),[evidence,setEvidence]=useState(''),[versionType,setVersion]=useState(recording.versionType),[parentId,setParent]=useState(recording.parentId || ''),[label,setLabel]=useState(recording.versionLabel || ''),[playlistId,setPlaylist]=useState('');
   const playlists=useQuery({queryKey:['external-private-playlists'],queryFn:getMyPlaylists});
   return <div className="space-y-5">
@@ -44,8 +44,7 @@ function AdminRecordingDetail({recording,versions,audit,records,run,pending}) {
     <p className="text-sm text-[var(--ns-text-muted)]">{t('externalMusic.linkOutNote')}</p>
     <section className="space-y-3" aria-label={t('externalMusic.sources')}><h2 className="font-semibold">{t('externalMusic.sources')}</h2>{recording.sources.map(s=><div key={s.id} className="rounded border border-[var(--ns-border-subtle)] p-3">
       <div className="flex flex-wrap items-center gap-3"><a className={button} href={s.canonicalUrl} target="_blank" rel="noopener noreferrer"><ExternalLink size={16}/>{s.provider} · {s.playbackMode}</a><span className="text-xs">{s.matchStatus} · {s.officialStatus==='VERIFIED'?t('externalMusic.verified'):t('externalMusic.unverified')} · {s.availability}</span>{recording.primarySources.some(p=>p.id===s.id)&&<span className="text-xs">{t('externalMusic.primary')}</span>}
-
-      {s.playbackMode==='EXTERNAL_STREAM'&&<button className={button} disabled={s.availability!=='AVAILABLE'||s.matchStatus!=='CONFIRMED'} onClick={()=>play({...recording,playbackSource:'external',playbackMode:'EXTERNAL_STREAM',provider:s.provider,selectedSourceId:s.id,isStreamable:true},null,'external-catalog')}>{t('externalMusic.play')}</button>}</div>
+</div>
       <SourceEditor source={s} run={run} pending={pending}/>
     </div>)}</section>
     <details><summary className="cursor-pointer font-semibold">{t('externalMusic.addSource')}</summary><form className="mt-3 grid gap-2 sm:grid-cols-2" onSubmit={e=>{e.preventDefault();run(`/recordings/${recording.recordingId}/sources`,{provider,url,reason});}}>

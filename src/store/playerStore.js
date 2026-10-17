@@ -1,7 +1,7 @@
 import {audioCache,audioCacheEnabled,canWarmAudio} from '../services/audioCache';
 import {nextQueuedTrack} from '../services/playerPreload';
 import { create } from 'zustand';
-import { resolveExternalPlayback, recordExternalPlay, saveCatalogTrack } from '../api/externalCatalog';
+import { saveCatalogTrack } from '../api/externalCatalog';
 import { createSpotifyController } from '../services/spotifyPlayback';
 import { importedPlayback } from '../api/playlistImport';
 import { API_BASE_URL, useMockApi, apiFetch } from '../api/client';
@@ -32,11 +32,6 @@ function releaseCachedSource() { cancelWarm(); currentDescriptor=null; if(active
 const cacheScope = () => useUserStore.getState().user?.id || 'guest';
 async function playbackDescriptor(track,signal) {
   if (track.playbackMode==='IMPORTED_SOURCE') throw new Error('IMPORT_AUDIO_UNAVAILABLE');
-  if (track.playbackMode==='EXTERNAL_STREAM') {
-    const resolved=await resolveExternalPlayback(track,signal);
-    if(resolved.playbackMode!=='EXTERNAL_STREAM'||!resolved.url)throw new Error('External audio is unavailable.');
-    return resolved;
-  }
   if(useMockApi)return {url:track.audioUrl};
   if(track.playbackSource==='landing')return {url:API_BASE_URL+'/landing/tracks/'+encodeURIComponent(track.id)+'/stream'};
   if(audioCacheEnabled())return apiFetch('/tracks/'+encodeURIComponent(track.id)+'/playback',{signal,suppressErrorToast:true});
@@ -152,11 +147,6 @@ async function reportQualifyingPlay(track, listenedSeconds, completed) {
   // Playback continues on the same singleton without issuing forbidden writes.
   if (track.playbackSource === 'landing' && import.meta.env.VITE_PUBLIC_APP_ENABLED === 'false') return false;
   try {
-    if (track.playbackMode === 'EXTERNAL_STREAM') {
-      if(!useUserStore.getState().user)return false;
-      const result = await recordExternalPlay(track, listenedSeconds, completed);
-      return result?.success === true;
-    }
     await useUserStore.getState().incrementPlayStats(track.id, track.artistId, {
       durationListenedSeconds: Math.round(listenedSeconds),
       completed: !!completed,
@@ -259,10 +249,9 @@ export const usePlayerStore = create((set, get) => {
     };
     audio.onerror = () => {
       if (get().activePlatformEmbed || get().playbackEngine==='spotify') return;
-      const message = get().currentTrack?.playbackMode === 'EXTERNAL_STREAM' ? 'External audio is unavailable. Retry or open Audius.' : 'The processed audio stream could not be loaded.';
       set({
         isPlaying: false,
-        playbackError: message
+        playbackError: 'The processed audio stream could not be loaded.'
       });
       reportPlaybackError(message);
     };

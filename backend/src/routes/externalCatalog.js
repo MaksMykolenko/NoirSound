@@ -1,5 +1,4 @@
 'use strict';
-const {createAudiusAdapter}=require('../providers/audius');
 const {createCatalogAdapters,createCatalogFeed}=require('../providers/catalogs');
 const {ADMIN_PERMISSIONS,adminReadOptions,adminMutationOptions}=require('../lib/adminGuard');
 const C=require('../lib/externalCatalog');
@@ -10,8 +9,7 @@ const reasonSchema={type:'string',minLength:3,maxLength:1000};
 const textSchema={type:'string',minLength:1,maxLength:300};
 const bodySchema=(properties,required=[])=>({body:{type:'object',additionalProperties:false,properties,required}});
 module.exports=async function externalCatalogRoutes(fastify,options) {
-  const audius=options.audius || createAudiusAdapter();
-  const adapters={AUDIUS:audius,...(options.catalogAdapters || createCatalogAdapters())};
+  const adapters=options.catalogAdapters || createCatalogAdapters();
   const feed=createCatalogFeed(adapters);
   const providerFor=p=>{const adapter=adapters[p];if(!adapter)C.fail('EXTERNAL_PROVIDER_PERMISSION_REQUIRED',409);return adapter;};
   const privateRead=adminReadOptions(fastify,ADMIN_PERMISSIONS.TRACKS_READ);
@@ -37,7 +35,7 @@ module.exports=async function externalCatalogRoutes(fastify,options) {
   async function refreshSource(source) {
     let m;
     try {m=await providerFor(source.provider).getTrack(source.externalId);}catch(e) {
-      if(['AUDIUS_HTTP_404','AUDIUS_HTTP_403','APPLE_MUSIC_HTTP_404','YOUTUBE_HTTP_404','EXTERNAL_TRACK_UNAVAILABLE'].includes(e.code)) {
+      if(['APPLE_MUSIC_HTTP_404','YOUTUBE_HTTP_404','EXTERNAL_TRACK_UNAVAILABLE'].includes(e.code)) {
         await fastify.prisma.$transaction(async tx=>{
           await tx.externalSource.update({where:{id:source.id},data:{availability:'UNAVAILABLE',checkedAt:new Date()}});
           const r=await tx.externalRecording.findUnique({where:{id:source.recordingId}});
@@ -61,7 +59,7 @@ module.exports=async function externalCatalogRoutes(fastify,options) {
   fastify.patch('/settings',{...mutate,schema:bodySchema({enabled:{type:'boolean'},reason:reasonSchema},['enabled','reason'])},async request=>{
     return fastify.prisma.$transaction(async tx=>{await C.catalogLock(tx);const setting=await tx.externalCatalogSetting.upsert({where:{id:'beta'},create:{id:'beta',enabled:request.body.enabled},update:{enabled:request.body.enabled}});await C.recordAudit(tx,request,'EXTERNAL_BETA_SETTING','beta',request.body.reason,{enabled:setting.enabled});return {enabled:setting.enabled};});
   });
-  // Retired Audius discovery endpoints cannot supply new imports to stale clients.
+  // Retired discovery endpoints cannot supply new imports to stale clients.
   fastify.get('/search',read,async()=>C.fail('EXTERNAL_PROVIDER_UNSUPPORTED',410));
   fastify.get('/browse',{...read,config:{...read.config,rateLimit:{max:30,timeWindow:'1 minute'}},schema:{querystring:{type:'object',additionalProperties:false,properties:{q:{type:'string',maxLength:200,default:''},cursor:{type:'string',maxLength:600,default:''},limit:{type:'integer',minimum:1,maximum:20,default:20}}}}},async request=>{
     const data=await feed.browse(request.query.q.trim(),request.query.cursor,request.query.limit);
@@ -72,7 +70,7 @@ module.exports=async function externalCatalogRoutes(fastify,options) {
       if(r?.mergedIntoId)r=await getRecording(r.mergedIntoId);
       if(r&&!C.allowRole(request.user)&&!C.visibleRecording(r))continue;
       const key=r?.id || `${m.provider}:${m.externalId}`;if(seen.has(key))continue;seen.add(key);
-      items.push(r?{...C.recordingView(r),imported:true}:{...m,id:key,duration:m.durationSeconds,isAvailable:m.availability==='AVAILABLE',isStreamable:m.playbackMode==='EXTERNAL_STREAM'&&m.availability==='AVAILABLE',playbackSource:'external',previewExternalId:m.externalId,imported:false});
+      items.push(r?{...C.recordingView(r),imported:true}:{...m,id:key,duration:m.durationSeconds,isAvailable:m.availability==='AVAILABLE',isStreamable:false,playbackSource:'external',previewExternalId:m.externalId,imported:false});
     }
     return {...data,items};
   });
@@ -186,15 +184,10 @@ module.exports=async function externalCatalogRoutes(fastify,options) {
       return officialEmbed(source.provider,source.canonicalUrl);
     }
     if(source.playbackMode==='LINK_OUT')return {playbackMode:'LINK_OUT',canonicalUrl:source.canonicalUrl,provider:source.provider};
-    if(source.provider!=='AUDIUS')C.fail('EXTERNAL_PROVIDER_UNSUPPORTED');
-    try {const p=await audius.playback(source.externalId);await refreshSource(source);return {url:p.url,playbackMode:p.playbackMode,provider:p.provider,expiresAt:p.expiresAt,cacheKey:p.cacheKey};}
-    catch(e){await fastify.prisma.externalSource.update({where:{id:source.id},data:{availability:['AUDIUS_HTTP_404','AUDIUS_HTTP_403','EXTERNAL_TRACK_UNAVAILABLE'].includes(e.code)?'UNAVAILABLE':'ERROR',checkedAt:new Date()}});throw e;}
-  });
-  fastify.post('/recordings/:id/play-event',{...save,schema:bodySchema({sourceId:textSchema,durationListenedSeconds:{type:'integer',minimum:1,maximum:3600},completed:{type:'boolean'}},['sourceId','durationListenedSeconds'])},async request=>{
-    const r=await getRecording(request.params.id);if(!C.allowRole(request.user)&&!C.visibleRecording(r))C.fail('EXTERNAL_RECORDING_NOT_FOUND',404);const s=[...r.sources,...r.members.flatMap(m=>m.sources)].find(s=>s.id===request.body.sourceId && s.playbackMode==='EXTERNAL_STREAM');if(!s)C.fail('EXTERNAL_SOURCE_NOT_PLAYABLE');
-    await fastify.prisma.externalPlaybackEvent.create({data:{recordingId:r.id,userId:request.user.id,provider:s.provider,durationListenedSeconds:Math.min(request.body.durationListenedSeconds,r.track.durationSeconds || 3600),completed:!!request.body.completed}});return {success:true,source:'NOIRSOUND_EXTERNAL_PLAYBACK',providerListenVerified:false};
+    C.fail('EXTERNAL_PROVIDER_UNSUPPORTED');
   });
   // Bounded expiry sweep purges stale provider metadata, preserving Track IDs and links.
+  // AUDIUS_PUBLIC_API stays listed so legacy rows (hidden since Audius removal) still expire.
   let sweep;
   fastify.addHook('onReady',async()=>{
     const expire=async()=>{try{const rows=await fastify.prisma.externalRecording.findMany({where:{metadataProvenance:{in:['AUDIUS_PUBLIC_API','APPLE_MUSIC_PUBLIC_API','YOUTUBE_PUBLIC_API']},metadataExpiresAt:{lt:new Date()}},select:{id:true,trackId:true},take:100});for(const r of rows)await fastify.prisma.$transaction([fastify.prisma.externalRecording.update({where:{id:r.id},data:{metadataExpiresAt:null,isrc:null}}),fastify.prisma.track.update({where:{id:r.trackId},data:{title:'Metadata refresh required',primaryArtistName:null,coverUrl:null,durationSeconds:0,duration:0,explicit:false}}),fastify.prisma.externalSource.updateMany({where:{recordingId:r.id,provenance:{in:['AUDIUS_PUBLIC_API','APPLE_MUSIC_PUBLIC_API','YOUTUBE_PUBLIC_API']}},data:{availability:'UNKNOWN'}})]);}catch{fastify.log.warn('External metadata expiry sweep unavailable');}};

@@ -17,19 +17,12 @@ local artist ID; no performer is matched to a local account by display name.
 
 ## Provider behavior
 
-Audius uses the official REST API at `https://api.audius.co/v1`. Its published
-OpenAPI permits anonymous search, resolve, track metadata and open streaming.
-No API key is required for this public read-only subset. An optional
-`AUDIUS_BEARER_TOKEN` stays on the backend. Private/unlisted/deleted/gated,
-scheduled, stem and API-key-restricted tracks are not imported or played.
-Each play checks current metadata and availability and resolves a fresh signed
-stream route. The provider-signed audio CID is checked before using the fixed
-Audius content gateway; the gateway is probed before the URL reaches the player.
-The server never downloads/proxies audio or writes it to MinIO/transcoding.
-The browser follows the gateway's GET redirect to Audius's verified R2 delivery
-origin, explicitly allowed only in `media-src`. The gateway's HEAD response does
-not expose that redirect. No wildcard Cloudflare storage origins are allowed;
-a provider CDN origin change requires review and a CSP update.
+Audius has been removed entirely (October 2026): no adapter, no direct audio
+streaming (`EXTERNAL_STREAM`) and no Audius origins in the CSP. Migration
+`20261017120000_remove_audius_sources` deletes Audius source rows and hides
+external tracks that had no other platform; their Track rows remain so likes,
+playlists and history stay intact. NoirSound never downloads, proxies or
+transcodes third-party audio.
 
 SoundCloud, Apple Music and YouTube support official visible players through
 `GET /api/external-catalog/embed?provider=...&url=...`. The same administrator
@@ -38,8 +31,7 @@ Select a platform in “Add a track by link” and provide the public recording 
 permitted title/artist metadata, provenance and audit reason. The existing
 `POST /recordings` endpoint validates the URL and atomically saves a private Track
 bridge and its origin; repeated canonical URLs return the existing recording.
-No provider metadata is guessed or scraped. Audius alone provides automatic
-search/metadata import; no new provider credentials are invented.
+No provider metadata is guessed or scraped; no new provider credentials are invented.
 Saved confirmed SoundCloud/Apple Music/YouTube sources resolve official embeds
 through the same recording/source playback endpoint used by ordinary cards.
 Manual links attached to an existing recording remain unplayable as matched
@@ -47,7 +39,7 @@ recordings until confirmation with evidence. Spotify remains a source link.
 The standalone embed resolver performs no third-party fetch and writes no rows.
 
 The existing global player owns one active platform frame. Opening one pauses
-and clears the native/Audius audio source; switching back synchronously blanks
+and clears the native audio source; switching back synchronously blanks
 and removes the frame. Closing/collapsing, entering admin, logging out or loss
 of beta access stops the frame. The persisted gate is checked every 15 seconds
 and on window focus. YouTube remains visible with controls and a viewport of
@@ -71,9 +63,6 @@ sources. Embeds remain outside audio queues/native play statistics. Source
 icons describe provenance, never a claim of official artist verification.
 
 References reviewed 2026-10-01:
-- https://docs.audius.co/sdk/
-- https://api.audius.co/v1/swagger.yaml
-- https://docs.audius.co/developers/guides/image-mirrors/
 - https://developer.spotify.com/documentation/embeds/terms
 - https://developers.soundcloud.com/docs/api/html5-widget
 - https://developers.google.com/youtube/iframe_api_reference
@@ -88,8 +77,6 @@ Backend-only settings are in `backend/.env.example` and `.env.production.example
 ```dotenv
 EXTERNAL_CATALOG_ENABLED=true
 EXTERNAL_CATALOG_ADMIN_IDS=<existing-owner-admin-user-uuid>
-AUDIUS_ENABLED=true
-AUDIUS_BEARER_TOKEN=
 ```
 
 The account must have the current server-verified ADMIN role; the optional UUID
@@ -104,16 +91,14 @@ re-enable beta if that environment flag is false.
 Status is LIVE only after an official API request succeeds. Link-only providers
 are LINK_OUT_ONLY; widget providers are OFFICIAL_EMBED, which indicates a
 configured URL adapter rather than guaranteed availability. API failures and disabled providers remain explicit. Normal
-NoirSound endpoints continue working when Audius is disabled or unavailable.
+NoirSound endpoints continue working when a provider is disabled or unavailable.
 
 ## Test
 
-Sign into the existing permitted account, open `/external-music`, search Audius
-or paste an Audius track URL. Play a result, pause and seek using the global player,
-add the result to the test catalog, then open its card. Like it or add it to a
-private playlist. Switch to an existing native track and back to the chosen
-external recording. External playback writes `ExternalPlaybackEvent` only;
-these are local observations, not verified Audius listens or native play counts.
+Sign into the existing permitted account, open `/external-music` and add a
+YouTube or SoundCloud track link. Open its official player, then open its card.
+Like it or add it to a private playlist. Switch to an existing native track and
+back to the chosen external recording. Embeds emit no NoirSound play statistics.
 Previews have no persistent identity until imported and cannot be liked.
 
 The detail page supports source editing, independent recording-match and official
@@ -121,7 +106,7 @@ publication verification, primary-source selection, version/parent editing,
 manual merge and unmerge, and action history. Confirmation requires evidence;
 merge also requires evidence. Title/duration similarity never auto-merges.
 Known conflicting performer/version/explicitness/duration prevents a merge.
-ISRC is used only when supplied by Audius or explicitly supplied with a reason.
+ISRC is used only when supplied by a provider API or explicitly supplied with a reason.
 Remix/live/nightcore and other marked versions retain their markers and cards.
 Original is never inferred from popularity, upload age, profile name or “official”.
 
@@ -241,9 +226,9 @@ Source editing, manual record creation, merges, verification, settings and audit
 ## Current import sources
 
 New imports and discovery are limited to Spotify, YouTube and SoundCloud.
-Audius and Apple Music are excluded from discovery, new catalog imports and
-source creation; legacy Audius preview/search endpoints return 410. Saved legacy
-recordings retain their IDs, library relationships and playback access.
+Apple Music is excluded from discovery, new catalog imports and source
+creation. Audius is removed entirely (see Provider behavior); legacy preview/search
+endpoints return 410.
 Playlist migration accepts provider links only, matches native NoirSound tracks,
 and rejects old Audius selection tokens. CSV/TXT import has been removed.
 The earlier provider expansion notes describe historical behavior.
@@ -255,7 +240,7 @@ standard browser media/IndexedDB facilities. No Liner code is included.
 
 - Audio cache: device-local IndexedDB, at most 80 MiB / 50 tracks, 24 MiB per
   recording and a six-hour expiry. Content identities are derived from the native
-  audio object or Audius CID; signed URLs and upstream credentials are never
+  audio object; signed URLs and upstream credentials are never
   persisted in the cache. Playback resolves current access before reading a blob.
   Private entries are account-scoped. Logout clears the cache. Settings allow
   disabling/clearing it; unsupported storage, CORS and quota failures fall back

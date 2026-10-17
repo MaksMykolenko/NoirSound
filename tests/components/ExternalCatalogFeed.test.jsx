@@ -8,16 +8,16 @@ import ExternalCatalogFeed from '../../src/components/tracks/ExternalCatalogFeed
 import {useUserStore} from '../../src/store/userStore';
 import {usePlayerStore} from '../../src/store/playerStore';
 import {catalogRequest,saveCatalogTrack} from '../../src/api/externalCatalog';
-vi.mock('../../src/api/externalCatalog',()=>({catalogRequest:vi.fn(),saveCatalogTrack:vi.fn(),resolveExternalPlayback:vi.fn(),resolvePlatformEmbed:vi.fn(),recordExternalPlay:vi.fn()}));
-const preview={id:'AUDIUS:owned',title:'Owned live catalog fixture',artistName:'Fixture artist',provider:'AUDIUS',previewExternalId:'owned',canonicalUrl:'https://audius.co/owned/fixture',isAvailable:true,isStreamable:true,playbackSource:'external',playbackMode:'EXTERNAL_STREAM'};
+vi.mock('../../src/api/externalCatalog',()=>({catalogRequest:vi.fn(),saveCatalogTrack:vi.fn(),resolvePlatformEmbed:vi.fn()}));
+const preview={id:'YOUTUBE:owned',title:'Owned live catalog fixture',artistName:'Fixture artist',provider:'YOUTUBE',previewExternalId:'owned',canonicalUrl:'https://www.youtube.com/watch?v=ownedfixtur',isAvailable:true,isStreamable:false,playbackSource:'external',playbackMode:'OFFICIAL_EMBED'};
 const saved={...preview,id:'saved-track',previewExternalId:undefined,recordingId:'saved-recording',selectedSourceId:'source'};
 function Location(){return <output data-testid="location">{useLocation().pathname}</output>;}
 function mount(){const client=new QueryClient({defaultOptions:{queries:{retry:false}}});return render(<QueryClientProvider client={client}><MemoryRouter initialEntries={['/discover']}><ExternalCatalogFeed/><Location/></MemoryRouter></QueryClientProvider>);}
 describe('automatic platform cards in the normal catalog',()=>{
- beforeEach(async()=>{vi.clearAllMocks();await i18n.changeLanguage('en');useUserStore.setState({user:{id:'owner',role:'ADMIN'},authHydrated:true});usePlayerStore.setState({likedTracks:[],currentTrack:null,isPlaying:false});saveCatalogTrack.mockResolvedValue(saved);catalogRequest.mockImplementation(async path=>path==='/status'?{enabled:true}:{items:[preview],providers:[{provider:'AUDIUS',status:'LIVE'}],pageInfo:{nextCursor:null}});});
+ beforeEach(async()=>{vi.clearAllMocks();await i18n.changeLanguage('en');useUserStore.setState({user:{id:'owner',role:'ADMIN'},authHydrated:true});usePlayerStore.setState({likedTracks:[],currentTrack:null,isPlaying:false});saveCatalogTrack.mockResolvedValue(saved);catalogRequest.mockImplementation(async path=>path==='/status'?{enabled:true}:{items:[preview],providers:[{provider:'YOUTUBE',status:'LIVE'}],pageInfo:{nextCursor:null}});});
  afterEach(()=>{vi.restoreAllMocks();useUserStore.setState({user:null});});
  it('shows live tracks, attribution and original links without a manual import or URL form',async()=>{
-  mount();await screen.findByText(preview.title);expect(screen.getByRole('img',{name:'Audius'})).toBeInTheDocument();expect(screen.getByRole('link',{name:'Audius'})).toHaveAttribute('href',preview.canonicalUrl);expect(screen.queryByRole('textbox')).toBeNull();expect(screen.queryByRole('button',{name:'Add to catalog'})).toBeNull();expect(saveCatalogTrack).not.toHaveBeenCalled();
+  mount();await screen.findByText(preview.title);expect(screen.getByRole('img',{name:'YouTube'})).toBeInTheDocument();expect(screen.getByRole('link',{name:/youtube/i})).toHaveAttribute('href',preview.canonicalUrl);expect(screen.queryByRole('textbox')).toBeNull();expect(screen.queryByRole('button',{name:'Add to catalog'})).toBeNull();expect(saveCatalogTrack).not.toHaveBeenCalled();
  });
  it('likes the stored Track identity, creating it automatically on first interaction',async()=>{
   const like=vi.spyOn(usePlayerStore.getState(),'toggleLikeTrack').mockResolvedValue();mount();await screen.findByText(preview.title);fireEvent.click(screen.getByRole('button',{name:`Like ${preview.title}`}));await waitFor(()=>expect(like).toHaveBeenCalledWith(saved.id));expect(saveCatalogTrack).toHaveBeenCalledWith(preview);

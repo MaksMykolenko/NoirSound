@@ -163,14 +163,14 @@ function buildServer(options = {}) {
     prefix: '/api/auth',
     googleOAuthClientFactory: options.googleOAuthClientFactory
   });
-  fastify.register(require('./routes/externalCatalog'), { prefix: '/api/external-catalog', audius: options.audius, catalogAdapters: options.catalogAdapters });
+  fastify.register(require('./routes/externalCatalog'), { prefix: '/api/external-catalog', catalogAdapters: options.catalogAdapters });
   fastify.register(require('./routes/tracks'), { prefix: '/api/tracks' });
   fastify.register(require('./routes/landing'), { prefix: '/api/landing' });
   fastify.register(require('./routes/discover'), { prefix: '/api/discover' });
   fastify.register(require('./routes/artists'), { prefix: '/api/artists' });
   fastify.register(require('./routes/profiles'), { prefix: '/api/profiles' });
   fastify.register(require('./routes/playlists'), { prefix: '/api/playlists' });
-  fastify.register(require('./routes/playlistImport'), { prefix: '/api/playlist-import', audius: options.audius, sources: options.playlistSources, redis: rateLimitRedis, spotifyPlayback: options.spotifyPlayback });
+  fastify.register(require('./routes/playlistImport'), { prefix: '/api/playlist-import', sources: options.playlistSources, redis: rateLimitRedis, spotifyPlayback: options.spotifyPlayback });
   fastify.register(require('./routes/uploads'), { prefix: '/api/uploads' });
   fastify.register(require('./routes/uploadBatches'), { prefix: '/api/uploads/batch' });
   fastify.register(require('./routes/comments'), { prefix: '/api/comments' });
